@@ -1,0 +1,4 @@
+[toolchain]
+# bevy_gaussian_splatting's default features use generic associated types
+# behind the `nightly_generic_alias` feature, which requires nightly.
+channel = "nightly"

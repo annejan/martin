@@ -1,0 +1,16 @@
+[package]
+name = "dogdemo"
+version = "0.1.0"
+edition = "2021"
+description = "Fly a camera around a Gaussian splat (and, soon, explode it). Rust + wgpu -> Vulkan, no CUDA."
+
+[dependencies]
+bevy = "0.18"
+# Default features need nightly (nightly_generic_alias); io_ply + planar load our .ply.
+bevy_gaussian_splatting = "7.0.1"
+
+# Faster iteration: optimize deps hard, our crate lightly.
+[profile.dev]
+opt-level = 1
+[profile.dev.package."*"]
+opt-level = 3
