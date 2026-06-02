@@ -17,6 +17,8 @@ use bevy::prelude::*;
 use bevy::app::AppExit;
 use bevy::camera::primitives::Aabb;
 use bevy::core_pipeline::tonemapping::Tonemapping;
+use bevy::post_process::bloom::Bloom;
+use bevy::render::view::Hdr;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy::camera::visibility::NoFrustumCulling;
 use bevy_gaussian_splatting::{
@@ -58,6 +60,7 @@ struct ExplodeState {
 #[derive(Resource)]
 struct Debug {
     shot: Option<String>,
+    shot_at: f32,
     auto_explode: bool,
     shot_done: bool,
     exploded: bool,
@@ -73,9 +76,11 @@ fn main() {
             ..default()
         }))
         .add_plugins(GaussianSplattingPlugin)
+        .insert_resource(ClearColor(Color::BLACK))
         .init_resource::<ExplodeState>()
         .insert_resource(Debug {
             shot: std::env::var("DOGDEMO_SHOT").ok(),
+            shot_at: std::env::var("DOGDEMO_SHOT_AT").ok().and_then(|s| s.parse().ok()).unwrap_or(4.5),
             auto_explode: std::env::var("DOGDEMO_EXPLODE").is_ok(),
             shot_done: false,
             exploded: false,
@@ -98,7 +103,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         GaussianCamera { warmup: true },
         Camera3d::default(),
+        Hdr, // HDR target so bright splats bloom
         Tonemapping::None,
+        Bloom::NATURAL,
         Transform::default(),
         OrbitCam::default(),
     ));
@@ -218,14 +225,14 @@ fn debug_driver(
         info!("debug: auto-explode triggered at t={el:.1}");
     }
     if let Some(path) = dbg.shot.clone() {
-        if !dbg.shot_done && el >= 4.5 {
+        if !dbg.shot_done && el >= dbg.shot_at {
             commands
                 .spawn(Screenshot::primary_window())
                 .observe(save_to_disk(path.clone()));
             dbg.shot_done = true;
             info!("auto-screenshot -> {path}");
         }
-        if dbg.shot_done && el >= 6.5 {
+        if dbg.shot_done && el >= dbg.shot_at + 2.0 {
             exit.write(AppExit::Success);
         }
     }
