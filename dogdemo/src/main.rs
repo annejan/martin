@@ -25,6 +25,7 @@ use bevy::camera::visibility::NoFrustumCulling;
 use bevy_gaussian_splatting::{
     CloudSettings, GaussianCamera, GaussianSplattingPlugin, PlanarGaussian3dHandle,
 };
+use bevy_gaussian_splatting::sort::SortMode;
 use std::f32::consts::PI;
 
 /// Tuning for the MVP puff.
@@ -213,7 +214,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, clouds: Res<Clo
     for cfg in &clouds.0 {
         commands.spawn((
             PlanarGaussian3dHandle(asset_server.load(cfg.name.clone())),
-            CloudSettings::default(),
+            // CPU (rayon) depth sort: GPU radix sort desyncs the view uniform with
+            // multiple clouds → half the splats get culled. CPU sort dodges that.
+            CloudSettings { sort_mode: SortMode::Rayon, ..default() },
             Transform::from_translation(cfg.offset).with_rotation(cloud_base_rotation()),
             CloudAnim(cfg.role),
         ));
