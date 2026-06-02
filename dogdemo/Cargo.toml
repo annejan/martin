@@ -12,8 +12,16 @@ bevy_gaussian_splatting = "7.0.1"
 # Faster iteration: optimize deps hard, our crate lightly.
 [profile.dev]
 opt-level = 1
+debug = "line-tables-only" # keep usable backtraces but shrink the dev binary (was ~1.7 GiB)
 [profile.dev.package."*"]
 opt-level = 3
+
+# Lean, shippable binary: no debuginfo, thin LTO, single codegen unit, stripped.
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
 
 # Vendored fork of the splat renderer so we can inject the explosion displacement
 # into its WGSL (shaders load via hardcoded-UUID internal assets — no app-side hook).

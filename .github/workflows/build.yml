@@ -1,0 +1,56 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: dogdemo
+    steps:
+      - uses: actions/checkout@v4
+
+      # bevy_gaussian_splatting (vendored fork) needs udev + alsa headers on Linux;
+      # winit needs wayland/xkbcommon. Windows (DX12) and macOS (Metal) need nothing.
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libudev-dev libasound2-dev libwayland-dev libxkbcommon-dev
+
+      # Default features require nightly (nightly_generic_alias / GATs);
+      # the exact channel is pinned by dogdemo/rust-toolchain.toml.
+      - name: Install nightly Rust
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: dogdemo
+
+      - name: Build (release)
+        run: cargo build --release
+
+      - name: Report binary size
+        shell: bash
+        run: ls -lh target/release/dogdemo* 2>/dev/null || true
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: dogdemo-${{ matrix.os }}
+          path: |
+            dogdemo/target/release/dogdemo
+            dogdemo/target/release/dogdemo.exe
+          if-no-files-found: ignore
