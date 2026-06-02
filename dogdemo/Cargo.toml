@@ -6,8 +6,17 @@ description = "Fly a camera around a Gaussian splat (and, soon, explode it). Rus
 
 [dependencies]
 bevy = "0.18"
-# Default features need nightly (nightly_generic_alias); io_ply + planar load our .ply.
-bevy_gaussian_splatting = "7.0.1"
+# Select features explicitly (mirrors the crate's defaults) so **sh0** is a feature
+# CHOICE here, not a vendored-Cargo.toml edit — our splats are SH degree-0 only.
+# Needs nightly (nightly_generic_alias); io_ply + planar load our .ply.
+bevy_gaussian_splatting = { version = "7.0.1", default-features = false, features = [
+    "io_flexbuffers", "io_ply", "planar", "buffer_storage", "sh0",
+    "query_select", "morph_interpolate", "nightly_generic_alias",
+    "sort_bitonic", "sort_radix", "sort_rayon", "sort_std",
+    "tooling", "viewer", "file_asset", "web_asset",
+] }
+# Glyph rasterization for splat-text (pure Rust; already in the lockfile transitively).
+ab_glyph = "0.2"
 
 # Faster iteration: optimize deps hard, our crate lightly.
 [profile.dev]
