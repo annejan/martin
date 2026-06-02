@@ -1,5 +1,7 @@
 # martin — CUDA-free Gaussian Splatting on AMD / openSUSE
 
+[![build](https://github.com/annejan/evoke-martin/actions/workflows/build.yml/badge.svg)](https://github.com/annejan/evoke-martin/actions/workflows/build.yml)
+
 Tooling for building 3D Gaussian splats **without CUDA or ROCm** — everything
 runs on CPU + Vulkan (Mesa RADV), targeting an AMD Ryzen AI 7 PRO 350 /
 Radeon 860M (gfx1152) on openSUSE Tumbleweed.
@@ -40,6 +42,12 @@ The splat loads from `dogdemo/assets/aegg.ply` (symlink to the project-root
 `.ply`). **Export uncompressed/standard PLY from SuperSplat** — the loader
 rejects SuperSplat's *compressed* format (`missing required properties`).
 Linux build deps: `systemd-devel` (libudev) + alsa (and a Vulkan/RADV driver).
+
+**Prebuilt binaries:** GitHub Actions builds release binaries for **Linux,
+Windows, and macOS** on every push — grab them from the artifacts of the latest
+[build run](https://github.com/annejan/evoke-martin/actions/workflows/build.yml).
+Release binary is ~75 MB (`strip` + thin LTO); use `cargo run --release` to show
+it off (the 1.8 GiB build is debug-only, for fast iteration).
 
 ## Note on git
 
