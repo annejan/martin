@@ -30,7 +30,6 @@ use std::f32::consts::PI;
 
 /// Tuning for the MVP puff.
 const EXPAND_RATE: f32 = 1.5; // cloud scale = 1 + EXPAND_RATE * t
-const FADE_RATE: f32 = 0.6; // exploder opacity = 1 - FADE_RATE*t (fast → masks dust away quickly)
 const FRONT_YAW: f32 = 1.4; // camera faces both Martins head-on (single-image splats have no back)
 const SWAY: f32 = 0.25; // gentle left-right sway amplitude — never reaches the hollow back
 
@@ -63,10 +62,11 @@ struct ExplodeState {
 /// Per-cloud animation role, driven by the master clock `tau` (ExplodeState.t).
 #[derive(Clone, Copy)]
 enum AnimRole {
-    /// Intact until `start`, then flies apart + fades out.
-    Explode { start: f32 },
-    /// Invisible + scattered until `start`, then particles fly IN (explosion run
-    /// backwards) and fade in over `dur` seconds, coalescing into the shape.
+    /// Intact until `start`, then COLLAPSES inward (particles + whole cloud drift to
+    /// the world center) and fades — feeding the reform, not blasting outward.
+    Explode { start: f32, home: Vec3 },
+    /// Invisible + scattered until `start`, then particles fly IN and fade in over
+    /// `dur` seconds, coalescing into the shape at the center.
     Reform { start: f32, dur: f32, scatter: f32 },
 }
 
@@ -142,19 +142,21 @@ fn main() {
     let has_reform = reform_name.is_some();
     let mut clouds: Vec<CloudCfg> = Vec::new();
     match std::env::var("DOGDEMO_PLY2").ok() {
-        // two splats → staggered exploders, side by side
+        // two splats → staggered, side by side; they collapse INWARD to center
         Some(p2) => {
-            clouds.push(CloudCfg { name: name1, offset: Vec3::new(-SEP, 0.0, 0.0), role: AnimRole::Explode { start: 0.5 } });
-            clouds.push(CloudCfg { name: file_name_of(&p2), offset: Vec3::new(SEP, 0.0, 0.0), role: AnimRole::Explode { start: 1.0 } });
+            let l = Vec3::new(-SEP, 0.0, 0.0);
+            let r = Vec3::new(SEP, 0.0, 0.0);
+            clouds.push(CloudCfg { name: name1, offset: l, role: AnimRole::Explode { start: 0.5, home: l } });
+            clouds.push(CloudCfg { name: file_name_of(&p2), offset: r, role: AnimRole::Explode { start: 1.0, home: r } });
         }
-        None => clouds.push(CloudCfg { name: name1, offset: Vec3::ZERO, role: AnimRole::Explode { start: 0.0 } }),
+        None => clouds.push(CloudCfg { name: name1, offset: Vec3::ZERO, role: AnimRole::Explode { start: 0.0, home: Vec3::ZERO } }),
     }
-    // DOGDEMO_REFORM: ONE dog reforms at center from the combined debris.
+    // DOGDEMO_REFORM: one dog reforms at center, overlapping the Martins' collapse.
     if let Some(dog) = &reform_name {
         clouds.push(CloudCfg {
             name: dog.clone(),
             offset: Vec3::ZERO,
-            role: AnimRole::Reform { start: 1.8, dur: 2.5, scatter: 3.0 },
+            role: AnimRole::Reform { start: 1.2, dur: 3.0, scatter: 1.5 },
         });
     }
 
@@ -283,13 +285,11 @@ fn frame_on_load(
 /// Reform-sequence camera zoom (continuous at t=0): martins framed → pull back
 /// for the blast → zoom IN on the reformed central dog (settle 1.0→0.55).
 fn reform_zoom(t: f32) -> f32 {
-    // smooth ease from framing the Martins (1.0) to framing the dog (~0.65), with a
-    // gentle, wide pull-back so the camera glides rather than lurching/shaking.
-    let p = (t / 5.0).clamp(0.0, 1.0);
+    // pure smooth zoom-IN (no pull-back bump): frame the two Martins (1.0) and ease
+    // in to the central dog as everything converges (~0.6). No lurch/shake.
+    let p = (t / 4.5).clamp(0.0, 1.0);
     let ease = p * p * (3.0 - 2.0 * p); // smoothstep
-    let settle = 1.0 - 0.35 * ease;
-    let x = (t - 2.0) / 2.0;
-    settle + 0.45 * (-x * x).exp()
+    1.0 - 0.4 * ease
 }
 
 fn orbit_camera(
@@ -360,34 +360,35 @@ fn controls(
 /// fade; the reformer runs its explosion backwards (scatter→0) and fades in.
 fn animate_clouds(
     explode: Res<ExplodeState>,
-    mut q: Query<(&mut CloudSettings, &CloudAnim)>,
+    mut q: Query<(&mut CloudSettings, &mut Transform, &CloudAnim)>,
 ) {
+    const COLLAPSE_DUR: f32 = 2.6;
     let tau = if explode.active { explode.t } else { 0.0 };
-    for (mut s, anim) in &mut q {
+    for (mut s, mut tf, anim) in &mut q {
         match anim.0 {
-            AnimRole::Explode { start } => {
+            AnimRole::Explode { start, home } => {
                 if tau <= start {
                     s.time = 0.0;
                     s.global_opacity = 1.0;
-                    s.global_scale = 1.0;
+                    tf.translation = home;
                 } else {
-                    let e = tau - start;
-                    s.time = e;
-                    s.global_opacity = (1.0 - FADE_RATE * e).max(0.0);
-                    s.global_scale = (1.0 - 0.5 * e).max(0.15); // shrink to fine specks → dust, not blobs
+                    let k = ((tau - start) / COLLAPSE_DUR).clamp(0.0, 1.0);
+                    s.time = -1.2 * k; // negative = particles implode toward the centroid
+                    s.global_opacity = (1.0 - k).max(0.0); // fade as it collapses
+                    tf.translation = home.lerp(Vec3::ZERO, k); // whole cloud drifts to center
                 }
+                s.global_scale = 1.0;
             }
             AnimRole::Reform { start, dur, scatter } => {
                 if tau <= start {
-                    s.time = scatter; // fully scattered…
-                    s.global_opacity = 0.0; // …but invisible until it starts reforming
-                    s.global_scale = 1.0;
+                    s.time = scatter; // mildly scattered near center…
+                    s.global_opacity = 0.0; // …invisible until it starts reforming
                 } else {
                     let p = ((tau - start) / dur).clamp(0.0, 1.0);
-                    s.time = scatter * (1.0 - p); // particles fly inward to the formed shape
+                    s.time = scatter * (1.0 - p); // particles converge to the formed shape
                     s.global_opacity = p; // fade in as it coalesces
-                    s.global_scale = 1.0;
                 }
+                s.global_scale = 1.0;
             }
         }
     }
