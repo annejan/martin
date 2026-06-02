@@ -77,6 +77,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         PlanarGaussian3dHandle(asset_server.load("aegg.ply")),
         CloudSettings::default(),
+        // Brush/COLMAP splats are Y-down/Z-forward vs Bevy's Y-up: rotate 180° about X.
+        Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::PI)),
     ));
     commands.spawn((
         GaussianCamera { warmup: true }, // REQUIRED: splat sort/draw systems only run for cameras with this marker
@@ -88,19 +90,23 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 /// Once the cloud's `Aabb` exists, frame the camera to its bounding sphere.
-fn frame_on_load(cloud: Query<&Aabb, With<PlanarGaussian3dHandle>>, mut cam: Query<&mut OrbitCam>) {
-    let Ok(aabb) = cloud.single() else {
+fn frame_on_load(
+    cloud: Query<(&Aabb, &Transform), With<PlanarGaussian3dHandle>>,
+    mut cam: Query<&mut OrbitCam>,
+) {
+    let Ok((aabb, cloud_tf)) = cloud.single() else {
         return;
     };
     for mut c in &mut cam {
         if c.framed {
             continue;
         }
-        let center = Vec3::from(aabb.center);
+        // Aabb is in the cloud's local space; map its center to world via the cloud transform.
+        let center = cloud_tf.transform_point(Vec3::from(aabb.center));
         let bounding_radius = Vec3::from(aabb.half_extents).length().max(0.001);
         c.center = center;
-        c.radius = bounding_radius * 2.5;
-        c.elevation = bounding_radius * 0.6;
+        c.radius = bounding_radius * 1.5; // tighter zoom than before
+        c.elevation = bounding_radius * 0.25;
         c.framed = true;
         info!(
             "framed cloud: center={center:?}  bounding_radius={bounding_radius:.3}  camera_radius={:.3}",
