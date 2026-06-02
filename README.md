@@ -38,10 +38,16 @@ cd dogdemo && cargo run            # window: orbiting splat
 ./record.sh                        # render the explosion to ./aegg_explosion.mp4
 ```
 
-The splat loads from `dogdemo/assets/aegg.ply` (symlink to the project-root
-`.ply`). **Export uncompressed/standard PLY from SuperSplat** — the loader
-rejects SuperSplat's *compressed* format (`missing required properties`).
-Linux build deps: `systemd-devel` (libudev) + alsa (and a Vulkan/RADV driver).
+By default the splat loads from `dogdemo/assets/aegg.ply`; point it at any file
+with `DOGDEMO_PLY=/abs/path.ply cargo run --release` (no symlink fuss). **Export
+uncompressed/standard PLY from SuperSplat** — the loader rejects SuperSplat's
+*compressed* format (`missing required properties`). Linux build deps:
+`systemd-devel` (libudev) + alsa (and a Vulkan/RADV driver).
+
+**Get a subject splat:** capture with `splat.sh` (COLMAP→Brush), or generate one
+from a single image with **[TRELLIS](https://huggingface.co/spaces/trellis-community/TRELLIS)**
+(image → 3DGS `.ply`, runs in the browser) — then
+`DOGDEMO_PLY=~/Downloads/dog.ply cargo run --release`.
 
 **Prebuilt binaries:** GitHub Actions builds release binaries for **Linux,
 Windows, and macOS** on every push — grab them from the artifacts of the latest

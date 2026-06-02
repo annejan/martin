@@ -15,6 +15,7 @@
 
 use bevy::prelude::*;
 use bevy::app::AppExit;
+use bevy::asset::AssetPlugin;
 use bevy::camera::primitives::Aabb;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::post_process::bloom::Bloom;
@@ -56,6 +57,10 @@ struct ExplodeState {
     t: f32,
 }
 
+/// Which `.ply` to load (from DOGDEMO_PLY, else "aegg.ply").
+#[derive(Resource)]
+struct PlySource(String);
+
 /// Debug driver (env-gated): auto-explode + framebuffer screenshot + exit.
 #[derive(Resource)]
 struct Debug {
@@ -80,16 +85,39 @@ struct RecordState {
 }
 
 fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "dogdemo — splat fly-around".into(),
-                resolution: (1280, 720).into(), // fixed size so recorded frames are uniform
-                ..default()
-            }),
+    // DOGDEMO_PLY=<abs path> loads any splat directly (e.g. a TRELLIS-generated dog),
+    // sidestepping the assets/ symlink. Falls back to assets/aegg.ply.
+    let (asset_root, ply_name) = match std::env::var("DOGDEMO_PLY").ok().as_deref() {
+        Some(p) => {
+            let path = std::path::Path::new(p);
+            (
+                path.parent()
+                    .filter(|d| !d.as_os_str().is_empty())
+                    .map(|d| d.to_string_lossy().into_owned()),
+                path.file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "aegg.ply".into()),
+            )
+        }
+        None => (None, "aegg.ply".to_string()),
+    };
+
+    let mut plugins = DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "dogdemo — splat fly-around".into(),
+            resolution: (1280, 720).into(), // fixed size so recorded frames are uniform
             ..default()
-        }))
+        }),
+        ..default()
+    });
+    if let Some(root) = asset_root {
+        plugins = plugins.set(AssetPlugin { file_path: root, ..default() });
+    }
+
+    App::new()
+        .add_plugins(plugins)
         .add_plugins(GaussianSplattingPlugin)
+        .insert_resource(PlySource(ply_name))
         .insert_resource(ClearColor(Color::BLACK))
         .init_resource::<ExplodeState>()
         .insert_resource(Debug {
@@ -122,9 +150,9 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>, ply: Res<PlySource>) {
     commands.spawn((
-        PlanarGaussian3dHandle(asset_server.load("aegg.ply")),
+        PlanarGaussian3dHandle(asset_server.load(ply.0.clone())),
         CloudSettings::default(),
         Transform::from_rotation(cloud_base_rotation()),
     ));
