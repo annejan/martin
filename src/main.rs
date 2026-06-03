@@ -221,19 +221,24 @@ fn parse_seq(spec: &str) -> Vec<Part> {
         if s.is_empty() || s.starts_with('#') {
             continue;
         }
-        // optional trailing transition token, e.g. `splat:doggo.ply @2,3 ~fade` (last word).
-        let (s, transition) = match s.rsplit_once('~') {
-            Some((before, name))
-                if !name.trim().contains(char::is_whitespace)
-                    && Transition::parse(name).is_some() =>
-            {
-                (before.trim(), Transition::parse(name))
-            }
-            _ => (s, None),
-        };
+        // a `~name` transition token (e.g. `~fade`) anywhere on the line — it's a single
+        // whitespace-delimited token, so pull it out and keep the rest. Position-independent,
+        // so `splat:x.ply ~fade @2,3` and `splat:x.ply @2,3 ~fade` both work.
+        let mut transition = None;
+        let s: String = s
+            .split_whitespace()
+            .filter(|tok| match tok.strip_prefix('~').and_then(Transition::parse) {
+                Some(tr) => {
+                    transition = Some(tr);
+                    false
+                }
+                None => true,
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
         let (head, timing) = match s.split_once('@') {
             Some((h, t)) => (h.trim(), Some(t.trim())),
-            None => (s, None),
+            None => (s.as_str(), None),
         };
         let (mut hold, mut morph, mut bulge) = (1.5_f32, 3.0_f32, 0.9_f32);
         if let Some(t) = timing {
