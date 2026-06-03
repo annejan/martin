@@ -33,7 +33,7 @@ use std::f32::consts::PI;
 mod morph;
 mod text;
 use crate::morph::{ball_of, drop_of, explode_of, fade_of, implode_of, resample_morton, swirl_of};
-use crate::text::{build_text_gaussians, build_text_pen_gaussians, TEXT_RGB};
+use crate::text::{build_text_gaussians, build_text_outline_gaussians, build_text_penwrite_gaussians, TEXT_RGB};
 
 const FRONT_YAW: f32 = 1.4; // camera faces the subject head-on (single-image splats have no back)
 const SWAY: f32 = 0.25; // gentle left-right sway amplitude — never reaches the hollow back
@@ -165,7 +165,8 @@ enum Transition {
     Sparkle,    // random per-particle twinkle-in (HDR bloom flashes)
     Slither,    // staggered lateral sine that settles
     Vortex,     // continuous unwind-rotation about the vertical axis
-    PenWrite,   // text drawn in pen order (stroke reveal); only meaningful for text parts
+    Outline,    // text traced in outline/pen order — a glowing neon draw-on (filled font); text only
+    PenWrite,   // text written in pen order on a single-stroke font — true handwriting; text only
 }
 
 impl Transition {
@@ -183,6 +184,7 @@ impl Transition {
             "sparkle" => Transition::Sparkle,
             "slither" => Transition::Slither,
             "vortex" => Transition::Vortex,
+            "outline" => Transition::Outline,
             "pen" | "penwrite" | "pen-write" | "write" => Transition::PenWrite,
             _ => return None,
         })
@@ -198,7 +200,8 @@ impl Transition {
             Transition::Sparkle => Some((3, 0.40, 0)),
             Transition::Vortex => Some((5, 0.35, 1)),
             Transition::Wipe => Some((6, 0.02, 0)),
-            Transition::PenWrite => Some((7, 0.06, 0)),
+            Transition::Outline => Some((7, 0.06, 0)),  // filled font → traces outlines
+            Transition::PenWrite => Some((7, 0.05, 0)), // single-stroke font → handwriting
             _ => None,
         }
     }
@@ -365,13 +368,20 @@ fn build_sequence(
 
     // read every part's gaussians once, so count==0 can mean "size N to the largest part"
     // (every part is then resampled to that single N — required by the shared morph output).
+    // pen-write stroke is thin, so its splat size + sample spacing want tuning (a fat splat
+    // blooms the strokes into filled blobs). Tunable while we dial it in.
+    let pw_step = std::env::var("MARTIN_PW_STEP").ok().and_then(|s| s.parse().ok()).unwrap_or(0.5_f32);
+    let pw_splat = std::env::var("MARTIN_PW_SPLAT").ok().and_then(|s| s.parse().ok()).unwrap_or(0.006_f32);
     let mut raws: Vec<Vec<Gaussian3d>> = seq
         .parts
         .iter()
         .zip(&transitions)
         .map(|(part, &tr)| match (&part.content, tr) {
+            (PartContent::Text(s), Transition::Outline) => {
+                build_text_outline_gaussians(s, TEXT_RGB, 3.0, 0.7, 0.012)
+            }
             (PartContent::Text(s), Transition::PenWrite) => {
-                build_text_pen_gaussians(s, TEXT_RGB, 3.0, 0.7, 0.012)
+                build_text_penwrite_gaussians(s, TEXT_RGB, 3.0, pw_step, pw_splat)
             }
             _ => part_gaussians(&part.content, &state, &assets),
         })

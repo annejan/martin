@@ -17,6 +17,10 @@ bevy_gaussian_splatting = { version = "7.0.1", default-features = false, feature
 ] }
 # Glyph rasterization for splat-text (pure Rust; already in the lockfile transitively).
 ab_glyph = "0.2"
+# Low-level glyph outlines for pen-write: lets us walk a single-stroke font's contours
+# WITHOUT auto-closing them (ab_glyph closes contours, which boxes open strokes). Same
+# version ab_glyph already pulls in, so no extra compile.
+ttf-parser = "0.25"
 
 # Faster iteration: optimize deps hard, our crate lightly.
 [profile.dev]
