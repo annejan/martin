@@ -234,6 +234,16 @@ struct OpenContours {
 }
 impl OpenContours {
     fn flush(&mut self) {
+        // ttf-parser closes every contour by returning to its start point. For a single-stroke
+        // glyph that turns an OPEN stroke (a `k` arm, the `s` curve, a `t` bar) into a loop /
+        // triangle / figure-8. Drop that trailing closure point and render the stroke open —
+        // genuine loops (`o`, bowls) keep their own near-closure, leaving only a hair-thin,
+        // hand-drawn-looking gap. This is the "lifted move vs stroke" distinction.
+        if let (Some(&first), Some(&last)) = (self.cur.first(), self.cur.last()) {
+            if self.cur.len() > 2 && (first.0 - last.0).hypot(first.1 - last.1) < 1.0 {
+                self.cur.pop();
+            }
+        }
         if self.cur.len() > 1 {
             self.contours.push(std::mem::take(&mut self.cur));
         } else {

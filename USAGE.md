@@ -162,9 +162,9 @@ explicit per-part `~name` wins over it.
 > **`~outline` vs `~pen-write` (both text-only).** Same shader mechanism (reveal along the pen
 > path), different font. `~outline` traces the bundled *filled* font (DejaVu) → a glowing neon
 > outline drawing itself on. `~pen-write` traces a bundled *single-stroke* font (Relief
-> SingleLine CAD, OFL) → genuine centerline handwriting. The single-stroke font renders
-> lowercase and most letters beautifully; a couple of its uppercase glyphs (`E`, `S`) come out
-> boxy, so **prefer lowercase** for pen-write (or swap in another single-stroke font later).
+> SingleLine CAD, OFL) via `ttf-parser`, keeping each stroke **open** (not closed back into a
+> loop) and respecting pen-lifts between strokes → genuine centerline handwriting, upper- and
+> lowercase. Tune stroke weight with `MARTIN_PW_SPLAT` (default `0.006`) / `MARTIN_PW_STEP`.
 
 (The first part has nothing to morph *from*, so `~morph` there falls back to `~ball`.)
 
