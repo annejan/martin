@@ -2,7 +2,7 @@
 //! source. Built Y-DOWN so the entity's `cloud_base_rotation` flips it upright like the
 //! Y-down `.ply` splats. Pure (no Bevy/ECS) apart from the gaussian type.
 
-use ab_glyph::{Font, FontRef, PxScale, ScaleFont, point};
+use ab_glyph::{Font, FontRef, OutlineCurve, PxScale, ScaleFont, point};
 use bevy_gaussian_splatting::{Gaussian3d, SphericalHarmonicCoefficients};
 
 /// Bundled bold TTF (`include_bytes`, not the asset server — `AssetPlugin.file_path` points
@@ -90,4 +90,123 @@ pub fn build_text_gaussians(s: &str, rgb: [f32; 3], world_width: f32, stride: us
         }
     }
     out
+}
+
+/// Flatten one glyph `OutlineCurve` into points (font units) ~`step_fu` apart, pushing
+/// `(x, y, seg_len)` where `seg_len` is the distance from the previous point of THIS curve
+/// (0 for its first point, so jumps between contours don't count as drawn pen length).
+fn sample_curve(c: &OutlineCurve, step_fu: f32, out: &mut Vec<(f32, f32, f32)>) {
+    let pts: Vec<(f32, f32)> = match c {
+        OutlineCurve::Line(a, b) => {
+            let n = ((b.x - a.x).hypot(b.y - a.y) / step_fu).ceil().max(1.0) as usize;
+            (0..=n)
+                .map(|i| {
+                    let t = i as f32 / n as f32;
+                    (a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+                })
+                .collect()
+        }
+        OutlineCurve::Quad(a, c1, b) => {
+            let approx = (c1.x - a.x).hypot(c1.y - a.y) + (b.x - c1.x).hypot(b.y - c1.y);
+            let n = (approx / step_fu).ceil().max(2.0) as usize;
+            (0..=n)
+                .map(|i| {
+                    let t = i as f32 / n as f32;
+                    let u = 1.0 - t;
+                    (u * u * a.x + 2.0 * u * t * c1.x + t * t * b.x, u * u * a.y + 2.0 * u * t * c1.y + t * t * b.y)
+                })
+                .collect()
+        }
+        OutlineCurve::Cubic(a, c1, c2, b) => {
+            let approx = (c1.x - a.x).hypot(c1.y - a.y) + (c2.x - c1.x).hypot(c2.y - c1.y) + (b.x - c2.x).hypot(b.y - c2.y);
+            let n = (approx / step_fu).ceil().max(3.0) as usize;
+            (0..=n)
+                .map(|i| {
+                    let t = i as f32 / n as f32;
+                    let u = 1.0 - t;
+                    (
+                        u * u * u * a.x + 3.0 * u * u * t * c1.x + 3.0 * u * t * t * c2.x + t * t * t * b.x,
+                        u * u * u * a.y + 3.0 * u * u * t * c1.y + 3.0 * u * t * t * c2.y + t * t * t * b.y,
+                    )
+                })
+                .collect()
+        }
+    };
+    for (i, &(x, y)) in pts.iter().enumerate() {
+        let seg = if i == 0 { 0.0 } else { (x - pts[i - 1].0).hypot(y - pts[i - 1].1) };
+        out.push((x, y, seg));
+    }
+}
+
+/// Pen-write source: gaussians sampled ALONG each glyph's outline in pen (contour) order, with
+/// each one's normalized cumulative pen-distance baked into the **visibility** channel (`w`).
+/// The shader's transition mode 7 reads that as its per-particle phase, so the stroke reveals
+/// in writing order. Stays flat at z=0 (unlike baking into z), so the morph target is unaffected.
+pub fn build_text_pen_gaussians(s: &str, rgb: [f32; 3], world_width: f32, step_px: f32, splat: f32) -> Vec<Gaussian3d> {
+    let font = FontRef::try_from_slice(FONT).expect("font.ttf");
+    let px = 64.0_f32;
+    let sf = font.as_scaled(PxScale::from(px));
+    let upm = font.units_per_em().unwrap_or(1000.0);
+    let s_f = px / upm; // font units → px
+    let step_fu = (step_px / s_f).max(1.0);
+
+    // layout: same pen walk as build_text_gaussians (kerning + newlines)
+    let line_h = sf.height() + sf.line_gap();
+    let mut placed: Vec<(f32, f32, char)> = Vec::new();
+    let (mut pen_x, mut pen_y, mut max_x) = (0.0_f32, sf.ascent(), 0.0_f32);
+    let mut prev: Option<char> = None;
+    for ch in s.chars() {
+        if ch == '\n' {
+            pen_x = 0.0;
+            pen_y += line_h;
+            prev = None;
+            continue;
+        }
+        if let Some(p) = prev {
+            pen_x += sf.kern(font.glyph_id(p), font.glyph_id(ch));
+        }
+        placed.push((pen_x, pen_y, ch));
+        pen_x += sf.h_advance(font.glyph_id(ch));
+        max_x = max_x.max(pen_x);
+        prev = Some(ch);
+    }
+    let block_h = pen_y + sf.descent().abs();
+    let scale = world_width / max_x.max(1.0);
+    let (cx, cy) = (max_x * 0.5, block_h * 0.5);
+
+    let mut sh = SphericalHarmonicCoefficients::default();
+    sh.set(0, dc(rgb[0]));
+    sh.set(1, dc(rgb[1]));
+    sh.set(2, dc(rgb[2]));
+
+    // walk outlines left→right glyph by glyph, accumulating drawn pen length
+    let mut samples: Vec<(f32, f32, f32)> = Vec::new();
+    let mut acc = 0.0_f32;
+    for (gx0, gy0, ch) in &placed {
+        let Some(outline) = font.outline(font.glyph_id(*ch)) else { continue }; // spaces → none
+        for curve in &outline.curves {
+            let mut cpts: Vec<(f32, f32, f32)> = Vec::new();
+            sample_curve(curve, step_fu, &mut cpts);
+            for (fx, fy, seg) in cpts {
+                acc += seg;
+                samples.push((gx0 + fx * s_f, gy0 - fy * s_f, acc)); // font y-up → screen y-down
+            }
+        }
+    }
+    let total = acc.max(1e-6);
+
+    samples
+        .into_iter()
+        .map(|(sx, sy, len)| {
+            let wx = (sx - cx) * scale;
+            let wy = (sy - cy) * scale;
+            let phase = (len / total).clamp(0.0, 1.0); // → visibility (w); shader mode 7 reads it
+            Gaussian3d {
+                position_visibility: [wx, wy, 0.0, phase].into(),
+                spherical_harmonic: sh,
+                rotation: [0.0, 0.0, 0.0, 1.0].into(),
+                scale_opacity: [splat, splat, splat, 1.0].into(),
+            }
+        })
+        .collect()
 }

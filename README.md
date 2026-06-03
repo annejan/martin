@@ -77,7 +77,7 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 | `MARTIN_TEXT="MARTIN GAUS"` | **Splat-text**: the title assembles out of a ball cloud (glowing). |
 | `MARTIN_SEQ="…"` | **Timeline** — a chain of parts that morph into one another (see below). |
 | `MARTIN_BULGE=0.9` | Ball-cloud explosiveness at a morph's midpoint (`0` = clean reorder). |
-| `MARTIN_TRANSITION=fade` | How each part **arrives**: `morph`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl`, or the shader ones `typewriter`/`wipe`/`sparkle`/`slither`/`vortex` (per-part `~name` wins). |
+| `MARTIN_TRANSITION=fade` | How each part **arrives**: `morph`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl`, or the shader ones `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`pen-write` (per-part `~name` wins). |
 | `MARTIN_MORPH_COUNT=250000` | Gaussian budget (`0`=max ~1.15M ≈ 20 fps; 250k ≈ 60 fps on the iGPU). |
 | `MARTIN_NORMALIZE=0` | Disable per-part centring + robust scale-to-common-size (on by default). |
 | `MARTIN_ZOOM=1.5` | Camera closeness (`>1` = closer / more zoomed in, `<1` = pull back). |
@@ -100,7 +100,7 @@ splat:a.ply+b.ply         # several splats, auto-arranged side by side
 
 The trailing `~transition` picks how a part arrives — data-only `ball` (default), `fade`,
 `explode`, `implode`, `drop`, `swirl`, `morph`, or the per-particle shader transitions
-`typewriter`, `wipe`, `sparkle`, `slither`, `vortex` (great for text). The ball is just one
+`typewriter`, `wipe`, `sparkle`, `slither`, `vortex`, `pen-write` (great for text). The ball is just one
 of many; the design + the shader fork are in **[`DESIGN.md`](DESIGN.md)** / **[`SHADER-BLUEPRINT.md`](SHADER-BLUEPRINT.md)**.
 
 Example — the full show (title → dog → greetings → credits):

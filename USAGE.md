@@ -76,7 +76,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_REFORM` | — | Morph target: the source splat(s) turn into this one. |
 | `MARTIN_TEXT` | — | Splat-text: this string assembles out of a ball cloud (glowing). |
 | `MARTIN_SEQ` | — | A timeline of parts (see [Sequences](#sequences)). Highest precedence. |
-| `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex` (per-particle shader). A per-part `~name` overrides it. See [Sequences](#sequences). |
+| `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`pen-write` (per-particle shader; `pen-write` is text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
 | `MARTIN_BULGE` | `0.9` | Ball-cloud size at a morph's midpoint, in object-radii. `0` = clean "puzzle-box" reorder (no explosion); `~0.9` = a ball roughly the object's size. (In sequences this is the per-part 3rd timing number instead.) |
 | `MARTIN_MORPH_COUNT` | `0` (shorthand) / `200000` (`MARTIN_SEQ`) | Gaussian budget every part is resampled to. `0` = the largest part's natural count (~1.15M for the Martins; crisp, ~20 fps). Lower = faster: **250k ≈ 60 fps, 500k ≈ 40 fps.** |
 | `MARTIN_YAW` | — (gentle sway) | Pin the camera to a fixed orbit angle in **radians** (e.g. `1.57` ≈ head-on). Handy for inspecting a splat. |
@@ -153,10 +153,15 @@ of them). It can sit anywhere on the line, but reads best last:
 | `~sparkle` | random per-particle twinkle-in (HDR bloom makes it flash) |
 | `~slither` | staggered lateral wobble that settles into place |
 | `~vortex` | spins/unwinds into place (continuous, shader-driven) |
+| `~pen-write` (`~pen`) | **text only** — draws on in pen/outline order (see caveat) |
 
 `MARTIN_TRANSITION=<name>` sets a default for **every** part (handy for trying one out); an
-explicit per-part `~name` wins over it. (One more — `~pen-write`, a true handwriting reveal —
-is designed in `DESIGN.md`/`SHADER-BLUEPRINT.md` but needs a glyph-outline walk first.)
+explicit per-part `~name` wins over it.
+
+> **`~pen-write` is text-only and font-dependent.** It samples each glyph's outline in pen
+> order and reveals along it. With the bundled *filled* font (DejaVu) the pen traces the letter
+> **outlines** → a glowing neon draw-on, not centerline handwriting. A **single-stroke /
+> monoline** font would make it true handwriting.
 
 (The first part has nothing to morph *from*, so `~morph` there falls back to `~ball`.)
 

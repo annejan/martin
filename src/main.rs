@@ -33,7 +33,7 @@ use std::f32::consts::PI;
 mod morph;
 mod text;
 use crate::morph::{ball_of, drop_of, explode_of, fade_of, implode_of, resample_morton, swirl_of};
-use crate::text::{build_text_gaussians, TEXT_RGB};
+use crate::text::{build_text_gaussians, build_text_pen_gaussians, TEXT_RGB};
 
 const FRONT_YAW: f32 = 1.4; // camera faces the subject head-on (single-image splats have no back)
 const SWAY: f32 = 0.25; // gentle left-right sway amplitude — never reaches the hollow back
@@ -165,6 +165,7 @@ enum Transition {
     Sparkle,    // random per-particle twinkle-in (HDR bloom flashes)
     Slither,    // staggered lateral sine that settles
     Vortex,     // continuous unwind-rotation about the vertical axis
+    PenWrite,   // text drawn in pen order (stroke reveal); only meaningful for text parts
 }
 
 impl Transition {
@@ -182,6 +183,7 @@ impl Transition {
             "sparkle" => Transition::Sparkle,
             "slither" => Transition::Slither,
             "vortex" => Transition::Vortex,
+            "pen" | "penwrite" | "pen-write" | "write" => Transition::PenWrite,
             _ => return None,
         })
     }
@@ -196,6 +198,7 @@ impl Transition {
             Transition::Sparkle => Some((3, 0.40, 0)),
             Transition::Vortex => Some((5, 0.35, 1)),
             Transition::Wipe => Some((6, 0.02, 0)),
+            Transition::PenWrite => Some((7, 0.06, 0)),
             _ => None,
         }
     }
@@ -342,12 +345,36 @@ fn build_sequence(
         return; // wait for every referenced splat
     }
 
+    // resolve each part's transition first (explicit ~name > MARTIN_TRANSITION > Ball for part
+    // 0 / Morph after) — needed before building gaussians so a PenWrite text part is built as a
+    // stroked outline (pen order baked into visibility) instead of filled coverage.
+    let global_tr = std::env::var("MARTIN_TRANSITION").ok().and_then(|s| Transition::parse(&s));
+    let transitions: Vec<Transition> = seq
+        .parts
+        .iter()
+        .enumerate()
+        .map(|(idx, part)| {
+            let tr = part
+                .transition
+                .or(global_tr)
+                .unwrap_or(if idx == 0 { Transition::Ball } else { Transition::Morph });
+            // part 0 has nothing to morph from — fall back to a ball assemble.
+            if idx == 0 && tr == Transition::Morph { Transition::Ball } else { tr }
+        })
+        .collect();
+
     // read every part's gaussians once, so count==0 can mean "size N to the largest part"
     // (every part is then resampled to that single N — required by the shared morph output).
     let mut raws: Vec<Vec<Gaussian3d>> = seq
         .parts
         .iter()
-        .map(|b| part_gaussians(&b.content, &state, &assets))
+        .zip(&transitions)
+        .map(|(part, &tr)| match (&part.content, tr) {
+            (PartContent::Text(s), Transition::PenWrite) => {
+                build_text_pen_gaussians(s, TEXT_RGB, 3.0, 0.7, 0.012)
+            }
+            _ => part_gaussians(&part.content, &state, &assets),
+        })
         .collect();
     // Normalize each part to a common "normal" size (MARTIN_NORMALIZE=0 to disable). Sources
     // vary wildly — a COLMAP scene spans hundreds of units, a TRELLIS object ~1 — so without
@@ -392,19 +419,11 @@ fn build_sequence(
     // FROM, chosen by its transition (`~name` per part > MARTIN_TRANSITION default > Ball for
     // part 0 / Morph after). `Morph` has no source — it flows from the previous part's shape
     // (with the ball-pulse bulge); the others build a source from the part's own shape.
-    let global_tr = std::env::var("MARTIN_TRANSITION").ok().and_then(|s| Transition::parse(&s));
     let mut shapes = Vec::new();
     let mut sources: Vec<Option<Handle<PlanarGaussian3d>>> = Vec::new();
-    let mut transitions: Vec<Transition> = Vec::new();
     for (idx, raw) in raws.into_iter().enumerate() {
         let shaped = resample_morton(raw, n);
-        let mut tr = seq.parts[idx]
-            .transition
-            .or(global_tr)
-            .unwrap_or(if idx == 0 { Transition::Ball } else { Transition::Morph });
-        if idx == 0 && tr == Transition::Morph {
-            tr = Transition::Ball; // part 0 has nothing to morph from — assemble from a ball
-        }
+        let tr = transitions[idx];
         let r = content_radius;
         let src: Option<Vec<Gaussian3d>> = match tr {
             Transition::Morph => None,
@@ -420,7 +439,6 @@ fn build_sequence(
             _ => None,
         };
         sources.push(src.map(|s| assets.add(PlanarGaussian3d::from(s))));
-        transitions.push(tr);
         shapes.push(assets.add(PlanarGaussian3d::from(shaped)));
     }
     let intro0 = sources[0].clone().expect("part 0 always builds a source cloud");

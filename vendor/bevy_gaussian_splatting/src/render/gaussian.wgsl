@@ -296,9 +296,12 @@ fn vs_points(
         let denom = max(gaussian_uniforms.time_stop - gaussian_uniforms.time_start, 1e-6);
         let gt = clamp((gaussian_uniforms.time - gaussian_uniforms.time_start) / denom, 0.0, 1.0);
         let softness = max(gaussian_uniforms.transition_softness, 1e-4);
-        let phase = transition_phase(splat_index, position.xyz);
-        let local = clamp((gt * (1.0 + softness) - phase) / softness, 0.0, 1.0);
         let mode = gaussian_uniforms.transition_mode;
+        // pen-write (mode 7) reads its per-particle phase from the visibility channel (cumulative
+        // pen-distance baked by build_text_pen_gaussians); the rest derive it from position.
+        var phase = transition_phase(splat_index, position.xyz);
+        if (mode == 7u) { phase = get_visibility(splat_index); }
+        let local = clamp((gt * (1.0 + softness) - phase) / softness, 0.0, 1.0);
         if (mode == 1u || mode == 6u) {
             tx_reveal = local;                  // typewriter / directional-wipe HARD
         } else if (mode == 2u) {
