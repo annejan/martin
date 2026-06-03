@@ -31,7 +31,9 @@ use bevy_gaussian_splatting::{
     PlanarGaussian3dHandle,
 };
 
+mod audio;
 mod morph;
+mod score;
 mod splat_image;
 mod text;
 use crate::morph::{ball_of, drop_of, explode_of, fade_of, implode_of, resample_morton, swirl_of};
@@ -926,6 +928,21 @@ fn parent_dir(p: String) -> Option<String> {
 }
 
 fn main() {
+    // MARTIN_SYNTH_WAV=path: render Cinder's synth to a WAV and exit (record.sh muxes it onto
+    // the frames). Done before the Bevy app so it needs no window/GPU.
+    if let Ok(path) = std::env::var("MARTIN_SYNTH_WAV") {
+        let track = audio::synth_track();
+        match audio::write_wav(&track, &path) {
+            Ok(()) => eprintln!(
+                "synth: {} samples ({:.1}s) -> {path}",
+                track.len(),
+                track.len() as f32 / audio::SAMPLE_RATE as f32
+            ),
+            Err(e) => eprintln!("synth wav error: {e}"),
+        }
+        return;
+    }
+
     let (sequence, asset_root) = sequence_from_env();
     // where `image:` PNG parts are read from — the .ply folder, or `assets` by default.
     let asset_root_path =

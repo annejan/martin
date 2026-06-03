@@ -5,6 +5,16 @@ path = "src/**"
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
+# Synth + music clock ported (with edits) from Cinder's term-demo (MIT) — keep his copyright.
+[[annotations]]
+path = ["src/audio.rs", "src/score.rs"]
+precedence = "override"
+SPDX-FileCopyrightText = [
+    "2026 Kristian Vlaardingerbroek",
+    "2026 Anne Jan Brouwer <brouwer@annejan.com>",
+]
+SPDX-License-Identifier = "MIT"
+
 [[annotations]]
 path = [
     "Cargo.toml",
