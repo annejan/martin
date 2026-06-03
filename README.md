@@ -84,7 +84,7 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 | `MARTIN_ROT=rx,ry,rz` | Orient the cloud (euler degrees) — e.g. stand a COLMAP scene upright. |
 | `MARTIN_YAW=1.4` `MARTIN_PITCH=0.1` | Seed the free-orbit camera angle (radians); `MARTIN_YAW` also holds it (no sway) when recording. |
 | `MARTIN_WAYPOINTS=path.json` | Where the **M-key** camera waypoints are logged / read (default `waypoints.json`) — fly + mark to author a camera path. |
-| `MARTIN_FLY=2` | Fly the camera through the marked waypoints; `<secs>` = time per waypoint leg (default 2). Recording flies the path once per part. |
+| `MARTIN_FLY=2` | Fly the camera through the marked waypoints. Recording: the path fills each part (longer hold = slower flyby), flowing through the morph. Live: `<secs>` = pace. |
 | `MARTIN_FPS=1` | Log frame time / FPS. |
 | `MARTIN_RECORD=/dir` | Dump one PNG per frame (used by `record.sh`). |
 | `MARTIN_SHOT=/x.png` `MARTIN_SHOT_AT=<s>` | Headless screenshot at time `s`, then exit. |

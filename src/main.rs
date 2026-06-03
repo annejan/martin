@@ -202,16 +202,17 @@ fn pingpong(x: f32) -> f32 {
     }
 }
 
-/// `MARTIN_FLY=<secs>`: fly the camera through the loaded waypoints (the M-key path); `secs` is
-/// the time per waypoint **leg**, so a full pass takes `secs × (markers − 1)`. While **recording**,
-/// each part flies one full pass, **alternating direction** (part 0 first→last, part 1 last→first,
-/// …) so the camera position is *continuous* across part boundaries — it flows through the morph
-/// instead of jumping back to the start. Size parts so `hold + morph ≥` a full pass. **Live** it
-/// ping-pongs the path there-and-back at the same pace, looping for preview. Owns the camera when
-/// active (`controls` and the recorder's sway stand down).
+/// `MARTIN_FLY=<secs>`: fly the camera through the loaded waypoints (the M-key path). While
+/// **recording**, the path **fills each part's on-screen window**, **alternating direction**
+/// (part 0 first→last, part 1 last→first, …) — so the camera is always moving (it reaches the
+/// turn-marker exactly as the morph begins: no dead hold before the transition) and its position
+/// is *continuous* across the morph (the next subject reverses from there: no jump). A part's
+/// flyby is therefore as long as its `hold`. **Live**, `secs` sets the pace (time per leg) and it
+/// ping-pongs the path on a loop for preview. Owns the camera (`controls` + recorder sway stand down).
 fn flypath(
     marks: Res<waypoints::Waypoints>,
     rec: Res<RecordState>,
+    seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
     clock: Res<SeqClock>,
     mut q: Query<&mut OrbitCam>,
@@ -221,26 +222,33 @@ fn flypath(
     if n < 2 {
         return;
     }
-    let legs = (n - 1) as f32; // a full pass takes `secs` per leg → secs * legs seconds
+    let legs = (n - 1) as f32;
     let p = if rec.dir.is_some() {
-        let Some(state) = &state else { return };
+        let (Some(seq), Some(state)) = (&seq, &state) else {
+            return;
+        };
         if !state.built {
             return;
         }
-        // recording = the demo: each part flies one full pass at `secs` per leg, ALTERNATING
-        // direction (even parts first→last, odd parts last→first). That keeps the camera position
-        // continuous across the part boundary — at the morph it's already at the last marker and
-        // simply reverses, instead of snapping back to the first. Size parts so hold+morph ≥
-        // secs*legs, or the pass is cut at the boundary.
-        let idx = active_part(&state.starts, clock.t);
-        let local = ((clock.t - state.starts[idx]) / (secs * legs)).clamp(0.0, 1.0);
+        // recording = the demo: the path fills each part's on-screen window (its slice of the
+        // timeline), ALTERNATING direction (even parts first→last, odd parts last→first). Filling
+        // the window keeps the camera always moving — it reaches the turn-marker exactly as the
+        // morph begins, then reverses through it: no dead hold before the transition, no jump.
+        // (So a part's flyby lasts its hold; live still paces by `secs` per leg.)
+        let starts = &state.starts;
+        let idx = active_part(starts, clock.t);
+        let part_end = starts
+            .get(idx + 1)
+            .copied()
+            .unwrap_or_else(|| show_end(&seq.parts, starts));
+        let local = ((clock.t - starts[idx]) / (part_end - starts[idx]).max(0.1)).clamp(0.0, 1.0);
         if idx % 2 == 0 {
             local
         } else {
             1.0 - local
         }
     } else {
-        // live: ping-pong there-and-back at the same per-leg pace, looping for preview.
+        // live: ping-pong there-and-back at `secs` per leg, looping for preview.
         pingpong((clock.t / (2.0 * secs * legs)).fract())
     };
     let Some(w) = waypoints::pose_at(&marks.list, p) else {
