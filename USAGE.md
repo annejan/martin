@@ -84,6 +84,8 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_SHOT` | — | Capture a single headless screenshot to this path, then exit ~2 s later. |
 | `MARTIN_SHOT_AT` | `6.0` | When (seconds) to take the `MARTIN_SHOT`. |
 | `MARTIN_FULLSCREEN` | off | `=1` starts borderless-fullscreen; toggle live with **F11 / F**. (Ignored while recording — that needs the fixed window.) |
+| `MARTIN_NORMALIZE` | on | Each beat is centred + uniformly scaled (positions *and* gaussian sizes) so its largest dimension ≈ 2 units. Makes a 200-unit COLMAP scene and a 1-unit TRELLIS object share one scale. `=0` keeps raw scales. |
+| `MARTIN_ROT` | — | `rx,ry,rz` euler **degrees** applied to the cloud — e.g. stand a COLMAP scene upright for a "normal" POV. Default = the portrait flip (gives scenes their abstract sideways look). |
 
 ---
 

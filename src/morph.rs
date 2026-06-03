@@ -69,3 +69,49 @@ pub fn ball_of(shape: &[Gaussian3d], shell_r: f32) -> Vec<Gaussian3d> {
         })
         .collect()
 }
+
+/// Largest bounding-box dimension of a gaussian set (its "size" in world units).
+pub fn extent_of(v: &[Gaussian3d]) -> f32 {
+    if v.is_empty() {
+        return 0.0;
+    }
+    let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
+    for g in v {
+        let p = g.position_visibility.position;
+        for k in 0..3 {
+            lo[k] = lo[k].min(p[k]);
+            hi[k] = hi[k].max(p[k]);
+        }
+    }
+    (0..3).map(|k| hi[k] - lo[k]).fold(0.0, f32::max)
+}
+
+/// Center a gaussian set at the origin and uniformly scale it so its largest bbox dimension
+/// is `target` units — scaling positions AND each gaussian's size together. Makes wildly
+/// different sources (a huge COLMAP scene vs a tiny TRELLIS object) render at one consistent
+/// "normal" scale, so they frame well and morph cleanly between each other.
+pub fn normalize_to(v: &mut [Gaussian3d], target: f32) {
+    if v.is_empty() {
+        return;
+    }
+    let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
+    for g in v.iter() {
+        let p = g.position_visibility.position;
+        for k in 0..3 {
+            lo[k] = lo[k].min(p[k]);
+            hi[k] = hi[k].max(p[k]);
+        }
+    }
+    let center = [(lo[0] + hi[0]) * 0.5, (lo[1] + hi[1]) * 0.5, (lo[2] + hi[2]) * 0.5];
+    let extent = (0..3).map(|k| hi[k] - lo[k]).fold(0.0, f32::max).max(1e-6);
+    let s = target / extent;
+    for g in v.iter_mut() {
+        let p = g.position_visibility.position;
+        let vis = g.position_visibility.visibility;
+        g.position_visibility =
+            [(p[0] - center[0]) * s, (p[1] - center[1]) * s, (p[2] - center[2]) * s, vis].into();
+        let sc = g.scale_opacity.scale;
+        let op = g.scale_opacity.opacity;
+        g.scale_opacity = [sc[0] * s, sc[1] * s, sc[2] * s, op].into();
+    }
+}

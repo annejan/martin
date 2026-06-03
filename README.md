@@ -169,6 +169,8 @@ are particles in the *same* system, so any of these morphs into any other.
 | `MARTIN_RECORD=/dir` | Dump one PNG per frame (used by `record.sh`). |
 | `MARTIN_SHOT=/x.png` `MARTIN_SHOT_AT=<s>` | Headless screenshot at time `s`, then exit. |
 | `MARTIN_FULLSCREEN=1` | Start borderless-fullscreen; toggle live with **F11 / F**. |
+| `MARTIN_NORMALIZE=0` | Disable per-beat centring + uniform scale-to-common-size (on by default — lets a huge COLMAP scene and a tiny TRELLIS object share one "normal" scale). |
+| `MARTIN_ROT=rx,ry,rz` | Orient the cloud (euler degrees) — e.g. stand a COLMAP scene upright. Default = portrait flip. |
 
 **`MARTIN_SEQ`** is a `;`-separated list of *beats* (or a path to a file of them, one
 per line; `#` comments allowed). Each beat morphs into the next, through a ball cloud:

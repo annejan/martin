@@ -39,6 +39,7 @@ const FRONT_YAW: f32 = 1.4; // camera faces the subject head-on (single-image sp
 const SWAY: f32 = 0.25; // gentle left-right sway amplitude — never reaches the hollow back
 const SIDE_SEP: f32 = 1.2; // half-spacing when a beat places several splats side by side
 const BALL_SHELL: f32 = 0.9; // intro ball-shell radius, in units of the framed radius
+const NORMALIZE_EXTENT: f32 = 2.0; // each beat is centered + scaled so its largest dim = this
 
 /// `.ply` splats are Y-down → rotate the cloud 180° about X for Y-up. Text is built Y-down
 /// too (see `build_text_gaussians`), so one transform makes text *and* splats upright.
@@ -268,11 +269,25 @@ fn build_sequence(
 
     // read every beat's gaussians once, so count==0 can mean "size N to the largest beat"
     // (every beat is then resampled to that single N — required by the shared morph output).
-    let raws: Vec<Vec<Gaussian3d>> = seq
+    let mut raws: Vec<Vec<Gaussian3d>> = seq
         .beats
         .iter()
         .map(|b| beat_gaussians(&b.content, &state, &assets))
         .collect();
+    // Normalize each beat to a common "normal" size (MARTIN_NORMALIZE=0 to disable). Sources
+    // vary wildly — a COLMAP scene spans hundreds of units, a TRELLIS object ~1 — so without
+    // this they'd frame inconsistently and morph badly. We log the raw extent first.
+    let normalize = std::env::var("MARTIN_NORMALIZE").map(|v| v != "0").unwrap_or(true);
+    for (raw, beat) in raws.iter_mut().zip(&seq.beats) {
+        let label = match &beat.content {
+            BeatContent::Text(s) => format!("text \"{s}\""),
+            BeatContent::Splats(list) => list.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>().join("+"),
+        };
+        info!("beat {label}: raw extent {:.2} units ({} gaussians)", crate::morph::extent_of(raw), raw.len());
+        if normalize {
+            crate::morph::normalize_to(raw, NORMALIZE_EXTENT);
+        }
+    }
     let n = if seq.count > 0 {
         seq.count
     } else {
@@ -300,6 +315,19 @@ fn build_sequence(
     let radius = ((union_hi - union_lo) * 0.5).length().max(0.1);
     let intro = assets.add(PlanarGaussian3d::from(ball_of(&shape0, radius * BALL_SHELL)));
 
+    // MARTIN_ROT="rx,ry,rz" (euler degrees) orients the cloud — e.g. to stand a COLMAP scene
+    // upright for a "normal" POV. Default = cloud_base_rotation (flip-X, right for portrait
+    // splats; gives scenes their abstract sideways look).
+    let entity_rot = std::env::var("MARTIN_ROT")
+        .ok()
+        .and_then(|s| {
+            let n: Vec<f32> = s.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+            (n.len() == 3).then(|| {
+                Quat::from_euler(EulerRot::XYZ, n[0].to_radians(), n[1].to_radians(), n[2].to_radians())
+            })
+        })
+        .unwrap_or_else(cloud_base_rotation);
+
     let entity = commands
         .spawn((
             GaussianInterpolate::<Gaussian3d> {
@@ -314,13 +342,13 @@ fn build_sequence(
                 bulge: 0.0,
                 ..default()
             },
-            Transform::from_rotation(cloud_base_rotation()),
+            Transform::from_rotation(entity_rot),
         ))
         .id();
 
-    // frame the union once (camera never pops between beats); flip the centre to match the
-    // entity's cloud_base_rotation so the camera looks at the post-transform world centre.
-    let center = cloud_base_rotation() * ((union_lo + union_hi) * 0.5);
+    // frame the union once (camera never pops between beats); apply the same rotation to the
+    // centre so the camera looks at the post-transform world centre.
+    let center = entity_rot * ((union_lo + union_hi) * 0.5);
     for mut c in &mut cam {
         c.center = center;
         c.radius = radius * 1.7;
