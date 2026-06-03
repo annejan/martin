@@ -1,4 +1,4 @@
-# dogdemo — CUDA-free Gaussian-splat morphing on AMD
+# martin — CUDA-free Gaussian-splat morphing on AMD
 
 [![build](https://github.com/annejan/evoke-martin/actions/workflows/build.yml/badge.svg)](https://github.com/annejan/evoke-martin/actions/workflows/build.yml)
 
@@ -10,7 +10,7 @@ RADV; built for an AMD Ryzen AI 7 PRO 350 / Radeon 860M on openSUSE Tumbleweed).
 cargo +nightly run --release     # a splat assembles out of a ball cloud
 ```
 
-See **[`USAGE.md`](USAGE.md)** for the full env-var reference and the `DOGDEMO_SEQ`
+See **[`USAGE.md`](USAGE.md)** for the full env-var reference and the `MARTIN_SEQ`
 timeline. The repo also ships the CUDA-free **splat-creation pipeline** that produces
 the `.ply` assets the demo renders:
 
@@ -89,7 +89,7 @@ loader rejects SuperSplat's *compressed* format).
 ### 4. Drop it in the demo
 
 ```bash
-DOGDEMO_PLY=assets/your.ply cargo run --release
+MARTIN_PLY=assets/your.ply cargo run --release
 ```
 
 For the **morph** (sources → target), prep all the splats the *same way*: same
@@ -115,25 +115,25 @@ iGPU (the full ~1.15M runs ~20 fps).
 
 Loads Gaussian splats, flies a camera around them, and **morphs them into one another**
 — each splat assembles out of a ball cloud, then the next morphs in (per-Gaussian, on the
-GPU), with HDR bloom on black. It's all one **sequence engine**; the `DOGDEMO_*` env vars
+GPU), with HDR bloom on black. It's all one **sequence engine**; the `MARTIN_*` env vars
 compose the show. Built on Bevy 0.18 + `bevy_gaussian_splatting` 7.0.1 (vendored fork in
 `vendor/`), wgpu → Vulkan (nightly toolchain, pinned).
 
 ```bash
 cargo run                          # window: a splat assembles from a ball cloud
-#   ↑/↓ zoom · ←/→ raise/lower · Space = restart the show
+#   ↑/↓ zoom · ←/→ raise/lower · Space = restart · F11/F = fullscreen
 ./record.sh out.mp4                # render the whole timeline to ./out.mp4
 ```
 
 By default the splat loads from `assets/aegg.ply`; point it at any file with
-`DOGDEMO_PLY=assets/your.ply cargo run --release`. Add
-`DOGDEMO_PLY2=second.ply` (same folder) for a **second splat beside it**, and
-`DOGDEMO_REFORM=dog.ply` so the source splat(s) **morph into that one** — a
+`MARTIN_PLY=assets/your.ply cargo run --release`. Add
+`MARTIN_PLY2=second.ply` (same folder) for a **second splat beside it**, and
+`MARTIN_REFORM=dog.ply` so the source splat(s) **morph into that one** — a
 per-Gaussian `GaussianInterpolate` blend where each source is paired to the target by
 **Morton (Z-order) spatial sort**, so particles *flow* into their nearest part of the
 target (no teleporting) and colours/positions lerp together (e.g. two Martins → one
 dog: each becomes a half of the dog). A front-facing camera sway keeps the hollow back
-of single-image splats out of frame (`DOGDEMO_YAW=<rad>` pins the angle for inspection).
+of single-image splats out of frame (`MARTIN_YAW=<rad>` pins the angle for inspection).
 **Export
 uncompressed/standard PLY from SuperSplat** — the loader rejects SuperSplat's
 *compressed* format (`missing required properties`). Linux build deps:
@@ -142,7 +142,7 @@ uncompressed/standard PLY from SuperSplat** — the loader rejects SuperSplat's
 **Get a subject splat:** capture with `pipeline/splat.sh` (COLMAP→Brush), or generate one
 from a single image with **[TRELLIS](https://huggingface.co/spaces/trellis-community/TRELLIS)**
 (image → 3DGS `.ply`, runs in the browser) — drop it in `assets/` and
-`DOGDEMO_PLY=assets/dog.ply cargo run --release`.
+`MARTIN_PLY=assets/dog.ply cargo run --release`.
 
 **Prebuilt binaries:** GitHub Actions builds release binaries for **Linux,
 Windows, and macOS** on every push — grab them from the artifacts of the latest
@@ -157,24 +157,25 @@ are particles in the *same* system, so any of these morphs into any other.
 
 | Env var | Effect |
 |---|---|
-| `DOGDEMO_PLY=/abs/x.ply` | Load a splat (sets the asset folder for the others). |
-| `DOGDEMO_PLY2=y.ply` | A second splat beside the first (the two morph together). |
-| `DOGDEMO_REFORM=dog.ply` | The source(s) **morph** into this one (Morton-paired particle flow). |
-| `DOGDEMO_TEXT="MARTIN GAUS"` | **Splat-text**: the title assembles out of a ball cloud (glowing). |
-| `DOGDEMO_SEQ="…"` | **Timeline** — a chain of beats that morph into one another (see below). |
-| `DOGDEMO_BULGE=0.9` | Ball-cloud explosiveness at a morph's midpoint (`0` = clean reorder). |
-| `DOGDEMO_MORPH_COUNT=250000` | Gaussian budget (`0`=max ~1.15M ≈ 20 fps; 250k ≈ 60 fps on the iGPU). |
-| `DOGDEMO_YAW=1.4` | Pin the camera angle (no sway). |
-| `DOGDEMO_FPS=1` | Log frame time / FPS. |
-| `DOGDEMO_RECORD=/dir` | Dump one PNG per frame (used by `record.sh`). |
-| `DOGDEMO_SHOT=/x.png` `DOGDEMO_SHOT_AT=<s>` | Headless screenshot at time `s`, then exit. |
+| `MARTIN_PLY=/abs/x.ply` | Load a splat (sets the asset folder for the others). |
+| `MARTIN_PLY2=y.ply` | A second splat beside the first (the two morph together). |
+| `MARTIN_REFORM=dog.ply` | The source(s) **morph** into this one (Morton-paired particle flow). |
+| `MARTIN_TEXT="MARTIN GAUS"` | **Splat-text**: the title assembles out of a ball cloud (glowing). |
+| `MARTIN_SEQ="…"` | **Timeline** — a chain of beats that morph into one another (see below). |
+| `MARTIN_BULGE=0.9` | Ball-cloud explosiveness at a morph's midpoint (`0` = clean reorder). |
+| `MARTIN_MORPH_COUNT=250000` | Gaussian budget (`0`=max ~1.15M ≈ 20 fps; 250k ≈ 60 fps on the iGPU). |
+| `MARTIN_YAW=1.4` | Pin the camera angle (no sway). |
+| `MARTIN_FPS=1` | Log frame time / FPS. |
+| `MARTIN_RECORD=/dir` | Dump one PNG per frame (used by `record.sh`). |
+| `MARTIN_SHOT=/x.png` `MARTIN_SHOT_AT=<s>` | Headless screenshot at time `s`, then exit. |
+| `MARTIN_FULLSCREEN=1` | Start borderless-fullscreen; toggle live with **F11 / F**. |
 
-**`DOGDEMO_SEQ`** is a `;`-separated list of *beats* (or a path to a file of them, one
+**`MARTIN_SEQ`** is a `;`-separated list of *beats* (or a path to a file of them, one
 per line; `#` comments allowed). Each beat morphs into the next, through a ball cloud:
 
 ```
 text:STRING               # splat-text (glowing)
-splat:a.ply               # a splat (filename in the DOGDEMO_PLY folder)
+splat:a.ply               # a splat (filename in the MARTIN_PLY folder)
 splat:a.ply+b.ply         # several splats, auto-arranged side by side
 …any beat… @hold,morph,bulge   # optional per-beat timing (seconds) + ball amount
 ```
@@ -182,8 +183,8 @@ splat:a.ply+b.ply         # several splats, auto-arranged side by side
 Example — the full show (title → dog → greetings → credits):
 
 ```bash
-DOGDEMO_PLY=assets/doggo.ply \
-DOGDEMO_SEQ="text:MARTIN GAUS @2,3,0; splat:doggo.ply @2,3,0.9; text:GREETINGS @1.5,3,0.9; text:CODE ANNEJAN @2,3,0.6" \
+MARTIN_PLY=assets/doggo.ply \
+MARTIN_SEQ="text:MARTIN GAUS @2,3,0; splat:doggo.ply @2,3,0.9; text:GREETINGS @1.5,3,0.9; text:CODE ANNEJAN @2,3,0.6" \
 cargo +nightly run --release
 #   ./record.sh out.mp4   renders the whole timeline to video
 ```

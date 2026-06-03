@@ -1,15 +1,16 @@
-//! dogdemo — fly a camera around Gaussian splats while they morph and reassemble.
+//! martin — fly a camera around Gaussian splats while they morph and reassemble.
 //!
 //! ONE engine: everything is a **sequence of beats** that morph into one another. A beat
 //! is splat-text or one-or-more splats; each beat assembles in from a ball cloud, then the
-//! next beat morphs in (Morton-paired, with a `sin(pi*t)` ball pulse). The `DOGDEMO_PLY /
+//! next beat morphs in (Morton-paired, with a `sin(pi*t)` ball pulse). The `MARTIN_PLY /
 //! _PLY2 / _REFORM / _TEXT` env vars are just shorthands that build a sequence;
-//! `DOGDEMO_SEQ` is the full timeline. See `USAGE.md` for the env reference.
+//! `MARTIN_SEQ` is the full timeline. See `USAGE.md` for the env reference.
 //!
 //! Rendering: one `GaussianInterpolate` entity (the crate's GPU blend), retargeted per
 //! beat; depth-sorted by GPU radix (reads live morphed positions → no holes); HDR `Bloom`
 //! on black makes bright splats glow. The ball pulse is a shader edit in the vendored
-//! crate (see vendor/.../CHANGES.md). Live: ↑/↓ zoom · ←/→ raise/lower · Space = restart.
+//! crate (see vendor/.../CHANGES.md). Live: ↑/↓ zoom · ←/→ raise/lower · Space = restart ·
+//! F11/F = fullscreen (or start fullscreen with MARTIN_FULLSCREEN=1).
 
 use bevy::prelude::*;
 use bevy::app::AppExit;
@@ -20,6 +21,7 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::post_process::bloom::Bloom;
 use bevy::render::view::Hdr;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
+use bevy::window::{MonitorSelection, WindowMode};
 use bevy_gaussian_splatting::morph::interpolate::GaussianInterpolate;
 use bevy_gaussian_splatting::sort::SortMode;
 use bevy_gaussian_splatting::{
@@ -70,7 +72,7 @@ impl Default for OrbitCam {
     }
 }
 
-/// DOGDEMO_YAW=<rad>: pin the camera to a fixed orbit angle (for inspecting a splat).
+/// MARTIN_YAW=<rad>: pin the camera to a fixed orbit angle (for inspecting a splat).
 #[derive(Resource)]
 struct CamOverride(Option<f32>);
 
@@ -118,6 +120,18 @@ fn controls(
     }
 }
 
+/// F11 / F: toggle borderless fullscreen at runtime.
+fn fullscreen_toggle(keys: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut Window>) {
+    if keys.just_pressed(KeyCode::F11) || keys.just_pressed(KeyCode::KeyF) {
+        for mut w in &mut windows {
+            w.mode = match w.mode {
+                WindowMode::Windowed => WindowMode::BorderlessFullscreen(MonitorSelection::Current),
+                _ => WindowMode::Windowed,
+            };
+        }
+    }
+}
+
 // ===========================================================================================
 // Sequence — the one timeline engine
 // ===========================================================================================
@@ -162,7 +176,7 @@ struct SeqClock {
     t: f32,
 }
 
-/// Parse `DOGDEMO_SEQ`: a file path OR an inline string. Beats are `;`/newline-separated.
+/// Parse `MARTIN_SEQ`: a file path OR an inline string. Beats are `;`/newline-separated.
 /// Each beat: `text:STRING` or `splat:a.ply` (or `a.ply+b.ply` for side-by-side), optional
 /// trailing `@hold,morph,bulge`. `#` comments and blank lines are skipped.
 fn parse_seq(spec: &str) -> Vec<Beat> {
@@ -399,7 +413,7 @@ fn seq_no_cull(
 // Headless capture: deterministic recorder + single screenshot
 // ===========================================================================================
 
-/// DOGDEMO_RECORD=<dir>: dump one PNG per frame across the whole timeline, then exit.
+/// MARTIN_RECORD=<dir>: dump one PNG per frame across the whole timeline, then exit.
 #[derive(Resource)]
 struct RecordState {
     dir: Option<String>,
@@ -447,7 +461,7 @@ fn record_driver(
     rec.i += 1;
 }
 
-/// DOGDEMO_SHOT=<path> [DOGDEMO_SHOT_AT=<s>]: one headless screenshot at time `s`, then exit.
+/// MARTIN_SHOT=<path> [MARTIN_SHOT_AT=<s>]: one headless screenshot at time `s`, then exit.
 #[derive(Resource)]
 struct ShotConfig {
     path: Option<String>,
@@ -473,7 +487,7 @@ fn shot_driver(
     }
 }
 
-/// DOGDEMO_FPS=1: log smoothed FPS + frame-time + timeline clock every ~0.5s.
+/// MARTIN_FPS=1: log smoothed FPS + frame-time + timeline clock every ~0.5s.
 #[derive(Resource)]
 struct FpsLog {
     enabled: bool,
@@ -499,42 +513,42 @@ fn fps_log(time: Res<Time>, clock: Res<SeqClock>, mut f: ResMut<FpsLog>) {
 // Wiring
 // ===========================================================================================
 
-/// Build the show: `DOGDEMO_SEQ` if set, else a shorthand from `DOGDEMO_TEXT` /
-/// `DOGDEMO_PLY(+_PLY2)(+_REFORM)`. Returns the sequence + the asset root (the .ply folder).
+/// Build the show: `MARTIN_SEQ` if set, else a shorthand from `MARTIN_TEXT` /
+/// `MARTIN_PLY(+_PLY2)(+_REFORM)`. Returns the sequence + the asset root (the .ply folder).
 fn sequence_from_env() -> (Sequence, Option<String>) {
-    let count_default = if std::env::var("DOGDEMO_SEQ").is_ok() { 200_000 } else { 0 };
-    let count = std::env::var("DOGDEMO_MORPH_COUNT")
+    let count_default = if std::env::var("MARTIN_SEQ").is_ok() { 200_000 } else { 0 };
+    let count = std::env::var("MARTIN_MORPH_COUNT")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(count_default);
 
-    if let Ok(spec) = std::env::var("DOGDEMO_SEQ") {
-        // asset root = the .ply folder (so `splat:` filenames resolve); DOGDEMO_PLY sets it.
-        let root = std::env::var("DOGDEMO_PLY").ok().and_then(parent_dir);
+    if let Ok(spec) = std::env::var("MARTIN_SEQ") {
+        // asset root = the .ply folder (so `splat:` filenames resolve); MARTIN_PLY sets it.
+        let root = std::env::var("MARTIN_PLY").ok().and_then(parent_dir);
         return (Sequence { beats: parse_seq(&spec), count }, root);
     }
 
-    if let Ok(text) = std::env::var("DOGDEMO_TEXT") {
+    if let Ok(text) = std::env::var("MARTIN_TEXT") {
         let beat = Beat { content: BeatContent::Text(text), hold: 2.0, morph: 3.0, bulge: 0.0 };
         return (Sequence { beats: vec![beat], count }, None);
     }
 
     // splat shorthand: PLY (+ PLY2) as beat 0; REFORM (if any) as beat 1.
-    let primary = std::env::var("DOGDEMO_PLY").ok();
+    let primary = std::env::var("MARTIN_PLY").ok();
     let root = primary.as_deref().and_then(|p| parent_dir(p.to_string()));
     let name1 = primary.as_deref().map(file_name_of).unwrap_or_else(|| "aegg.ply".into());
     let mut names = vec![name1];
-    if let Ok(p2) = std::env::var("DOGDEMO_PLY2") {
+    if let Ok(p2) = std::env::var("MARTIN_PLY2") {
         names.push(file_name_of(&p2));
     }
-    let bulge = std::env::var("DOGDEMO_BULGE").ok().and_then(|s| s.parse().ok()).unwrap_or(0.9);
+    let bulge = std::env::var("MARTIN_BULGE").ok().and_then(|s| s.parse().ok()).unwrap_or(0.9);
     let mut beats = vec![Beat {
         content: BeatContent::Splats(side_by_side(names.iter().map(String::as_str))),
         hold: 2.0,
         morph: 3.0,
         bulge: 0.0,
     }];
-    if let Ok(reform) = std::env::var("DOGDEMO_REFORM") {
+    if let Ok(reform) = std::env::var("MARTIN_REFORM") {
         beats.push(Beat {
             content: BeatContent::Splats(vec![(file_name_of(&reform), Vec3::ZERO)]),
             hold: 2.0,
@@ -555,10 +569,18 @@ fn parent_dir(p: String) -> Option<String> {
 fn main() {
     let (sequence, asset_root) = sequence_from_env();
 
+    // MARTIN_FULLSCREEN=1 → start borderless-fullscreen (ignored while recording, which
+    // needs the fixed 1280×720 window for uniform frames). Toggle live with F11 / F.
+    let fullscreen = std::env::var("MARTIN_FULLSCREEN").is_ok() && std::env::var("MARTIN_RECORD").is_err();
     let mut plugins = DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
-            title: "dogdemo — splat fly-around".into(),
+            title: "martin — splat fly-around".into(),
             resolution: (1280, 720).into(), // fixed size so recorded frames are uniform
+            mode: if fullscreen {
+                WindowMode::BorderlessFullscreen(MonitorSelection::Current)
+            } else {
+                WindowMode::Windowed
+            },
             ..default()
         }),
         ..default()
@@ -573,15 +595,15 @@ fn main() {
         .insert_resource(sequence)
         .init_resource::<SeqClock>()
         .insert_resource(ClearColor(Color::BLACK))
-        .insert_resource(CamOverride(std::env::var("DOGDEMO_YAW").ok().and_then(|s| s.parse().ok())))
-        .insert_resource(FpsLog { enabled: std::env::var("DOGDEMO_FPS").is_ok(), accum: 0.0, frames: 0 })
+        .insert_resource(CamOverride(std::env::var("MARTIN_YAW").ok().and_then(|s| s.parse().ok())))
+        .insert_resource(FpsLog { enabled: std::env::var("MARTIN_FPS").is_ok(), accum: 0.0, frames: 0 })
         .insert_resource(ShotConfig {
-            path: std::env::var("DOGDEMO_SHOT").ok(),
-            at: std::env::var("DOGDEMO_SHOT_AT").ok().and_then(|s| s.parse().ok()).unwrap_or(6.0),
+            path: std::env::var("MARTIN_SHOT").ok(),
+            at: std::env::var("MARTIN_SHOT_AT").ok().and_then(|s| s.parse().ok()).unwrap_or(6.0),
             done: false,
         })
         .insert_resource(RecordState {
-            dir: std::env::var("DOGDEMO_RECORD").ok(),
+            dir: std::env::var("MARTIN_RECORD").ok(),
             dt: 1.0 / 60.0,
             yaw_step: 2.0 * PI / 480.0, // ~8s gentle sway period
             i: 0,
@@ -598,6 +620,7 @@ fn main() {
                 record_driver,
                 orbit_camera,
                 controls,
+                fullscreen_toggle,
                 shot_driver,
                 fps_log,
             ),

@@ -49,13 +49,13 @@ jobs:
 
       - name: Report binary size
         shell: bash
-        run: ls -lh target/release/dogdemo* 2>/dev/null || true
+        run: ls -lh target/release/martin* 2>/dev/null || true
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: dogdemo-${{ matrix.os }}
+          name: martin-${{ matrix.os }}
           path: |
-            target/release/dogdemo
-            target/release/dogdemo.exe
+            target/release/martin
+            target/release/martin.exe
           if-no-files-found: ignore

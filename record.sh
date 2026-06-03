@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Render the dogdemo timeline to an mp4 (headless deterministic frame capture + ffmpeg).
-# Usage: ./record.sh [output.mp4]   (inherits any DOGDEMO_* env vars)
+# Render the martin timeline to an mp4 (headless deterministic frame capture + ffmpeg).
+# Usage: ./record.sh [output.mp4]   (inherits any MARTIN_* env vars)
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-OUT="${1:-$HERE/dogdemo.mp4}"
+OUT="${1:-$HERE/martin.mp4}"
 FR="$(mktemp -d)"
 export DISPLAY="${DISPLAY:-:0}"
 
-echo "==> building dogdemo"
+echo "==> building martin"
 cargo +nightly build --manifest-path "$HERE/Cargo.toml"
-BIN="$(find "$HERE/target/debug" -maxdepth 1 -type f -executable -name dogdemo | head -n1)"
+BIN="$(find "$HERE/target/debug" -maxdepth 1 -type f -executable -name martin | head -n1)"
 
 echo "==> recording the timeline -> $FR"
-DOGDEMO_RECORD="$FR" BEVY_ASSET_ROOT="$HERE" "$BIN"
+MARTIN_RECORD="$FR" BEVY_ASSET_ROOT="$HERE" "$BIN"
 
 echo "==> assembling $OUT"
 ffmpeg -y -framerate 60 -start_number 0 -i "$FR/frame_%05d.png" \

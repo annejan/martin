@@ -64,5 +64,5 @@ positions → no holes). Candidates to **upstream as a PR**.
 ## Not a fork (for reference)
 - `sh0` vs `sh3`: feature selection in `../../Cargo.toml`.
 - `assets/font.ttf`, `build_text_gaussians`, the `GaussianInterpolate` morph, the
-  `DOGDEMO_SEQ` timeline: all live in the **app** (`../../src/main.rs`) and use the crate's
+  `MARTIN_SEQ` timeline: all live in the **app** (`../../src/main.rs`) and use the crate's
   public API — zero vendor changes.
