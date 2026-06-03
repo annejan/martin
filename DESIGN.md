@@ -722,9 +722,11 @@ lead-in). **Mode 0 reproduces today bit-for-bit** by never touching `local`.
   max: vec4`. So the new fields must be **appended after `max: vec4` (the true
   struct end)** — **NOT** after `bulge`, which would shift `num_classes`,
   `color_space`, `min`, `max` and corrupt every offset (`CloudUniform` mirrors this
-  order at `mod.rs:979-983`). This one location is the difference between a clean PR
+  order at `mod.rs:970-983`, constructed at `mod.rs:1031-1048`). This one location is
+  the difference between a clean PR
   and silently garbage uniforms. (Note `CloudSettings` is *richer* than the uniform
-  — it also has `time_scale`/`num_classes`/`color_space`, `settings.rs:71-80` — so
+  — it also has `time_scale`/`num_classes`/`color_space`, `gaussian/settings.rs:71-76`
+  (struct 60-81) — so
   "identical footprint as `bulge`" is true of the *uniform*, not the whole settings
   struct.)
 - **The GPU sort doesn't see it.** The radix sort is a compute pass over the

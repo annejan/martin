@@ -37,6 +37,7 @@ path = [
     "README.md",
     "ART-DIRECTION.md",
     "DESIGN.md",
+    "SHADER-BLUEPRINT.md",
     "record.sh",
     "pipeline/splat-setup.sh",
     "pipeline/splat.sh",
