@@ -5,7 +5,6 @@ another** — driven entirely by environment variables. There's no config file: 
 the show by combining env vars on the command line.
 
 ```bash
-cd dogdemo
 cargo +nightly run --release        # nightly toolchain is pinned (rust-toolchain.toml)
 ```
 
@@ -31,17 +30,17 @@ Examples:
 
 ```bash
 # Single splat (your own .ply)
-DOGDEMO_PLY=~/Projects/martin/martin.ply cargo +nightly run --release
+DOGDEMO_PLY=assets/martin.ply cargo +nightly run --release
 
 # Two Martins morph into a dog
-DOGDEMO_PLY=~/Projects/martin/martin-peace.ply DOGDEMO_PLY2=martin.ply \
+DOGDEMO_PLY=assets/martin-peace.ply DOGDEMO_PLY2=martin.ply \
 DOGDEMO_REFORM=doggo.ply cargo +nightly run --release
 
 # A glowing title that assembles from particles
 DOGDEMO_TEXT="MARTIN GAUS" cargo +nightly run --release
 
 # A whole show (see "Sequences" below)
-DOGDEMO_PLY=~/Projects/martin/doggo.ply \
+DOGDEMO_PLY=assets/doggo.ply \
 DOGDEMO_SEQ="text:MARTIN GAUS; splat:doggo.ply; text:GREETINGS; text:CODE ANNEJAN" \
 cargo +nightly run --release
 ```
@@ -50,18 +49,18 @@ cargo +nightly run --release
 
 ## Where files are loaded from
 
-`DOGDEMO_PLY` takes an **absolute path**, and its **parent folder becomes the asset
-root**. Every other splat reference (`DOGDEMO_PLY2`, `DOGDEMO_REFORM`, and `splat:` beats
-in a sequence) is then just a **filename in that same folder**:
+The demo's splats live in **`assets/`** — the default asset root — so splat names
+(`DOGDEMO_PLY2`, `DOGDEMO_REFORM`, `splat:` beats) resolve there with no extra setup. To
+load splats from a **different folder**, point `DOGDEMO_PLY` at one of them; its **parent
+folder becomes the asset root** and the other names resolve beside it:
 
 ```bash
-DOGDEMO_PLY=/home/you/splats/martin.ply   # → asset root = /home/you/splats
-DOGDEMO_PLY2=martin-peace.ply              # → /home/you/splats/martin-peace.ply
-DOGDEMO_REFORM=doggo.ply                   # → /home/you/splats/doggo.ply
+DOGDEMO_PLY=/other/dir/martin.ply   # → asset root = /other/dir
+DOGDEMO_PLY2=martin-peace.ply        # → /other/dir/martin-peace.ply
+DOGDEMO_REFORM=doggo.ply             # → /other/dir/doggo.ply
 ```
 
-In **sequence mode** the splat referenced by `DOGDEMO_PLY` isn't shown; it's only used to
-set the asset root, so point it at any `.ply` in the folder your beats live in.
+(In a sequence, `DOGDEMO_PLY` itself need not appear in the beats — it just sets the root.)
 
 > **Export uncompressed / standard PLY** (e.g. from [SuperSplat](https://superspl.at/editor)).
 > The loader rejects SuperSplat's *compressed* format (`missing required properties`).
@@ -72,7 +71,7 @@ set the asset root, so point it at any `.ply` in the folder your beats live in.
 
 | Env var | Default | What it does |
 |---|---|---|
-| `DOGDEMO_PLY` | `assets/aegg.ply` | Primary splat (absolute path); sets the asset folder for the rest. |
+| `DOGDEMO_PLY` | `assets/aegg.ply` | Primary splat / asset-folder override — its parent folder becomes the asset root. |
 | `DOGDEMO_PLY2` | — | A second splat, placed beside the first. |
 | `DOGDEMO_REFORM` | — | Morph target: the source splat(s) turn into this one. |
 | `DOGDEMO_TEXT` | — | Splat-text: this string assembles out of a ball cloud (glowing). |
@@ -130,7 +129,7 @@ The optional trailing `@hold,morph,bulge` sets, in **seconds** (and ball amount)
 **Inline example — a full show:**
 
 ```bash
-DOGDEMO_PLY=~/Projects/martin/doggo.ply \
+DOGDEMO_PLY=assets/doggo.ply \
 DOGDEMO_SEQ="text:MARTIN GAUS @2,2.5,0; splat:doggo.ply @2,3,0.9; text:GREETINGS @1.5,2.5,0.9; text:DEFEEST CINDER @1.5,2.5,0.7; text:CODE ANNEJAN @2,2.5,0.6" \
 cargo +nightly run --release
 ```
@@ -138,7 +137,7 @@ cargo +nightly run --release
 **File example** — put this in `show.seq`:
 
 ```
-# Martin Gaus — Evoke
+# Martin Gaus — title → two faces → dog → greetings → credits
 text:MARTIN GAUS @2.5,3,0
 splat:martin.ply+martin-peace.ply @2,3,0.6   # the two Martins, side by side
 splat:doggo.ply @2,3.5,0.9                    # …become the dog
@@ -149,7 +148,7 @@ text:CODE ANNEJAN @2.5,3,0.6
 …and run it:
 
 ```bash
-DOGDEMO_PLY=~/Projects/martin/doggo.ply DOGDEMO_SEQ=~/show.seq cargo +nightly run --release
+DOGDEMO_PLY=assets/doggo.ply DOGDEMO_SEQ=~/show.seq cargo +nightly run --release
 ```
 
 All beats are resampled to one gaussian count (`DOGDEMO_MORPH_COUNT`, default 200k in
@@ -164,7 +163,7 @@ ffmpeg. It inherits all the `DOGDEMO_*` env vars:
 
 ```bash
 # from the repo root
-DOGDEMO_PLY=~/Projects/martin/doggo.ply \
+DOGDEMO_PLY=assets/doggo.ply \
 DOGDEMO_SEQ="text:MARTIN GAUS; splat:doggo.ply; text:CODE ANNEJAN" \
 ./record.sh my_show.mp4
 ```

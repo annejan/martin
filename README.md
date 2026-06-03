@@ -1,24 +1,32 @@
-# martin — CUDA-free Gaussian Splatting on AMD / openSUSE
+# dogdemo — CUDA-free Gaussian-splat morphing on AMD
 
 [![build](https://github.com/annejan/evoke-martin/actions/workflows/build.yml/badge.svg)](https://github.com/annejan/evoke-martin/actions/workflows/build.yml)
 
-Tooling for building 3D Gaussian splats **without CUDA or ROCm** — everything
-runs on CPU + Vulkan (Mesa RADV), targeting an AMD Ryzen AI 7 PRO 350 /
-Radeon 860M (gfx1152) on openSUSE Tumbleweed.
+A standalone **Bevy + Vulkan** demo that morphs 3D Gaussian splats into one another —
+a title, two faces, a dog — entirely **without CUDA or ROCm** (CPU + Vulkan / Mesa
+RADV; built for an AMD Ryzen AI 7 PRO 350 / Radeon 860M on openSUSE Tumbleweed).
 
-## Tools
+```bash
+cargo +nightly run --release     # a splat assembles out of a ball cloud
+```
+
+See **[`USAGE.md`](USAGE.md)** for the full env-var reference and the `DOGDEMO_SEQ`
+timeline. The repo also ships the CUDA-free **splat-creation pipeline** that produces
+the `.ply` assets the demo renders:
+
+## Splat-creation pipeline (`pipeline/`)
 
 | Script | What it does |
 |---|---|
-| `splat-setup.sh` | One-time: installs COLMAP build deps via `zypper`, builds **COLMAP** (CUDA off) and **Brush** (wgpu/Vulkan), symlinks `~/.local/bin/brush`. |
-| `splat.sh` | Pipeline: `video \| image-dir` → ffmpeg frames → COLMAP CPU SfM + undistort → **Brush** training → `.ply`. |
+| `pipeline/splat-setup.sh` | One-time: installs COLMAP build deps via `zypper`, builds **COLMAP** (CUDA off) and **Brush** (wgpu/Vulkan), symlinks `~/.local/bin/brush`. |
+| `pipeline/splat.sh` | `video \| image-dir` → ffmpeg frames → COLMAP CPU SfM + undistort → **Brush** training → `.ply`. |
 
 ### Usage
 
 ```bash
-./splat-setup.sh                 # once
-./splat.sh my_video.mp4          # or:  ./splat.sh ./photos/
-VIEWER=1 ./splat.sh ./photos/    # watch training live in Brush's window
+./pipeline/splat-setup.sh                 # once
+./pipeline/splat.sh my_video.mp4          # or:  ./pipeline/splat.sh ./photos/
+VIEWER=1 ./pipeline/splat.sh ./photos/    # watch training live in Brush's window
 ```
 
 Tunables (env): `FPS`, `MAX_SIZE`, `EXPORT_EVERY`, `VIEWER`.
@@ -62,9 +70,9 @@ giving the computer many views of the same thing so it can work out the 3D shape
 ### 2. Turn the photos into a splat (all CUDA-free, on this machine)
 
 ```bash
-./splat-setup.sh                 # once: builds COLMAP + Brush
-./splat.sh my_dog_video.mp4      # or:  ./splat.sh ./my_photos/
-VIEWER=1 ./splat.sh ./my_photos/ # watch it train live
+./pipeline/splat-setup.sh                 # once: builds COLMAP + Brush
+./pipeline/splat.sh my_dog_video.mp4      # or:  ./pipeline/splat.sh ./my_photos/
+VIEWER=1 ./pipeline/splat.sh ./my_photos/ # watch it train live
 ```
 
 Out comes a `.ply`. (No good photo set yet, or only **one** image? Drop it into
@@ -81,7 +89,7 @@ loader rejects SuperSplat's *compressed* format).
 ### 4. Drop it in the demo
 
 ```bash
-DOGDEMO_PLY=~/path/to/your.ply cargo run --release   # in dogdemo/
+DOGDEMO_PLY=assets/your.ply cargo run --release
 ```
 
 For the **morph** (sources → target), prep all the splats the *same way*: same
@@ -103,23 +111,22 @@ Pick one vibe per scene and keep a morph set consistent. Brush also lets you tun
 **densification** to hit a gaussian budget — ~250k–500k stays a smooth 60 fps on the
 iGPU (the full ~1.15M runs ~20 fps).
 
-## `dogdemo/` — standalone splat demo (Bevy + Vulkan, no CUDA)
+## Running the demo
 
-A standalone executable that loads Gaussian splats, flies a camera around them, and
-**morphs them into one another** — each splat assembles out of a ball cloud, then the
-next morphs in (per-Gaussian, on the GPU), with HDR bloom on black. It's all one
-**sequence engine**; the `DOGDEMO_*` env vars compose the show. Built on Bevy 0.18 +
-`bevy_gaussian_splatting` 7.0.1 (vendored fork in `dogdemo/vendor/`), wgpu → Vulkan
-(nightly toolchain, pinned).
+Loads Gaussian splats, flies a camera around them, and **morphs them into one another**
+— each splat assembles out of a ball cloud, then the next morphs in (per-Gaussian, on the
+GPU), with HDR bloom on black. It's all one **sequence engine**; the `DOGDEMO_*` env vars
+compose the show. Built on Bevy 0.18 + `bevy_gaussian_splatting` 7.0.1 (vendored fork in
+`vendor/`), wgpu → Vulkan (nightly toolchain, pinned).
 
 ```bash
-cd dogdemo && cargo run            # window: a splat assembles from a ball cloud
+cargo run                          # window: a splat assembles from a ball cloud
 #   ↑/↓ zoom · ←/→ raise/lower · Space = restart the show
 ./record.sh out.mp4                # render the whole timeline to ./out.mp4
 ```
 
-By default the splat loads from `dogdemo/assets/aegg.ply`; point it at any file with
-`DOGDEMO_PLY=/abs/path.ply cargo run --release` (no symlink fuss). Add
+By default the splat loads from `assets/aegg.ply`; point it at any file with
+`DOGDEMO_PLY=assets/your.ply cargo run --release`. Add
 `DOGDEMO_PLY2=second.ply` (same folder) for a **second splat beside it**, and
 `DOGDEMO_REFORM=dog.ply` so the source splat(s) **morph into that one** — a
 per-Gaussian `GaussianInterpolate` blend where each source is paired to the target by
@@ -132,10 +139,10 @@ uncompressed/standard PLY from SuperSplat** — the loader rejects SuperSplat's
 *compressed* format (`missing required properties`). Linux build deps:
 `systemd-devel` (libudev) + alsa (and a Vulkan/RADV driver).
 
-**Get a subject splat:** capture with `splat.sh` (COLMAP→Brush), or generate one
+**Get a subject splat:** capture with `pipeline/splat.sh` (COLMAP→Brush), or generate one
 from a single image with **[TRELLIS](https://huggingface.co/spaces/trellis-community/TRELLIS)**
-(image → 3DGS `.ply`, runs in the browser) — then
-`DOGDEMO_PLY=~/Downloads/dog.ply cargo run --release`.
+(image → 3DGS `.ply`, runs in the browser) — drop it in `assets/` and
+`DOGDEMO_PLY=assets/dog.ply cargo run --release`.
 
 **Prebuilt binaries:** GitHub Actions builds release binaries for **Linux,
 Windows, and macOS** on every push — grab them from the artifacts of the latest
@@ -175,8 +182,7 @@ splat:a.ply+b.ply         # several splats, auto-arranged side by side
 Example — the full show (title → dog → greetings → credits):
 
 ```bash
-cd dogdemo
-DOGDEMO_PLY=~/Projects/martin/doggo.ply \
+DOGDEMO_PLY=assets/doggo.ply \
 DOGDEMO_SEQ="text:MARTIN GAUS @2,3,0; splat:doggo.ply @2,3,0.9; text:GREETINGS @1.5,3,0.9; text:CODE ANNEJAN @2,3,0.6" \
 cargo +nightly run --release
 #   ./record.sh out.mp4   renders the whole timeline to video

@@ -10,6 +10,13 @@ permissions:
   contents: read
 
 jobs:
+  reuse:
+    name: REUSE compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fsfe/reuse-action@v5
+
   build:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -17,9 +24,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    defaults:
-      run:
-        working-directory: dogdemo
     steps:
       - uses: actions/checkout@v4
 
@@ -33,14 +37,12 @@ jobs:
             libudev-dev libasound2-dev libwayland-dev libxkbcommon-dev
 
       # Default features require nightly (nightly_generic_alias / GATs);
-      # the exact channel is pinned by dogdemo/rust-toolchain.toml.
+      # the exact channel is pinned by rust-toolchain.toml.
       - name: Install nightly Rust
         uses: dtolnay/rust-toolchain@nightly
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: dogdemo
 
       - name: Build (release)
         run: cargo build --release
@@ -54,6 +56,6 @@ jobs:
         with:
           name: dogdemo-${{ matrix.os }}
           path: |
-            dogdemo/target/release/dogdemo
-            dogdemo/target/release/dogdemo.exe
+            target/release/dogdemo
+            target/release/dogdemo.exe
           if-no-files-found: ignore

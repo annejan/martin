@@ -1,33 +1,33 @@
 version = 1
 
 [[annotations]]
-path = "dogdemo/src/**"
+path = "src/**"
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
 path = [
-    "dogdemo/Cargo.toml",
-    "dogdemo/Cargo.lock",
-    "dogdemo/rust-toolchain.toml",
-    "dogdemo/USAGE.md",
+    "Cargo.toml",
+    "Cargo.lock",
+    "rust-toolchain.toml",
+    "USAGE.md",
 ]
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
-path = "dogdemo/assets/*.ply"
+path = "assets/*.ply"
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
-path = "dogdemo/assets/font.ttf"
+path = "assets/font.ttf"
 SPDX-FileCopyrightText = "2003 Bitstream, Inc."
 SPDX-License-Identifier = "LicenseRef-DejaVu"
 
 [[annotations]]
-path = "dogdemo/vendor/**"
+path = "vendor/**"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 bevy_gaussian_splatting contributors"
 SPDX-License-Identifier = "MIT OR Apache-2.0"
@@ -36,8 +36,8 @@ SPDX-License-Identifier = "MIT OR Apache-2.0"
 path = [
     "README.md",
     "record.sh",
-    "splat-setup.sh",
-    "splat.sh",
+    "pipeline/splat-setup.sh",
+    "pipeline/splat.sh",
     ".gitignore",
     ".github/dependabot.yml",
     ".github/workflows/build.yml",

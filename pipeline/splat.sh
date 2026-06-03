@@ -20,8 +20,8 @@ FPS="${FPS:-2}"
 MAX_SIZE="${MAX_SIZE:-1600}"
 EXPORT_EVERY="${EXPORT_EVERY:-2000}"
 
-command -v colmap >/dev/null || { echo "colmap not found — run ./splat-setup.sh first"; exit 1; }
-command -v brush  >/dev/null || { echo "brush not found — run ./splat-setup.sh (and put ~/.local/bin on PATH)"; exit 1; }
+command -v colmap >/dev/null || { echo "colmap not found — run ./pipeline/splat-setup.sh first"; exit 1; }
+command -v brush  >/dev/null || { echo "brush not found — run ./pipeline/splat-setup.sh (and put ~/.local/bin on PATH)"; exit 1; }
 
 mkdir -p "$WORK/images"
 SEQUENTIAL=0
