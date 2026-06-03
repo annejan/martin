@@ -35,6 +35,7 @@ SPDX-License-Identifier = "MIT OR Apache-2.0"
 [[annotations]]
 path = [
     "README.md",
+    "ART-DIRECTION.md",
     "record.sh",
     "pipeline/splat-setup.sh",
     "pipeline/splat.sh",

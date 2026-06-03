@@ -8,7 +8,7 @@ the show by combining env vars on the command line.
 cargo +nightly run --release        # nightly toolchain is pinned (rust-toolchain.toml)
 ```
 
-It's **one sequence engine**: every run is a list of *beats* (splats or text) that each
+It's **one sequence engine**: every run is a list of *parts* (splats or text) that each
 assemble out of a ball cloud and morph into the next. With no env vars it assembles
 `assets/aegg.ply` from a ball and holds it.
 
@@ -21,10 +21,10 @@ Everything is one timeline. `MARTIN_SEQ` writes it explicitly; the other env var
 
 | If you set… | The sequence it builds |
 |---|---|
-| `MARTIN_SEQ` | exactly the beats you write (the full timeline) |
-| `MARTIN_TEXT` | one beat: that title, assembled from a ball |
-| `MARTIN_PLY` (+ `_PLY2`) (+ `_REFORM`) | the splat(s) as beat 1; the reform target (if any) as beat 2 |
-| *(nothing)* | one beat: `assets/aegg.ply` |
+| `MARTIN_SEQ` | exactly the parts you write (the full timeline) |
+| `MARTIN_TEXT` | one part: that title, assembled from a ball |
+| `MARTIN_PLY` (+ `_PLY2`) (+ `_REFORM`) | the splat(s) as part 1; the reform target (if any) as part 2 |
+| *(nothing)* | one part: `assets/aegg.ply` |
 
 Examples:
 
@@ -50,7 +50,7 @@ cargo +nightly run --release
 ## Where files are loaded from
 
 The demo's splats live in **`assets/`** — the default asset root — so splat names
-(`MARTIN_PLY2`, `MARTIN_REFORM`, `splat:` beats) resolve there with no extra setup. To
+(`MARTIN_PLY2`, `MARTIN_REFORM`, `splat:` parts) resolve there with no extra setup. To
 load splats from a **different folder**, point `MARTIN_PLY` at one of them; its **parent
 folder becomes the asset root** and the other names resolve beside it:
 
@@ -60,7 +60,7 @@ MARTIN_PLY2=martin-peace.ply        # → /other/dir/martin-peace.ply
 MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 ```
 
-(In a sequence, `MARTIN_PLY` itself need not appear in the beats — it just sets the root.)
+(In a sequence, `MARTIN_PLY` itself need not appear in the parts — it just sets the root.)
 
 > **Export uncompressed / standard PLY** (e.g. from [SuperSplat](https://superspl.at/editor)).
 > The loader rejects SuperSplat's *compressed* format (`missing required properties`).
@@ -75,16 +75,17 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_PLY2` | — | A second splat, placed beside the first. |
 | `MARTIN_REFORM` | — | Morph target: the source splat(s) turn into this one. |
 | `MARTIN_TEXT` | — | Splat-text: this string assembles out of a ball cloud (glowing). |
-| `MARTIN_SEQ` | — | A timeline of beats (see [Sequences](#sequences)). Highest precedence. |
-| `MARTIN_BULGE` | `0.9` | Ball-cloud size at a morph's midpoint, in object-radii. `0` = clean "puzzle-box" reorder (no explosion); `~0.9` = a ball roughly the object's size. (In sequences this is the per-beat 3rd timing number instead.) |
-| `MARTIN_MORPH_COUNT` | `0` (shorthand) / `200000` (`MARTIN_SEQ`) | Gaussian budget every beat is resampled to. `0` = the largest beat's natural count (~1.15M for the Martins; crisp, ~20 fps). Lower = faster: **250k ≈ 60 fps, 500k ≈ 40 fps.** |
+| `MARTIN_SEQ` | — | A timeline of parts (see [Sequences](#sequences)). Highest precedence. |
+| `MARTIN_BULGE` | `0.9` | Ball-cloud size at a morph's midpoint, in object-radii. `0` = clean "puzzle-box" reorder (no explosion); `~0.9` = a ball roughly the object's size. (In sequences this is the per-part 3rd timing number instead.) |
+| `MARTIN_MORPH_COUNT` | `0` (shorthand) / `200000` (`MARTIN_SEQ`) | Gaussian budget every part is resampled to. `0` = the largest part's natural count (~1.15M for the Martins; crisp, ~20 fps). Lower = faster: **250k ≈ 60 fps, 500k ≈ 40 fps.** |
 | `MARTIN_YAW` | — (gentle sway) | Pin the camera to a fixed orbit angle in **radians** (e.g. `1.57` ≈ head-on). Handy for inspecting a splat. |
 | `MARTIN_FPS` | off | `=1` logs smoothed FPS / frame-time + timeline clock every ~0.5 s. |
 | `MARTIN_RECORD` | — | Directory to dump one PNG per frame into (the whole timeline; used by `record.sh`). |
 | `MARTIN_SHOT` | — | Capture a single headless screenshot to this path, then exit ~2 s later. |
 | `MARTIN_SHOT_AT` | `6.0` | When (seconds) to take the `MARTIN_SHOT`. |
 | `MARTIN_FULLSCREEN` | off | `=1` starts borderless-fullscreen; toggle live with **F11 / F**. (Ignored while recording — that needs the fixed window.) |
-| `MARTIN_NORMALIZE` | on | Each beat is centred + uniformly scaled (positions *and* gaussian sizes) so its largest dimension ≈ 2 units. Makes a 200-unit COLMAP scene and a 1-unit TRELLIS object share one scale. `=0` keeps raw scales. |
+| `MARTIN_NORMALIZE` | on | Each part is centred on its **centroid** and uniformly scaled (positions *and* gaussian sizes) so the bulk of its content (90th-percentile radius) ≈ 2 units. Using a percentile, not the bounding box, **ignores stray "floater" splats** that would otherwise shrink the scene to a distant dot — so a 200-unit COLMAP scene and a 1-unit TRELLIS object share one "normal" scale. `=0` keeps raw scales. |
+| `MARTIN_ZOOM` | `1.0` | Camera closeness multiplier: **`>1` = closer / more zoomed in, `<1` = pull back**. The camera frames the normalized content up close by default; nudge this to taste. |
 | `MARTIN_ROT` | — | `rx,ry,rz` euler **degrees** applied to the cloud — e.g. stand a COLMAP scene upright for a "normal" POV. Default = the portrait flip (gives scenes their abstract sideways look). |
 
 ---
@@ -109,11 +110,11 @@ can be orbited freely.
 
 ## Sequences
 
-`MARTIN_SEQ` is the composable mode: a list of **beats** that morph into one another,
+`MARTIN_SEQ` is the composable mode: a list of **parts** that morph into one another,
 each transition flowing through a ball cloud. It's either a `;`-separated string **or a
-path to a file** with one beat per line (`#` starts a comment, blank lines are skipped).
+path to a file** with one part per line (`#` starts a comment, blank lines are skipped).
 
-**Beat grammar:**
+**Part grammar:**
 
 ```
 text:STRING                      # splat-text (glowing)
@@ -123,11 +124,11 @@ splat:a.ply+b.ply                # several splats, auto-arranged side by side
 ```
 
 The optional trailing `@hold,morph,bulge` sets, in **seconds** (and ball amount):
-- **hold** — how long to rest on this beat once it arrives (default `1.5`)
-- **morph** — how long the morph *into* this beat takes (default `3.0`)
+- **hold** — how long to rest on this part once it arrives (default `1.5`)
+- **morph** — how long the morph *into* this part takes (default `3.0`)
 - **bulge** — ball-cloud explosiveness of that morph, `0`–`~1.4` (default `0.9`)
 
-(The first beat assembles in from a ball over its `morph` seconds; its `bulge` is ignored
+(The first part assembles in from a ball over its `morph` seconds; its `bulge` is ignored
 — the ball already *is* its source.)
 
 **Inline example — a full show:**
@@ -155,8 +156,8 @@ text:CODE ANNEJAN @2.5,3,0.6
 MARTIN_PLY=assets/doggo.ply MARTIN_SEQ=~/show.seq cargo +nightly run --release
 ```
 
-All beats are resampled to one gaussian count (`MARTIN_MORPH_COUNT`, default 200k in
-sequences) and the camera is framed once over everything, so it never pops between beats.
+All parts are resampled to one gaussian count (`MARTIN_MORPH_COUNT`, default 200k in
+sequences) and the camera is framed once over everything, so it never pops between parts.
 
 ---
 
@@ -172,7 +173,7 @@ MARTIN_SEQ="text:MARTIN GAUS; splat:doggo.ply; text:CODE ANNEJAN" \
 ./record.sh my_show.mp4
 ```
 
-The clip length is computed automatically from the beats' `@hold,morph` timings.
+The clip length is computed automatically from the parts' `@hold,morph` timings.
 
 To grab a single still instead:
 

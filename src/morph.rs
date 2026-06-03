@@ -49,7 +49,7 @@ pub fn resample_morton(mut v: Vec<Gaussian3d>, n: usize) -> Vec<Gaussian3d> {
 }
 
 /// Scatter each gaussian of `shape` onto a fuzzy sphere shell of radius `shell_r` (paired
-/// 1:1, so it flies from the ball to its slot as the morph runs). The intro: beat 0 morphs
+/// 1:1, so it flies from the ball to its slot as the morph runs). The intro: part 0 morphs
 /// from this ball into `shape`. No shader bulge needed — the ball IS the lhs.
 pub fn ball_of(shape: &[Gaussian3d], shell_r: f32) -> Vec<Gaussian3d> {
     shape
@@ -86,25 +86,39 @@ pub fn extent_of(v: &[Gaussian3d]) -> f32 {
     (0..3).map(|k| hi[k] - lo[k]).fold(0.0, f32::max)
 }
 
-/// Center a gaussian set at the origin and uniformly scale it so its largest bbox dimension
-/// is `target` units — scaling positions AND each gaussian's size together. Makes wildly
-/// different sources (a huge COLMAP scene vs a tiny TRELLIS object) render at one consistent
-/// "normal" scale, so they frame well and morph cleanly between each other.
+/// Center a gaussian set on its centroid and uniformly scale it so the *bulk* of its content
+/// — the 90th-percentile distance from the centroid — spans `target` units, scaling positions
+/// AND each gaussian's size together. Using a percentile rather than the bounding box makes it
+/// robust to the stray "floater" gaussians that 3DGS scenes always carry: floaters would
+/// otherwise blow up the bbox and shrink the real scene to a distant dot. Brings wildly
+/// different sources (a huge COLMAP scene vs a tiny TRELLIS object) to one consistent "normal"
+/// scale, so they frame well and morph cleanly between each other.
 pub fn normalize_to(v: &mut [Gaussian3d], target: f32) {
     if v.is_empty() {
         return;
     }
-    let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
+    // centroid (mean position) — the dense centre, not pulled around by bbox extremes
+    let mut sum = [0f64; 3];
     for g in v.iter() {
         let p = g.position_visibility.position;
         for k in 0..3 {
-            lo[k] = lo[k].min(p[k]);
-            hi[k] = hi[k].max(p[k]);
+            sum[k] += p[k] as f64;
         }
     }
-    let center = [(lo[0] + hi[0]) * 0.5, (lo[1] + hi[1]) * 0.5, (lo[2] + hi[2]) * 0.5];
-    let extent = (0..3).map(|k| hi[k] - lo[k]).fold(0.0, f32::max).max(1e-6);
-    let s = target / extent;
+    let nf = v.len() as f64;
+    let center = [(sum[0] / nf) as f32, (sum[1] / nf) as f32, (sum[2] / nf) as f32];
+    // 90th-percentile distance from the centroid → ignore the far ~10% (the floaters)
+    let mut dists: Vec<f32> = v
+        .iter()
+        .map(|g| {
+            let p = g.position_visibility.position;
+            ((p[0] - center[0]).powi(2) + (p[1] - center[1]).powi(2) + (p[2] - center[2]).powi(2))
+                .sqrt()
+        })
+        .collect();
+    let k = ((dists.len() as f32 * 0.90) as usize).min(dists.len() - 1);
+    dists.select_nth_unstable_by(k, f32::total_cmp);
+    let s = (target * 0.5) / dists[k].max(1e-6); // 90% of content fits within target/2 of centre
     for g in v.iter_mut() {
         let p = g.position_visibility.position;
         let vis = g.position_visibility.visibility;

@@ -1,13 +1,13 @@
 //! martin — fly a camera around Gaussian splats while they morph and reassemble.
 //!
-//! ONE engine: everything is a **sequence of beats** that morph into one another. A beat
-//! is splat-text or one-or-more splats; each beat assembles in from a ball cloud, then the
-//! next beat morphs in (Morton-paired, with a `sin(pi*t)` ball pulse). The `MARTIN_PLY /
+//! ONE engine: everything is a **sequence of parts** that morph into one another. A part
+//! is splat-text or one-or-more splats; each part assembles in from a ball cloud, then the
+//! next part morphs in (Morton-paired, with a `sin(pi*t)` ball pulse). The `MARTIN_PLY /
 //! _PLY2 / _REFORM / _TEXT` env vars are just shorthands that build a sequence;
 //! `MARTIN_SEQ` is the full timeline. See `USAGE.md` for the env reference.
 //!
 //! Rendering: one `GaussianInterpolate` entity (the crate's GPU blend), retargeted per
-//! beat; depth-sorted by GPU radix (reads live morphed positions → no holes); HDR `Bloom`
+//! part; depth-sorted by GPU radix (reads live morphed positions → no holes); HDR `Bloom`
 //! on black makes bright splats glow. The ball pulse is a shader edit in the vendored
 //! crate (see vendor/.../CHANGES.md). Live: ↑/↓ zoom · ←/→ raise/lower · Space = restart ·
 //! F11/F = fullscreen (or start fullscreen with MARTIN_FULLSCREEN=1).
@@ -37,9 +37,9 @@ use crate::text::{build_text_gaussians, TEXT_RGB};
 
 const FRONT_YAW: f32 = 1.4; // camera faces the subject head-on (single-image splats have no back)
 const SWAY: f32 = 0.25; // gentle left-right sway amplitude — never reaches the hollow back
-const SIDE_SEP: f32 = 1.2; // half-spacing when a beat places several splats side by side
+const SIDE_SEP: f32 = 1.2; // half-spacing when a part places several splats side by side
 const BALL_SHELL: f32 = 0.9; // intro ball-shell radius, in units of the framed radius
-const NORMALIZE_EXTENT: f32 = 2.0; // each beat is centered + scaled so its largest dim = this
+const NORMALIZE_EXTENT: f32 = 2.0; // each part is centered + scaled so its largest dim = this
 
 /// `.ply` splats are Y-down → rotate the cloud 180° about X for Y-up. Text is built Y-down
 /// too (see `build_text_gaussians`), so one transform makes text *and* splats upright.
@@ -138,35 +138,35 @@ fn fullscreen_toggle(keys: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut Wi
 // ===========================================================================================
 
 #[derive(Clone)]
-enum BeatContent {
+enum PartContent {
     Text(String),
     /// one or more splats (filename in the asset dir, world offset) combined into one shape
     Splats(Vec<(String, Vec3)>),
 }
 
-/// One beat morphs in from the previous (or, for beat 0, from a ball), then holds.
+/// One part morphs in from the previous (or, for part 0, from a ball), then holds.
 #[derive(Clone)]
-struct Beat {
-    content: BeatContent,
+struct Part {
+    content: PartContent,
     hold: f32,  // seconds held after arriving
     morph: f32, // seconds to morph in
-    bulge: f32, // ball-cloud explosiveness of the morph-in (ignored for beat 0)
+    bulge: f32, // ball-cloud explosiveness of the morph-in (ignored for part 0)
 }
 
-/// The whole show: a list of beats + the gaussian budget every beat is resampled to.
+/// The whole show: a list of parts + the gaussian budget every part is resampled to.
 #[derive(Resource)]
 struct Sequence {
-    beats: Vec<Beat>,
+    parts: Vec<Part>,
     count: usize,
 }
 
-/// Loaded splat handles + the per-beat built shapes (all `count` gaussians) + the intro ball.
+/// Loaded splat handles + the per-part built shapes (all `count` gaussians) + the intro ball.
 #[derive(Resource)]
 struct SeqState {
     load_names: Vec<String>,
     loads: Vec<Handle<PlanarGaussian3d>>,
     shapes: Vec<Handle<PlanarGaussian3d>>,
-    intro: Handle<PlanarGaussian3d>, // ball that beat 0 assembles out of
+    intro: Handle<PlanarGaussian3d>, // ball that part 0 assembles out of
     built: bool,
     entity: Option<Entity>,
 }
@@ -177,13 +177,13 @@ struct SeqClock {
     t: f32,
 }
 
-/// Parse `MARTIN_SEQ`: a file path OR an inline string. Beats are `;`/newline-separated.
-/// Each beat: `text:STRING` or `splat:a.ply` (or `a.ply+b.ply` for side-by-side), optional
+/// Parse `MARTIN_SEQ`: a file path OR an inline string. Parts are `;`/newline-separated.
+/// Each part: `text:STRING` or `splat:a.ply` (or `a.ply+b.ply` for side-by-side), optional
 /// trailing `@hold,morph,bulge`. `#` comments and blank lines are skipped.
-fn parse_seq(spec: &str) -> Vec<Beat> {
+fn parse_seq(spec: &str) -> Vec<Part> {
     let raw = std::fs::read_to_string(spec).unwrap_or_else(|_| spec.to_string());
-    let mut beats = Vec::new();
-    for line in raw.split(|c| c == ';' || c == '\n') {
+    let mut parts = Vec::new();
+    for line in raw.split([';', '\n']) {
         let s = line.trim();
         if s.is_empty() || s.starts_with('#') {
             continue;
@@ -200,15 +200,15 @@ fn parse_seq(spec: &str) -> Vec<Beat> {
             if let Some(v) = nums.get(2) { bulge = *v; }
         }
         let content = if let Some(txt) = head.strip_prefix("text:") {
-            BeatContent::Text(txt.to_string())
+            PartContent::Text(txt.to_string())
         } else if let Some(p) = head.strip_prefix("splat:") {
-            BeatContent::Splats(side_by_side(p.split('+').map(str::trim).filter(|x| !x.is_empty())))
+            PartContent::Splats(side_by_side(p.split('+').map(str::trim).filter(|x| !x.is_empty())))
         } else {
             continue;
         };
-        beats.push(Beat { content, hold, morph, bulge });
+        parts.push(Part { content, hold, morph, bulge });
     }
-    beats
+    parts
 }
 
 /// Arrange splat filenames evenly along X, centered (one splat → at origin).
@@ -225,15 +225,15 @@ fn side_by_side<'a>(names: impl Iterator<Item = &'a str>) -> Vec<(String, Vec3)>
         .collect()
 }
 
-/// Read a beat's gaussians (text rasterized, or splats loaded + offset + combined).
-fn beat_gaussians(
-    content: &BeatContent,
+/// Read a part's gaussians (text rasterized, or splats loaded + offset + combined).
+fn part_gaussians(
+    content: &PartContent,
     state: &SeqState,
     assets: &Assets<PlanarGaussian3d>,
 ) -> Vec<Gaussian3d> {
     match content {
-        BeatContent::Text(s) => build_text_gaussians(s, TEXT_RGB, 3.0, 2, 0.012),
-        BeatContent::Splats(list) => {
+        PartContent::Text(s) => build_text_gaussians(s, TEXT_RGB, 3.0, 2, 0.012),
+        PartContent::Splats(list) => {
             let mut out = Vec::new();
             for (name, off) in list {
                 let Some(idx) = state.load_names.iter().position(|x| x == name) else { continue };
@@ -250,7 +250,7 @@ fn beat_gaussians(
     }
 }
 
-/// Once every referenced splat has loaded, build each beat's shape (resampled to the fixed
+/// Once every referenced splat has loaded, build each part's shape (resampled to the fixed
 /// count) + the intro ball, spawn the single interpolate entity, and frame the union once.
 fn build_sequence(
     mut commands: Commands,
@@ -260,30 +260,30 @@ fn build_sequence(
     mut cam: Query<&mut OrbitCam>,
 ) {
     let (Some(seq), Some(mut state)) = (seq, state) else { return };
-    if state.built || seq.beats.is_empty() {
+    if state.built || seq.parts.is_empty() {
         return;
     }
     if state.loads.iter().any(|h| assets.get(h).is_none()) {
         return; // wait for every referenced splat
     }
 
-    // read every beat's gaussians once, so count==0 can mean "size N to the largest beat"
-    // (every beat is then resampled to that single N — required by the shared morph output).
+    // read every part's gaussians once, so count==0 can mean "size N to the largest part"
+    // (every part is then resampled to that single N — required by the shared morph output).
     let mut raws: Vec<Vec<Gaussian3d>> = seq
-        .beats
+        .parts
         .iter()
-        .map(|b| beat_gaussians(&b.content, &state, &assets))
+        .map(|b| part_gaussians(&b.content, &state, &assets))
         .collect();
-    // Normalize each beat to a common "normal" size (MARTIN_NORMALIZE=0 to disable). Sources
+    // Normalize each part to a common "normal" size (MARTIN_NORMALIZE=0 to disable). Sources
     // vary wildly — a COLMAP scene spans hundreds of units, a TRELLIS object ~1 — so without
     // this they'd frame inconsistently and morph badly. We log the raw extent first.
     let normalize = std::env::var("MARTIN_NORMALIZE").map(|v| v != "0").unwrap_or(true);
-    for (raw, beat) in raws.iter_mut().zip(&seq.beats) {
-        let label = match &beat.content {
-            BeatContent::Text(s) => format!("text \"{s}\""),
-            BeatContent::Splats(list) => list.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>().join("+"),
+    for (raw, part) in raws.iter_mut().zip(&seq.parts) {
+        let label = match &part.content {
+            PartContent::Text(s) => format!("text \"{s}\""),
+            PartContent::Splats(list) => list.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>().join("+"),
         };
-        info!("beat {label}: raw extent {:.2} units ({} gaussians)", crate::morph::extent_of(raw), raw.len());
+        info!("part {label}: raw extent {:.2} units ({} gaussians)", crate::morph::extent_of(raw), raw.len());
         if normalize {
             crate::morph::normalize_to(raw, NORMALIZE_EXTENT);
         }
@@ -312,8 +312,17 @@ fn build_sequence(
         shapes.push(assets.add(PlanarGaussian3d::from(shaped)));
     }
 
-    let radius = ((union_hi - union_lo) * 0.5).length().max(0.1);
-    let intro = assets.add(PlanarGaussian3d::from(ball_of(&shape0, radius * BALL_SHELL)));
+    // Framing radius of the *content*: when normalized, every part is ~NORMALIZE_EXTENT across
+    // centred on its centroid, so frame from that — robust to the floaters that still inflate
+    // the raw union AABB and would otherwise shrink the scene to a distant dot. Raw mode (no
+    // normalize) frames the union box instead.
+    let (frame_center, content_radius, frame_factor) = if normalize {
+        (Vec3::ZERO, NORMALIZE_EXTENT * 0.5, 2.5)
+    } else {
+        let c = (union_lo + union_hi) * 0.5;
+        (c, ((union_hi - union_lo) * 0.5).length().max(0.1), 1.7)
+    };
+    let intro = assets.add(PlanarGaussian3d::from(ball_of(&shape0, content_radius * BALL_SHELL)));
 
     // MARTIN_ROT="rx,ry,rz" (euler degrees) orients the cloud — e.g. to stand a COLMAP scene
     // upright for a "normal" POV. Default = cloud_base_rotation (flip-X, right for portrait
@@ -336,7 +345,7 @@ fn build_sequence(
             },
             CloudSettings {
                 sort_mode: SortMode::Radix,
-                time: 0.0, // start as the ball; beat_director morphs it in
+                time: 0.0, // start as the ball; part_director morphs it in
                 time_start: 0.0,
                 time_stop: 1.0,
                 bulge: 0.0,
@@ -346,13 +355,19 @@ fn build_sequence(
         ))
         .id();
 
-    // frame the union once (camera never pops between beats); apply the same rotation to the
+    // frame the union once (camera never pops between parts); apply the same rotation to the
     // centre so the camera looks at the post-transform world centre.
-    let center = entity_rot * ((union_lo + union_hi) * 0.5);
+    // MARTIN_ZOOM scales how close the camera sits (>1 = closer / more zoomed in, <1 = back).
+    let zoom = std::env::var("MARTIN_ZOOM")
+        .ok()
+        .and_then(|s| s.parse::<f32>().ok())
+        .filter(|z| *z > 0.0)
+        .unwrap_or(1.0);
+    let center = entity_rot * frame_center;
     for mut c in &mut cam {
         c.center = center;
-        c.radius = radius * 1.7;
-        c.elevation = radius * 0.2;
+        c.radius = content_radius * frame_factor / zoom;
+        c.elevation = c.radius * 0.12; // gentle downward tilt, held constant across zoom levels
         c.framed = true;
     }
 
@@ -360,13 +375,13 @@ fn build_sequence(
     state.intro = intro;
     state.entity = Some(entity);
     state.built = true;
-    info!("sequence built: {} beats × {n} gaussians", state.shapes.len());
+    info!("sequence built: {} parts × {n} gaussians", state.shapes.len());
 }
 
-/// Drive the show from `SeqClock.t`: find the active beat, retarget the interpolate entity's
-/// lhs/rhs (only on change), and set the blend factor + ball bulge. Beat 0 morphs in from the
-/// intro ball; every later beat morphs in from the previous beat's shape.
-fn beat_director(
+/// Drive the show from `SeqClock.t`: find the active part, retarget the interpolate entity's
+/// lhs/rhs (only on change), and set the blend factor + ball bulge. Part 0 morphs in from the
+/// intro ball; every later part morphs in from the previous part's shape.
+fn part_director(
     seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
     clock: Res<SeqClock>,
@@ -378,12 +393,12 @@ fn beat_director(
     }
     let Some(entity) = state.entity else { return };
     let Ok((mut interp, mut cs)) = q.get_mut(entity) else { return };
-    let beats = &seq.beats;
+    let parts = &seq.parts;
 
-    // each beat occupies [morph_i + hold_i); the first `morph_i` is the morph-in.
+    // each part occupies [morph_i + hold_i); the first `morph_i` is the morph-in.
     let mut t = clock.t;
-    let (mut idx, mut morphing, mut factor) = (beats.len() - 1, false, 1.0_f32);
-    for (i, b) in beats.iter().enumerate() {
+    let (mut idx, mut morphing, mut factor) = (parts.len() - 1, false, 1.0_f32);
+    for (i, b) in parts.iter().enumerate() {
         let seg = b.morph + b.hold;
         if t < seg {
             idx = i;
@@ -394,7 +409,7 @@ fn beat_director(
         t -= seg;
     }
 
-    // lhs: intro ball for beat 0, else the previous beat's shape.
+    // lhs: intro ball for part 0, else the previous part's shape.
     let want_lhs = if idx == 0 { &state.intro } else { &state.shapes[idx - 1] };
     if interp.lhs.0.id() != want_lhs.id() {
         interp.lhs = PlanarGaussian3dHandle(want_lhs.clone());
@@ -404,8 +419,8 @@ fn beat_director(
     }
     let eased = factor * factor * (3.0 - 2.0 * factor);
     cs.time = eased;
-    // beat 0 assembles from the (real) ball, so no shader pulse; later beats pulse to bulge.
-    cs.bulge = if morphing && idx > 0 { beats[idx].bulge } else { 0.0 };
+    // part 0 assembles from the (real) ball, so no shader pulse; later parts pulse to bulge.
+    cs.bulge = if morphing && idx > 0 { parts[idx].bulge } else { 0.0 };
 }
 
 /// Live clock advance (record mode drives `SeqClock` itself, deterministically).
@@ -425,6 +440,7 @@ fn advance_seq_clock(
 
 /// Add `NoFrustumCulling` to the sequence entity once its Aabb exists, so morph/ball
 /// particles that briefly leave the framed view don't pop out.
+#[allow(clippy::type_complexity)] // a Bevy query filter tuple — verbose by nature
 fn seq_no_cull(
     mut commands: Commands,
     state: Option<Res<SeqState>>,
@@ -467,7 +483,7 @@ fn record_driver(
     if !state.built || !camq.iter().any(|c| c.framed) {
         return; // wait until built + framed
     }
-    let dur = seq.beats.iter().map(|b| b.morph + b.hold).sum::<f32>() + 1.0; // +tail
+    let dur = seq.parts.iter().map(|b| b.morph + b.hold).sum::<f32>() + 1.0; // +tail
     let total = (dur / rec.dt).ceil() as u32;
     if rec.i >= total {
         rec.grace += 1; // let async PNG writes flush
@@ -553,15 +569,15 @@ fn sequence_from_env() -> (Sequence, Option<String>) {
     if let Ok(spec) = std::env::var("MARTIN_SEQ") {
         // asset root = the .ply folder (so `splat:` filenames resolve); MARTIN_PLY sets it.
         let root = std::env::var("MARTIN_PLY").ok().and_then(parent_dir);
-        return (Sequence { beats: parse_seq(&spec), count }, root);
+        return (Sequence { parts: parse_seq(&spec), count }, root);
     }
 
     if let Ok(text) = std::env::var("MARTIN_TEXT") {
-        let beat = Beat { content: BeatContent::Text(text), hold: 2.0, morph: 3.0, bulge: 0.0 };
-        return (Sequence { beats: vec![beat], count }, None);
+        let part = Part { content: PartContent::Text(text), hold: 2.0, morph: 3.0, bulge: 0.0 };
+        return (Sequence { parts: vec![part], count }, None);
     }
 
-    // splat shorthand: PLY (+ PLY2) as beat 0; REFORM (if any) as beat 1.
+    // splat shorthand: PLY (+ PLY2) as part 0; REFORM (if any) as part 1.
     let primary = std::env::var("MARTIN_PLY").ok();
     let root = primary.as_deref().and_then(|p| parent_dir(p.to_string()));
     let name1 = primary.as_deref().map(file_name_of).unwrap_or_else(|| "aegg.ply".into());
@@ -570,21 +586,21 @@ fn sequence_from_env() -> (Sequence, Option<String>) {
         names.push(file_name_of(&p2));
     }
     let bulge = std::env::var("MARTIN_BULGE").ok().and_then(|s| s.parse().ok()).unwrap_or(0.9);
-    let mut beats = vec![Beat {
-        content: BeatContent::Splats(side_by_side(names.iter().map(String::as_str))),
+    let mut parts = vec![Part {
+        content: PartContent::Splats(side_by_side(names.iter().map(String::as_str))),
         hold: 2.0,
         morph: 3.0,
         bulge: 0.0,
     }];
     if let Ok(reform) = std::env::var("MARTIN_REFORM") {
-        beats.push(Beat {
-            content: BeatContent::Splats(vec![(file_name_of(&reform), Vec3::ZERO)]),
+        parts.push(Part {
+            content: PartContent::Splats(vec![(file_name_of(&reform), Vec3::ZERO)]),
             hold: 2.0,
             morph: 3.5,
             bulge,
         });
     }
-    (Sequence { beats, count }, root)
+    (Sequence { parts, count }, root)
 }
 
 fn parent_dir(p: String) -> Option<String> {
@@ -642,7 +658,7 @@ fn main() {
             Update,
             (
                 build_sequence,
-                beat_director,
+                part_director,
                 advance_seq_clock,
                 seq_no_cull,
                 record_driver,
@@ -658,10 +674,10 @@ fn main() {
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, seq: Res<Sequence>) {
     // load every referenced splat (by filename in the asset folder); build_sequence
-    // assembles the per-beat shapes once they're all available.
+    // assembles the per-part shapes once they're all available.
     let mut names: Vec<String> = Vec::new();
-    for b in &seq.beats {
-        if let BeatContent::Splats(list) = &b.content {
+    for b in &seq.parts {
+        if let PartContent::Splats(list) = &b.content {
             for (n, _) in list {
                 if !names.contains(n) {
                     names.push(n.clone());
