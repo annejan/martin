@@ -116,6 +116,14 @@ fn controls(
     if rec.dir.is_some() {
         return; // record_driver drives the camera + clock deterministically while recording
     }
+    // path playback owns the camera: while flying a loaded path (MARTIN_FLY) skip live orbit +
+    // marking, but keep Space (restart) working so you can re-watch the move.
+    if marks.fly.is_some() && marks.list.len() >= 2 {
+        if keys.just_pressed(KeyCode::Space) {
+            clock.t = 0.0;
+        }
+        return;
+    }
     let dt = time.delta_secs();
     for mut cam in &mut q {
         let orbit = 1.3 * dt; // rad/s
@@ -182,6 +190,50 @@ fn controls(
     }
     if keys.just_pressed(KeyCode::Space) {
         clock.t = 0.0; // restart the show
+    }
+}
+
+/// `MARTIN_FLY=<secs>`: fly the camera through the loaded waypoints (the M-key path). **Live** it
+/// ping-pongs there-and-back over `secs` for a smooth, cut-free preview loop; while **recording**
+/// it spreads the path across the whole show once (reaching the last marker as the last part
+/// ends) — an authored camera move that fills the clip. Owns the camera when active (`controls`
+/// and the recorder's sway stand down).
+fn flypath(
+    marks: Res<waypoints::Waypoints>,
+    rec: Res<RecordState>,
+    seq: Option<Res<Sequence>>,
+    state: Option<Res<SeqState>>,
+    clock: Res<SeqClock>,
+    mut q: Query<&mut OrbitCam>,
+) {
+    let Some(secs) = marks.fly else { return };
+    if marks.list.len() < 2 {
+        return;
+    }
+    let p = if rec.dir.is_some() {
+        let (Some(seq), Some(state)) = (&seq, &state) else {
+            return;
+        };
+        if !state.built {
+            return;
+        }
+        (clock.t / show_end(&seq.parts, &state.starts).max(0.1)).clamp(0.0, 1.0)
+    } else {
+        let cycle = (clock.t / secs).fract(); // live: ping-pong 0→1→0 for a cut-free preview
+        if cycle < 0.5 {
+            cycle * 2.0
+        } else {
+            2.0 - cycle * 2.0
+        }
+    };
+    let Some(w) = waypoints::pose_at(&marks.list, p) else {
+        return;
+    };
+    for mut cam in &mut q {
+        cam.target = w.target;
+        cam.dist = w.dist;
+        cam.yaw = w.yaw;
+        cam.pitch = w.pitch;
     }
 }
 
@@ -917,6 +969,17 @@ struct RecordState {
     grace: u32,
 }
 
+/// End of the cue timeline: the latest part's `start + morph + hold` (anchors can push it past a
+/// simple sum). The recorder uses this (+ a tail) for the clip length; `flypath` spreads the
+/// camera path across it while recording.
+fn show_end(parts: &[Part], starts: &[f32]) -> f32 {
+    parts
+        .iter()
+        .zip(starts)
+        .map(|(p, &start)| start + p.morph + p.hold)
+        .fold(0.0_f32, f32::max)
+}
+
 /// Deterministic recorder: total duration = the cue timeline's end (last part's
 /// `start + morph + hold`) + tail; set the clock per frame, sway the camera, screenshot, then
 /// exit. Frame-indexed → smooth regardless of render speed.
@@ -936,15 +999,8 @@ fn record_driver(
     if !state.built || !camq.iter().any(|c| c.framed) {
         return; // wait until built + framed
     }
-    // end of the cue timeline: the latest part's start + its morph + hold (anchors can reorder
-    // or stretch it past a simple sum), plus a tail.
-    let dur = seq
-        .parts
-        .iter()
-        .zip(&state.starts)
-        .map(|(p, &start)| start + p.morph + p.hold)
-        .fold(0.0_f32, f32::max)
-        + 1.0;
+    // end of the cue timeline (the latest part's start + morph + hold), plus a tail.
+    let dur = show_end(&seq.parts, &state.starts) + 1.0;
     let total = (dur / rec.dt).ceil() as u32;
     if rec.i >= total {
         // Wait for the async PNG writes to actually land before exiting — a fast (release)
@@ -1201,8 +1257,10 @@ fn main() {
             dir: std::env::var("MARTIN_RECORD").ok(),
             dt: 1.0 / 60.0,
             yaw_step: 2.0 * PI / 480.0, // ~8s gentle sway period
-            // a pinned yaw or a parked capture pose → hold it, don't sway
-            sway: std::env::var("MARTIN_YAW").is_err() && std::env::var("MARTIN_CAMERAS").is_err(),
+            // a pinned yaw, a parked capture pose, or a flown waypoint path → hold/drive it, no sway
+            sway: std::env::var("MARTIN_YAW").is_err()
+                && std::env::var("MARTIN_CAMERAS").is_err()
+                && std::env::var("MARTIN_FLY").is_err(),
             i: 0,
             grace: 0,
         })
@@ -1217,6 +1275,7 @@ fn main() {
                 record_driver,
                 orbit_camera,
                 controls,
+                flypath,
                 fullscreen_toggle,
                 shot_driver,
                 fps_log,

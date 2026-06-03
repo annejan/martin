@@ -84,7 +84,8 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_MORPH_COUNT` | `0` (shorthand) / `200000` (`MARTIN_SEQ`) | Gaussian budget every part is resampled to. `0` = the largest part's natural count (~1.15M for the Martins; crisp, ~20 fps). Lower = faster: **250k ≈ 60 fps, 500k ≈ 40 fps.** |
 | `MARTIN_YAW` | `1.4` (front) | Seed the orbit **yaw** in **radians** (e.g. `1.57` ≈ head-on). When set, a recording **holds** this yaw instead of swaying — bake a found scene viewpoint. |
 | `MARTIN_PITCH` | `0.12` | Seed the orbit **pitch** in **radians** (0 = eye level, `+` looks down). |
-| `MARTIN_WAYPOINTS` | `waypoints.json` | File the **M-key camera waypoints** are written to. Each marker appends the live orbit pose (target/dist/yaw/pitch) so you can author a camera path while flying — see [live controls](#live-keyboard-controls). |
+| `MARTIN_WAYPOINTS` | `waypoints.json` | File the **M-key camera waypoints** are written to (and read from on startup). Each marker appends the live orbit pose (target/dist/yaw/pitch) so you can author a camera path while flying — see [live controls](#live-keyboard-controls). |
+| `MARTIN_FLY` | — | `=<secs>` **flies the camera through the loaded waypoints** instead of free-orbiting. Live: ping-pongs the path there-and-back over `<secs>` (a preview loop). Recording: spreads the path across the whole show once — an authored camera move. Needs ≥2 waypoints in `MARTIN_WAYPOINTS`. |
 | `MARTIN_FPS` | off | `=1` logs smoothed FPS / frame-time + timeline clock every ~0.5 s. |
 | `MARTIN_RECORD` | — | Directory to dump one PNG per frame into (the whole timeline; used by `record.sh`). |
 | `MARTIN_SHOT` | — | Capture a single headless screenshot to this path, then exit ~2 s later. |
@@ -120,8 +121,24 @@ from there — handy for finding and baking a viewpoint. (Single-image splats fr
 **Marking a camera path.** Fly to a pose you like and tap **M** — martin appends the live orbit
 pose (`target` / `dist` / `yaw` / `pitch`) to the waypoints file (`MARTIN_WAYPOINTS`, default
 `waypoints.json`) and logs the marker index to the console. Keep flying and dropping markers to
-capture a whole path. The file is plain JSON — an array of poses — ready to replay into the
-demo's camera moves later (path playback is the next step on this; the format is built for it).
+capture a whole path. The file is plain JSON — an array of poses — and is **read back on startup**,
+so M *continues* an existing path across runs.
+
+**Flying the path back.** With ≥2 markers, set **`MARTIN_FLY=<secs>`** and the camera flies the
+path instead of free-orbiting (smoothstep easing through each marker, shortest-way yaw):
+
+```bash
+# preview the move you just marked, looping there-and-back every 8 s
+MARTIN_PLY=assets/train.ply MARTIN_FLY=8 cargo +nightly run --release
+
+# bake that path into a recording (it spans the whole show, no swaying)
+MARTIN_PLY=assets/train.ply MARTIN_FLY=1 ./record.sh train_flyby.mp4
+```
+
+Live, it ping-pongs the path over `<secs>` so you can judge it on a loop; **while recording it
+stretches the path across the whole show once**, reaching the last marker as the last part ends —
+so the camera move fills the clip (the `<secs>` value is only used for the live loop). Waypoints
+are scene-specific (they pin exact camera poses), so capture and replay them on the same `.ply`.
 
 > **Heads-up on raw scene `.ply`s.** A bare splat from a 360° capture (no camera poses) carries
 > lots of under-constrained background "needle" splats and only blends coherently along its
