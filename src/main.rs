@@ -10,7 +10,7 @@
 //! part; depth-sorted by GPU radix (reads live morphed positions → no holes); HDR `Bloom`
 //! on black makes bright splats glow. The ball pulse is a shader edit in the vendored
 //! crate (see vendor/.../CHANGES.md). Live free-orbit: ←/→ yaw · ↑/↓ pitch · W/S zoom · A/D &
-//! Q/E pan · Space = restart · F11/F = fullscreen (or start fullscreen with MARTIN_FULLSCREEN=1).
+//! Q/E pan · M = mark camera waypoint · Space = restart · F11/F = fullscreen (MARTIN_FULLSCREEN=1).
 
 use std::f32::consts::PI;
 
@@ -36,6 +36,7 @@ mod morph;
 mod score;
 mod splat_image;
 mod text;
+mod waypoints;
 use crate::morph::{ball_of, drop_of, explode_of, fade_of, implode_of, resample_morton, swirl_of};
 use crate::splat_image::build_image_gaussians;
 use crate::text::{
@@ -102,12 +103,14 @@ fn orbit_camera(mut q: Query<(&mut Transform, &OrbitCam)>) {
 }
 
 /// Live free-orbit controls (ignored while recording): **arrows** orbit (←/→ yaw, ↑/↓ pitch),
-/// **W/S** zoom in/out, **A/D** pan left/right, **Q/E** pan down/up, **Space** restarts.
+/// **W/S** zoom in/out, **A/D** pan left/right, **Q/E** pan down/up, **M** logs a camera
+/// waypoint (→ the waypoints file), **Space** restarts.
 fn controls(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     rec: Res<RecordState>,
     mut clock: ResMut<SeqClock>,
+    mut marks: ResMut<waypoints::Waypoints>,
     mut q: Query<&mut OrbitCam>,
 ) {
     if rec.dir.is_some() {
@@ -149,6 +152,32 @@ fn controls(
         }
         if keys.pressed(KeyCode::KeyE) {
             cam.target.y += pan;
+        }
+    }
+    // M: drop a camera waypoint — log the live orbit pose into the waypoints file, accumulating a
+    // camera path you can replay / author the demo's camera moves from later.
+    if keys.just_pressed(KeyCode::KeyM) {
+        if let Ok(cam) = q.single() {
+            marks.list.push(waypoints::Waypoint {
+                target: cam.target,
+                dist: cam.dist,
+                yaw: cam.yaw,
+                pitch: cam.pitch,
+            });
+            match waypoints::save(&marks.list, &marks.path) {
+                Ok(()) => info!(
+                    "waypoint #{} → {} (yaw {:.3}, pitch {:.3}, dist {:.2}, target [{:.2}, {:.2}, {:.2}])",
+                    marks.list.len(),
+                    marks.path,
+                    cam.yaw,
+                    cam.pitch,
+                    cam.dist,
+                    cam.target.x,
+                    cam.target.y,
+                    cam.target.z,
+                ),
+                Err(e) => warn!("waypoint save failed: {e}"),
+            }
         }
     }
     if keys.just_pressed(KeyCode::Space) {
@@ -1152,6 +1181,7 @@ fn main() {
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(0.0),
         ))
+        .insert_resource(waypoints::Waypoints::from_env())
         .init_resource::<SeqClock>()
         .insert_resource(ClearColor(Color::BLACK))
         .insert_resource(FpsLog {

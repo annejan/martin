@@ -39,6 +39,9 @@
 *.obj
 assets/defeest-logo.png
 
+# ── Camera-path scratch (default MARTIN_WAYPOINTS target; name a keeper differently) ──
+/waypoints.json
+
 # ── Local agent / editor / OS state ───────────────────────────────────
 .claude/
 .DS_Store

@@ -9,7 +9,7 @@ Tumbleweed). Demoscene spirit, all-AMD metal. 🪩
 
 ```bash
 cargo +nightly run --release     # a splat assembles out of a ball cloud
-#   free-orbit: ←/→ yaw · ↑/↓ pitch · W/S zoom · A/D & Q/E pan · Space restart · F11/F fullscreen
+#   free-orbit: ←/→ yaw · ↑/↓ pitch · W/S zoom · A/D & Q/E pan · M mark waypoint · Space restart · F11/F fs
 ./record.sh out.mp4              # render the whole timeline to ./out.mp4
 ```
 
@@ -83,6 +83,7 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 | `MARTIN_ZOOM=1.5` | Camera closeness (`>1` = closer / more zoomed in, `<1` = pull back). |
 | `MARTIN_ROT=rx,ry,rz` | Orient the cloud (euler degrees) — e.g. stand a COLMAP scene upright. |
 | `MARTIN_YAW=1.4` `MARTIN_PITCH=0.1` | Seed the free-orbit camera angle (radians); `MARTIN_YAW` also holds it (no sway) when recording. |
+| `MARTIN_WAYPOINTS=path.json` | Where the **M-key** camera waypoints are logged (default `waypoints.json`) — fly + mark to author a camera path. |
 | `MARTIN_FPS=1` | Log frame time / FPS. |
 | `MARTIN_RECORD=/dir` | Dump one PNG per frame (used by `record.sh`). |
 | `MARTIN_SHOT=/x.png` `MARTIN_SHOT_AT=<s>` | Headless screenshot at time `s`, then exit. |
