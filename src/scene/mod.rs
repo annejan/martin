@@ -1,0 +1,137 @@
+//! The scene: shared content + the two ways to stage it — the morph `sequence` timeline and the
+//! `compose` stage. `ScenePlugin` wires both, the shared show clock, and the splat loader.
+
+use std::f32::consts::PI;
+
+use bevy::prelude::*;
+use bevy_gaussian_splatting::PlanarGaussian3d;
+
+pub mod compose;
+pub mod content;
+pub mod sequence;
+
+use compose::Composition;
+use content::PartContent;
+use sequence::{SeqState, Sequence};
+
+use crate::capture::RecordState;
+
+const NORMALIZE_EXTENT: f32 = 2.0; // each part is centered + scaled so its largest dim = this
+
+/// `.ply` splats are Y-down → rotate the cloud 180° about X for Y-up. Text is built Y-down
+/// too (see `build_text_gaussians`), so one transform makes text *and* splats upright.
+pub(crate) fn cloud_base_rotation() -> Quat {
+    Quat::from_rotation_x(PI)
+}
+
+pub(crate) fn file_name_of(p: &str) -> String {
+    std::path::Path::new(p)
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "aegg.ply".into())
+}
+
+pub(crate) fn parent_dir(p: String) -> Option<String> {
+    std::path::Path::new(&p)
+        .parent()
+        .filter(|d| !d.as_os_str().is_empty())
+        .map(|d| d.to_string_lossy().into_owned())
+}
+
+/// Folder that `image:` parts (PNG logos) are read from — the `.ply` asset root (default `assets`).
+#[derive(Resource)]
+pub(crate) struct AssetRoot(pub std::path::PathBuf);
+
+/// Master timeline clock (seconds). Live: accumulates real time; record: frame×dt.
+#[derive(Resource, Default)]
+pub(crate) struct SeqClock {
+    pub t: f32,
+}
+
+/// Live clock advance (record mode drives `SeqClock` itself, deterministically).
+fn advance_seq_clock(
+    time: Res<Time>,
+    rec: Res<RecordState>,
+    state: Option<Res<SeqState>>,
+    comp: Option<Res<Composition>>,
+    mut clock: ResMut<SeqClock>,
+) {
+    if rec.dir.is_some() {
+        return;
+    }
+    // advance once the show is up — the morph sequence OR the composition stage.
+    let built = state.map(|s| s.built).unwrap_or(false) || comp.map(|c| c.built).unwrap_or(false);
+    if built {
+        clock.t += time.delta_secs();
+    }
+}
+
+/// Startup: load every referenced splat (by filename in the asset folder) from both the morph
+/// sequence and the composition stage; `build_sequence` / `build_composition` assemble the shapes
+/// once they're all available.
+fn load_splats(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    seq: Res<Sequence>,
+    comp: Res<Composition>,
+) {
+    let mut names: Vec<String> = Vec::new();
+    let add = |content: &PartContent, names: &mut Vec<String>| {
+        if let PartContent::Splats(list) = content {
+            for (n, _) in list {
+                if !names.contains(n) {
+                    names.push(n.clone());
+                }
+            }
+        }
+    };
+    for b in &seq.parts {
+        add(&b.content, &mut names);
+    }
+    for o in &comp.objects {
+        add(o.content(), &mut names);
+    }
+    let loads = names
+        .iter()
+        .map(|n| asset_server.load::<PlanarGaussian3d>(n.clone()))
+        .collect();
+    commands.insert_resource(SeqState {
+        load_names: names,
+        loads,
+        shapes: Vec::new(),
+        sources: Vec::new(),
+        transitions: Vec::new(),
+        deforms: Vec::new(),
+        starts: Vec::new(),
+        built: false,
+        entity: None,
+    });
+}
+
+/// The morph timeline + the composition stage + the shared show clock and splat loader.
+pub(crate) struct ScenePlugin;
+
+impl Plugin for ScenePlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<SeqClock>()
+            .insert_resource(sequence::FlashStrength(
+                std::env::var("MARTIN_FLASH")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(0.0),
+            ))
+            .add_systems(Startup, load_splats)
+            .add_systems(
+                Update,
+                (
+                    sequence::build_sequence,
+                    sequence::part_director,
+                    sequence::seq_no_cull,
+                    advance_seq_clock,
+                    compose::build_composition,
+                    compose::animate_composition,
+                    compose::compose_camera,
+                ),
+            );
+    }
+}
