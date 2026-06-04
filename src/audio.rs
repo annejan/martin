@@ -1,10 +1,13 @@
-//! Procedural synth — the *instrument* (voices + DSP), ported from Cinder's (Kristian
-//! Vlaardingerbroek, deFEEST) `term-demo` (MIT, Outline 2026). The *score* it plays (tempo,
-//! sections, patterns, dynamics) is data in `score.rs` — `Score::builtin()` or a `MARTIN_SCORE`
-//! file. The whole track renders offline to a sample buffer; martin plays it live (bevy_audio)
-//! and/or writes a WAV (`write_wav`) for ffmpeg to mux onto recorded frames.
+//! Synth — the *instrument* (voices + DSP) for the placeholder track. The *score* it plays (tempo,
+//! sections, drum patterns, chords, melody, dynamics) is data in `score.rs` (`assets/score.txt`).
+//! Voices are FunDSP graphs (filtered/enveloped oscillators) — far richer than bare sines — built
+//! per hit/note and rendered into one mono buffer; `score.rs` supplies all the timing + dynamics.
+//! The whole track renders offline; martin plays it live (bevy_audio) and/or writes a WAV that
+//! ffmpeg muxes onto recorded frames. (Still a placeholder — the real track comes from Cinder.)
 
 use std::sync::Arc;
+
+use fundsp::prelude32::*;
 
 use crate::score::{Inst, Score};
 
@@ -21,180 +24,172 @@ impl Track {
     }
 }
 
-fn pad_voice(t: f32, freq: f32) -> f32 {
-    use std::f32::consts::TAU;
-    let a = (t * freq * TAU).sin();
-    let b = (t * freq * 1.003 * TAU).sin();
-    (a + b) * 0.5
+// ---- voices (FunDSP graphs; each is a 0-input → 1-output unit) ------------------------------
+
+/// Kick: a sine swept from ~125 Hz down to 45 Hz with a fast amplitude decay.
+fn kick() -> Box<dyn AudioUnit> {
+    Box::new(
+        (envelope(|t: f32| 45.0 + 80.0 * (-t * 38.0).exp()) >> sine())
+            * envelope(|t: f32| (-t * 9.0).exp()),
+    )
 }
 
-fn bass_voice(t: f32, freq: f32) -> f32 {
-    use std::f32::consts::TAU;
-    let f1 = (t * freq * TAU).sin();
-    let f3 = (t * 3.0 * freq * TAU).sin();
-    let f5 = (t * 5.0 * freq * TAU).sin();
-    f1 + 0.4 * f3 + 0.15 * f5
+/// Snare: high-passed noise burst + a short tone body.
+fn snare() -> Box<dyn AudioUnit> {
+    Box::new(
+        ((noise() >> highpass_hz(1200.0, 0.7)) * envelope(|t: f32| (-t * 26.0).exp())
+            + sine_hz(190.0) * envelope(|t: f32| (-t * 24.0).exp()) * 0.5)
+            * 0.7,
+    )
 }
 
-fn noise_hash(idx: u32, salt: u32) -> f32 {
-    let n = (idx ^ salt).wrapping_mul(2654435761);
-    (n as f32 / u32::MAX as f32) * 2.0 - 1.0
+/// Hat: very short bright high-passed noise.
+fn hat() -> Box<dyn AudioUnit> {
+    Box::new((noise() >> highpass_hz(7000.0, 0.7)) * envelope(|t: f32| (-t * 80.0).exp()))
 }
 
-fn noise_sample_lowpassed(t: f32, salt: u32) -> f32 {
-    let idx = (t as f64 * SAMPLE_RATE as f64) as u32;
-    let n0 = noise_hash(idx, salt);
-    let n1 = noise_hash(idx.saturating_sub(1), salt);
-    let n2 = noise_hash(idx.saturating_sub(2), salt);
-    let n3 = noise_hash(idx.saturating_sub(3), salt);
-    (n0 + n1 + n2 + n3) * 0.25
+/// Stab: the chord triad as saws through a low-pass, with a plucky attack.
+fn stab(tri: [f32; 3]) -> Box<dyn AudioUnit> {
+    Box::new(
+        ((saw_hz(tri[0]) + saw_hz(tri[1]) + saw_hz(tri[2])) >> lowpass_hz(1600.0, 0.8))
+            * envelope(|t: f32| {
+                let a = 0.01;
+                if t < a {
+                    t / a
+                } else {
+                    (-(t - a) * 7.0).exp()
+                }
+            })
+            * 0.3,
+    )
 }
 
-fn snare_voice(t: f32, dt: f32) -> f32 {
-    use std::f32::consts::TAU;
-    let tone = (dt * 140.0 * TAU).sin();
-    let noise = noise_sample_lowpassed(t, 0x5C5A_E9F1);
-    let env_tone = (-dt / 0.05).exp();
-    let env_noise = (-dt / 0.09).exp();
-    tone * env_tone * 0.5 + noise * env_noise * 0.6
+/// Pad: the triad an octave down through a soft low-pass, slow swell — warmth/body under it all.
+fn pad(tri: [f32; 3]) -> Box<dyn AudioUnit> {
+    Box::new(
+        ((saw_hz(tri[0] * 0.5) + saw_hz(tri[1] * 0.5) + saw_hz(tri[2] * 0.5))
+            >> lowpass_hz(900.0, 0.6))
+            * envelope(|t: f32| (t * 2.0).min(1.0))
+            * 0.25,
+    )
 }
 
-fn hat_voice(t: f32, dt: f32) -> f32 {
-    let noise = noise_sample_lowpassed(t, 0xA17B_C9C3);
-    let env = (-dt / 0.025).exp();
-    noise * env
+/// Bass: sine + a touch of saw through a low-pass, short decay.
+fn bass(freq: f32) -> Box<dyn AudioUnit> {
+    Box::new(
+        ((sine_hz(freq) + saw_hz(freq) * 0.35) >> lowpass_hz(500.0, 0.7))
+            * envelope(|t: f32| {
+                let a = 0.005;
+                if t < a {
+                    t / a
+                } else {
+                    (-(t - a) * 4.0).exp()
+                }
+            })
+            * 0.5,
+    )
 }
 
-fn stab_envelope(dt: f32) -> f32 {
-    if dt < 0.0 {
-        return 0.0;
+/// Lead: a filtered saw — mellow, sits under the groove.
+fn lead(freq: f32) -> Box<dyn AudioUnit> {
+    Box::new(
+        (saw_hz(freq) >> lowpass_hz(2200.0, 0.9))
+            * envelope(|t: f32| {
+                let a = 0.02;
+                if t < a {
+                    t / a
+                } else {
+                    (-(t - a) * 2.2).exp()
+                }
+            })
+            * 0.5,
+    )
+}
+
+/// Render a voice `node` into `buf` starting at `start_t` seconds for `dur` seconds, scaled by
+/// `amp`, with a 4 ms release fade so sustained voices don't click at their cut-off.
+fn render_into(buf: &mut [f32], start_t: f32, dur: f32, amp: f32, mut node: Box<dyn AudioUnit>) {
+    let sr = SAMPLE_RATE as f32;
+    node.set_sample_rate(SAMPLE_RATE as f64);
+    node.reset();
+    let start = (start_t * sr) as usize;
+    let n = (dur * sr) as usize;
+    let rel = (0.004 * sr) as usize;
+    for i in 0..n {
+        let idx = start + i;
+        if idx >= buf.len() {
+            break;
+        }
+        let fade = if n > rel && i >= n - rel {
+            (n - i) as f32 / rel as f32
+        } else {
+            1.0
+        };
+        buf[idx] += node.get_mono() * amp * fade;
     }
-    let attack: f32 = 0.030;
-    if dt < attack {
-        (dt / attack).clamp(0.0, 1.0)
-    } else {
-        (-(dt - attack) / 0.120).exp().clamp(0.0, 1.0)
-    }
 }
 
-/// Mellow lead voice — fundamental + a soft 2nd harmonic (a harsh 4-harmonic saw was grating),
-/// gentle attack + longer decay so it sits *under* the groove rather than stabbing over it.
-fn lead_voice(t: f32, freq: f32, dt: f32) -> f32 {
-    use std::f32::consts::TAU;
-    let osc = (t * freq * TAU).sin() + 0.25 * (t * 2.0 * freq * TAU).sin();
-    let attack = 0.02;
-    let env = if dt < attack {
-        dt / attack
-    } else {
-        (-(dt - attack) / 0.6).exp()
-    };
-    osc * env
-}
-
-/// One mono sample of the mix at time `t`, reading the patterns + dynamics from `score`.
-fn synth_sample(score: &Score, t: f32) -> f32 {
-    use std::f32::consts::TAU;
-    let lv = score.levels(t);
-
-    let sub_freq = 55.0;
-    let sub = (t * sub_freq * TAU).sin() * (0.12 + 0.45 * lv.sub_bass);
-
-    let kick = score.last_hit(Inst::Kick, t).map_or(0.0, |kt| {
-        let dt = t - kt;
-        let pitch = 45.0 + 75.0 * (-dt / 0.03).exp();
-        let env = (-dt / 0.12).exp();
-        (dt * pitch * TAU).sin() * env * 0.55
-    });
-
-    let snare = score.last_hit(Inst::Snare, t).map_or(0.0, |kt| {
-        let dt = t - kt;
-        if dt > 0.5 {
-            0.0
-        } else {
-            snare_voice(t, dt) * 0.35
-        }
-    });
-
-    let hat = score.last_hit(Inst::Hat, t).map_or(0.0, |kt| {
-        let dt = t - kt;
-        if dt > 0.15 {
-            0.0
-        } else {
-            hat_voice(t, dt) * 0.08
-        }
-    });
-
-    let stab = score.last_hit(Inst::Stab, t).map_or(0.0, |kt| {
-        let dt = t - kt;
-        if dt > 0.4 {
-            0.0
-        } else {
-            let env = stab_envelope(dt);
-            let tri = score.chord_at(kt).triad();
-            (pad_voice(t, tri[0]) + pad_voice(t, tri[1]) + pad_voice(t, tri[2]))
-                * env
-                * (0.03 + 0.05 * lv.mids)
-        }
-    });
-
-    let bass = score.last_hit(Inst::Kick, t).map_or(0.0, |kt| {
-        let dt = t - kt;
-        // Let the bass ring out, then fade its tail to silence — instead of hard-zeroing it while
-        // still ~14% audible, which was the abrupt "bass cutoff" click.
-        let cut = 0.9;
-        let fade = 0.08;
-        if dt > cut {
-            0.0
-        } else {
-            let freq = score.chord_at(kt).root * 0.5; // chord root, an octave down
-            let attack: f32 = 0.010;
-            let env = if dt < attack {
-                (dt / attack).clamp(0.0, 1.0)
-            } else {
-                (-(dt - attack) / 0.25).exp()
-            };
-            let tail = ((cut - dt) / fade).clamp(0.0, 1.0); // smooth release to zero at `cut`
-            bass_voice(t, freq) * env * tail * 0.18
-        }
-    });
-
-    // melody: the most recent lead note, played by the lead voice (silent in lead-less sections).
-    let lead = score.last_lead(t).map_or(0.0, |(freq, lt)| {
-        let dt = t - lt;
-        if dt > 1.5 {
-            0.0
-        } else {
-            lead_voice(t, freq, dt) * 0.05 // well under the groove — a hint, not a stab
-        }
-    });
-
-    // warm sustained pad on the current chord (+ a sub-octave) — fills the harmony so the track
-    // has body instead of sounding thin / elevator-empty. Slow swell, modulated by the mids level.
-    let pad = {
-        let tri = score.chord_at(t).triad();
-        let swell = 0.55 + 0.45 * (t / (4.0 * score.beat()) * TAU).sin();
-        let v = |f: f32| (t * f * TAU).sin() + 0.5 * (t * f * 0.5 * TAU).sin();
-        (v(tri[0]) + v(tri[1]) + v(tri[2])) * 0.03 * swell * (0.4 + 0.6 * lv.mids)
-    };
-
-    let master = {
-        let fade_in = (t / 1.5).clamp(0.0, 1.0);
-        let fade_out = ((score.demo_len() - t) / 2.0).clamp(0.0, 1.0);
-        fade_in * fade_out * score.gain_at(t)
-    };
-
-    ((sub + kick + snare + hat + stab + bass + lead + pad) * master).tanh()
-}
-
-/// Render the whole score to a mono sample buffer.
+/// Render the whole score to a mono buffer: build a FunDSP voice at every drum hit / lead note /
+/// per-bar chord (timing + chord + dynamics all from `score`), then add the continuous sub and the
+/// per-section master gain (fades + `gain_at`) and soft-clip.
 pub fn synth_track(score: &Score) -> Track {
-    let total = (score.demo_len() * SAMPLE_RATE as f32).ceil() as usize;
-    let dt = 1.0 / SAMPLE_RATE as f32;
-    let samples: Vec<f32> = (0..total)
-        .map(|i| synth_sample(score, i as f32 * dt))
-        .collect();
+    use std::f32::consts::TAU;
+    let sr = SAMPLE_RATE as f32;
+    let total = (score.demo_len() * sr).ceil() as usize;
+    let mut buf = vec![0f32; total];
+
+    for kt in score.hits(Inst::Kick) {
+        render_into(&mut buf, kt, 0.45, 0.7, kick());
+        render_into(&mut buf, kt, 0.55, 0.5, bass(score.chord_at(kt).root * 0.5));
+    }
+    for t in score.hits(Inst::Snare) {
+        render_into(&mut buf, t, 0.4, 0.5, snare());
+    }
+    for t in score.hits(Inst::Hat) {
+        render_into(&mut buf, t, 0.12, 0.2, hat());
+    }
+    for t in score.hits(Inst::Stab) {
+        let m = score.levels(t).mids;
+        render_into(
+            &mut buf,
+            t,
+            0.5,
+            0.10 + 0.10 * m,
+            stab(score.chord_at(t).triad()),
+        );
+    }
+    for (t, f) in score.lead_notes() {
+        render_into(&mut buf, t, 0.6, 0.13, lead(f));
+    }
+    // sustained pad: one chord per bar (warmth/body)
+    let bar = score.bar();
+    let nbars = (score.demo_len() / bar).ceil() as usize;
+    for b in 0..nbars {
+        let t = b as f32 * bar;
+        let m = score.levels(t).mids;
+        render_into(
+            &mut buf,
+            t,
+            bar,
+            0.06 + 0.06 * m,
+            pad(score.chord_at(t).triad()),
+        );
+    }
+
+    // continuous sub-bass + per-section master gain (fade-in/out × gain_at) + soft clip.
+    let dt = 1.0 / sr;
+    let demo = score.demo_len();
+    for (i, s) in buf.iter_mut().enumerate() {
+        let t = i as f32 * dt;
+        let lv = score.levels(t);
+        let sub = (TAU * 55.0 * t).sin() * (0.12 + 0.45 * lv.sub_bass);
+        let fade_in = (t / 1.5).clamp(0.0, 1.0);
+        let fade_out = ((demo - t) / 2.0).clamp(0.0, 1.0);
+        let g = fade_in * fade_out * score.gain_at(t);
+        *s = ((*s + sub) * g).tanh();
+    }
     Track {
-        samples: Arc::new(samples),
+        samples: Arc::new(buf),
     }
 }
 

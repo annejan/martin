@@ -288,28 +288,17 @@ impl Score {
         s.lane(inst).at(s.phase_at(into))
     }
 
-    /// The time of the most recent `inst` hit at/just-before `t` (None if there isn't one within a
-    /// few bars). Drives the per-voice envelopes in the synth.
-    pub fn last_hit(&self, inst: Inst, t: f32) -> Option<f32> {
-        if t < 0.0 {
-            return None;
-        }
+    /// Every hit time (s) for `inst` across the whole track, in order — the synth builds a voice at
+    /// each. Forward enumeration: walk every 16th-note slot and keep the ones that fire.
+    pub fn hits(&self, inst: Inst) -> Vec<f32> {
         let sl = self.slot_len();
-        let mut slot = ((t + sl * 1e-3) / sl).floor() as i64;
-        if slot >= 0 && (slot as f32) * sl > t {
-            slot -= 1;
-        }
-        for _ in 0..(SLOTS_PER_BAR * 4) {
-            if slot < 0 {
-                return None;
-            }
-            let kt = slot as f32 * sl;
-            if self.lane_hits(inst, kt)[slot.rem_euclid(SLOTS_PER_BAR) as usize] {
-                return Some(kt);
-            }
-            slot -= 1;
-        }
-        None
+        let slots = self.total_bars as i64 * SLOTS_PER_BAR;
+        (0..slots)
+            .filter_map(|s| {
+                let t = s as f32 * sl;
+                self.lane_hits(inst, t)[(s % SLOTS_PER_BAR) as usize].then_some(t)
+            })
+            .collect()
     }
 
     // --- harmony + melody ---------------------------------------------------------------------
@@ -325,28 +314,17 @@ impl Score {
         s.lead.at(s.phase_at(into))
     }
 
-    /// The most recent lead note (freq) + its start time at/just-before `t` — drives the lead
-    /// voice's envelope. `None` if there's no note within a few bars (e.g. a lead-less section).
-    pub fn last_lead(&self, t: f32) -> Option<(f32, f32)> {
-        if t < 0.0 {
-            return None;
-        }
+    /// Every lead note as (time, freq) across the whole track — the synth builds the melody voice
+    /// at each onset.
+    pub fn lead_notes(&self) -> Vec<(f32, f32)> {
         let sl = self.slot_len();
-        let mut slot = ((t + sl * 1e-3) / sl).floor() as i64;
-        if slot >= 0 && (slot as f32) * sl > t {
-            slot -= 1;
-        }
-        for _ in 0..(SLOTS_PER_BAR * 4) {
-            if slot < 0 {
-                return None;
-            }
-            let lt = slot as f32 * sl;
-            if let Some(freq) = self.lead_grid(lt)[slot.rem_euclid(SLOTS_PER_BAR) as usize] {
-                return Some((freq, lt));
-            }
-            slot -= 1;
-        }
-        None
+        let slots = self.total_bars as i64 * SLOTS_PER_BAR;
+        (0..slots)
+            .filter_map(|s| {
+                let t = s as f32 * sl;
+                self.lead_grid(t)[(s % SLOTS_PER_BAR) as usize].map(|f| (t, f))
+            })
+            .collect()
     }
 
     // --- dynamics -----------------------------------------------------------------------------
