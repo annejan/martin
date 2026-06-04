@@ -171,4 +171,54 @@ mod tests {
         assert!(finite, "non-finite gaussian positions from the mesh");
         eprintln!("defeest.dae → {} gaussians", g.len());
     }
+
+    // Diagnostic for the bornhack badge: count, how many use the grey fallback colour, and any
+    // non-finite / extreme positions that could crash the GPU.
+    #[test]
+    fn bornhack_diag() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("assets/bornhack2026-hardware.dae");
+        if !p.exists() {
+            eprintln!("skip bornhack_diag: not present");
+            return;
+        }
+        let fallback = [0.8_f32, 0.85, 0.95];
+        let g = build_mesh_gaussians(&p, 60_000, 0.01, fallback);
+        let grey = sh_of(fallback);
+        let n_grey = g
+            .iter()
+            .filter(|gg| {
+                (0..3).all(|i| {
+                    (gg.spherical_harmonic.coefficients[i] - grey.coefficients[i]).abs() < 1e-4
+                })
+            })
+            .count();
+        let mut lo = f32::MAX;
+        let mut hi = f32::MIN;
+        let mut nonfinite = 0;
+        for gg in &g {
+            for c in gg.position_visibility.position {
+                if !c.is_finite() {
+                    nonfinite += 1;
+                } else {
+                    lo = lo.min(c);
+                    hi = hi.max(c);
+                }
+            }
+        }
+        eprintln!(
+            "bornhack: {} gaussians, {n_grey} grey ({:.0}%), pos range [{lo:.4}, {hi:.4}], nonfinite {nonfinite}",
+            g.len(),
+            100.0 * n_grey as f32 / g.len().max(1) as f32
+        );
+        assert_eq!(nonfinite, 0, "non-finite mesh positions");
+        assert!(
+            hi > lo,
+            "mesh collapsed to a point (node transforms not baked?)"
+        );
+        assert!(
+            n_grey * 4 < g.len(),
+            "mesh mostly fell back to grey — materials not read?"
+        );
+    }
 }
