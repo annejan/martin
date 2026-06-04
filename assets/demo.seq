@@ -1,0 +1,16 @@
+# martin — a simple demo from the bits we KNOW render crisp: the two Martins, the dog, a wavy wall
+# of text, a falling bitterbal, the deFEEST logo. These are objects (not scene captures), so they
+# fill the frame — no waypoint camera needed; the default front framing + gentle sway just works.
+#
+#   MARTIN_PLY=assets/doggo.ply MARTIN_SEQ=assets/demo.seq MARTIN_SCORE=assets/score.txt \
+#     MARTIN_MORPH_COUNT=300000 ./record.sh demo.mp4
+#
+# Live preview (hear + see it, no file): same line but `cargo +nightly run --release` at the end.
+# It's all data — edit the titles, the order, the effects (~name) and deforms (^name) to taste.
+
+text:MARTIN GAUS                  @@intro      @8,3       ~pen-write    # title, handwritten on
+splat:martin.ply+martin-peace.ply @@build      @10,3,0.6  ~morph        # the two Martins assemble
+splat:doggo.ply                   @@drop       @16,3,0.6  ~morph        # …morph into the dog, on the drop
+wall:GREETINGS|TO ALL|DEMOSCENERS @@breakdown  @12,3      ~fade ^wave   # a wavy wall of greetings
+mesh:bitterbal.obj                @@climax     @14,4      ~drop         # a bitterbal drops in (deFEEST!)
+image:defeest-logo.png            @@outro      @10,3      ~ball         # the deFEEST logo for the outro
