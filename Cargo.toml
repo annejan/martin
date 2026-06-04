@@ -5,7 +5,9 @@ edition = "2021"
 description = "Fly a camera around a Gaussian splat (and, soon, explode it). Rust + wgpu -> Vulkan, no CUDA."
 
 [dependencies]
-bevy = "0.18"
+# `wav` enables rodio's WAV decoder — the live synth playback feeds bevy_audio a hand-rolled WAV,
+# and Bevy's default audio features are vorbis-only (without this, playback panics UnrecognizedFormat).
+bevy = { version = "0.18", features = ["wav"] }
 # Select features explicitly (mirrors the crate's defaults) so **sh0** is a feature
 # CHOICE here, not a vendored-Cargo.toml edit — our splats are SH degree-0 only.
 # Needs nightly (nightly_generic_alias); io_ply + planar load our .ply.
