@@ -519,22 +519,7 @@ fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
                 bulge = *v;
             }
         }
-        let content = if let Some(txt) = head.strip_prefix("text:") {
-            PartContent::Text(txt.to_string())
-        } else if let Some(w) = head.strip_prefix("wall:") {
-            // a wall of text: a multi-line block. `|` separates lines (build_text_gaussians lays
-            // out `\n`), or point at a text file. Great with a `^deform` to make it ripple/billow.
-            let w = w.trim();
-            PartContent::Text(std::fs::read_to_string(w).unwrap_or_else(|_| w.replace('|', "\n")))
-        } else if let Some(name) = head.strip_prefix("image:") {
-            PartContent::Image(name.trim().to_string())
-        } else if let Some(name) = head.strip_prefix("mesh:") {
-            PartContent::Mesh(name.trim().to_string())
-        } else if let Some(p) = head.strip_prefix("splat:") {
-            PartContent::Splats(side_by_side(
-                p.split('+').map(str::trim).filter(|x| !x.is_empty()),
-            ))
-        } else {
+        let Some(content) = parse_source(head) else {
             continue;
         };
         parts.push(Part {
@@ -548,6 +533,29 @@ fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
         });
     }
     parts
+}
+
+/// Parse a source head (`text:` / `wall:` / `image:` / `mesh:` / `splat:`) into a `PartContent`.
+/// Shared by the morph timeline (`parse_seq`) and the composition stage (`parse_compose`).
+fn parse_source(head: &str) -> Option<PartContent> {
+    Some(if let Some(txt) = head.strip_prefix("text:") {
+        PartContent::Text(txt.to_string())
+    } else if let Some(w) = head.strip_prefix("wall:") {
+        // a wall of text: a multi-line block. `|` separates lines (build_text_gaussians lays out
+        // `\n`), or point at a text file. Great with a `^deform` to make it ripple/billow.
+        let w = w.trim();
+        PartContent::Text(std::fs::read_to_string(w).unwrap_or_else(|_| w.replace('|', "\n")))
+    } else if let Some(name) = head.strip_prefix("image:") {
+        PartContent::Image(name.trim().to_string())
+    } else if let Some(name) = head.strip_prefix("mesh:") {
+        PartContent::Mesh(name.trim().to_string())
+    } else if let Some(p) = head.strip_prefix("splat:") {
+        PartContent::Splats(side_by_side(
+            p.split('+').map(str::trim).filter(|x| !x.is_empty()),
+        ))
+    } else {
+        return None;
+    })
 }
 
 /// Arrange splat filenames evenly along X, centered (one splat → at origin).
@@ -1018,12 +1026,15 @@ fn advance_seq_clock(
     time: Res<Time>,
     rec: Res<RecordState>,
     state: Option<Res<SeqState>>,
+    comp: Option<Res<Composition>>,
     mut clock: ResMut<SeqClock>,
 ) {
     if rec.dir.is_some() {
         return;
     }
-    if state.map(|s| s.built).unwrap_or(false) {
+    // advance once the show is up — the morph sequence OR the composition stage.
+    let built = state.map(|s| s.built).unwrap_or(false) || comp.map(|c| c.built).unwrap_or(false);
+    if built {
         clock.t += time.delta_secs();
     }
 }
@@ -1182,7 +1193,8 @@ fn live_end(
     }
 }
 
-/// MARTIN_FPS=1: log smoothed FPS + frame-time + timeline clock every ~0.5s.
+/// FPS + splat-count metrics. `MARTIN_FPS=1` logs every ~0.5 s; the **`I`** key toggles that live
+/// and logs one snapshot immediately.
 #[derive(Resource)]
 struct FpsLog {
     enabled: bool,
@@ -1190,17 +1202,26 @@ struct FpsLog {
     frames: u32,
 }
 
-fn fps_log(time: Res<Time>, clock: Res<SeqClock>, mut f: ResMut<FpsLog>) {
-    if !f.enabled {
-        return;
+fn fps_log(
+    time: Res<Time>,
+    keys: Res<ButtonInput<KeyCode>>,
+    clock: Res<SeqClock>,
+    seq: Option<Res<Sequence>>,
+    mut f: ResMut<FpsLog>,
+) {
+    let snap = keys.just_pressed(KeyCode::KeyI); // `I` → toggle logging + log one snapshot now
+    if snap {
+        f.enabled = !f.enabled;
     }
     f.accum += time.delta_secs();
     f.frames += 1;
-    if f.accum >= 0.5 {
-        let ms = 1000.0 * f.accum / f.frames as f32;
+    if (f.enabled && f.accum >= 0.5) || snap {
+        let fps = f.frames as f32 / f.accum.max(1e-6);
+        let ms = 1000.0 * f.accum / f.frames.max(1) as f32;
+        // gaussians rendered per part (the morph budget; 0 = each part's native count).
+        let splats = seq.map(|s| s.count).unwrap_or(0);
         info!(
-            "FPS {:.1} ({ms:.1} ms/frame) t={:.2}",
-            f.frames as f32 / f.accum,
+            "metrics: {fps:.1} fps ({ms:.1} ms/frame) · {splats} splats/part · t={:.2}",
             clock.t
         );
         f.accum = 0.0;
@@ -1235,6 +1256,7 @@ fn music_director(
     mut commands: Commands,
     music: Option<ResMut<Music>>,
     state: Option<Res<SeqState>>,
+    comp: Option<Res<Composition>>,
     clock: Res<SeqClock>,
     mut audio_assets: ResMut<Assets<AudioSource>>,
 ) {
@@ -1256,7 +1278,7 @@ fn music_director(
         }
     }
     music.prev_t = clock.t;
-    let built = state.map(|s| s.built).unwrap_or(false);
+    let built = state.map(|s| s.built).unwrap_or(false) || comp.map(|c| c.built).unwrap_or(false);
     if built && music.entity.is_none() {
         if let Some(h) = music.handle.clone() {
             music.entity = Some(
@@ -1264,6 +1286,253 @@ fn music_director(
                     .spawn((AudioPlayer(h), PlaybackSettings::ONCE))
                     .id(),
             );
+        }
+    }
+}
+
+// ===========================================================================================
+// Composition — many objects on one stage at once (MARTIN_COMPOSE), vs the single-morph timeline
+// ===========================================================================================
+
+/// One object placed on the composition stage: a source + where it sits + how it moves.
+#[derive(Clone)]
+struct Composed {
+    content: PartContent,
+    pos: Vec3,
+    scale: f32,
+    rot: Vec3,   // static orientation, euler degrees
+    spin: Vec3,  // auto-rotation, degrees/sec
+    bob: f32,    // vertical bob amplitude (units)
+    drift: Vec3, // translation velocity (units/sec)
+    appear: f32, // fade-in start (s on the show clock)
+    out: f32,    // fade-out start (s); f32::MAX = stays to the end
+    fade: f32,   // fade in/out duration (s)
+}
+
+/// `MARTIN_COMPOSE=<file>`: a stage of objects, all on screen together.
+#[derive(Resource)]
+struct Composition {
+    objects: Vec<Composed>,
+    built: bool,
+}
+
+/// Per-object animation state, carried on each spawned cloud entity.
+#[derive(Component)]
+struct ComposeAnim {
+    base_pos: Vec3,
+    base_rot: Quat,
+    spin: Vec3, // rad/sec
+    bob: f32,
+    drift: Vec3,
+    appear: f32,
+    out: f32,
+    fade: f32,
+}
+
+/// Parse `MARTIN_COMPOSE` (a file path or inline string). Each line: a `<source>` head (text/splat/
+/// mesh/image) then placement tokens — `@x,y,z` position, `*scale`, `rot a,b,c`, `spin a,b,c`
+/// (deg/s), `bob amp`, `drift dx,dy,dz`, `in <anchor>`, `out <anchor>` (section/bar/beat/seconds).
+fn parse_compose(spec: &str, score: &score::Score) -> Vec<Composed> {
+    let raw = std::fs::read_to_string(spec).unwrap_or_else(|_| spec.to_string());
+    let kw = |t: &str| matches!(t, "rot" | "spin" | "bob" | "drift" | "in" | "out");
+    let mut out = Vec::new();
+    for line in raw.split([';', '\n']) {
+        let s = line.split('#').next().unwrap_or("").trim();
+        if s.is_empty() {
+            continue;
+        }
+        let toks: Vec<&str> = s.split_whitespace().collect();
+        // source = the leading tokens up to the first placement token (so `text:HELLO WORLD` works).
+        let split = toks
+            .iter()
+            .position(|t| t.starts_with('@') || t.starts_with('*') || kw(t))
+            .unwrap_or(toks.len());
+        let Some(content) = parse_source(&toks[..split].join(" ")) else {
+            continue;
+        };
+        let rest = &toks[split..];
+        let (mut pos, mut scale, mut rot) = (Vec3::ZERO, 1.0_f32, Vec3::ZERO);
+        let (mut spin, mut bob, mut drift) = (Vec3::ZERO, 0.0_f32, Vec3::ZERO);
+        let (mut appear, mut out_t, fade) = (0.0_f32, f32::MAX, 0.8_f32);
+        let mut i = 0;
+        while i < rest.len() {
+            let t = rest[i];
+            if let Some(v) = t.strip_prefix('@') {
+                pos = vec3_csv(v);
+                i += 1;
+            } else if let Some(v) = t.strip_prefix('*') {
+                scale = v.parse().unwrap_or(1.0);
+                i += 1;
+            } else {
+                let val = rest.get(i + 1).copied().unwrap_or("");
+                match t {
+                    "rot" => rot = vec3_csv(val),
+                    "spin" => spin = vec3_csv(val),
+                    "drift" => drift = vec3_csv(val),
+                    "bob" => bob = val.parse().unwrap_or(0.0),
+                    "in" => appear = score.anchor_seconds(val).unwrap_or(0.0),
+                    "out" => out_t = score.anchor_seconds(val).unwrap_or(f32::MAX),
+                    _ => {}
+                }
+                i += 2;
+            }
+        }
+        out.push(Composed {
+            content,
+            pos,
+            scale,
+            rot,
+            spin,
+            bob,
+            drift,
+            appear,
+            out: out_t,
+            fade,
+        });
+    }
+    out
+}
+
+fn vec3_csv(s: &str) -> Vec3 {
+    let n: Vec<f32> = s.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+    Vec3::new(
+        n.first().copied().unwrap_or(0.0),
+        n.get(1).copied().unwrap_or(0.0),
+        n.get(2).copied().unwrap_or(0.0),
+    )
+}
+
+/// Build the stage once every referenced splat has loaded: each object → its own gaussian cloud
+/// entity placed at its transform with a `ComposeAnim` for motion. Frames the camera on the union.
+fn build_composition(
+    mut commands: Commands,
+    mut assets: ResMut<Assets<PlanarGaussian3d>>,
+    comp: Option<ResMut<Composition>>,
+    state: Option<Res<SeqState>>,
+    root: Res<AssetRoot>,
+    mut cam: Query<&mut OrbitCam>,
+) {
+    let (Some(mut comp), Some(state)) = (comp, state) else {
+        return;
+    };
+    if comp.built || comp.objects.is_empty() {
+        return;
+    }
+    if state.loads.iter().any(|h| assets.get(h).is_none()) {
+        return; // wait for every referenced splat
+    }
+    let base = cloud_base_rotation();
+    // cap each object's splats so a stage of big splats stays performant on the iGPU.
+    let count = std::env::var("MARTIN_MORPH_COUNT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(120_000);
+    let mut placed: Vec<(Vec3, f32)> = Vec::new(); // (centre, radius) per object, for framing
+    for obj in &comp.objects {
+        let mut raw = part_gaussians(&obj.content, &state, &assets, &root.0);
+        if raw.is_empty() {
+            continue;
+        }
+        crate::morph::normalize_to(&mut raw, NORMALIZE_EXTENT); // centre + ~2 units across
+        let raw = resample_morton(raw, count);
+        let rot = Quat::from_euler(
+            EulerRot::XYZ,
+            obj.rot.x.to_radians(),
+            obj.rot.y.to_radians(),
+            obj.rot.z.to_radians(),
+        ) * base;
+        let handle = assets.add(PlanarGaussian3d::from(raw));
+        commands.spawn((
+            PlanarGaussian3dHandle(handle),
+            CloudSettings {
+                sort_mode: SortMode::Radix,
+                global_opacity: 0.0, // animate_composition fades it in
+                ..default()
+            },
+            Transform {
+                translation: obj.pos,
+                rotation: rot,
+                scale: Vec3::splat(obj.scale),
+            },
+            NoFrustumCulling,
+            ComposeAnim {
+                base_pos: obj.pos,
+                base_rot: rot,
+                spin: obj.spin * (PI / 180.0),
+                bob: obj.bob,
+                drift: obj.drift,
+                appear: obj.appear,
+                out: obj.out,
+                fade: obj.fade,
+            },
+        ));
+        placed.push((obj.pos, NORMALIZE_EXTENT * 0.5 * obj.scale));
+    }
+    comp.built = true;
+    if placed.is_empty() {
+        return;
+    }
+    let center = placed.iter().map(|(p, _)| *p).sum::<Vec3>() / placed.len() as f32;
+    let radius = placed
+        .iter()
+        .map(|(p, r)| (*p - center).length() + r)
+        .fold(0.1_f32, f32::max);
+    let zoom = std::env::var("MARTIN_ZOOM")
+        .ok()
+        .and_then(|s| s.parse::<f32>().ok())
+        .filter(|z| *z > 0.0)
+        .unwrap_or(1.0);
+    for mut c in &mut cam {
+        c.target = center;
+        c.dist = radius * 2.5 / zoom;
+        c.yaw = FRONT_YAW;
+        c.pitch = DEFAULT_PITCH;
+        c.framed = true;
+    }
+    info!("composition: {} objects on stage", placed.len());
+}
+
+/// Animate the stage from the show clock: spin + bob + drift each object, fade it in (and out, if
+/// it has an `out` time) via `global_opacity`.
+fn animate_composition(
+    clock: Res<SeqClock>,
+    mut q: Query<(&ComposeAnim, &mut Transform, &mut CloudSettings)>,
+) {
+    let t = clock.t;
+    for (a, mut tf, mut cs) in &mut q {
+        tf.rotation =
+            a.base_rot * Quat::from_euler(EulerRot::XYZ, a.spin.x * t, a.spin.y * t, a.spin.z * t);
+        let bob = if a.bob != 0.0 {
+            a.bob * (t * 1.5).sin()
+        } else {
+            0.0
+        };
+        tf.translation = a.base_pos + a.drift * t + Vec3::Y * bob;
+        let fin = ((t - a.appear) / a.fade.max(1e-3)).clamp(0.0, 1.0);
+        let fout = if a.out < f32::MAX {
+            ((a.out + a.fade - t) / a.fade.max(1e-3)).clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+        cs.global_opacity = fin.min(fout);
+    }
+}
+
+/// Slowly orbit the camera around the stage (the "flow") — additive with the live arrow keys.
+fn compose_camera(
+    comp: Option<Res<Composition>>,
+    rec: Res<RecordState>,
+    time: Res<Time>,
+    mut cam: Query<&mut OrbitCam>,
+) {
+    if comp.map(|c| c.built).unwrap_or(false) {
+        let dt = if rec.dir.is_some() {
+            1.0 / 60.0
+        } else {
+            time.delta_secs()
+        };
+        for mut c in &mut cam {
+            c.yaw += 0.12 * dt;
         }
     }
 }
@@ -1390,7 +1659,23 @@ fn main() {
         return;
     }
 
-    let (sequence, asset_root) = sequence_from_env(&score);
+    // MARTIN_COMPOSE: the composition stage (many objects at once). When set it IS the show — the
+    // morph timeline is left empty (build_sequence no-ops) and build_composition drives everything.
+    let composition = std::env::var("MARTIN_COMPOSE")
+        .ok()
+        .map(|spec| parse_compose(&spec, &score));
+    let (sequence, asset_root) = if composition.is_some() {
+        let root = std::env::var("MARTIN_PLY").ok().and_then(parent_dir);
+        (
+            Sequence {
+                parts: Vec::new(),
+                count: 0,
+            },
+            root,
+        )
+    } else {
+        sequence_from_env(&score)
+    };
     // where `image:` PNG parts are read from — the .ply folder, or `assets` by default.
     let asset_root_path =
         std::path::PathBuf::from(asset_root.clone().unwrap_or_else(|| "assets".to_string()));
@@ -1432,6 +1717,10 @@ fn main() {
         ))
         .insert_resource(waypoints::Waypoints::from_env())
         .insert_resource(ScoreRes(std::sync::Arc::new(score)))
+        .insert_resource(Composition {
+            objects: composition.unwrap_or_default(),
+            built: false,
+        })
         .init_resource::<SeqClock>()
         .insert_resource(ClearColor(Color::BLACK))
         .insert_resource(FpsLog {
@@ -1454,7 +1743,8 @@ fn main() {
             // a pinned yaw, a parked capture pose, or a flown waypoint path → hold/drive it, no sway
             sway: std::env::var("MARTIN_YAW").is_err()
                 && std::env::var("MARTIN_CAMERAS").is_err()
-                && std::env::var("MARTIN_FLY").is_err(),
+                && std::env::var("MARTIN_FLY").is_err()
+                && std::env::var("MARTIN_COMPOSE").is_err(),
             i: 0,
             grace: 0,
         })
@@ -1475,6 +1765,9 @@ fn main() {
                 fps_log,
                 music_director,
                 live_end,
+                build_composition,
+                animate_composition,
+                compose_camera,
             ),
         )
         .run();
@@ -1484,19 +1777,26 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     seq: Res<Sequence>,
+    comp: Res<Composition>,
     score_res: Res<ScoreRes>,
 ) {
-    // load every referenced splat (by filename in the asset folder); build_sequence
-    // assembles the per-part shapes once they're all available.
+    // load every referenced splat (by filename in the asset folder); build_sequence /
+    // build_composition assemble the shapes once they're all available.
     let mut names: Vec<String> = Vec::new();
-    for b in &seq.parts {
-        if let PartContent::Splats(list) = &b.content {
+    let add = |content: &PartContent, names: &mut Vec<String>| {
+        if let PartContent::Splats(list) = content {
             for (n, _) in list {
                 if !names.contains(n) {
                     names.push(n.clone());
                 }
             }
         }
+    };
+    for b in &seq.parts {
+        add(&b.content, &mut names);
+    }
+    for o in &comp.objects {
+        add(&o.content, &mut names);
     }
     let loads = names
         .iter()

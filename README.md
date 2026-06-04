@@ -76,6 +76,8 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 | `MARTIN_REFORM=dog.ply` | The source(s) **morph** into this one (Morton-paired particle flow). |
 | `MARTIN_TEXT="MARTIN GAUS"` | **Splat-text**: the title assembles out of a ball cloud (glowing). |
 | `MARTIN_SEQ="…"` | **Timeline** — a chain of parts that morph into one another (see below). |
+| `MARTIN_COMPOSE=stage.compose` | **Composition** — many objects on one stage at once, placed + spinning/bobbing/drifting, fading in on the music, camera auto-orbiting (vs the morph timeline). Example: `assets/stage.compose`. |
+| `MARTIN_FPS=1` / **`I`** key | Log FPS + splat count (the `I` key toggles it live + logs a snapshot). |
 | `MARTIN_BULGE=0.9` | Ball-cloud explosiveness at a morph's midpoint (`0` = clean reorder). |
 | `MARTIN_TRANSITION=fade` | How each part **arrives**: `morph`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl`, or the shader ones `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-part `~name` wins). |
 | `MARTIN_DEFORM=wave` | **Persistent** deform held the whole part (`wave`/`cloth`/`ripple`/`twist`) — great on a `wall:` of text. Per-part `^name` wins. |

@@ -317,6 +317,42 @@ sequences) and the camera is framed once over everything, so it never pops betwe
 
 ---
 
+## Composition — the stage (`MARTIN_COMPOSE`)
+
+Where `MARTIN_SEQ` is a *timeline* (one object morphs into the next), `MARTIN_COMPOSE=<file>` is a
+**stage**: many objects on screen **at once**, each placed + animated, the camera flowing around
+them. The shipped example is **`assets/stage.compose`**:
+
+```bash
+MARTIN_PLY=assets/doggo.ply MARTIN_COMPOSE=assets/stage.compose MARTIN_MORPH_COUNT=120000 \
+  cargo +nightly run --release
+```
+
+Each line is one object: a `<source>` (any of `text:` / `wall:` / `image:` / `mesh:` / `splat:`)
+followed by placement + motion tokens:
+
+```
+splat:doggo.ply                @0,0,0      *1.1  spin 0,18,0
+splat:martin.ply               @-1.9,.3,0  *.7   spin 0,-22,0   in build
+text:deFEEST                   @0,1.7,0    *.8   bob .12        in drop
+mesh:bornhack2026-hardware.dae @0,-1.6,.3  *.7   spin 20,40,0   in climax
+```
+
+| token | meaning |
+|---|---|
+| `@x,y,z` | position on the stage |
+| `*s` | scale |
+| `rot a,b,c` | static orientation (euler degrees) |
+| `spin a,b,c` | auto-rotation, **degrees/sec** |
+| `bob amp` | vertical bob amplitude |
+| `drift dx,dy,dz` | translation velocity, units/sec |
+| `in <anchor>` / `out <anchor>` | fade in / out at an `@@`-style time (section / `bar:N` / `beat:N` / seconds) |
+
+So objects **fade in on the music** (the stage builds with the track), spin/bob/drift in place, and
+the camera slowly **auto-orbits** the whole arrangement (grab it any time with the arrow keys).
+`MARTIN_MORPH_COUNT` caps splats **per object**. (When `MARTIN_COMPOSE` is set, the morph timeline
+is empty — the stage is the show.)
+
 ## Music (the synth)
 
 martin carries a procedural synth + a **section/beat music clock**, ported (MIT) from Cinder's
