@@ -1302,6 +1302,7 @@ struct Composed {
     scale: f32,
     rot: Vec3,   // static orientation, euler degrees
     spin: Vec3,  // auto-rotation, degrees/sec
+    sway: Vec3,  // oscillating rotation amplitude, degrees (swings front-on; for hollow-back splats)
     bob: f32,    // vertical bob amplitude (units)
     drift: Vec3, // translation velocity (units/sec)
     appear: f32, // fade-in start (s on the show clock)
@@ -1322,6 +1323,7 @@ struct ComposeAnim {
     base_pos: Vec3,
     base_rot: Quat,
     spin: Vec3, // rad/sec
+    sway: Vec3, // rad amplitude, oscillating
     bob: f32,
     drift: Vec3,
     appear: f32,
@@ -1334,7 +1336,7 @@ struct ComposeAnim {
 /// (deg/s), `bob amp`, `drift dx,dy,dz`, `in <anchor>`, `out <anchor>` (section/bar/beat/seconds).
 fn parse_compose(spec: &str, score: &score::Score) -> Vec<Composed> {
     let raw = std::fs::read_to_string(spec).unwrap_or_else(|_| spec.to_string());
-    let kw = |t: &str| matches!(t, "rot" | "spin" | "bob" | "drift" | "in" | "out");
+    let kw = |t: &str| matches!(t, "rot" | "spin" | "sway" | "bob" | "drift" | "in" | "out");
     let mut out = Vec::new();
     for line in raw.split([';', '\n']) {
         let s = line.split('#').next().unwrap_or("").trim();
@@ -1352,7 +1354,7 @@ fn parse_compose(spec: &str, score: &score::Score) -> Vec<Composed> {
         };
         let rest = &toks[split..];
         let (mut pos, mut scale, mut rot) = (Vec3::ZERO, 1.0_f32, Vec3::ZERO);
-        let (mut spin, mut bob, mut drift) = (Vec3::ZERO, 0.0_f32, Vec3::ZERO);
+        let (mut spin, mut sway, mut bob, mut drift) = (Vec3::ZERO, Vec3::ZERO, 0.0_f32, Vec3::ZERO);
         // appear < 0 = no fade-in (visible from the start); `in <anchor>` sets it to a real time.
         let (mut appear, mut out_t, fade) = (-1.0_f32, f32::MAX, 0.8_f32);
         let mut i = 0;
@@ -1369,6 +1371,7 @@ fn parse_compose(spec: &str, score: &score::Score) -> Vec<Composed> {
                 match t {
                     "rot" => rot = vec3_csv(val),
                     "spin" => spin = vec3_csv(val),
+                    "sway" => sway = vec3_csv(val),
                     "drift" => drift = vec3_csv(val),
                     "bob" => bob = val.parse().unwrap_or(0.0),
                     "in" => appear = score.anchor_seconds(val).unwrap_or(0.0),
@@ -1384,6 +1387,7 @@ fn parse_compose(spec: &str, score: &score::Score) -> Vec<Composed> {
             scale,
             rot,
             spin,
+            sway,
             bob,
             drift,
             appear,
@@ -1471,6 +1475,7 @@ fn build_composition(
                 base_pos: obj.pos,
                 base_rot: rot,
                 spin: obj.spin * (PI / 180.0),
+                sway: obj.sway * (PI / 180.0),
                 bob: obj.bob,
                 drift: obj.drift,
                 appear: obj.appear,
@@ -1520,8 +1525,16 @@ fn animate_composition(
 ) {
     let t = clock.t;
     for (a, mut tf, mut cs) in &mut q {
-        tf.rotation =
-            a.base_rot * Quat::from_euler(EulerRot::XYZ, a.spin.x * t, a.spin.y * t, a.spin.z * t);
+        // spin = continuous rotation; sway = a gentle oscillation around the base orientation
+        // (swings a hollow-back single-image splat left/right without ever facing away).
+        let osc = (t * 0.6).sin();
+        tf.rotation = a.base_rot
+            * Quat::from_euler(
+                EulerRot::XYZ,
+                a.spin.x * t + a.sway.x * osc,
+                a.spin.y * t + a.sway.y * osc,
+                a.spin.z * t + a.sway.z * osc,
+            );
         let bob = if a.bob != 0.0 {
             a.bob * (t * 1.5).sin()
         } else {
