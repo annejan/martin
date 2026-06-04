@@ -25,6 +25,8 @@ ttf-parser = "0.25"
 image = { version = "0.25", default-features = false, features = ["png"] }
 # Parse 3DGS `cameras.json` capture poses (MARTIN_CAMERAS). Same version Bevy already pulls in.
 serde_json = "1"
+# Load meshes (COLLADA .dae, .obj, .stl, .ply) → triangles, to sample into gaussians (mesh: source).
+mesh-loader = "0.1"
 
 # Faster iteration: optimize deps hard, our crate lightly.
 [profile.dev]

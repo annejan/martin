@@ -33,6 +33,7 @@ use bevy_gaussian_splatting::{
 };
 
 mod audio;
+mod mesh;
 mod morph;
 mod score;
 mod splat_image;
@@ -285,6 +286,8 @@ enum PartContent {
     Text(String),
     /// a PNG in the asset dir, rasterized to flat gaussians (a logo, etc.)
     Image(String),
+    /// a mesh in the asset dir (`.dae`/`.obj`/`.stl`/`.ply`), surface-sampled into gaussians
+    Mesh(String),
     /// one or more splats (filename in the asset dir, world offset) combined into one shape
     Splats(Vec<(String, Vec3)>),
 }
@@ -525,6 +528,8 @@ fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
             PartContent::Text(std::fs::read_to_string(w).unwrap_or_else(|_| w.replace('|', "\n")))
         } else if let Some(name) = head.strip_prefix("image:") {
             PartContent::Image(name.trim().to_string())
+        } else if let Some(name) = head.strip_prefix("mesh:") {
+            PartContent::Mesh(name.trim().to_string())
         } else if let Some(p) = head.strip_prefix("splat:") {
             PartContent::Splats(side_by_side(
                 p.split('+').map(str::trim).filter(|x| !x.is_empty()),
@@ -591,6 +596,26 @@ fn part_gaussians(
                 Vec::new()
             }
         },
+        PartContent::Mesh(name) => {
+            // MARTIN_MESH_COUNT (target gaussian count), MARTIN_MESH_SPLAT (size), MARTIN_MESH_RGB
+            // ("r,g,b" flat colour; vertex colours used when the mesh has them).
+            let count = std::env::var("MARTIN_MESH_COUNT")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(60_000);
+            let splat = std::env::var("MARTIN_MESH_SPLAT")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0.01);
+            let rgb = std::env::var("MARTIN_MESH_RGB")
+                .ok()
+                .and_then(|s| {
+                    let n: Vec<f32> = s.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+                    (n.len() == 3).then(|| [n[0], n[1], n[2]])
+                })
+                .unwrap_or([0.80, 0.85, 0.95]);
+            mesh::build_mesh_gaussians(&root.join(name), count, splat, rgb)
+        }
         PartContent::Splats(list) => {
             let mut out = Vec::new();
             for (name, off) in list {
@@ -712,6 +737,7 @@ fn build_sequence(
         let label = match &part.content {
             PartContent::Text(s) => format!("text \"{s}\""),
             PartContent::Image(name) => format!("image {name}"),
+            PartContent::Mesh(name) => format!("mesh {name}"),
             PartContent::Splats(list) => list
                 .iter()
                 .map(|(n, _)| n.as_str())

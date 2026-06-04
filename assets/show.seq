@@ -8,7 +8,7 @@
 # Record it with the bundled synth muxed in (swap MARTIN_SEQ into record.sh's env), or load your
 # own tune with MARTIN_SCORE=assets/score.txt (edit it!). Each line: content  @@anchor  @hold,morph,bulge  ~transition
 
-text:DEFEEST           @@intro      @5,3      ~pen-write    # handwriting draws on over the intro
+text:deFEEST           @@intro      @5,3      ~pen-write    # handwriting draws on over the intro
 text:PRESENTS          @@build      @3,2      ~typewriter   # types in as the drums build
 splat:doggo.ply        @@drop       @9,2.5,0.6 ~morph       # the dog assembles ON the drop
 splat:train.ply        @@breakdown  @5,3,0    ~morph        # straight morph dog → train
