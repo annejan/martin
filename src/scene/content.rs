@@ -115,7 +115,12 @@ pub(crate) fn part_gaussians(
                     (n.len() == 3).then(|| [n[0], n[1], n[2]])
                 })
                 .unwrap_or([0.80, 0.85, 0.95]);
-            mesh::build_mesh_gaussians(&root.join(name), count, splat, rgb)
+            // MARTIN_MESH_THIN: disk thickness as a fraction of the in-plane radius (flatness).
+            let thin = std::env::var("MARTIN_MESH_THIN")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0.2);
+            mesh::build_mesh_gaussians(&root.join(name), count, splat, thin, rgb)
         }
         PartContent::Splats(list) => {
             let mut out = Vec::new();

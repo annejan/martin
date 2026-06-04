@@ -23,8 +23,9 @@ ab_glyph = "0.2"
 # WITHOUT auto-closing them (ab_glyph closes contours, which boxes open strokes). Same
 # version ab_glyph already pulls in, so no extra compile.
 ttf-parser = "0.25"
-# Decode PNG logos into gaussians (logo → splat). Same version Bevy already pulls in.
-image = { version = "0.25", default-features = false, features = ["png"] }
+# Decode PNG logos into gaussians (logo → splat) + mesh diffuse textures (PNG/JPEG) sampled at the
+# UV. Same version Bevy already pulls in.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 # Parse 3DGS `cameras.json` capture poses (MARTIN_CAMERAS). Same version Bevy already pulls in.
 serde_json = "1"
 # Load meshes (COLLADA .dae, .obj, .stl, .ply) → triangles, to sample into gaussians (mesh: source).
