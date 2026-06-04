@@ -1,0 +1,22 @@
+# martin — "truck show": the whole story in assets. The truck rides the music while wavy neon
+# titles draw on, the camera flies the marked waypoint path, and it morphs into the deFEEST logo.
+#
+# Everything lives in assets/ (sequence + score + camera path), so this is one self-contained demo:
+#   MARTIN_PLY=assets/truck.ply \
+#   MARTIN_SEQ=assets/truck-show.seq \
+#   MARTIN_SCORE=assets/score.txt \
+#   MARTIN_WAYPOINTS=assets/truck-path.json MARTIN_FLY=2 \
+#   MARTIN_MORPH_COUNT=500000 ./record.sh truck_show.mp4
+#
+# (record.sh renders the synth + muxes it, so the .mp4 has the music. Drop MARTIN_FLY to use the
+#  default framing instead of the waypoint camera; re-mark assets/truck-path.json by flying + M.)
+#
+# Each part is @@anchored to a music section, so the cuts land on the arc. The camera flies the
+# path across each part's window (alternating direction → continuous through the morphs).
+
+splat:truck.ply        @@intro      @8,2       ~fade            # the truck materialises; camera flies in
+text:deFEEST           @@build      @10,3      ~outline ^wave   # a wavy neon title draws on as it builds
+splat:truck.ply        @@drop       @14,3,0    ~morph           # back to the truck on the drop, rotating
+text:MARTIN GAUS       @@breakdown  @8,3       ~outline ^wave   # second title over the breakdown
+splat:truck.ply        @@climax     @20,3,0    ~morph           # the big camera move around the truck
+mesh:defeest.dae       @@outro      @12,3,0    ~morph ^twist    # truck → the deFEEST logo, curling, for the outro

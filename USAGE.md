@@ -397,8 +397,9 @@ mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
 
 ## Recording to video
 
-`record.sh` (in the repo root) builds the demo, renders frames headlessly, and runs
-ffmpeg. It inherits all the `MARTIN_*` env vars:
+`record.sh` (in the repo root) builds the demo, renders frames, **renders the synth and muxes it
+in** (so the `.mp4` has the music — honours `MARTIN_SCORE`, skipped by `MARTIN_MUTE`), and fades the
+video out with the track. It inherits all the `MARTIN_*` env vars:
 
 ```bash
 # from the repo root
@@ -407,7 +408,17 @@ MARTIN_SEQ="text:MARTIN GAUS; splat:doggo.ply; text:CODE ANNEJAN" \
 ./record.sh my_show.mp4
 ```
 
-The clip length is computed automatically from the parts' `@hold,morph` timings.
+The clip length is computed automatically from the parts' `@hold,morph` (and `@@anchor`) timings.
+
+**Flagship example — the whole story in assets** (`assets/truck-show.seq`): the truck rides the
+music while wavy neon titles draw on, the camera flies the marked waypoint path, and it morphs into
+the deFEEST logo mesh for the outro:
+
+```bash
+MARTIN_PLY=assets/truck.ply MARTIN_SEQ=assets/truck-show.seq MARTIN_SCORE=assets/score.txt \
+  MARTIN_WAYPOINTS=assets/truck-path.json MARTIN_FLY=2 MARTIN_MORPH_COUNT=500000 \
+  ./record.sh truck_show.mp4
+```
 
 To grab a single still instead:
 
