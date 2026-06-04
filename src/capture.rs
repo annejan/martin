@@ -11,6 +11,8 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, T
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 
 use crate::camera::{OrbitCam, FRONT_YAW, SWAY};
+use crate::scene::sequence::{show_end, SeqState, Sequence};
+use crate::scene::SeqClock;
 
 /// Offscreen render target for recording: the camera renders the show into this image and the
 /// recorder screenshots *it* — so frames don't depend on the OS window being visible/focused
@@ -63,8 +65,6 @@ fn attach_record_target(
         *done = true;
     }
 }
-use crate::scene::sequence::{show_end, SeqState, Sequence};
-use crate::scene::SeqClock;
 
 /// MARTIN_RECORD=<dir>: dump one PNG per frame across the whole timeline, then exit.
 #[derive(Resource)]
