@@ -77,15 +77,20 @@ fn stab_envelope(dt: f32) -> f32 {
     }
 }
 
-// Am triad: A2, C3, E3.
-const AM_CHORD: [f32; 3] = [110.00, 130.81, 164.81];
-
-// A2 / E2 / G2, rotated per bar.
-const BASS_NOTES: [f32; 3] = [110.0, 82.41, 98.00];
-
-fn bass_note_for(hit_time: f32, bar: f32) -> f32 {
-    let bar_idx = (hit_time / bar.max(f32::MIN_POSITIVE)).floor().max(0.0) as usize;
-    BASS_NOTES[bar_idx % BASS_NOTES.len()]
+/// Bright saw-ish lead voice (first few harmonics) with a fast attack + exponential decay.
+fn lead_voice(t: f32, freq: f32, dt: f32) -> f32 {
+    use std::f32::consts::TAU;
+    let osc = (t * freq * TAU).sin()
+        + 0.5 * (t * 2.0 * freq * TAU).sin()
+        + 0.33 * (t * 3.0 * freq * TAU).sin()
+        + 0.25 * (t * 4.0 * freq * TAU).sin();
+    let attack = 0.008;
+    let env = if dt < attack {
+        dt / attack
+    } else {
+        (-(dt - attack) / 0.45).exp()
+    };
+    osc * env
 }
 
 /// One mono sample of the mix at time `t`, reading the patterns + dynamics from `score`.
@@ -127,7 +132,8 @@ fn synth_sample(score: &Score, t: f32) -> f32 {
             0.0
         } else {
             let env = stab_envelope(dt);
-            (pad_voice(t, AM_CHORD[0]) + pad_voice(t, AM_CHORD[1]) + pad_voice(t, AM_CHORD[2]))
+            let tri = score.chord_at(kt).triad();
+            (pad_voice(t, tri[0]) + pad_voice(t, tri[1]) + pad_voice(t, tri[2]))
                 * env
                 * (0.03 + 0.05 * lv.mids)
         }
@@ -142,7 +148,7 @@ fn synth_sample(score: &Score, t: f32) -> f32 {
         if dt > cut {
             0.0
         } else {
-            let freq = bass_note_for(kt, score.bar());
+            let freq = score.chord_at(kt).root * 0.5; // chord root, an octave down
             let attack: f32 = 0.010;
             let env = if dt < attack {
                 (dt / attack).clamp(0.0, 1.0)
@@ -154,13 +160,23 @@ fn synth_sample(score: &Score, t: f32) -> f32 {
         }
     });
 
+    // melody: the most recent lead note, played by the lead voice (silent in lead-less sections).
+    let lead = score.last_lead(t).map_or(0.0, |(freq, lt)| {
+        let dt = t - lt;
+        if dt > 1.5 {
+            0.0
+        } else {
+            lead_voice(t, freq, dt) * 0.16
+        }
+    });
+
     let master = {
         let fade_in = (t / 1.5).clamp(0.0, 1.0);
         let fade_out = ((score.demo_len() - t) / 2.0).clamp(0.0, 1.0);
         fade_in * fade_out * score.gain_at(t)
     };
 
-    ((sub + kick + snare + hat + stab + bass) * master).tanh()
+    ((sub + kick + snare + hat + stab + bass + lead) * master).tanh()
 }
 
 /// Render the whole score to a mono sample buffer.

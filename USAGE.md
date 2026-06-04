@@ -320,8 +320,9 @@ sequences) and the camera is framed once over everything, so it never pops betwe
 
 martin carries a procedural synth + a **section/beat music clock**, ported (MIT) from Cinder's
 (Kristian Vlaardingerbroek, deFEEST) `term-demo` — `src/audio.rs` + `src/score.rs`. The clock
-is 140 BPM with a six-section arc (`intro → build → drop → breakdown → climax → outro`); those
-section/bar/beat times are what `@@anchor` (above) pins parts to, so the visuals lock to the
+is 140 BPM with a six-section arc (`intro → build → drop → breakdown → climax → outro`), an
+Am–F–C–G chord progression driving the bass + stab, and a melodic **lead** — all editable in the
+[score file](#the-score-file). Those section/bar/beat times are what `@@anchor` (above) pins parts to, so the visuals lock to the
 track. It **plays live in the window** so you can tune the score by ear — it starts with the show
 and restarts on **Space** (`MARTIN_MUTE=1` silences it). For **recording**, live playback is
 skipped and the synth instead renders **offline to a WAV** that ffmpeg muxes onto the frames
@@ -337,11 +338,11 @@ MARTIN_PLY=$PWD/assets/doggo.ply MARTIN_SEQ="…@@drop…@@outro…" MARTIN_RECO
 
 # 3. mux: video + audio (+ a fade to match the synth's own fade-out)
 ffmpeg -framerate 60 -i /tmp/frames/frame_%05d.png -i /tmp/track.wav \
-  -vf "fade=t=out:st=90:d=2.6" -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest out.mp4
+  -vf "fade=t=out:st=206:d=2.6" -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest out.mp4   # st ≈ clip end
 ```
 
-The synth track is ~92.6 s (`DEMO_LEN`); anchor the final part near `@@outro` so the recording
-covers the whole track.
+The built-in track is **~3:30** (209 s); anchor the final part near `@@outro` so the recording
+covers the whole track. (The length is the score's total bars — edit `assets/score.txt` to change it.)
 
 ---
 
@@ -356,10 +357,13 @@ show. The shipped example is **`assets/score.txt`**.
 ```
 bpm 140
 
+# chord progression, one per bar, cycling (a note + optional `m` = minor): drives bass + stab
+chords Am F C G
+
 # section <name> <bars> <phase-bars,csv> [fill]
-section intro      4             # 4 bars, one phase, no fill
-section build     10  4,5  fill  # 10 bars = phase0 (4 bars) + phase1 (5) + 1 fill bar
-section drop      10  4,5  fill
+section intro      8             # 8 bars, one phase, no fill
+section build     20  9,10 fill  # 20 bars = phase0 (9 bars) + phase1 (10) + 1 fill bar
+section drop      28  13,14 fill
 
 # <section>.<kick|snare|hat|stab>  p<N>|fill:  16 steps   (x = hit, . = rest; spaces ignored)
 build.kick  p0:   x... .... .... x...
@@ -367,12 +371,19 @@ build.kick  p1:   x... ..x. .... x...
 build.snare p1:   .... x... .... x...
 build.kick  fill: x... .... .... x...
 
+# <section>.lead  p<N>|fill:  16 note slots — the MELODY (note names like A4 / C#5 / Eb3; . = rest)
+drop.lead   p0:   A5 . E5 .  . C5 . .  D5 . E5 .  . A5 . .
+drop.lead   p1:   E5 . . A5  . G5 . E5  . . D5 .  C5 . . .
+
 # dynamics 0..1 per section — `v` constant, or `a>b` to ramp across the section (a riser!)
 gain  intro 0.5  build 0.85  drop 1  breakdown 0.6  climax 1  outro 0.7
 sub   intro 0.25 build 0.25>0.8  drop 1  breakdown 0.15  climax 0.9  outro 0.4   # build's sub rises into the drop
 mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
 ```
 
+- **`chords`** is one root per bar (cycling), e.g. `Am F C G`; a trailing `m` = minor. It moves the
+  **bass** (root) and **stab** (triad). **`lead`** is the melody: 16 whitespace-separated note
+  tokens per slot (`A4`, `C#5`, `Eb3`, or `.`/`-` for a rest), written per phase like the drums.
 - **16 steps per bar** (16th notes); patterns you don't write are silent.
 - A section's `<bars>` is its total length; `<phase-bars>` is how the kit pattern changes *within*
   it (plus a trailing fill bar when `fill`). Section **names** are what `@@anchor` matches — so a

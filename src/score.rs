@@ -77,6 +77,51 @@ impl Lane {
     }
 }
 
+/// A melodic note lane: a frequency (Hz) per 16-step slot (`None` = rest) — same phase/fill shape
+/// as `Lane`, but pitched. This is the `lead` (melody) the synth plays.
+#[derive(Clone, Default)]
+pub struct NoteLane {
+    pub phases: Vec<[Option<f32>; 16]>,
+    pub fill: [Option<f32>; 16],
+}
+
+impl NoteLane {
+    fn at(&self, phase: u8) -> [Option<f32>; 16] {
+        if phase == 255 {
+            self.fill
+        } else {
+            self.phases
+                .get(phase as usize)
+                .copied()
+                .unwrap_or([None; 16])
+        }
+    }
+    fn any(g: &[Option<f32>; 16]) -> bool {
+        g.iter().any(|n| n.is_some())
+    }
+}
+
+/// A chord: a root frequency + major/minor quality. Cycles per bar (the `chords` line) and drives
+/// the bass + stab, so the harmony moves under the melody.
+#[derive(Clone, Copy)]
+pub struct Chord {
+    pub root: f32,
+    pub minor: bool,
+}
+
+impl Chord {
+    /// (root, third, fifth) triad frequencies.
+    pub fn triad(&self) -> [f32; 3] {
+        let third = if self.minor { 3.0 } else { 4.0 };
+        [self.root, self.root * semis(third), self.root * semis(7.0)]
+    }
+}
+
+/// Frequency ratio of `n` semitones.
+fn semis(n: f32) -> f32 {
+    2f32.powf(n / 12.0)
+}
+
 /// One section of the arrangement: a span of `bars` divided into `phases` (bars per phase) with an
 /// optional fill bar, its dynamics curves, and its four drum lanes.
 #[derive(Clone)]
@@ -92,6 +137,7 @@ pub struct Section {
     pub snare: Lane,
     pub hat: Lane,
     pub stab: Lane,
+    pub lead: NoteLane, // melody (one note per slot); empty = no lead
     pub start_bar: u32, // computed by Score::new
 }
 
@@ -109,6 +155,7 @@ impl Section {
             snare: Lane::default(),
             hat: Lane::default(),
             stab: Lane::default(),
+            lead: NoteLane::default(),
             start_bar: 0,
         }
     }
@@ -164,6 +211,7 @@ pub struct Levels {
 #[derive(Clone)]
 pub struct Score {
     pub bpm: f32,
+    pub chords: Vec<Chord>, // per-bar chord progression (cycles); drives bass + stab
     pub sections: Vec<Section>,
     total_bars: u32,
 }
@@ -171,14 +219,24 @@ pub struct Score {
 impl Score {
     /// Lay out the sections (cumulative `start_bar`, total length) — the single place section
     /// timing is derived, so the file and the built-in agree.
-    fn new(bpm: f32, mut sections: Vec<Section>) -> Self {
+    fn new(bpm: f32, chords: Vec<Chord>, mut sections: Vec<Section>) -> Self {
         let mut bar = 0;
         for s in &mut sections {
             s.start_bar = bar;
             bar += s.bars;
         }
+        // a score with no `chords` line still needs harmony — default to a single A-minor.
+        let chords = if chords.is_empty() {
+            vec![Chord {
+                root: note_freq("A3").unwrap(),
+                minor: true,
+            }]
+        } else {
+            chords
+        };
         Self {
             bpm,
+            chords,
             sections,
             total_bars: bar,
         }
@@ -249,6 +307,43 @@ impl Score {
             let kt = slot as f32 * sl;
             if self.lane_hits(inst, kt)[slot.rem_euclid(SLOTS_PER_BAR) as usize] {
                 return Some(kt);
+            }
+            slot -= 1;
+        }
+        None
+    }
+
+    // --- harmony + melody ---------------------------------------------------------------------
+    /// The chord active at `t` (per-bar, cycling through the progression).
+    pub fn chord_at(&self, t: f32) -> Chord {
+        self.chords[self.bar_idx_at(t) as usize % self.chords.len()]
+    }
+
+    fn lead_grid(&self, t: f32) -> [Option<f32>; 16] {
+        let i = self.section_index_at(t);
+        let s = &self.sections[i];
+        let into = (self.bar_idx_at(t) as i64 - s.start_bar as i64).max(0) as u32;
+        s.lead.at(s.phase_at(into))
+    }
+
+    /// The most recent lead note (freq) + its start time at/just-before `t` — drives the lead
+    /// voice's envelope. `None` if there's no note within a few bars (e.g. a lead-less section).
+    pub fn last_lead(&self, t: f32) -> Option<(f32, f32)> {
+        if t < 0.0 {
+            return None;
+        }
+        let sl = self.slot_len();
+        let mut slot = ((t + sl * 1e-3) / sl).floor() as i64;
+        if slot >= 0 && (slot as f32) * sl > t {
+            slot -= 1;
+        }
+        for _ in 0..(SLOTS_PER_BAR * 4) {
+            if slot < 0 {
+                return None;
+            }
+            let lt = slot as f32 * sl;
+            if let Some(freq) = self.lead_grid(lt)[slot.rem_euclid(SLOTS_PER_BAR) as usize] {
+                return Some((freq, lt));
             }
             slot -= 1;
         }
@@ -349,6 +444,7 @@ impl Score {
     /// Parse a tracker-DSL score (see `to_dsl` for the shape / `USAGE.md` for the grammar).
     pub fn from_str(text: &str) -> Result<Score, String> {
         let mut bpm = 140.0_f32;
+        let mut chords: Vec<Chord> = Vec::new();
         let mut sections: Vec<Section> = Vec::new();
         let find = |sections: &[Section], name: &str| sections.iter().position(|s| s.name == name);
 
@@ -373,22 +469,45 @@ impl Score {
                     .ok_or_else(|| format!("line {ln}: expected `section.inst`, got `{target}`"))?;
                 let si = find(&sections, sec)
                     .ok_or_else(|| format!("line {ln}: unknown section `{sec}`"))?;
-                let grid = parse_pattern(pat)
-                    .ok_or_else(|| format!("line {ln}: pattern must be 16 of x/."))?;
-                let lane = sections[si]
-                    .lane_mut(inst)
-                    .ok_or_else(|| format!("line {ln}: unknown instrument `{inst}`"))?;
-                if phase_tok.eq_ignore_ascii_case("fill") {
-                    lane.fill = grid;
+                let phase: Option<usize> = if phase_tok.eq_ignore_ascii_case("fill") {
+                    None
                 } else {
-                    let p: usize = phase_tok
-                        .trim_start_matches('p')
-                        .parse()
-                        .map_err(|_| format!("line {ln}: bad phase `{phase_tok}`"))?;
-                    if lane.phases.len() <= p {
-                        lane.phases.resize(p + 1, [false; 16]);
+                    Some(
+                        phase_tok
+                            .trim_start_matches('p')
+                            .parse()
+                            .map_err(|_| format!("line {ln}: bad phase `{phase_tok}`"))?,
+                    )
+                };
+                if inst == "lead" {
+                    // pitched note lane: 16 whitespace-separated note tokens (`A4`, `C#5`, `.`)
+                    let grid = parse_notes(pat)
+                        .ok_or_else(|| format!("line {ln}: lead needs 16 notes/rests"))?;
+                    let lane = &mut sections[si].lead;
+                    match phase {
+                        None => lane.fill = grid,
+                        Some(p) => {
+                            if lane.phases.len() <= p {
+                                lane.phases.resize(p + 1, [None; 16]);
+                            }
+                            lane.phases[p] = grid;
+                        }
                     }
-                    lane.phases[p] = grid;
+                } else {
+                    let grid = parse_pattern(pat)
+                        .ok_or_else(|| format!("line {ln}: pattern must be 16 of x/."))?;
+                    let lane = sections[si]
+                        .lane_mut(inst)
+                        .ok_or_else(|| format!("line {ln}: unknown instrument `{inst}`"))?;
+                    match phase {
+                        None => lane.fill = grid,
+                        Some(p) => {
+                            if lane.phases.len() <= p {
+                                lane.phases.resize(p + 1, [false; 16]);
+                            }
+                            lane.phases[p] = grid;
+                        }
+                    }
                 }
                 continue;
             }
@@ -426,6 +545,14 @@ impl Score {
                     }
                     sections.push(Section::empty(name, bars, phases, fill));
                 }
+                "chords" => {
+                    for tok in it {
+                        chords.push(
+                            parse_chord(tok)
+                                .ok_or_else(|| format!("line {ln}: bad chord `{tok}`"))?,
+                        );
+                    }
+                }
                 "gain" | "sub" | "mids" => {
                     let toks: Vec<&str> = it.collect();
                     for pair in toks.chunks(2) {
@@ -447,7 +574,7 @@ impl Score {
         if sections.is_empty() {
             return Err("no sections defined".into());
         }
-        Ok(Score::new(bpm, sections))
+        Ok(Score::new(bpm, chords, sections))
     }
 
     /// Serialize back to the tracker DSL — `MARTIN_SCORE_DUMP` writes the built-in this way for a
@@ -455,7 +582,15 @@ impl Score {
     pub fn to_dsl(&self) -> String {
         let mut o = String::new();
         o.push_str("# martin score — tracker DSL. Edit + load with MARTIN_SCORE=<this file>.\n");
-        o.push_str(&format!("bpm {}\n\n", fnum(self.bpm)));
+        o.push_str(&format!("bpm {}\n", fnum(self.bpm)));
+        o.push_str(&format!(
+            "chords {}\n\n",
+            self.chords
+                .iter()
+                .map(chord_str)
+                .collect::<Vec<_>>()
+                .join(" ")
+        ));
         o.push_str("# section <name> <bars> <phase-bars,csv> [fill]\n");
         for s in &self.sections {
             let ph = s
@@ -495,6 +630,23 @@ impl Score {
                         pat_str(&lane.fill)
                     ));
                 }
+            }
+        }
+        o.push_str(
+            "\n# melody: <section>.lead p<N>|fill: 16 note slots (A4 C#5 . E5 …; . = rest)\n",
+        );
+        for s in &self.sections {
+            for (p, grid) in s.lead.phases.iter().enumerate() {
+                if NoteLane::any(grid) {
+                    o.push_str(&format!("{}.lead p{p}: {}\n", s.name, notes_str(grid)));
+                }
+            }
+            if NoteLane::any(&s.lead.fill) {
+                o.push_str(&format!(
+                    "{}.lead fill: {}\n",
+                    s.name,
+                    notes_str(&s.lead.fill)
+                ));
             }
         }
         o.push_str(
@@ -539,13 +691,14 @@ impl Score {
             snare: sn,
             hat: h,
             stab: st,
+            lead: NoteLane::default(),
             start_bar: 0,
         };
-        let sections = vec![
+        let mut sections = vec![
             sec(
                 "intro",
-                4,
-                &[4],
+                8,
+                &[8],
                 false,
                 (0.5, 0.5),
                 (0.25, 0.25),
@@ -557,8 +710,8 @@ impl Score {
             ),
             sec(
                 "build",
-                10,
-                &[4, 5],
+                20,
+                &[9, 10],
                 true,
                 (0.85, 0.85),
                 (0.25, 0.8),
@@ -570,8 +723,8 @@ impl Score {
             ),
             sec(
                 "drop",
-                10,
-                &[4, 5],
+                28,
+                &[13, 14],
                 true,
                 (1.0, 1.0),
                 (1.0, 1.0),
@@ -583,8 +736,8 @@ impl Score {
             ),
             sec(
                 "breakdown",
-                6,
-                &[3, 2],
+                16,
+                &[7, 8],
                 true,
                 (0.6, 0.6),
                 (0.15, 0.15),
@@ -599,8 +752,8 @@ impl Score {
             ),
             sec(
                 "climax",
-                18,
-                &[6, 6, 5],
+                36,
+                &[11, 12, 12],
                 true,
                 (1.0, 1.0),
                 (0.9, 0.9),
@@ -624,8 +777,8 @@ impl Score {
             ),
             sec(
                 "outro",
-                6,
-                &[5],
+                14,
+                &[13],
                 true,
                 (0.7, 0.7),
                 (0.4, 0.4),
@@ -636,7 +789,29 @@ impl Score {
                 Lane::of(&[STAB_OUTRO_P0], STAB_OUTRO_FILL),
             ),
         ];
-        Score::new(140.0, sections)
+        // chord progression (per bar, cycling): driving minor — Am F C G.
+        let chords = ["Am", "F", "C", "G"]
+            .iter()
+            .map(|c| parse_chord(c).unwrap())
+            .collect();
+        // melodies — A-minor-pentatonic lines over the progression. Edit these in score.txt
+        // (MARTIN_SCORE_DUMP exports them); a section with no lead is silent there.
+        sections[1].lead.phases = vec![
+            notes("A4 . . . . . E4 . . . . . A4 . . ."),
+            notes("A4 . C5 . E5 . . . D5 . . . E5 . . ."),
+        ];
+        sections[2].lead.phases = vec![
+            notes("A5 . E5 . . C5 . . D5 . E5 . . A5 . ."),
+            notes("E5 . . A5 . G5 . E5 . . D5 . C5 . . ."),
+        ];
+        sections[3].lead.phases = vec![[None; 16], notes("A4 . . . C5 . . . E5 . . . D5 . . .")];
+        sections[4].lead.phases = vec![
+            notes("A5 . E5 . C5 . E5 . A5 . G5 . E5 . D5 ."),
+            notes("E5 . G5 . A5 . G5 . E5 . D5 . C5 . D5 ."),
+            notes("A5 G5 E5 D5 C5 D5 E5 G5 A5 G5 E5 D5 C5 D5 E5 A5"),
+        ];
+        sections[5].lead.phases = vec![notes("A4 . . . G4 . . . E4 . . . C4 . . .")];
+        Score::new(140.0, chords, sections)
     }
 }
 
@@ -653,6 +828,107 @@ fn parse_ramp(s: &str) -> Option<Ramp> {
         Some((a, b)) => Some(Ramp::new(pf(a)?, pf(b)?)),
         None => Some(Ramp::c(pf(s)?)),
     }
+}
+
+/// Parse a note name → frequency (Hz): letter `A`–`G`, optional `#`/`b`, octave (`A4` = 440 Hz).
+fn note_freq(name: &str) -> Option<f32> {
+    let mut chars = name.chars();
+    let base: i32 = match chars.next()?.to_ascii_uppercase() {
+        'C' => 0,
+        'D' => 2,
+        'E' => 4,
+        'F' => 5,
+        'G' => 7,
+        'A' => 9,
+        'B' => 11,
+        _ => return None,
+    };
+    let mut semi = base;
+    let mut rest = chars.as_str();
+    match rest.chars().next() {
+        Some('#') => {
+            semi += 1;
+            rest = &rest[1..];
+        }
+        Some('b') => {
+            semi -= 1;
+            rest = &rest[1..];
+        }
+        _ => {}
+    }
+    let octave: i32 = rest.parse().ok()?;
+    let midi = (octave + 1) * 12 + semi;
+    Some(440.0 * 2f32.powf((midi as f32 - 69.0) / 12.0))
+}
+
+/// Parse a chord token: a note (letter + optional `#`/`b`) + optional trailing `m` for minor
+/// (`Am`, `F`, `C#`, `Ebm`). The root is taken at octave 3.
+fn parse_chord(s: &str) -> Option<Chord> {
+    let s = s.trim();
+    let (note, minor) = match s.strip_suffix('m') {
+        Some(p) if !p.is_empty() => (p, true),
+        _ => (s, false),
+    };
+    Some(Chord {
+        root: note_freq(&format!("{note}3"))?,
+        minor,
+    })
+}
+
+/// Parse 16 whitespace-separated note tokens (`A4`/`C#5`/… or `.`/`-`/`_` = rest) → a lead grid.
+fn parse_notes(s: &str) -> Option<[Option<f32>; 16]> {
+    let toks: Vec<&str> = s.split_whitespace().collect();
+    if toks.len() != 16 {
+        return None;
+    }
+    let mut out = [None; 16];
+    for (i, t) in toks.iter().enumerate() {
+        out[i] = match *t {
+            "." | "-" | "_" => None,
+            n => Some(note_freq(n)?),
+        };
+    }
+    Some(out)
+}
+
+const NOTE_NAMES: [&str; 12] = [
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+];
+
+fn freq_to_midi(freq: f32) -> i32 {
+    (69.0 + 12.0 * (freq / 440.0).log2()).round() as i32
+}
+
+/// Nearest note name (with octave) for a frequency — for `to_dsl`.
+fn note_name(freq: f32) -> String {
+    let midi = freq_to_midi(freq);
+    format!(
+        "{}{}",
+        NOTE_NAMES[midi.rem_euclid(12) as usize],
+        midi.div_euclid(12) - 1
+    )
+}
+
+fn notes_str(g: &[Option<f32>; 16]) -> String {
+    let toks: Vec<String> = g
+        .iter()
+        .map(|n| n.map(note_name).unwrap_or_else(|| ".".into()))
+        .collect();
+    toks.chunks(4)
+        .map(|c| c.join(" "))
+        .collect::<Vec<_>>()
+        .join("  ")
+}
+
+fn chord_str(c: &Chord) -> String {
+    let name = note_name(c.root); // e.g. "A3"
+    let letter: String = name.chars().take_while(|ch| !ch.is_ascii_digit()).collect();
+    format!("{letter}{}", if c.minor { "m" } else { "" })
+}
+
+/// Built-in-lead helper: parse a note string (panics on a bad literal — built-in use only).
+fn notes(s: &str) -> [Option<f32>; 16] {
+    parse_notes(s).expect("built-in lead pattern")
 }
 
 /// Parse a 16-step grid: `x`/`X` = hit, `.`/`-`/`_` = rest; spaces / `|` group separators ignored.
