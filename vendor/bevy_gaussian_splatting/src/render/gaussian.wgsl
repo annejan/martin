@@ -332,6 +332,36 @@ fn vs_points(
         }
     }
 
+    // --- persistent vertex DEFORM (martin fork). Off by default: deform_mode == 0u skips the
+    //     whole block → byte-identical to upstream. NOT gated to a morph (unlike the transition
+    //     above): driven by deform_time it animates every frame, so a held shape keeps moving.
+    //     Displaces the OBJECT-space position before the world transform. if/else-if (RADV-safe). ---
+    if (gaussian_uniforms.deform_mode != 0u) {
+        let dcenter = (gaussian_uniforms.min.xyz + gaussian_uniforms.max.xyz) * 0.5;
+        let dp = position.xyz - dcenter;
+        let damp = gaussian_uniforms.deform_amp;
+        let dfreq = gaussian_uniforms.deform_freq;
+        let dtt = gaussian_uniforms.deform_time;
+        let dmode = gaussian_uniforms.deform_mode;
+        if (dmode == 1u) {
+            // wave (flag): z displaced by a sine travelling across x
+            position = vec4<f32>(position.x, position.y, position.z + damp * sin(dp.x * dfreq + dtt), 1.0);
+        } else if (dmode == 2u) {
+            // cloth (billow): 2D undulation, x and y out of phase
+            let d = damp * sin(dp.x * dfreq + dtt) * cos(dp.y * dfreq * 0.7 + dtt * 0.8);
+            position = vec4<f32>(position.x, position.y, position.z + d, 1.0);
+        } else if (dmode == 3u) {
+            // ripple (radial): concentric waves from the centre outward
+            let rr = length(dp.xy);
+            position = vec4<f32>(position.x, position.y, position.z + damp * sin(rr * dfreq - dtt), 1.0);
+        } else if (dmode == 4u) {
+            // twist / curl: rotate the x-z plane by an angle that varies with height + time
+            let ang = damp * sin(dp.y * dfreq + dtt);
+            let cs = cos(ang); let sn = sin(ang);
+            position = vec4<f32>(dcenter.x + cs * dp.x + sn * dp.z, position.y, dcenter.z - sn * dp.x + cs * dp.z, 1.0);
+        }
+    }
+
     var transformed_position = (gaussian_uniforms.transform * position).xyz;
     var previous_transformed_position = transformed_position;
 

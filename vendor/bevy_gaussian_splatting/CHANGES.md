@@ -81,6 +81,24 @@ default and is byte-identical to upstream.** Append-only + default-off ⇒ a cle
 > it into `interpolate.wgsl` (that buffer is what the sort reads). Pure fn of `splat_index` +
 > position + uniforms ⇒ deterministic in record mode.
 
+## 5. Persistent vertex deform  (`gaussian.wgsl` + 4 uniform spots — opt-in, default-off)
+
+A continuous, *non-morph* displacement so a held shape keeps moving (a waving "wall of text":
+wave/cloth/ripple/twist). Unlike §4 (gated to `interp_active`, plays once over a morph), this is
+driven by `deform_time` and runs **every frame**. **`deform_mode == 0` is the default and is
+byte-identical to upstream.** Append-only + default-off ⇒ also a clean candidate to upstream.
+
+- `src/render/gaussian.wgsl` — a gated branch in `vs_points` **after** the transition block and
+  **before** `transformed_position` (so the deform is in object space, pre-transform). Displaces
+  `position` by a per-mode function of its centred coords + `deform_time`. if/else-if, not switch.
+- New uniform group (4 spots, like §2/§4): `deform_mode: u32`, `deform_amp: f32`,
+  `deform_freq: f32`, `deform_time: f32` — a **second 16-byte block appended after the transition
+  group** (`_transition_pad`) in `bindings.wgsl` `GaussianUniforms`, `mod.rs` `CloudUniform`
+  (+ its construction), and `gaussian/settings.rs` `CloudSettings` (+ `Default`: all 0).
+
+> Same sort caveat as §4: lives in `vs_points`, invisible to the radix sort. Amplitudes are small
+> so the depth-sort error is negligible. The app advances `deform_time` from the show clock.
+
 ---
 
 ## Not a fork (for reference)

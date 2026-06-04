@@ -51,6 +51,7 @@ const BALL_SHELL: f32 = 0.9; // intro ball-shell radius, in units of the framed 
 const NORMALIZE_EXTENT: f32 = 2.0; // each part is centered + scaled so its largest dim = this
 const FLASH_LEN: f32 = 0.18; // cut-flash decay time (s), MARTIN_FLASH strength
 const DEFAULT_PITCH: f32 = 0.12; // camera pitch above the horizon (rad) when framing
+const DEFORM_SPEED: f32 = 2.0; // deform animation rate: deform_time = clock.t * this
 
 /// `.ply` splats are Y-down → rotate the cloud 180° about X for Y-up. Text is built Y-down
 /// too (see `build_text_gaussians`), so one transform makes text *and* splats upright.
@@ -351,6 +352,40 @@ impl Transition {
     }
 }
 
+/// A *persistent* vertex deform (`^name` token / `MARTIN_DEFORM`). Unlike a `Transition` (which
+/// plays once on arrival), this keeps running while the part is **held** — so a `wall:` of text
+/// can ripple, billow or curl the whole time it's on screen. Drives the vendored shader's deform
+/// uniforms (see SHADER-BLUEPRINT.md); default-off, so an unset part renders plain.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Deform {
+    Wave,   // flag-like ripple travelling across x
+    Cloth,  // 2D billow (x and y out of phase)
+    Ripple, // concentric radial waves from the centre
+    Twist,  // banner curl/uncurl
+}
+
+impl Deform {
+    fn parse(s: &str) -> Option<Deform> {
+        Some(match s.trim().to_ascii_lowercase().as_str() {
+            "wave" | "flag" => Deform::Wave,
+            "cloth" | "billow" => Deform::Cloth,
+            "ripple" => Deform::Ripple,
+            "twist" | "curl" => Deform::Twist,
+            _ => return None,
+        })
+    }
+
+    /// The `(mode, amp, freq)` uniform triple for the vendored shader deform.
+    fn uniforms(self) -> (u32, f32, f32) {
+        match self {
+            Deform::Wave => (1, 0.15, 4.0),
+            Deform::Cloth => (2, 0.12, 3.5),
+            Deform::Ripple => (3, 0.18, 6.0),
+            Deform::Twist => (4, 0.5, 2.0), // amp is radians
+        }
+    }
+}
+
 /// One part morphs in from the previous (or, for part 0, from a ball), then holds.
 #[derive(Clone)]
 struct Part {
@@ -360,6 +395,7 @@ struct Part {
     bulge: f32,                     // ball-pulse explosiveness (Morph transition only)
     transition: Option<Transition>, // None = default (Ball for part 0, else Morph)
     anchor: Option<f32>,            // absolute start (s) on the music clock; None = relative
+    deform: Option<Deform>,         // persistent deform while held (None = none / MARTIN_DEFORM)
 }
 
 /// Load the capture-camera world positions from a 3DGS/COLMAP `cameras.json` (graphdeco format:
@@ -413,6 +449,7 @@ struct SeqState {
     shapes: Vec<Handle<PlanarGaussian3d>>,
     sources: Vec<Option<Handle<PlanarGaussian3d>>>, // per-part lhs source (None = morph from prev)
     transitions: Vec<Transition>,                   // resolved transition per part
+    deforms: Vec<Option<Deform>>,                   // resolved persistent deform per part
     starts: Vec<f32>,                               // absolute start time (s) of each part
     built: bool,
     entity: Option<Entity>,
@@ -442,11 +479,16 @@ fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
         // tokens, position-independent); keep the rest of the line for the head + `@timing`.
         let mut transition = None;
         let mut anchor = None;
+        let mut deform = None;
         let s: String = s
             .split_whitespace()
             .filter(|tok| {
                 if let Some(a) = tok.strip_prefix("@@").and_then(|a| score.anchor_seconds(a)) {
                     anchor = Some(a);
+                    return false;
+                }
+                if let Some(d) = tok.strip_prefix('^').and_then(Deform::parse) {
+                    deform = Some(d);
                     return false;
                 }
                 if let Some(tr) = tok.strip_prefix('~').and_then(Transition::parse) {
@@ -476,6 +518,11 @@ fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
         }
         let content = if let Some(txt) = head.strip_prefix("text:") {
             PartContent::Text(txt.to_string())
+        } else if let Some(w) = head.strip_prefix("wall:") {
+            // a wall of text: a multi-line block. `|` separates lines (build_text_gaussians lays
+            // out `\n`), or point at a text file. Great with a `^deform` to make it ripple/billow.
+            let w = w.trim();
+            PartContent::Text(std::fs::read_to_string(w).unwrap_or_else(|_| w.replace('|', "\n")))
         } else if let Some(name) = head.strip_prefix("image:") {
             PartContent::Image(name.trim().to_string())
         } else if let Some(p) = head.strip_prefix("splat:") {
@@ -492,6 +539,7 @@ fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
             bulge,
             transition,
             anchor,
+            deform,
         });
     }
     parts
@@ -588,6 +636,16 @@ fn build_sequence(
     let global_tr = std::env::var("MARTIN_TRANSITION")
         .ok()
         .and_then(|s| Transition::parse(&s));
+    // persistent per-part deform: explicit `^name` > MARTIN_DEFORM > none. Runs while the part is
+    // held (a waving wall of text etc.), independent of the arrival transition above.
+    let global_deform = std::env::var("MARTIN_DEFORM")
+        .ok()
+        .and_then(|s| Deform::parse(&s));
+    let deforms: Vec<Option<Deform>> = seq
+        .parts
+        .iter()
+        .map(|p| p.deform.or(global_deform))
+        .collect();
     let transitions: Vec<Transition> = seq
         .parts
         .iter()
@@ -813,6 +871,7 @@ fn build_sequence(
     state.shapes = shapes;
     state.sources = sources;
     state.transitions = transitions;
+    state.deforms = deforms;
     state.starts = starts;
     state.entity = Some(entity);
     state.built = true;
@@ -898,6 +957,15 @@ fn part_director(
     cs.transition_mode = mode;
     cs.transition_softness = soft;
     cs.transition_axis = axis;
+    // Persistent deform (wave/cloth/ripple/twist): unlike the transition this runs the *whole*
+    // time the part is up (not just while morphing), animated by the show clock. Mode 0 = off.
+    let (dmode, damp, dfreq) = state.deforms[idx]
+        .map(|d| d.uniforms())
+        .unwrap_or((0, 0.0, 0.0));
+    cs.deform_mode = dmode;
+    cs.deform_amp = damp;
+    cs.deform_freq = dfreq;
+    cs.deform_time = t * DEFORM_SPEED;
     // Flash on each cut (term-demo's Director trick): a brief over-bright pulse at every part
     // start → the HDR bloom flares. MARTIN_FLASH=<strength> (0 = off, default); reuses
     // global_opacity, so off keeps every frame byte-identical.
@@ -1170,6 +1238,7 @@ fn sequence_from_env(score: &score::Score) -> (Sequence, Option<String>) {
             bulge: 0.0,
             transition: None,
             anchor: None,
+            deform: None,
         };
         return (
             Sequence {
@@ -1202,6 +1271,7 @@ fn sequence_from_env(score: &score::Score) -> (Sequence, Option<String>) {
         bulge: 0.0,
         transition: None,
         anchor: None,
+        deform: None,
     }];
     if let Ok(reform) = std::env::var("MARTIN_REFORM") {
         parts.push(Part {
@@ -1211,6 +1281,7 @@ fn sequence_from_env(score: &score::Score) -> (Sequence, Option<String>) {
             bulge,
             transition: None,
             anchor: None,
+            deform: None,
         });
     }
     (Sequence { parts, count }, root)
@@ -1370,6 +1441,7 @@ fn setup(
         shapes: Vec::new(),
         sources: Vec::new(),
         transitions: Vec::new(),
+        deforms: Vec::new(),
         starts: Vec::new(),
         built: false,
         entity: None,

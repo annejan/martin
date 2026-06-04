@@ -986,6 +986,11 @@ pub struct CloudUniform {
     pub transition_softness: f32,
     pub transition_axis: u32,
     pub _transition_pad: u32,
+    // persistent vertex deform (martin fork; appended after the transition group)
+    pub deform_mode: u32,
+    pub deform_amp: f32,
+    pub deform_freq: f32,
+    pub deform_time: f32,
 }
 
 #[allow(clippy::type_complexity)]
@@ -1054,6 +1059,10 @@ pub fn extract_gaussians<R: PlanarSync>(
             transition_softness: settings.transition_softness,
             transition_axis: settings.transition_axis,
             _transition_pad: 0,
+            deform_mode: settings.deform_mode,
+            deform_amp: settings.deform_amp,
+            deform_freq: settings.deform_freq,
+            deform_time: settings.deform_time,
         };
 
         commands_list.push((

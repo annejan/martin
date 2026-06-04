@@ -30,6 +30,14 @@ struct GaussianUniforms {
     transition_softness: f32,    // moving-window ramp width (small = hard edge)
     transition_axis: u32,        // 0 = x, 1 = y, 2 = z (axis/wipe/vortex modes)
     _transition_pad: u32,        // std140: complete the 16-byte tail block
+    // --- persistent vertex deform (martin fork; default-off, append-only). A second 16-byte
+    //     block after the transition group, so offsets above are unchanged. Unlike the transition
+    //     it is NOT gated to a morph — driven by deform_time it runs every frame, so a held shape
+    //     (a "wall of text") keeps undulating. ---
+    deform_mode: u32,            // 0 = off; 1 wave, 2 cloth, 3 ripple, 4 twist
+    deform_amp: f32,             // displacement amplitude (object units; radians for twist)
+    deform_freq: f32,            // spatial frequency
+    deform_time: f32,            // animation phase (seconds) — completes the 16-byte block
 };
 @group(1) @binding(0) var<uniform> gaussian_uniforms: GaussianUniforms;
 

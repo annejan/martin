@@ -77,6 +77,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_TEXT` | — | Splat-text: this string assembles out of a ball cloud (glowing). |
 | `MARTIN_SEQ` | — | A timeline of parts (see [Sequences](#sequences)). Highest precedence. |
 | `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
+| `MARTIN_DEFORM` | — | Default **persistent deform** for every part: `wave`/`cloth`/`ripple`/`twist` — runs the whole time a part is held (great on a `wall:`). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
 | `MARTIN_FLASH` | `0` | Over-bright **bloom flash on each part cut** (0 = off; `~0.6` = punchy). Synced to the music when parts are `@@`-anchored to beats/bars. |
 | `MARTIN_SYNTH_WAV` | — | Render the bundled deFEEST synth (Cinder) to a WAV at this path, then exit — for muxing audio onto a recording. See [Music](#music-the-synth). |
 | `MARTIN_MUTE` | — | `=1` silences the **live** synth playback (it plays in the window by default; starts with the show, restarts on Space). Doesn't affect recordings — those mux the WAV. |
@@ -179,10 +180,11 @@ path to a file** with one part per line (`#` starts a comment, blank lines are s
 
 ```
 text:STRING                      # splat-text (glowing)
+wall:LINE1|LINE2|LINE3           # a multi-line WALL of text (| = newline), or wall:greets.txt
 image:logo.png                   # a PNG in the asset folder, rasterized to gaussians (a logo)
 splat:name.ply                   # a splat (filename in the asset folder)
 splat:a.ply+b.ply                # several splats, auto-arranged side by side
-…any of the above… @hold,morph,bulge   ~transition   @@anchor
+…any of the above… @hold,morph,bulge   ~transition   ^deform   @@anchor
 ```
 
 The optional trailing `@hold,morph,bulge` sets, in **seconds** (and ball amount):
@@ -228,6 +230,27 @@ explicit per-part `~name` wins over it.
 > lowercase. Tune stroke weight with `MARTIN_PW_SPLAT` (default `0.006`) / `MARTIN_PW_STEP`.
 
 (The first part has nothing to morph *from*, so `~morph` there falls back to `~ball`.)
+
+### Persistent deforms: `^name` (keep a part moving while it's held)
+
+A `~transition` plays **once** on arrival. A trailing **`^deform`** instead runs the *whole* time
+the part is on screen — a living wobble, perfect on a `wall:` of text (orbit it with the free
+camera to catch the ripple in 3D):
+
+| `^name` | What it does |
+|---|---|
+| `^wave` (`^flag`) | a sine ripple travelling across the wall — a flag in wind |
+| `^cloth` (`^billow`) | 2D undulation (x and y out of phase) — a hanging-cloth billow |
+| `^ripple` | concentric waves from the centre outward — a drop in water |
+| `^twist` (`^curl`) | the wall slowly curls and uncurls — a 3D banner roll |
+
+```
+wall:GREETINGS|TO ALL|DEMOSCENERS   @8,1   ~fade   ^wave
+```
+
+`MARTIN_DEFORM=<name>` sets a default deform for **every** part; an explicit per-part `^name` wins.
+The deform is independent of the arrival transition, so a part can `~fade` in *and* `^wave`. (Off
+by default → no movement; it's a default-off branch in the vendored shader, see `CHANGES.md §5`.)
 
 ### Cue-anchoring: `@@anchor` (lock a part to the music)
 

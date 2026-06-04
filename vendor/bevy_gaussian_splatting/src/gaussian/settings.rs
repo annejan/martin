@@ -86,6 +86,16 @@ pub struct CloudSettings {
     pub transition_softness: f32,
     /// Axis for axis/wipe/vortex transition modes: 0 = x, 1 = y, 2 = z.
     pub transition_axis: u32,
+    /// Persistent vertex deform (0 = off → byte-identical to upstream): 1 wave, 2 cloth,
+    /// 3 ripple, 4 twist. Unlike the transition it runs *every frame* (driven by `deform_time`),
+    /// so a held shape keeps moving. See gaussian.wgsl / SHADER-BLUEPRINT.md.
+    pub deform_mode: u32,
+    /// Deform displacement amplitude (object units; radians for twist). Ignored when mode == 0.
+    pub deform_amp: f32,
+    /// Deform spatial frequency. Ignored when mode == 0.
+    pub deform_freq: f32,
+    /// Deform animation phase in seconds (the app advances it from the show clock).
+    pub deform_time: f32,
 }
 
 impl Default for CloudSettings {
@@ -111,6 +121,10 @@ impl Default for CloudSettings {
             transition_mode: 0,        // off → byte-identical to upstream
             transition_softness: 0.15, // sensible ramp; only used when mode != 0
             transition_axis: 0,        // x
+            deform_mode: 0,            // off → byte-identical to upstream
+            deform_amp: 0.0,
+            deform_freq: 0.0,
+            deform_time: 0.0,
         }
     }
 }
