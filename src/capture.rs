@@ -11,6 +11,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, T
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 
 use crate::camera::{OrbitCam, FRONT_YAW, SWAY};
+use crate::scene::compose::Composition;
 use crate::scene::sequence::{show_end, SeqState, Sequence};
 use crate::scene::SeqClock;
 
@@ -80,10 +81,12 @@ pub(crate) struct RecordState {
 /// Deterministic recorder: total duration = the cue timeline's end (last part's
 /// `start + morph + hold`) + tail; set the clock per frame, sway the camera, screenshot, then
 /// exit. Frame-indexed → smooth regardless of render speed.
+#[allow(clippy::too_many_arguments)]
 fn record_driver(
     mut rec: ResMut<RecordState>,
     seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
+    comp: Option<Res<Composition>>,
     target: Option<Res<RecordTarget>>,
     mut clock: ResMut<SeqClock>,
     mut camq: Query<&mut OrbitCam>,
@@ -91,14 +94,21 @@ fn record_driver(
     mut exit: MessageWriter<AppExit>,
 ) {
     let Some(dir) = rec.dir.clone() else { return };
-    let (Some(seq), Some(state)) = (seq, state) else {
+    // Record either show: wait for the morph sequence OR the composition stage to be built + framed.
+    let seq_built = state.as_ref().map(|s| s.built).unwrap_or(false);
+    let comp_built = comp.as_ref().map(|c| c.built).unwrap_or(false);
+    if (!seq_built && !comp_built) || !camq.iter().any(|c| c.framed) {
         return;
-    };
-    if !state.built || !camq.iter().any(|c| c.framed) {
-        return; // wait until built + framed
     }
-    // end of the cue timeline (the latest part's start + morph + hold), plus a tail.
-    let dur = show_end(&seq.parts, &state.starts) + 1.0;
+    // sequence → cue timeline end (last part's start + morph + hold); compose → its object timeline.
+    let dur = if seq_built {
+        match (&seq, &state) {
+            (Some(seq), Some(state)) => show_end(&seq.parts, &state.starts) + 1.0,
+            _ => 12.0,
+        }
+    } else {
+        comp.as_ref().map(|c| c.record_secs()).unwrap_or(12.0)
+    };
     let total = (dur / rec.dt).ceil() as u32;
     if rec.i >= total {
         // Wait for the async PNG writes to actually land before exiting — a fast (release)

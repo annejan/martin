@@ -41,6 +41,22 @@ impl Composed {
     }
 }
 
+impl Composition {
+    /// How long to record a composition stage: enough for every object to have appeared (and any
+    /// fade-out to finish), plus a tail. The recorder uses this since a compose stage has no morph
+    /// timeline to derive an end from.
+    pub(crate) fn record_secs(&self) -> f32 {
+        let mut end = 0.0_f32;
+        for o in &self.objects {
+            end = end.max(o.appear.max(0.0));
+            if o.out < f32::MAX {
+                end = end.max(o.out + o.fade);
+            }
+        }
+        (end + 8.0).max(12.0)
+    }
+}
+
 /// `MARTIN_COMPOSE=<file>`: a stage of objects, all on screen together.
 #[derive(Resource)]
 pub(crate) struct Composition {

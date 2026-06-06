@@ -94,6 +94,14 @@ for ob in objs:
     ob.matrix_world = fix @ ob.matrix_world
 radius = 1.0  # half of the ~2-unit normalized model
 
+# The thinnest bounding-box axis is the object's "flat" normal (a PCB's board plane). A uniform
+# camera sphere sees a flat object mostly edge-on → mush + depth ambiguity, so we bias the cameras
+# toward the two big FACES (±thin axis) where the detail is. FACE_BIAS=0 reverts to a plain sphere.
+dims = [(hi - lo)[i] for i in range(3)]
+thin = dims.index(min(dims))
+face_axis = Vector((1.0 if k == thin else 0.0 for k in range(3)))
+face_bias = float(os.environ.get("FACE_BIAS", "1.3"))
+
 
 # ---- even lighting: world ambient + a soft key sun -------------------------
 world = bpy.data.worlds.new("W") if not bpy.context.scene.world else bpy.context.scene.world
@@ -161,6 +169,9 @@ for i in range(n_views):
     r = math.sqrt(max(0.0, 1.0 - y * y))
     theta = ga * i
     direction = Vector((math.cos(theta) * r, y, math.sin(theta) * r))
+    # pull each camera toward the nearest face (along the thin axis) so the faces get dense,
+    # high-parallax coverage; near-edge cameras (small dot) stay put for some thickness coverage.
+    direction = (direction + face_bias * direction.dot(face_axis) * face_axis).normalized()
     eye = direction * cam_dist
     cam.matrix_world = look_at_matrix(eye, Vector((0.0, 0.0, 0.0)))
 
