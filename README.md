@@ -163,9 +163,15 @@ in) from `bundle.toml`, then verifies it self-extracts and plays:
 *light* assets: the procedural demo shapes + doggo + the Martins + text, so it stays self-contained
 without the 500 MB photogrammetry scenes). The example bundles to ~182 MB (Bevy base ~75 MB + ~108 MB
 lz4-compressed splats). To shrink it: ship fewer / **downsampled** `.ply` (the real lever — splat
-floats dominate), or trim the show. Cross-OS: run `release.sh` on each OS (the bundling is the same
-`cargo build --features bundle` everywhere; GitHub Actions can do it where the assets are present),
-then `gh release upload`.
+floats dominate), or trim the show.
+
+**Portability (run on other distros).** A binary linked against this dev box's glibc (openSUSE
+Tumbleweed = bleeding-edge) fails on older distros with `version 'GLIBC_2.xx' not found`. So
+`release.sh` links against an **old glibc** via [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild)
+when `zig` + `cargo-zigbuild` are on `PATH` — built here, runs on Ubuntu 20.04+/Debian 11+/Mint 20+
+(glibc ≥ `TARGET_GLIBC`, default 2.31; the GPU/audio/window libs are dlopen'd at runtime and present
+on any desktop). One-time setup: `cargo install cargo-zigbuild` and put `zig` on `PATH`. Cross-*OS*
+(Windows/macOS): run `release.sh` on each, or use GitHub Actions, then `gh release upload`.
 
 ## Note on git
 
