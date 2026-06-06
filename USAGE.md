@@ -76,8 +76,11 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_REFORM` | — | Morph target: the source splat(s) turn into this one. |
 | `MARTIN_TEXT` | — | Splat-text: this string assembles out of a ball cloud (glowing). |
 | `MARTIN_SEQ` | — | A timeline of parts (see [Sequences](#sequences)). Highest precedence. |
-| `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
-| `MARTIN_DEFORM` | — | Default **persistent deform** for every part: `wave`/`cloth`/`ripple`/`twist` — runs the whole time a part is held (great on a `wall:`). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
+| `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
+| `MARTIN_DEFORM` | — | Default **persistent deform** for every part: `wave`/`cloth`/`ripple`/`twist` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
+| `MARTIN_DEFORM_AMP` | `1.0` | Scales the deform amplitude — **`0.2`–`0.3` ≈ a gentle wobble on a big scene**, `1` = default, higher = wild. |
+| `MARTIN_DEFORM_SPEED` | `2.0` | Deform animation rate — `0.6`–`1` = slow/dreamy, higher = faster. |
+| `MARTIN_BEAT` | `1.0` | **Beat-reactive visuals** strength (`0` = off). The score's drums drive the look: kick → a scale "thump" + camera pump, snare → a bloom flare, hat → a shimmer, and any active `^deform` swells on the beat. See [Beat-reactive visuals](#beat-reactive-visuals). |
 | `MARTIN_FLASH` | `0` | Over-bright **bloom flash on each part cut** (0 = off; `~0.6` = punchy). Synced to the music when parts are `@@`-anchored to beats/bars. |
 | `MARTIN_SYNTH_WAV` | — | Render the bundled deFEEST synth (Cinder) to a WAV at this path, then exit — for muxing audio onto a recording. See [Music](#music-the-synth). |
 | `MARTIN_MUTE` | — | `=1` silences the **live** synth playback (it plays in the window by default; starts with the show, restarts on Space). Doesn't affect recordings — those mux the WAV. |
@@ -90,8 +93,10 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_PITCH` | `0.12` | Seed the orbit **pitch** in **radians** (0 = eye level, `+` looks down). |
 | `MARTIN_WAYPOINTS` | `waypoints.json` | File the **M-key camera waypoints** are written to (and read from on startup). Each marker appends the live orbit pose (target/dist/yaw/pitch) so you can author a camera path while flying — see [live controls](#live-keyboard-controls). |
 | `MARTIN_FLY` | — | `=<secs>` **flies the camera through the loaded waypoints** instead of free-orbiting. **Recording:** the path fills each part's on-screen time (so a longer part `hold` = a slower flyby), alternating direction so it flows through the morph. **Live:** `<secs>` = time per waypoint leg (default `2`) for a ping-pong preview loop. Needs ≥2 waypoints in `MARTIN_WAYPOINTS`. |
-| `MARTIN_FPS` | off | `=1` logs smoothed FPS / frame-time + timeline clock every ~0.5 s. |
-| `MARTIN_RECORD` | — | Directory to dump one PNG per frame into (the whole timeline; used by `record.sh`). |
+| `MARTIN_FPS` | off | `=1` logs smoothed FPS / frame-time + timeline clock every ~0.5 s (the **`I`** key toggles it live + logs a snapshot). |
+| `MARTIN_RECORD` | — | Directory to dump one PNG per frame into (the whole timeline; used by `record.sh`). **Recording runs fully headless** — no window, camera → an offscreen image (so it works over SSH / on any compositor, and never captures a black background). Works for `MARTIN_COMPOSE` stages too. |
+| `MARTIN_BENCH` | — | `=<frames>` renders that many frames **headless with no PNG output** and logs the render-only fps, then exits — a clean perf probe (disk-I/O-free). |
+| `MARTIN_LOADER` / `MARTIN_LOGO` | off | `=1` shows a **loading screen** (black + progress bar; `MARTIN_LOGO=<png in the asset root>` adds the logo) until the show is built. Set automatically in a bundled build. |
 | `MARTIN_SHOT` | — | Capture a single headless screenshot to this path, then exit ~2 s later. |
 | `MARTIN_SHOT_AT` | `6.0` | When (seconds) to take the `MARTIN_SHOT`. |
 | `MARTIN_FULLSCREEN` | off | `=1` starts borderless-fullscreen; toggle live with **F11 / F**. (Ignored while recording — that needs the fixed window.) |
@@ -99,8 +104,9 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_NORMALIZE` | on | Each part is centred on its **centroid** and uniformly scaled (positions *and* gaussian sizes) so the bulk of its content (90th-percentile radius) ≈ 2 units. Using a percentile, not the bounding box, **ignores stray "floater" splats** that would otherwise shrink the scene to a distant dot — so a 200-unit COLMAP scene and a 1-unit TRELLIS object share one "normal" scale. `=0` keeps raw scales. |
 | `MARTIN_ZOOM` | `1.0` | Camera closeness multiplier: **`>1` = closer / more zoomed in, `<1` = pull back**. The camera frames the normalized content up close by default; nudge this to taste. |
 | `MARTIN_MESH_COUNT` | `60000` | Target gaussian count when surface-sampling a `mesh:` part (distributed by triangle area; ≥1 per triangle). |
-| `MARTIN_MESH_SPLAT` | `0.006` | Gaussian splat size for a `mesh:` part, as a **fraction of the mesh's largest dimension** (scale-invariant — a tiny badge and a unit object both look right). |
-| `MARTIN_MESH_RGB` | vertex / `0.8,0.85,0.95` | Flat `r,g,b` colour for a `mesh:` part; the mesh's own vertex colours are used when it has them. |
+| `MARTIN_MESH_SPLAT` | `0.006` | Gaussian splat **in-plane disk size** for a `mesh:` part, as a **fraction of the mesh's largest dimension** (scale-invariant). Each sample is a flat disk aligned to the surface normal. |
+| `MARTIN_MESH_THIN` | `0.2` | Mesh disk thickness as a fraction of `MARTIN_MESH_SPLAT` (how flat the surface splats are). |
+| `MARTIN_MESH_RGB` | texture / vertex / `0.8,0.85,0.95` | Flat `r,g,b` fallback for a `mesh:` part. Colour priority: the material's **diffuse texture** (sampled at the UV; PNG/JPEG) > vertex colours > material diffuse > this. |
 | `MARTIN_ROT` | — | `rx,ry,rz` euler **degrees** applied to the cloud — e.g. stand a COLMAP scene upright for a "normal" POV. Default = the portrait flip (gives scenes their abstract sideways look). |
 
 ---
@@ -205,6 +211,7 @@ of them). It can sit anywhere on the line, but reads best last:
 | `~name` | How it arrives |
 |---|---|
 | `~morph` | flows from the **previous** part's shape (Morton-paired), with the ball-pulse `bulge` — the default after part 0 |
+| `~swarm` | like `~morph`, but each particle takes a curled, **flocking/swarming** detour between the two scenes (the `@_,_,N` timing value tunes the swarm strength) |
 | `~ball` | assembles out of a fuzzy ball shell — the default for part 0 |
 | `~fade` | fades up on the spot (opacity 0 → in) |
 | `~explode` | gathers in from an outward burst |
@@ -256,6 +263,29 @@ wall:GREETINGS|TO ALL|DEMOSCENERS   @8,1   ~fade   ^wave
 `MARTIN_DEFORM=<name>` sets a default deform for **every** part; an explicit per-part `^name` wins.
 The deform is independent of the arrival transition, so a part can `~fade` in *and* `^wave`. (Off
 by default → no movement; it's a default-off branch in the vendored shader, see `CHANGES.md §5`.)
+**`MARTIN_DEFORM_AMP`** scales the wobble (`0.2`–`0.3` ≈ gentle on a whole scene) and
+**`MARTIN_DEFORM_SPEED`** its rate — so you can load a scene and softly wobble it while you fly
+around it:
+
+```bash
+MARTIN_PLY=assets/train.ply MARTIN_DEFORM=wave MARTIN_DEFORM_AMP=0.3 MARTIN_DEFORM_SPEED=1 \
+  MARTIN_ZOOM=1.5 cargo +nightly run --release
+```
+
+### Beat-reactive visuals
+
+With a score playing (always, unless muted), the drums drive the look — `MARTIN_BEAT=<scale>` tunes
+it (`0` = off, `2`–`3` = exaggerated):
+
+| hit | reaction |
+|---|---|
+| **kick** | a quick scale **thump** on the cloud/objects + a camera **pump** (lunges in) |
+| **snare** | a **bloom flare** (over-bright pulse) |
+| **hat** | a fine bloom **shimmer** |
+| kick+snare | swells any active **`^deform`** so a `^wave`/`^ripple` part *pumps* with the track |
+
+It's the same data path as the synth + `@@anchor`s, so the visuals react to *any* score. Camera
+pump + thump are deterministic (clock-driven), so they bake identically into a recording.
 
 ### Cue-anchoring: `@@anchor` (lock a part to the music)
 
@@ -412,6 +442,9 @@ build.kick  fill: x... .... .... x...
 drop.lead   p0:   A5 . E5 .  . C5 . .  D5 . E5 .  . A5 . .
 drop.lead   p1:   E5 . . A5  . G5 . E5  . . D5 .  C5 . . .
 
+# <section>.arp  p<N>|fill:  same note grammar — a SECOND melodic line (a sparkly counter-melody)
+climax.arp  p0:   A6 E6 C6 E6  A6 E6 G6 E6  A6 E6 C6 E6  D6 E6 G6 A6
+
 # dynamics 0..1 per section — `v` constant, or `a>b` to ramp across the section (a riser!)
 gain  intro 0.5  build 0.85  drop 1  breakdown 0.6  climax 1  outro 0.7
 sub   intro 0.25 build 0.25>0.8  drop 1  breakdown 0.15  climax 0.9  outro 0.4   # build's sub rises into the drop
@@ -419,8 +452,9 @@ mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
 ```
 
 - **`chords`** is one root per bar (cycling), e.g. `Am F C G`; a trailing `m` = minor. It moves the
-  **bass** (root) and **stab** (triad). **`lead`** is the melody: 16 whitespace-separated note
-  tokens per slot (`A4`, `C#5`, `Eb3`, or `.`/`-` for a rest), written per phase like the drums.
+  **bass** (root) and **stab** (triad). **`lead`** is the melody and **`arp`** is a second melodic
+  line — both note-lanes: 16 whitespace-separated note tokens per slot (`A4`, `C#5`, `Eb3`, or
+  `.`/`-` for a rest), written per phase like the drums.
 - **16 steps per bar** (16th notes); patterns you don't write are silent.
 - A section's `<bars>` is its total length; `<phase-bars>` is how the kit pattern changes *within*
   it (plus a trailing fill bar when `fill`). Section **names** are what `@@anchor` matches — so a
@@ -430,8 +464,8 @@ mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
   no env var; the visuals re-anchor to the new section times). `MARTIN_SCORE=<other>` overrides it,
   and the file is also embedded in the binary as the fallback, so the music isn't duplicated in code.
 
-> **Bundling.** Because the score *and* `MARTIN_SEQ` (e.g. `assets/show.seq`) are now plain files,
-> a future single-binary build can ship them zipped alongside the splats instead of compiled in.
+> **Bundling.** Because the score *and* `MARTIN_SEQ` are plain files, a single-binary build bakes
+> them (+ the splats) into the executable — see [Packaging & release](#packaging--release).
 
 ## Recording to video
 
@@ -466,6 +500,33 @@ cargo +nightly run --release
 ```
 
 ---
+
+## Packaging & release
+
+Ship a whole show as **one self-contained binary** — assets baked in, no external files, no env:
+
+```bash
+./pipeline/release.sh            # → a portable single binary that plays the baked-in show
+```
+
+`cargo build --release --features bundle` *is* the pipeline: `build.rs` reads **`bundle.toml`** (the
+show — a `seq`/`compose` + `score`/`logo`/`morph_count`), auto-collects every `.ply`/PNG it
+references, lz4-compresses them into the executable, and bakes the show string in. At startup the
+binary self-extracts to a temp dir and plays the show (loader screen while it decompresses); env
+vars still override for debugging. Fonts + the default score are already compiled in, so only splats
+(+ a logo PNG) ship. `bundle.toml` ships pointed at **`assets/release.seq`** — a ~song-length
+showcase using only *light* assets (the procedural demo shapes + doggo + Martins + text), ~182 MB.
+
+**Portability.** A binary linked on a bleeding-edge distro (openSUSE Tumbleweed, glibc 2.43) fails on
+older ones (`GLIBC_2.xx not found`). `release.sh` links against an **old glibc** via
+[`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) when `zig` + `cargo-zigbuild` are on
+`PATH` (`TARGET_GLIBC`, default 2.31 → Ubuntu 20.04+/Debian 11+/Mint 20+) — built on the dev box,
+runs everywhere; the GPU/audio/window libs are dlopen'd and present on any desktop. One-time setup:
+`cargo install cargo-zigbuild` + put `zig` on `PATH`. Native fallback (+ a warning) otherwise.
+
+Generate the procedural demo shapes (`sphere`/`cube`/`torus`/`helix`/`galaxy`/`star`/`wave`/`ring`/
+`knot`/`mobius`/`supershape`) the release show uses with `python3 pipeline/gen-demo-splats.py`.
+Mesh → "proper" splat (offline Blender→Brush bake, all-AMD): `pipeline/mesh-splat.sh`.
 
 ## Performance notes (Radeon 860M iGPU, Vulkan)
 
