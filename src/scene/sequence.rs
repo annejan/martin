@@ -643,6 +643,9 @@ pub(crate) fn part_director(
     clock: Res<crate::scene::SeqClock>,
     flash: Res<FlashStrength>,
     beat: Res<crate::scene::beat::Beat>,
+    // (amp_scale, speed) for the persistent deform — read from env once. MARTIN_DEFORM_AMP scales the
+    // wobble strength (e.g. 0.3 = gentle on a whole scene), MARTIN_DEFORM_SPEED its rate.
+    mut deform_tune: Local<Option<(f32, f32)>>,
     mut q: Query<(
         &mut GaussianInterpolate<Gaussian3d>,
         &mut CloudSettings,
@@ -710,13 +713,25 @@ pub(crate) fn part_director(
     cs.transition_axis = axis;
     // Persistent deform (wave/cloth/ripple/twist): unlike the transition this runs the *whole*
     // time the part is up (not just while morphing), animated by the show clock. Mode 0 = off.
+    let (amp_scale, speed) = *deform_tune.get_or_insert_with(|| {
+        let f = |k: &str, d: f32| {
+            std::env::var(k)
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(d)
+        };
+        (
+            f("MARTIN_DEFORM_AMP", 1.0),
+            f("MARTIN_DEFORM_SPEED", DEFORM_SPEED),
+        )
+    });
     let (dmode, damp, dfreq) = state.deforms[idx]
         .map(|d| d.uniforms())
         .unwrap_or((0, 0.0, 0.0));
     cs.deform_mode = dmode;
-    cs.deform_amp = damp;
+    cs.deform_amp = damp * amp_scale;
     cs.deform_freq = dfreq;
-    cs.deform_time = t * DEFORM_SPEED;
+    cs.deform_time = t * speed;
     // Flash on each cut (term-demo's Director trick): a brief over-bright pulse at every part
     // start → the HDR bloom flares. MARTIN_FLASH=<strength> (0 = off, default); reuses
     // global_opacity, so off keeps every frame byte-identical.
