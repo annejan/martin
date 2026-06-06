@@ -4,11 +4,8 @@
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
-use bevy_gaussian_splatting::morph::interpolate::GaussianInterpolate;
 use bevy_gaussian_splatting::sort::SortMode;
-use bevy_gaussian_splatting::{
-    CloudSettings, Gaussian3d, PlanarGaussian3d, PlanarGaussian3dHandle,
-};
+use bevy_gaussian_splatting::{CloudSettings, PlanarGaussian3d, PlanarGaussian3dHandle};
 
 use crate::camera::{OrbitCam, DEFAULT_PITCH, FRONT_YAW};
 use crate::capture::RecordState;
@@ -197,15 +194,15 @@ pub(crate) fn build_composition(
         ) * base;
         let handle = assets.add(PlanarGaussian3d::from(raw));
         commands.spawn((
-            // a static GaussianInterpolate (lhs == rhs) — the same render path the morph engine
-            // uses (a plain PlanarGaussian3dHandle isn't picked up by martin's pipeline).
-            // NB: do NOT add NoFrustumCulling here — `calculate_bounds` skips culling-exempt
-            // entities, so they'd never get an Aabb and `extract_gaussians` would drop them
-            // (black screen). Static stage clouds want frustum culling anyway.
-            GaussianInterpolate::<Gaussian3d> {
-                lhs: PlanarGaussian3dHandle(handle.clone()),
-                rhs: PlanarGaussian3dHandle(handle),
-            },
+            // A PLAIN static cloud — NOT a GaussianInterpolate. The objects never morph (lhs==rhs),
+            // so wrapping them in GaussianInterpolate ran a full GPU blend-compute every frame that
+            // just bit-copied identical buffers (7× per frame here). `extract_gaussians` renders a
+            // plain `PlanarGaussian3dHandle` directly; `calculate_bounds` adds the Aabb and
+            // `auto_insert_sorted_entries` the sort handle. (An explicit `Visibility` makes sure
+            // `ViewVisibility` gets computed.) NB: no `NoFrustumCulling` — `calculate_bounds` skips
+            // culling-exempt entities, so it would never get an Aabb (the old black-screen bug).
+            PlanarGaussian3dHandle(handle),
+            Visibility::Visible,
             CloudSettings {
                 sort_mode: SortMode::Radix,
                 time: 0.0,

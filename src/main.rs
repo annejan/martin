@@ -101,7 +101,7 @@ fn main() {
     // renders black whenever it isn't the focused/visible window, so the recorder renders the
     // camera into an offscreen image (capture.rs) and drives the schedule itself; live runs keep
     // a normal window. MARTIN_FULLSCREEN=1 → borderless fullscreen (live only).
-    let recording = std::env::var("MARTIN_RECORD").is_ok();
+    let recording = std::env::var("MARTIN_RECORD").is_ok() || std::env::var("MARTIN_BENCH").is_ok();
     let fullscreen = std::env::var("MARTIN_FULLSCREEN").is_ok() && !recording;
     let mut plugins = DefaultPlugins.set(WindowPlugin {
         primary_window: (!recording).then(|| Window {

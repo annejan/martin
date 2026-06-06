@@ -720,19 +720,24 @@ pub(crate) fn part_director(
     // Flash on each cut (term-demo's Director trick): a brief over-bright pulse at every part
     // start → the HDR bloom flares. MARTIN_FLASH=<strength> (0 = off, default); reuses
     // global_opacity, so off keeps every frame byte-identical.
-    let flash = flash.0
-        * starts
-            .iter()
-            .map(|&s| {
-                let d = t - s;
-                if (0.0..FLASH_LEN).contains(&d) {
-                    let a = 1.0 - d / FLASH_LEN;
-                    a * a
-                } else {
-                    0.0
-                }
-            })
-            .fold(0.0_f32, f32::max);
+    // MARTIN_FLASH defaults to 0 — skip the per-frame max-over-starts loop entirely in that case.
+    let flash = if flash.0 <= 0.0 {
+        0.0
+    } else {
+        flash.0
+            * starts
+                .iter()
+                .map(|&s| {
+                    let d = t - s;
+                    if (0.0..FLASH_LEN).contains(&d) {
+                        let a = 1.0 - d / FLASH_LEN;
+                        a * a
+                    } else {
+                        0.0
+                    }
+                })
+                .fold(0.0_f32, f32::max)
+    };
     cs.global_opacity = 1.0 + flash;
 
     // Beat reactions (MARTIN_BEAT scale): the score's drum hits drive the look. A held part can't

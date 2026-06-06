@@ -76,14 +76,18 @@ pub(crate) struct RecordState {
     pub sway: bool,    // gentle front-sway (true) vs hold the framed/pinned yaw (MARTIN_YAW set)
     pub i: u32,
     pub grace: u32,
+    pub bench: Option<u32>, // MARTIN_BENCH=<frames>: render-only fps (no PNG save), then exit
+    pub bench_t0: f32,
 }
 
 /// Deterministic recorder: total duration = the cue timeline's end (last part's
 /// `start + morph + hold`) + tail; set the clock per frame, sway the camera, screenshot, then
 /// exit. Frame-indexed → smooth regardless of render speed.
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 fn record_driver(
     mut rec: ResMut<RecordState>,
+    time: Res<Time>,
     seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
     comp: Option<Res<Composition>>,
@@ -93,13 +97,34 @@ fn record_driver(
     mut commands: Commands,
     mut exit: MessageWriter<AppExit>,
 ) {
-    let Some(dir) = rec.dir.clone() else { return };
+    if rec.dir.is_none() && rec.bench.is_none() {
+        return;
+    }
     // Record either show: wait for the morph sequence OR the composition stage to be built + framed.
     let seq_built = state.as_ref().map(|s| s.built).unwrap_or(false);
     let comp_built = comp.as_ref().map(|c| c.built).unwrap_or(false);
     if (!seq_built && !comp_built) || !camq.iter().any(|c| c.framed) {
         return;
     }
+    // MARTIN_BENCH=<frames>: render-only throughput — advance the clock + render each frame but skip
+    // the screenshot/PNG entirely, so the timing isolates the render (no disk I/O), then exit.
+    if let Some(n) = rec.bench {
+        if rec.i == 0 {
+            rec.bench_t0 = time.elapsed_secs();
+        }
+        clock.t = rec.i as f32 * rec.dt;
+        rec.i += 1;
+        if rec.i >= n {
+            let dt = (time.elapsed_secs() - rec.bench_t0).max(1e-3);
+            info!(
+                "bench: {n} frames in {dt:.2}s = {:.1} render fps (no I/O)",
+                n as f32 / dt
+            );
+            exit.write(AppExit::Success);
+        }
+        return;
+    }
+    let Some(dir) = rec.dir.clone() else { return };
     // sequence → cue timeline end (last part's start + morph + hold); compose → its object timeline.
     let dur = if seq_built {
         match (&seq, &state) {
@@ -252,6 +277,10 @@ impl Plugin for CapturePlugin {
                 && std::env::var("MARTIN_COMPOSE").is_err(),
             i: 0,
             grace: 0,
+            bench: std::env::var("MARTIN_BENCH")
+                .ok()
+                .and_then(|s| s.parse().ok()),
+            bench_t0: 0.0,
         })
         .insert_resource(ShotConfig {
             path: std::env::var("MARTIN_SHOT").ok(),
