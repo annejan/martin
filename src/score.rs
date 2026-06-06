@@ -137,6 +137,7 @@ pub struct Section {
     pub hat: Lane,
     pub stab: Lane,
     pub lead: NoteLane, // melody (one note per slot); empty = no lead
+    pub arp: NoteLane,  // a second melodic line (the plucky counter-melody); empty = no arp
     pub start_bar: u32, // computed by Score::new
 }
 
@@ -155,6 +156,7 @@ impl Section {
             hat: Lane::default(),
             stab: Lane::default(),
             lead: NoteLane::default(),
+            arp: NoteLane::default(),
             start_bar: 0,
         }
     }
@@ -307,24 +309,34 @@ impl Score {
         self.chords[self.bar_idx_at(t) as usize % self.chords.len()]
     }
 
-    fn lead_grid(&self, t: f32) -> [Option<f32>; 16] {
+    fn note_grid(&self, t: f32, pick: fn(&Section) -> &NoteLane) -> [Option<f32>; 16] {
         let i = self.section_index_at(t);
         let s = &self.sections[i];
         let into = (self.bar_idx_at(t) as i64 - s.start_bar as i64).max(0) as u32;
-        s.lead.at(s.phase_at(into))
+        pick(s).at(s.phase_at(into))
     }
 
-    /// Every lead note as (time, freq) across the whole track — the synth builds the melody voice
+    /// Every note of a note-lane as (time, freq) across the whole track — the synth builds a voice
     /// at each onset.
-    pub fn lead_notes(&self) -> Vec<(f32, f32)> {
+    fn note_line(&self, pick: fn(&Section) -> &NoteLane) -> Vec<(f32, f32)> {
         let sl = self.slot_len();
         let slots = self.total_bars as i64 * SLOTS_PER_BAR;
         (0..slots)
             .filter_map(|s| {
                 let t = s as f32 * sl;
-                self.lead_grid(t)[(s % SLOTS_PER_BAR) as usize].map(|f| (t, f))
+                self.note_grid(t, pick)[(s % SLOTS_PER_BAR) as usize].map(|f| (t, f))
             })
             .collect()
+    }
+
+    /// The `lead` (foreground melody) onsets.
+    pub fn lead_notes(&self) -> Vec<(f32, f32)> {
+        self.note_line(|s| &s.lead)
+    }
+
+    /// The `arp` (second melodic line) onsets.
+    pub fn arp_notes(&self) -> Vec<(f32, f32)> {
+        self.note_line(|s| &s.arp)
     }
 
     // --- dynamics -----------------------------------------------------------------------------
@@ -466,11 +478,15 @@ impl Score {
                             .map_err(|_| format!("line {ln}: bad phase `{phase_tok}`"))?,
                     )
                 };
-                if inst == "lead" {
+                if inst == "lead" || inst == "arp" {
                     // pitched note lane: 16 whitespace-separated note tokens (`A4`, `C#5`, `.`)
                     let grid = parse_notes(pat)
-                        .ok_or_else(|| format!("line {ln}: lead needs 16 notes/rests"))?;
-                    let lane = &mut sections[si].lead;
+                        .ok_or_else(|| format!("line {ln}: {inst} needs 16 notes/rests"))?;
+                    let lane = if inst == "arp" {
+                        &mut sections[si].arp
+                    } else {
+                        &mut sections[si].lead
+                    };
                     match phase {
                         None => lane.fill = grid,
                         Some(p) => {
@@ -633,6 +649,21 @@ impl Score {
                     "{}.lead fill: {}\n",
                     s.name,
                     notes_str(&s.lead.fill)
+                ));
+            }
+        }
+        o.push_str("\n# arp: <section>.arp p<N>|fill — a second melodic line, same note grammar\n");
+        for s in &self.sections {
+            for (p, grid) in s.arp.phases.iter().enumerate() {
+                if NoteLane::any(grid) {
+                    o.push_str(&format!("{}.arp p{p}: {}\n", s.name, notes_str(grid)));
+                }
+            }
+            if NoteLane::any(&s.arp.fill) {
+                o.push_str(&format!(
+                    "{}.arp fill: {}\n",
+                    s.name,
+                    notes_str(&s.arp.fill)
                 ));
             }
         }

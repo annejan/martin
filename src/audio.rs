@@ -265,26 +265,14 @@ pub fn synth_track(score: &Score) -> Track {
     for (t, f) in score.lead_notes() {
         render_into(&mut bed, t, 0.6, 0.22, 0.0, lead(f));
     }
-    // arp counter-line: eighth notes off the bar's chord, octave up, only in energetic sections
-    // (gain ≥ 0.85 = drop/climax), panned alternately.
-    let bar = score.bar();
-    let eighth = score.beat() / 2.0;
-    let nbars = (score.demo_len() / bar).ceil() as usize;
-    for b in 0..nbars {
-        for e in 0..8usize {
-            let t = b as f32 * bar + e as f32 * eighth;
-            if score.gain_at(t) < 0.85 {
-                continue;
-            }
-            let tri = score.chord_at(t).triad();
-            let pool = [tri[0], tri[1], tri[2], tri[0] * 2.0];
-            let k = b * 8 + e;
-            let f = pool[k % 4] * 2.0; // octave up sparkle
-            let pan = if k % 2 == 0 { 0.55 } else { -0.55 };
-            render_into(&mut bed, t, 0.2, 0.11, pan, arp(f));
-        }
+    // arp counter-line: a score note-lane (`<section>.arp` in assets/score.txt), panned alternately.
+    for (i, (t, f)) in score.arp_notes().into_iter().enumerate() {
+        let pan = if i % 2 == 0 { 0.55 } else { -0.55 };
+        render_into(&mut bed, t, 0.2, 0.11, pan, arp(f));
     }
     // sustained pad: one chord per bar, spread wide (warmth/body).
+    let bar = score.bar();
+    let nbars = (score.demo_len() / bar).ceil() as usize;
     for b in 0..nbars {
         let t = b as f32 * bar;
         let m = score.levels(t).mids;
