@@ -56,3 +56,7 @@ assets/defeest-logo.png
 __pycache__/
 *.pyc
 assets/hd-test.png
+
+# full-length reel render scratch
+/_render/
+/*.mp4
