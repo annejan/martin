@@ -236,6 +236,41 @@ of them). It can sit anywhere on the line, but reads best last:
 `MARTIN_TRANSITION=<name>` sets a default for **every** part (handy for trying one out); an
 explicit per-part `~name` wins over it.
 
+---
+
+## Meshes + splats in one universe
+
+Real triangle meshes and gaussian splats **coexist** — the splat crate draws splats in the
+`Transparent3d` phase with a depth test against the opaque pass, so a mesh occludes splats behind
+it and splats blend over it. Three ways to combine them, from simplest to richest:
+
+| Source | Where | What it does |
+|---|---|---|
+| `mesh:foo.dae` | seq + compose | Surface-**samples** a mesh (`.dae`/`.obj`/`.stl`/`.ply`) into gaussians — it *becomes* splats and morphs like anything else. No real mesh is drawn. |
+| `model:foo.glb` | **compose only** | Renders a **real** PBR glTF mesh as a rigid prop *alongside* the splat objects (shares camera + depth). It doesn't morph; it spins/bobs/dissolves-by-scale via the compose `in`/`out` timing. |
+| `glb:foo.glb` | **seq only** | The **dissolve**: renders the real mesh crisp AND samples its splats from that *same loaded mesh*, so they coincide. Choreographs splats↔mesh↔splats (see below). |
+
+**The `glb:` dissolve choreography** (one part — `glb:badge.glb`):
+
+1. the part assembles **as splats** (its `~ball`/`~morph`/… — mesh hidden),
+2. the splats **materialize** into the crisp solid mesh (`MODEL_FADE`, ~0.6 s),
+3. it **holds** crisp (splats suppressed → no poke-through; the mesh is truly crisp + readable),
+4. it **dissolves** back to splats as its OWN step (`DISSOLVE_LEN`, ~1.2 s, carved from the end of
+   the hold so it finishes *before* the next part's morph),
+5. those splats **morph on** to the next part.
+
+So `glb:badge.glb → splat:dog.ply → text:HELLO` reads as: random → badge splats → **mesh** → badge
+splats → dog → text. `MARTIN_ROT` orients the mesh **and** its splats together (they always coincide).
+`MARTIN_MESH_COUNT`/`_SPLAT`/`_THIN` tune the sampled disks.
+
+**Why `glb:` and not just `model:` + `mesh:` of the same board?** Two separately-exported files can't
+be aligned by a rotation: the mesh *sampler* reflects Y (Y-down convention) while the *renderer*
+rotates, and a `.dae` and a `.glb` of the same object have different native frames — so a sampled
+`mesh:` and a rendered `model:` of "the same" board are mirrored/rotated apart and impossible to line
+up by eye. `glb:` sidesteps it entirely by sampling the gaussians **from the rendered mesh itself**
+(normalizing the gaussians and placing the mesh on the identical `(centroid, scale)`), so they're
+coincident *by construction* — no rotation/scale/mirror knobs.
+
 > **`~outline` vs `~pen-write` (both text-only).** Same shader mechanism (reveal along the pen
 > path), different font. `~outline` traces the bundled *filled* font (DejaVu) → a glowing neon
 > outline drawing itself on. `~pen-write` traces a bundled *single-stroke* font (Relief
