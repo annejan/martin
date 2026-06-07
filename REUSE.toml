@@ -75,13 +75,13 @@ SPDX-License-Identifier = "MIT"
 
 # Bitterbal model — © Maali (maali.nl), used with permission (see LICENSES/LicenseRef-Maali.txt).
 [[annotations]]
-path = "assets/bitterbal.obj"
+path = ["assets/bitterbal.obj", "assets/bitterbal.mtl"]
 SPDX-FileCopyrightText = "Maali <https://maali.nl>"
 SPDX-License-Identifier = "LicenseRef-Maali"
 
-# logo build tooling + render harness.
+# logo / asset-import tooling + render harness.
 [[annotations]]
-path = ["pipeline/svg_extrude_logo.py", "pipeline/logo-check.compose"]
+path = ["pipeline/svg_extrude_logo.py", "pipeline/svg_import.py", "pipeline/logo-check.compose"]
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 

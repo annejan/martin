@@ -338,6 +338,15 @@ Tips so it reads well once sampled into splats:
   glTF) and `assets/defeest.dae` (what the show loads via `mesh:`), each layer its own coloured
   material. Self-verify headless: `pipeline/logo-check.compose` (one `mesh:` line) +
   `MARTIN_SHOT=/tmp/x.png MARTIN_SHOT_AT=3`.
+- **`pipeline/svg_import.py` — generic SVG → 3D asset import.** The reusable version of the above for
+  *any* flat SVG: `pipeline/svg_import.py logo.svg` → `assets/logo.glb` + `.dae`. It groups the SVG's
+  filled paths **by fill colour** (one material each) and extrudes each, stepped by paint order so the
+  foreground colour sits proudest (centred on z=0 → mirror-symmetric, no cap-plane mush). `--depth`
+  tunes thickness, `--uniform` makes every colour equal, `--clean` runs an Inkscape `object-to-path`
+  normalise first. This is the **ahead-of-time** route (bake the mesh once, then `mesh:`/`glb:` it);
+  the **runtime** counterpart is `image:logo.png`, which rasterises a flat PNG to splats live. Only
+  *filled* paths import (no strokes/gradients/bitmaps); same-colour regions merge into one layer (to
+  split figure/ground that share a colour — as the deFEEST logo does — use `svg_extrude_logo.py`).
 **Asset provenance** (licences declared in `REUSE.toml`):
 - **deFEEST logo** — official vector `defeest.svg` (via [Iconape](https://iconape.com)); the 3D
   `defeest.dae`/`.glb` are extruded from it (`pipeline/svg_extrude_logo.py`). `defeest-logo.png` from
