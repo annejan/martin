@@ -600,7 +600,8 @@ pub(crate) fn build_sequence(
     }
 
     // MARTIN_MODEL: overlay a real mesh on one part that dissolves into its generated splats.
-    spawn_dissolve_model(&mut commands, &asset_server, seq.parts.len());
+    // It shares the cloud's base orientation so it lands in the same frame as those splats.
+    spawn_dissolve_model(&mut commands, &asset_server, seq.parts.len(), entity_rot);
 
     state.shapes = shapes;
     state.sources = sources;
@@ -814,8 +815,15 @@ pub(crate) struct SeqModel {
 /// part morphs out — revealing the coincident `mesh:`-sampled splats, which the morph swarms away.
 /// `MARTIN_MODEL_SCALE` / `MARTIN_MODEL_ROT` (euler degrees) align it with those splats. Returns
 /// whether a model was spawned (only the lights are needed if so). Splats are unlit, so we add a
-/// key + fill light for the PBR mesh.
-fn spawn_dissolve_model(commands: &mut Commands, assets: &AssetServer, part_count: usize) {
+/// key + fill light for the PBR mesh. `base_rot` is the cloud's own orientation (the portrait flip
+/// / `MARTIN_ROT`) — the model shares it so it lands in the same frame as the generated splats, then
+/// `MARTIN_MODEL_ROT` fine-tunes on top.
+fn spawn_dissolve_model(
+    commands: &mut Commands,
+    assets: &AssetServer,
+    part_count: usize,
+    base_rot: Quat,
+) {
     let Ok(name) = std::env::var("MARTIN_MODEL") else {
         return;
     };
@@ -841,7 +849,7 @@ fn spawn_dissolve_model(commands: &mut Commands, assets: &AssetServer, part_coun
     commands.spawn((
         SceneRoot(assets.load(GltfAssetLabel::Scene(0).from_asset(name))),
         Transform {
-            rotation: rot,
+            rotation: base_rot * rot, // share the cloud's frame; MARTIN_MODEL_ROT tweaks on top
             scale: Vec3::splat(scale),
             ..default()
         },

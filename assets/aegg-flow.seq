@@ -9,10 +9,13 @@
 # DISSOLVES (material alpha) as the morph to the doggo begins, so the board crumbles into these same
 # generated splats which then swarm away. Add to the run above:
 #
-#   MARTIN_MODEL=aegg.glb MARTIN_MODEL_PART=0 MARTIN_MODEL_SCALE=22 MARTIN_MODEL_ROT="-90,0,0"
+#   MARTIN_MODEL=aegg.glb MARTIN_MODEL_PART=0 MARTIN_MODEL_SCALE=22 MARTIN_MODEL_ROT="90,0,0"
 #
-# (MARTIN_MODEL_SCALE/_ROT align the mesh with the part's generated splats — tune to taste.)
+# (MARTIN_MODEL_SCALE/_ROT align the mesh with the part's generated splats — tune to taste. The
+# mesh shares the cloud's base flip, so MODEL_ROT is on top of that.) NOTE: part 0 holds STILL (no
+# ^twist/spin) so the rigid mesh and the splats stay aligned for a seamless crumble — a persistent
+# deform would twist the splats out from under the static mesh.
 
-mesh:aegg.dae      @3,3     ~ball ^twist     # the Ægg as generated splats — assembles, curling
+mesh:aegg.dae      @3,3     ~ball            # the Ægg as generated splats — assembles (held still)
 splat:doggo.ply    @2,3.5   ~swarm           # the particles SWARM into the doggo
 text:deFEEST       @3,3     ~swarm           # …and flow on into a title
