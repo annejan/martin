@@ -4,6 +4,7 @@
 
 use bevy::camera::primitives::Aabb;
 use bevy::camera::visibility::NoFrustumCulling;
+use bevy::gltf::GltfAssetLabel;
 use bevy::prelude::*;
 use bevy_gaussian_splatting::morph::interpolate::GaussianInterpolate;
 use bevy_gaussian_splatting::sort::SortMode;
@@ -21,6 +22,7 @@ use crate::text::{build_text_outline_gaussians, build_text_penwrite_gaussians, T
 const BALL_SHELL: f32 = 0.9; // intro ball-shell radius, in units of the framed radius
 const FLASH_LEN: f32 = 0.18; // cut-flash decay time (s), MARTIN_FLASH strength
 const DEFORM_SPEED: f32 = 2.0; // deform animation rate: deform_time = clock.t * this
+const MODEL_FADE: f32 = 0.6; // dissolve-model fade-in time (s) as its part finishes assembling
 
 /// How a part *arrives*. `Morph` (the default after part 0) flows from the previous part's
 /// shape, Morton-paired, with the optional ball-pulse `bulge`. The next group build a source
@@ -344,6 +346,7 @@ pub(crate) fn build_sequence(
     seq: Option<Res<Sequence>>,
     state: Option<ResMut<SeqState>>,
     root: Res<AssetRoot>,
+    asset_server: Res<AssetServer>,
     mut cam: Query<&mut OrbitCam>,
 ) {
     let (Some(seq), Some(mut state)) = (seq, state) else {
@@ -596,6 +599,9 @@ pub(crate) fn build_sequence(
         c.framed = true;
     }
 
+    // MARTIN_MODEL: overlay a real mesh on one part that dissolves into its generated splats.
+    spawn_dissolve_model(&mut commands, &asset_server, seq.parts.len());
+
     state.shapes = shapes;
     state.sources = sources;
     state.transitions = transitions;
@@ -792,5 +798,120 @@ pub(crate) fn seq_no_cull(
     let Some(e) = state.entity else { return };
     if q.get(e).is_ok() {
         commands.entity(e).insert(NoFrustumCulling);
+    }
+}
+
+/// A real PBR mesh overlaid on one sequence part, dissolving (material alpha) as that part morphs
+/// out — so a solid mesh crumbles into its coincident generated splats. Carries which part it
+/// shadows; `animate_seq_model` reads that part's cue times to drive the fade.
+#[derive(Component)]
+pub(crate) struct SeqModel {
+    part: usize,
+}
+
+/// `MARTIN_MODEL=<file.glb>`: overlay a real lit mesh on sequence part `MARTIN_MODEL_PART`
+/// (default 0). It fades in crisp as that part finishes assembling, holds, then DISSOLVES as the
+/// part morphs out — revealing the coincident `mesh:`-sampled splats, which the morph swarms away.
+/// `MARTIN_MODEL_SCALE` / `MARTIN_MODEL_ROT` (euler degrees) align it with those splats. Returns
+/// whether a model was spawned (only the lights are needed if so). Splats are unlit, so we add a
+/// key + fill light for the PBR mesh.
+fn spawn_dissolve_model(commands: &mut Commands, assets: &AssetServer, part_count: usize) {
+    let Ok(name) = std::env::var("MARTIN_MODEL") else {
+        return;
+    };
+    let env_f = |k: &str| std::env::var(k).ok().and_then(|s| s.parse::<f32>().ok());
+    let part = std::env::var("MARTIN_MODEL_PART")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(0)
+        .min(part_count.saturating_sub(1));
+    let scale = env_f("MARTIN_MODEL_SCALE").unwrap_or(1.0);
+    let rot = std::env::var("MARTIN_MODEL_ROT")
+        .ok()
+        .map(|s| {
+            let n: Vec<f32> = s.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+            Quat::from_euler(
+                EulerRot::XYZ,
+                n.first().copied().unwrap_or(0.0).to_radians(),
+                n.get(1).copied().unwrap_or(0.0).to_radians(),
+                n.get(2).copied().unwrap_or(0.0).to_radians(),
+            )
+        })
+        .unwrap_or(Quat::IDENTITY);
+    commands.spawn((
+        SceneRoot(assets.load(GltfAssetLabel::Scene(0).from_asset(name))),
+        Transform {
+            rotation: rot,
+            scale: Vec3::splat(scale),
+            ..default()
+        },
+        SeqModel { part },
+    ));
+    commands.spawn((
+        DirectionalLight {
+            illuminance: 9000.0,
+            shadows_enabled: false,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.6, 0.5, 0.0)),
+    ));
+    commands.spawn((
+        DirectionalLight {
+            illuminance: 3500.0,
+            shadows_enabled: false,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, 0.5, -0.8, 0.0)),
+    ));
+}
+
+/// Drive the dissolve-model's opacity: invisible until its part is nearly assembled, crisp (opaque)
+/// while the part holds, then fading to transparent over the *next* part's morph — the moment the
+/// generated splats flow away. The only PBR materials in a sequence are this overlay's, so we fade
+/// every `StandardMaterial`.
+pub(crate) fn animate_seq_model(
+    seq: Option<Res<Sequence>>,
+    state: Option<Res<SeqState>>,
+    clock: Res<crate::scene::SeqClock>,
+    model: Query<&SeqModel>,
+    handles: Query<&MeshMaterial3d<StandardMaterial>>,
+    mut mats: ResMut<Assets<StandardMaterial>>,
+) {
+    let (Some(seq), Some(state), Ok(m)) = (seq, state, model.single()) else {
+        return;
+    };
+    if !state.built {
+        return;
+    }
+    let (starts, parts) = (&state.starts, &seq.parts);
+    let full_at = starts[m.part] + parts[m.part].morph;
+    let (dissolve_start, dissolve_end) = match m.part + 1 {
+        next if next < parts.len() => (starts[next], starts[next] + parts[next].morph),
+        _ => (f32::MAX, f32::MAX), // last part: never dissolves, just stays
+    };
+    let t = clock.t;
+    let vis = if t < full_at - MODEL_FADE {
+        0.0
+    } else if t < full_at {
+        (t - (full_at - MODEL_FADE)) / MODEL_FADE
+    } else if t < dissolve_start {
+        1.0
+    } else if t < dissolve_end {
+        1.0 - (t - dissolve_start) / (dissolve_end - dissolve_start).max(1e-3)
+    } else {
+        0.0
+    }
+    .clamp(0.0, 1.0);
+    for h in &handles {
+        if let Some(mat) = mats.get_mut(&h.0) {
+            mat.base_color.set_alpha(vis);
+            // opaque while crisp (writes depth → occludes the splats behind); blend while dissolving
+            // (no depth write → the splats show through as it fades).
+            mat.alpha_mode = if vis >= 0.999 {
+                AlphaMode::Opaque
+            } else {
+                AlphaMode::Blend
+            };
+        }
     }
 }
