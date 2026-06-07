@@ -343,22 +343,25 @@ pub(crate) fn animate_composition(
             0.0
         };
         tf.translation = a.base_pos + a.drift * t + Vec3::Y * bob;
-        // kick thumps the object's scale (bulge is a no-op on a static cloud, so scale carries it).
-        tf.scale = Vec3::splat(a.base_scale * (1.0 + beat.kick * 0.06 * k));
-        // splat objects fade in/out via global_opacity (+ snare flare / hat shimmer); mesh props
-        // have no CloudSettings and just animate their transform above.
+        // in/out visibility (0..1): splats fade it via opacity; mesh props (no CloudSettings) have
+        // no opacity, so they DISSOLVE by SCALE instead — grow in, shrink out. That gives a clean
+        // mesh→splat cross-dissolve (a mesh shrinks away as a splat fades/grows in at the same spot).
+        let fin = if a.appear < 0.0 {
+            1.0
+        } else {
+            ((t - a.appear) / a.fade.max(1e-3)).clamp(0.0, 1.0)
+        };
+        let fout = if a.out < f32::MAX {
+            ((a.out + a.fade - t) / a.fade.max(1e-3)).clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+        let vis = fin.min(fout);
+        let has_cs = cs.is_some();
+        let scale_vis = if has_cs { 1.0 } else { vis }; // meshes carry the fade in their scale
+                                                        // kick thumps the scale (bulge is a no-op on a static cloud, so scale carries it too).
+        tf.scale = Vec3::splat(a.base_scale * scale_vis * (1.0 + beat.kick * 0.06 * k));
         if let Some(mut cs) = cs {
-            let fin = if a.appear < 0.0 {
-                1.0 // no `in` → visible from the start (robust even if the clock hasn't advanced)
-            } else {
-                ((t - a.appear) / a.fade.max(1e-3)).clamp(0.0, 1.0)
-            };
-            let fout = if a.out < f32::MAX {
-                ((a.out + a.fade - t) / a.fade.max(1e-3)).clamp(0.0, 1.0)
-            } else {
-                1.0
-            };
-            let vis = fin.min(fout);
             cs.global_opacity = vis * (1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k);
         }
     }
