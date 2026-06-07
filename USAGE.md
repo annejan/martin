@@ -342,7 +342,8 @@ Tips so it reads well once sampled into splats:
   `MARTIN_SHOT=/tmp/x.png MARTIN_SHOT_AT=3`.
 - **`pipeline/svg_import.py` — generic SVG → 3D asset import.** The reusable version of the above for
   *any* flat SVG: `pipeline/svg_import.py logo.svg` → `assets/logo.glb` + `.dae`. It groups the SVG's
-  filled paths **by fill colour** (one material each) and extrudes each, stepped by paint order so the
+  filled paths **by fill colour** (inline, `fill=`, or CSS-class `.st0{fill:…}` — one material each) and
+  extrudes each, stepped by paint order so the
   foreground colour sits proudest (centred on z=0 → mirror-symmetric, no cap-plane mush). `--depth`
   tunes thickness, `--uniform` makes every colour equal, `--clean` runs an Inkscape `object-to-path`
   normalise first. This is the **ahead-of-time** route (bake the mesh once, then `mesh:`/`glb:` it);

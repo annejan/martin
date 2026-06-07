@@ -38,6 +38,8 @@
 #    in-repo with provenance — see USAGE.md. bawl-e.dae (bawlsec.com, a friend of
 #    deFEEST) is a pending keeper, not published yet. ──
 assets/bawl-e.dae
+# Third-party party logos kept LOCAL (placeholders / greetings) — not ours to publish.
+assets/evoke-23.*
 
 # ── Camera-path scratch (default MARTIN_WAYPOINTS target; name a keeper differently) ──
 /waypoints.json

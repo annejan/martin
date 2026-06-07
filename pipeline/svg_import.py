@@ -32,11 +32,9 @@ ET.register_namespace("", SVG_NS)
 PX_TO_MM = 25.4 / 72.0   # OpenSCAD imports SVG user units at 72 dpi
 
 
-def parse_fill(path_el):
-    """Return (r,g,b) in 0..1 for a path's fill, or None (no/!fill)."""
-    style = path_el.get("style") or ""
-    m = re.search(r"fill\s*:\s*([^;]+)", style)
-    fill = m.group(1).strip() if m else (path_el.get("fill") or "").strip()
+def colour_to_rgb(fill):
+    """A CSS colour string -> (r,g,b) in 0..1, or None (none/named/unknown)."""
+    fill = (fill or "").strip()
     if not fill or fill.lower() in ("none", "transparent"):
         return None
     m = re.match(r"rgb\(([^)]+)\)", fill)
@@ -54,6 +52,31 @@ def parse_fill(path_el):
     return None  # named colours etc. — not worth guessing
 
 
+def parse_css_fills(root):
+    """class name -> fill colour string, from <style> blocks (Illustrator/Inkscape
+    export fills as `.st0{fill:#...}` classes rather than inline)."""
+    css = {}
+    for st in root.iter(f"{{{SVG_NS}}}style"):
+        for m in re.finditer(r"\.([\w-]+)\s*\{([^}]*)\}", "".join(st.itertext())):
+            fm = re.search(r"fill\s*:\s*([^;]+)", m.group(2))
+            if fm:
+                css[m.group(1)] = fm.group(1).strip()
+    return css
+
+
+def parse_fill(el, css):
+    """A path's fill, resolved inline-style > fill attr > CSS class -> rgb or None."""
+    m = re.search(r"fill\s*:\s*([^;]+)", el.get("style") or "")
+    if m and (c := colour_to_rgb(m.group(1))) is not None:
+        return c
+    if (c := colour_to_rgb(el.get("fill"))) is not None:
+        return c
+    for name in (el.get("class") or "").split():
+        if name in css and (c := colour_to_rgb(css[name])) is not None:
+            return c
+    return None
+
+
 def viewbox_width(root):
     vb = root.get("viewBox")
     if vb:
@@ -65,9 +88,10 @@ def viewbox_width(root):
 def group_by_colour(svg_path):
     """[(rgb, [d,...]), ...] in first-seen paint order; + extruded width (mm)."""
     root = ET.parse(svg_path).getroot()
+    css = parse_css_fills(root)
     order, groups = [], {}
     for p in root.iter(f"{{{SVG_NS}}}path"):
-        rgb = parse_fill(p)
+        rgb = parse_fill(p, css)
         d = p.get("d")
         if rgb is None or not d:
             continue
