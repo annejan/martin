@@ -107,6 +107,7 @@ pub(crate) enum Deform {
     Cloth,  // 2D billow (x and y out of phase)
     Ripple, // concentric radial waves from the centre
     Twist,  // banner curl/uncurl
+    Wind,   // gusting sideways sway + spatial turbulence — flutters/streams in the wind
 }
 
 impl Deform {
@@ -116,6 +117,7 @@ impl Deform {
             "cloth" | "billow" => Deform::Cloth,
             "ripple" => Deform::Ripple,
             "twist" | "curl" => Deform::Twist,
+            "wind" | "gust" => Deform::Wind,
             _ => return None,
         })
     }
@@ -127,6 +129,7 @@ impl Deform {
             Deform::Cloth => (2, 0.12, 3.5),
             Deform::Ripple => (3, 0.18, 6.0),
             Deform::Twist => (4, 0.5, 2.0), // amp is radians
+            Deform::Wind => (5, 0.15, 2.5),
         }
     }
 }

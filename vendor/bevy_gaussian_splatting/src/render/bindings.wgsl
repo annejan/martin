@@ -34,7 +34,7 @@ struct GaussianUniforms {
     //     block after the transition group, so offsets above are unchanged. Unlike the transition
     //     it is NOT gated to a morph — driven by deform_time it runs every frame, so a held shape
     //     (a "wall of text") keeps undulating. ---
-    deform_mode: u32,            // 0 = off; 1 wave, 2 cloth, 3 ripple, 4 twist
+    deform_mode: u32,            // 0 = off; 1 wave, 2 cloth, 3 ripple, 4 twist, 5 wind
     deform_amp: f32,             // displacement amplitude (object units; radians for twist)
     deform_freq: f32,            // spatial frequency
     deform_time: f32,            // animation phase (seconds) — completes the 16-byte block

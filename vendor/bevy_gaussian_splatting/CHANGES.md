@@ -84,13 +84,15 @@ default and is byte-identical to upstream.** Append-only + default-off ⇒ a cle
 ## 5. Persistent vertex deform  (`gaussian.wgsl` + 4 uniform spots — opt-in, default-off)
 
 A continuous, *non-morph* displacement so a held shape keeps moving (a waving "wall of text":
-wave/cloth/ripple/twist). Unlike §4 (gated to `interp_active`, plays once over a morph), this is
+wave/cloth/ripple/twist/**wind**). Unlike §4 (gated to `interp_active`, plays once over a morph), this is
 driven by `deform_time` and runs **every frame**. **`deform_mode == 0` is the default and is
 byte-identical to upstream.** Append-only + default-off ⇒ also a clean candidate to upstream.
 
 - `src/render/gaussian.wgsl` — a gated branch in `vs_points` **after** the transition block and
   **before** `transformed_position` (so the deform is in object space, pre-transform). Displaces
   `position` by a per-mode function of its centred coords + `deform_time`. if/else-if, not switch.
+  Modes 1-4 (wave/cloth/ripple/twist); **mode 5 = wind** (gusting sideways sway with a per-position
+  phase lag + y/z turbulence — flutters/streams, sways around 0 so no net drift).
 - New uniform group (4 spots, like §2/§4): `deform_mode: u32`, `deform_amp: f32`,
   `deform_freq: f32`, `deform_time: f32` — a **second 16-byte block appended after the transition
   group** (`_transition_pad`) in `bindings.wgsl` `GaussianUniforms`, `mod.rs` `CloudUniform`

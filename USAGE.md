@@ -77,7 +77,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_TEXT` | — | Splat-text: this string assembles out of a ball cloud (glowing). |
 | `MARTIN_SEQ` | — | A timeline of parts (see [Sequences](#sequences)). Highest precedence. |
 | `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
-| `MARTIN_DEFORM` | — | Default **persistent deform** for every part: `wave`/`cloth`/`ripple`/`twist` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
+| `MARTIN_DEFORM` | — | Default **persistent deform** for every part: `wave`/`cloth`/`ripple`/`twist`/`wind` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
 | `MARTIN_DEFORM_AMP` | `1.0` | Scales the deform amplitude — **`0.2`–`0.3` ≈ a gentle wobble on a big scene**, `1` = default, higher = wild. |
 | `MARTIN_DEFORM_SPEED` | `2.0` | Deform animation rate — `0.6`–`1` = slow/dreamy, higher = faster. |
 | `MARTIN_BEAT` | `1.0` | **Beat-reactive visuals** strength (`0` = off). The score's drums drive the look: kick → a scale "thump" + camera pump, snare → a bloom flare, hat → a shimmer, and any active `^deform` swells on the beat. See [Beat-reactive visuals](#beat-reactive-visuals). |
@@ -347,6 +347,7 @@ camera to catch the ripple in 3D):
 | `^cloth` (`^billow`) | 2D undulation (x and y out of phase) — a hanging-cloth billow |
 | `^ripple` | concentric waves from the centre outward — a drop in water |
 | `^twist` (`^curl`) | the wall slowly curls and uncurls — a 3D banner roll |
+| `^wind` (`^gust`) | a gusting sideways sway (particles lag by position) + flutter — blown in the wind |
 
 ```
 wall:GREETINGS|TO ALL|DEMOSCENERS   @8,1   ~fade   ^wave

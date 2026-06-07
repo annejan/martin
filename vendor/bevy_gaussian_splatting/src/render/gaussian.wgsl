@@ -380,6 +380,15 @@ fn vs_points(
             let ang = damp * sin(dp.y * dfreq + dtt);
             let cs = cos(ang); let sn = sin(ang);
             position = vec4<f32>(dcenter.x + cs * dp.x + sn * dp.z, position.y, dcenter.z - sn * dp.x + cs * dp.z, 1.0);
+        } else if (dmode == 5u) {
+            // wind: a gusting sideways (+x) sway with particles lagging by position, plus spatial
+            // turbulence in y/z — the cloud flutters and streams in the wind (sways around 0, no drift)
+            let phase = dp.x * dfreq * 0.3 + dp.y * dfreq * 0.5;
+            let gust = 0.6 + 0.4 * sin(dtt * 0.5);                 // slow gust swell
+            let swayx = damp * gust * sin(dtt * 1.2 + phase);
+            let fly = damp * 0.4 * sin(dp.x * dfreq + dtt * 1.7);
+            let flz = damp * 0.5 * cos(dp.y * dfreq * 1.1 - dtt * 1.4);
+            position = vec4<f32>(position.x + swayx, position.y + fly, position.z + flz, 1.0);
         }
     }
 
