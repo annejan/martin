@@ -70,3 +70,46 @@ jobs:
             target/release/martin
             target/release/martin.exe
           if-no-files-found: ignore
+
+  # The packaged deal: ONE self-contained binary. build.rs (--features bundle) bakes the published-
+  # asset demo (assets/demo.seq → licence-cleared meshes + logo, no .ply) into the executable; it
+  # self-extracts to a temp dir at startup and plays with no external files and no env vars. Because
+  # the demo uses only in-repo published assets, this builds straight from a clean checkout in CI.
+  bundle:
+    name: single binary (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libudev-dev libasound2-dev libwayland-dev libxkbcommon-dev
+
+      - name: Install nightly Rust
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build single binary (--features bundle)
+        run: cargo build --release --features bundle
+
+      - name: Report binary size
+        shell: bash
+        run: ls -lh target/release/martin* 2>/dev/null || true
+
+      - name: Upload single binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: martin-bundle-${{ matrix.os }}
+          path: |
+            target/release/martin
+            target/release/martin.exe
+          if-no-files-found: ignore
