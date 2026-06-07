@@ -169,6 +169,7 @@ pub(crate) struct Part {
     pub deform: Option<Deform>, // persistent deform while held (None = none / MARTIN_DEFORM)
     pub out: Option<Departure>, // how the part LEAVES (`out:name`); None = cross-morph to the next
     pub rot: Option<Quat>,      // per-part orientation (`rot:rx,ry,rz` deg), baked into the shape
+    pub cluster: Option<usize>, // `cluster:N` → N scattered, randomly-rotated copies (a "serving")
 }
 
 /// The whole show: a list of parts + the gaussian budget every part is resampled to.
@@ -244,6 +245,7 @@ fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
         let mut deform = None;
         let mut out = None;
         let mut rot = None;
+        let mut cluster = None;
         let s: String = s
             .split_whitespace()
             .filter(|tok| {
@@ -261,6 +263,10 @@ fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
                 }
                 if let Some(q) = tok.strip_prefix("rot:").and_then(parse_euler_deg) {
                     rot = Some(q);
+                    return false;
+                }
+                if let Some(n) = tok.strip_prefix("cluster:").and_then(|s| s.parse().ok()) {
+                    cluster = Some(n);
                     return false;
                 }
                 if let Some(tr) = tok.strip_prefix('~').and_then(Transition::parse) {
@@ -301,6 +307,7 @@ fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
             deform,
             out,
             rot,
+            cluster,
         });
     }
     parts
@@ -381,6 +388,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
             deform: None,
             out: None,
             rot: None,
+            cluster: None,
         };
         return (
             Sequence {
@@ -416,6 +424,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
         deform: None,
         out: None,
         rot: None,
+        cluster: None,
     }];
     if let Ok(reform) = std::env::var("MARTIN_REFORM") {
         parts.push(Part {
@@ -428,6 +437,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
             deform: None,
             out: None,
             rot: None,
+            cluster: None,
         });
     }
     (Sequence { parts, count }, root)
@@ -525,6 +535,20 @@ pub(crate) fn build_sequence(
             _ => part_gaussians(&part.content, &state, &assets, &root.0),
         })
         .collect();
+    // `cluster:N` → replicate a part into N scattered, randomly-rotated copies (a "serving", e.g. a
+    // pile of bitterballen) BEFORE normalize, so the whole pile frames as one. Downsample per copy
+    // to keep the total near the morph budget.
+    let cluster_total = std::env::var("MARTIN_MORPH_COUNT")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(200_000);
+    for (raw, part) in raws.iter_mut().zip(&seq.parts) {
+        if let Some(copies) = part.cluster {
+            let per = (cluster_total / copies.max(1)).max(2_000);
+            let one = resample_morton(std::mem::take(raw), per);
+            *raw = crate::morph::cluster_of(&one, copies);
+        }
+    }
     // Normalize each part to a common "normal" size (MARTIN_NORMALIZE=0 to disable). Sources
     // vary wildly — a COLMAP scene spans hundreds of units, a TRELLIS object ~1 — so without
     // this they'd frame inconsistently and morph badly. We log the raw extent first.
@@ -552,7 +576,9 @@ pub(crate) fn build_sequence(
         );
         // a glb: part is a placeholder here (sample_gl_mesh fills + normalizes it from the loaded
         // mesh later) — don't normalize the placeholder (its zero extent would blow up the scale).
-        if normalize && !matches!(part.content, PartContent::GlMesh(_)) {
+        // a `cluster:` part is already frame-sized by cluster_of (the whole serving ≈ NORMALIZE_EXTENT),
+        // so don't re-normalize it (that would re-fit on the 90th-percentile and shrink the pile).
+        if normalize && !matches!(part.content, PartContent::GlMesh(_)) && part.cluster.is_none() {
             let norm = crate::morph::normalize_to(raw, NORMALIZE_EXTENT);
             if i == 0 {
                 scene_norm = norm;

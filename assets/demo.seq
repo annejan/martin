@@ -3,9 +3,11 @@
 # the box. Anchored to the built-in score; it's all data — edit the titles, order and effects
 # (~arrival, ^deform, out:departure, rot:) to taste.
 
-glb:defeest.glb   rot:-90,0,0   @@intro      @9,4               # deFEEST logo: random splats → crisp MESH → dissolve
-mesh:bitterbal.obj              @@build      @8,3   ~drop ^wind   # a brown bitterbal drops in, wobbling
-mesh:aegg.dae                   @@drop       @10,4  ~rain         # the Bornhack Ægg badge rains in on the drop
-wall:GREETINGS|TO ALL|DEMOSCENERS @@breakdown @12,3  ~fade ^wave  # a wavy wall of greetings
-image:defeest-logo.png          @@climax     @10,3  ~ball         # the deFEEST logo (flat image splats)
-text:deFEEST                    @@outro      @8,3   ~rain ^wind    # outro title, fluttering
+# Laid end-to-end (no @@anchors) so a short default demo shows EVERY part in order — the music plays
+# underneath. (Anchor to @@sections only for a full song-length show, where parts are spaced out.)
+glb:defeest.glb                 @7,4               # deFEEST logo: random splats → crisp MESH → dissolve (face-on)
+mesh:bitterbal.obj cluster:9    @6,3   ~drop ^wind  # a serving of 9 brown bitterballen drops in, wobbling
+mesh:aegg.dae                   @6,4   ~rain        # the Bornhack Ægg badge rains in
+wall:GREETINGS|TO ALL|DEMOSCENERS @6,3  ~fade ^wave # a wavy wall of greetings
+image:defeest-logo.png          @5,3   ~ball        # the deFEEST logo (flat image splats)
+text:deFEEST                    @6,3   ~rain ^wind   # outro title, fluttering in the wind

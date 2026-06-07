@@ -4,8 +4,63 @@
 //! so consecutive parts pair k-th↔k-th and *flow* into one another instead of teleporting.
 //! Pure functions over `Gaussian3d` — no Bevy/ECS.
 
-use bevy::math::{Quat, Vec3};
+use bevy::math::{EulerRot, Quat, Vec3};
 use bevy_gaussian_splatting::Gaussian3d;
+
+/// Replicate `shape` into `copies` scattered, randomly-rotated instances — a "serving" (e.g. a pile
+/// of bitterballen, never just one). Deterministic (index-hashed) so it's frame-stable for recording.
+/// `spread` is the scatter radius as a multiple of the shape's own size; the whole pile is normalized
+/// to frame afterwards, so each instance ends up small.
+pub fn cluster_of(shape: &[Gaussian3d], copies: usize) -> Vec<Gaussian3d> {
+    use std::f32::consts::TAU;
+    const BALL: f32 = 0.58; // each instance's diameter, world units
+    const DISC: f32 = 0.95; // serving radius (a plate of them) — the whole pile ≈ NORMALIZE_EXTENT
+    let copies = copies.max(1);
+    if shape.is_empty() {
+        return Vec::new();
+    }
+    // ball centroid + a scale that makes each instance ~BALL across, and the whole serving fit the
+    // frame — so a cluster part SKIPS the later normalize (build_sequence) and frames as one plate.
+    let mut c = Vec3::ZERO;
+    for g in shape {
+        c += Vec3::from_array(g.position_visibility.position);
+    }
+    c /= shape.len() as f32;
+    let scale = BALL / extent_of(shape).max(1e-3);
+    let mut out = Vec::with_capacity(shape.len() * copies);
+    for n in 0..copies {
+        let k = n as u32 + 1;
+        let q = Quat::from_euler(
+            EulerRot::XYZ,
+            hash01(k, 2_654_435_761) * TAU,
+            hash01(k, 2_246_822_519) * TAU,
+            hash01(k, 3_266_489_917) * TAU,
+        );
+        // uniform-ish in a flattened disc (a plate: wide, a little stacking in Y), random rotation.
+        // (Distinct LARGE salts — small salts like 0x1111_1111·k are a near-linear, low-entropy ramp.)
+        let ang = hash01(k, 668_265_263) * TAU;
+        let rad = hash01(k, 374_761_393).sqrt() * DISC;
+        let off = Vec3::new(
+            rad * ang.cos(),
+            (hash01(k, 1_274_126_177) - 0.5) * BALL * 1.5,
+            rad * ang.sin(),
+        );
+        for g in shape {
+            let mut s = *g;
+            let local = (Vec3::from_array(s.position_visibility.position) - c) * scale;
+            s.position_visibility.position = (q * local + off).to_array();
+            let rr = s.rotation.rotation;
+            let nq = (q * Quat::from_xyzw(rr[0], rr[1], rr[2], rr[3])).normalize();
+            s.rotation = [nq.x, nq.y, nq.z, nq.w].into();
+            // shrink the splat disks to match the shrunk ball (this cluster skips normalize).
+            let sc = s.scale_opacity.scale;
+            let op = s.scale_opacity.opacity;
+            s.scale_opacity = [sc[0] * scale, sc[1] * scale, sc[2] * scale, op].into();
+            out.push(s);
+        }
+    }
+    out
+}
 
 /// Rotate a gaussian set in place by `q` (about the origin): both each splat's position AND its
 /// orientation quaternion. Used to bake a per-part rotation into a shape so different parts of a

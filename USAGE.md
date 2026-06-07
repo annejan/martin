@@ -197,7 +197,7 @@ glb:badge.glb                    # a real glTF mesh: rendered crisp, THEN dissol
                                  #   sampled splats (coincident by construction) which morph on
 splat:name.ply                   # a splat (filename in the asset folder)
 splat:a.ply+b.ply                # several splats, auto-arranged side by side
-…any of the above… @hold,morph,bulge   ~transition   ^deform   out:departure   rot:rx,ry,rz   @@anchor
+…any of the above… @hold,morph,bulge   ~transition   ^deform   out:departure   rot:rx,ry,rz   cluster:N   @@anchor
 ```
 
 The optional trailing `@hold,morph,bulge` sets, in **seconds** (and ball amount):
@@ -258,6 +258,11 @@ reorients smoothly), without a global `MARTIN_ROT` that would tilt everything. I
 `MARTIN_ROT`. Handy when one object's natural frame differs — e.g. a flat logo that needs standing
 up while the dog stays upright: `glb:defeest.glb rot:-90,0,0 ; splat:dog.ply ; text:HELLO`. (Works
 for `glb:` too — the mesh and its sampled splats rotate together.)
+
+**Cluster** (`cluster:N`) replicates a part into **N scattered, randomly-rotated copies** — a
+"serving" rather than a lone object (e.g. `mesh:bitterbal.obj cluster:9` → a plate of 9 bitterballen,
+each tumbled differently). Deterministic (frame-stable for recording); the whole pile is sized to
+frame as one. Great for snacks, confetti, a swarm of logos, …
 
 ---
 
