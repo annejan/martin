@@ -1,0 +1,6 @@
+# martin — effects showcase: new arrivals (~rain), force fields (^wind), departures (out:…)
+#   MARTIN_PLY=assets/doggo.ply MARTIN_SEQ=assets/effects-demo.seq MARTIN_BEAT=2 cargo +nightly run --release
+text:de FEEST    ~rain  ^wind  out:wash       # rains in → flutters in the wind → washes away
+splat:doggo.ply  ~ball  ^wind  out:disperse   # assembles → wind-blown → blows to dust
+text:in de WIND  ~drop  ^wind  out:evaporate  # drops in → flutters → evaporates upward
+splat:doggo.ply  ~rain                        # rains back in to finish
