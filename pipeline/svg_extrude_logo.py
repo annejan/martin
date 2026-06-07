@@ -34,7 +34,7 @@ BLUE   = (0.1098, 0.3882, 0.6863)     # SVG fill rgb(10.98%,38.82%,68.63%)
 # Only the yellow rim gets a soft bevel — its outer edge is the coin's rim.
 RIM_T = LETTER_T = 3.0     # rim + letters: same thickness, the proud top level
 BLUE_T = 2.0              # thinner → recessed / inset between rim and letters
-RIM_BEVEL = 0.30          # soft rim radius, as a fraction of RIM_T (clearly rounded/pillowy edge; < 0.5)
+RIM_BEVEL = 0.13          # soft rim radius, as a fraction of RIM_T (the sweet spot; < 0.5)
 
 # ---- 1. split defeest.svg into base / blue / text path groups ----
 root = ET.parse(SVG).getroot()
