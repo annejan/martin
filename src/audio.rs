@@ -127,6 +127,25 @@ fn arp(freq: f32) -> Box<dyn AudioUnit> {
     )
 }
 
+/// Supersaw: 7 detuned saws + a sub-octave saw through a bright-ish filter, slow swell — the wide
+/// "epic" chord wall for the drop/climax. Held a full bar per chord note (panned wide by chord_spread).
+fn supersaw(freq: f32) -> Box<dyn AudioUnit> {
+    Box::new(
+        ((saw_hz(freq)
+            + saw_hz(freq * 1.005)
+            + saw_hz(freq * 0.995)
+            + saw_hz(freq * 1.011)
+            + saw_hz(freq * 0.989)
+            + saw_hz(freq * 1.018)
+            + saw_hz(freq * 0.982)
+            + saw_hz(freq * 0.5) * 1.2)
+            * 0.12
+            >> lowpass_hz(2800.0, 0.9))
+            * envelope(|t: f32| (t * 1.4).min(1.0)) // swell in, then sustain
+            * 0.5,
+    )
+}
+
 /// Equal-power pan gains for `pan` in [-1, 1] (-1 = hard left, 0 = centre, 1 = hard right).
 fn pan_gains(pan: f32) -> (f32, f32) {
     let a = (pan.clamp(-1.0, 1.0) + 1.0) * (std::f32::consts::FRAC_PI_4); // 0..PI/2
@@ -239,6 +258,30 @@ fn section_time(score: &Score, name: &str) -> Option<f32> {
         .iter()
         .position(|s| s.name == name)
         .map(|i| score.section_start_secs(i))
+}
+
+/// `(start, end)` seconds of a named section (end = next section's start, or the demo end).
+fn section_window(score: &Score, name: &str) -> Option<(f32, f32)> {
+    let i = score.sections.iter().position(|s| s.name == name)?;
+    let start = score.section_start_secs(i);
+    let end = if i + 1 < score.sections.len() {
+        score.section_start_secs(i + 1)
+    } else {
+        score.demo_len()
+    };
+    Some((start, end))
+}
+
+/// Accelerating, rising snare roll over `[start, start+dur]` — the build-up tension into a drop.
+fn render_snare_roll(buf: &mut [f32], start: f32, dur: f32, beat: f32) {
+    let mut t = 0.0;
+    let mut step = beat;
+    while t < dur {
+        let p = (t / dur).clamp(0.0, 1.0);
+        render_into(buf, start + t, 0.16, 0.10 + 0.5 * p, 0.0, snare());
+        step = (step * 0.86).max(beat * 0.12); // tighten toward the drop
+        t += step;
+    }
 }
 
 fn render_intro_bassline(buf: &mut [f32], score: &Score) {
@@ -416,9 +459,15 @@ pub fn synth_track(score: &Score) -> Track {
     }
     render_intro_bassline(&mut bed, score);
 
-    // lead: forward + centre.
+    // lead: forward + centre — octave-doubled in the climax for an anthem.
+    let climax = section_window(score, "climax");
     for (t, f) in score.lead_notes() {
         render_into(&mut bed, t, 0.6, 0.22, 0.0, lead(f));
+        if let Some((s0, s1)) = climax {
+            if (s0..s1).contains(&t) {
+                render_into(&mut bed, t, 0.6, 0.10, 0.0, lead(f * 2.0));
+            }
+        }
     }
     // arp counter-line: a score note-lane (`<section>.arp` in assets/score.txt), panned alternately.
     for (i, (t, f)) in score.arp_notes().into_iter().enumerate() {
@@ -443,11 +492,34 @@ pub fn synth_track(score: &Score) -> Track {
         );
     }
 
+    // epic supersaw chord wall: wide detuned saws on the chords, one per bar, gated to the BIG
+    // sections (drop + climax) so the dynamic range stays — quiet intro/breakdown → wall in the drop.
+    for name in ["drop", "climax"] {
+        if let Some((s0, s1)) = section_window(score, name) {
+            let mut b = (s0 / bar).ceil() as usize;
+            while (b as f32) * bar < s1 {
+                let t = b as f32 * bar;
+                let m = score.levels(t).mids;
+                chord_spread(
+                    &mut bed,
+                    t,
+                    bar,
+                    0.045 + 0.05 * m,
+                    0.9,
+                    score.chord_at(t).triad(),
+                    supersaw,
+                );
+                b += 1;
+            }
+        }
+    }
+
     if let Some(t) = section_time(score, "build") {
         render_riser(&mut bed, t - 2.0 * bar, 2.0 * bar, 0.10, -0.25);
     }
     if let Some(t) = section_time(score, "drop") {
         render_riser(&mut bed, t - 4.0 * bar, 4.0 * bar, 0.26, 0.15);
+        render_snare_roll(&mut bed, t - 2.0 * bar, 2.0 * bar, score.beat()); // build-up roll
         render_impact(&mut bed, t, 1.6, 0.62);
     }
     if let Some(t) = section_time(score, "breakdown") {
