@@ -296,6 +296,20 @@ Tips so it reads well once sampled into splats:
   orients the whole thing with `MARTIN_ROT` (it moves mesh + splats together).
 - Poly count isn't critical — sampling is area-weighted to the splat budget (`MARTIN_MESH_COUNT`).
 
+**Other handy ways to edit** (besides Blender):
+- **Inkscape → Blender (the logo route).** A logo edits best as **2D vector**: tweak the
+  ellipse/text/colours in Inkscape, save SVG, then Blender `Import ▸ SVG` → curves → extrude →
+  export `.glb`. Far nicer for crisp text/shapes than pushing polygons.
+- **`gltf-transform` via `npx`** (no install) for quick non-interactive edits to a `.glb`:
+  `npx @gltf-transform/cli inspect assets/foo.glb` (what's inside), `… recenter`, recolour, optimise.
+- **Edit `.gltf` as text.** Export glTF *Separate* (`.gltf`) and hand-edit **material colours, names,
+  node transforms** in the JSON (geometry is binary, but those bits are plain JSON — git-diffable).
+- **Headless Blender Python** — `blender-5.0 --background --python edit.py` for reproducible scripted
+  edits (recolour, apply transforms, re-export) — good for a repeatable asset bake.
+- **Flat-logo shortcut:** if it's really 2D, skip the mesh — `image:logo.png` rasterises a PNG
+  straight to crisp flat splats (edit the PNG in GIMP/Inkscape). The 3D `.glb` is only for the
+  mesh-dissolve.
+
 > **`~outline` vs `~pen-write` (both text-only).** Same shader mechanism (reveal along the pen
 > path), different font. `~outline` traces the bundled *filled* font (DejaVu) → a glowing neon
 > outline drawing itself on. `~pen-write` traces a bundled *single-stroke* font (Relief
