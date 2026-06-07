@@ -37,7 +37,7 @@
 # ── Branded mesh assets (deFEEST / Bornhack Ægg / hardware / bitterbal) now live
 #    in-repo with provenance — see USAGE.md. bawl-e.dae (bawlsec.com, a friend of
 #    deFEEST) is a pending keeper, not published yet. ──
-/bawl-e.dae
+assets/bawl-e.dae
 
 # ── Camera-path scratch (default MARTIN_WAYPOINTS target; name a keeper differently) ──
 /waypoints.json
