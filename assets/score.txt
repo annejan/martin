@@ -1,6 +1,6 @@
 # martin score — tracker DSL. Edit + load with MARTIN_SCORE=<this file>.
 bpm 140
-chords Am F C G
+chords Am F C G Dm Am E E F G Am C Dm F E E
 
 # section <name> <bars> <phase-bars,csv> [fill]
 section intro 8 8
@@ -13,23 +13,23 @@ section outro 14 13 fill
 # patterns: <section>.<kick|snare|hat|stab> p<N>|fill: 16 steps (x=hit .=rest)
 build.kick p0: x... .... .... x...
 build.kick p1: x... ..x. .... x...
-build.kick fill: x... .... .... x...
+build.kick fill: x... .... .... ....
 build.snare p1: .... x... .... x...
-build.snare fill: .... x.x. x.x. xxxx
+build.snare fill: .... x... .... ..xx
 build.hat p0: x... x... x... x...
 build.hat p1: x.x. x.x. x.x. x.x.
-build.hat fill: xxxx xxxx xxxx xxxx
+build.hat fill: x.x. x.x. xxxx ....
 build.stab p1: .... ..x. .... ....
-build.stab fill: .... .... .... ...x
-drop.kick p0: x... ..x. ..x. ....
-drop.kick p1: x... .... x... x..x
+build.stab fill: .... .... x... ....
+drop.kick p0: x... x... x... x...
+drop.kick p1: x... x... x... x..x
 drop.kick fill: x... .... .... x...
-drop.snare p0: .... x..x .... x..x
-drop.snare p1: ..x. .... ..x. x...
-drop.snare fill: .... x.xx .xxx xxxx
+drop.snare p0: .... x... .... x...
+drop.snare p1: .... x..x .... x..x
+drop.snare fill: .... x... .... x.xx
 drop.hat p0: xxxx xxxx xxxx xxxx
-drop.hat p1: xxxx xxxx xxxx xxxx
-drop.hat fill: xxxx xxxx xxxx xxxx
+drop.hat p1: x.x. xxxx x.x. xxxx
+drop.hat fill: xxxx x.x. xxxx ....
 drop.stab p0: .... ..x. .... ..x.
 drop.stab p1: .... x... .... x...
 drop.stab fill: .... .... .... ...x
@@ -37,25 +37,25 @@ breakdown.kick p0: x... .... .... ....
 breakdown.kick p1: x... .... .... x...
 breakdown.kick fill: x... .... .... ....
 breakdown.snare p1: .... .... .... x...
-breakdown.snare fill: ..xx .xxx .xxx xxxx
+breakdown.snare fill: .... x... .... ..xx
 breakdown.hat p1: x... x... x... x...
-breakdown.hat fill: xxxx xxxx xxxx xxxx
+breakdown.hat fill: x.x. x.x. xxxx ....
 breakdown.stab p0: .... .... x... ....
-climax.kick p0: x..x ..x. ..x. x...
-climax.kick p1: x... x..x .x.. x..x
-climax.kick p2: x.x. x.x. x.x. x.x.
+climax.kick p0: x... x... x... x...
+climax.kick p1: x... x... x... x..x
+climax.kick p2: x... x..x x... x..x
 climax.kick fill: x... .... .... x...
-climax.snare p0: .... x..x .... x.xx
-climax.snare p1: ..x. ..x. .x.. ..xx
-climax.snare p2: x.x. x.x. x.x. x.xx
-climax.snare fill: .... xxxx xxxx xxxx
+climax.snare p0: .... x... .... x..x
+climax.snare p1: .... x..x .... x.xx
+climax.snare p2: .... x..x .... x.xx
+climax.snare fill: .... x.xx .... xxxx
 climax.hat p0: xxxx xxxx xxxx xxxx
-climax.hat p1: xxxx xxxx xxxx xxxx
-climax.hat p2: xxxx xxxx xxxx xxxx
-climax.hat fill: xxxx xxxx xxxx xxxx
+climax.hat p1: x.x. xxxx x.x. xxxx
+climax.hat p2: xxxx x.x. xxxx x.x.
+climax.hat fill: xxxx x.x. xxxx ....
 climax.stab p0: .... ..x. ..x. ..x.
 climax.stab p1: .x.. ..x. .x.. ..x.
-climax.stab p2: x..x .xx. x.x. x.xx
+climax.stab p2: x... ..x. .... ..x.
 climax.stab fill: .... .... .... ...x
 outro.kick p0: x... .... x... ....
 outro.kick fill: x... .... .... ....
@@ -66,21 +66,37 @@ outro.stab p0: .... ..x. .... ....
 outro.stab fill: .... ..x. .... ....
 
 # melody: <section>.lead p<N>|fill: 16 note slots (A4 C#5 . E5 …; . = rest)
-drop.lead p0: A5 . E5 .  . C5 . .  D5 . E5 .  . A5 . .
-drop.lead p1: E5 . . A5  . G5 . E5  . . D5 .  C5 . . .
-climax.lead p0: A5 . E5 .  C5 . E5 .  A5 . G5 .  E5 . D5 .
-climax.lead p1: E5 . G5 .  A5 . G5 .  E5 . D5 .  C5 . D5 .
-climax.lead p2: A5 G5 E5 D5  C5 D5 E5 G5  A5 G5 E5 D5  C5 D5 E5 A5
+build.lead p0: A4 . . .  . . C5 .  . . E5 .  . . . .
+build.lead p1: A4 . . C5  . . E5 .  . G5 . E5  . D5 . .
+build.lead fill: A4 . C5 .  E5 . G5 .  A5 . . .  . . . .
+drop.lead p0: A5 . C6 .  E6 . C6 .  G5 . E5 .  D5 . E5 .
+drop.lead p1: A5 . G5 .  E5 . C5 .  D5 . E5 .  A5 . . .
+drop.lead fill: E6 . D6 .  C6 . A5 .  G5 . E5 .  D5 . E5 .
+breakdown.lead p0: E5 . . C5  . . A4 .  . . C5 .  . . . .
+breakdown.lead p1: D5 . . E5  . . C5 .  . . A4 .  . . . .
+breakdown.lead fill: A4 . C5 .  E5 . G5 .  A5 . G5 .  E5 . . .
+climax.lead p0: A5 . C6 .  E6 . G6 .  A6 . G6 .  E6 . D6 .
+climax.lead p1: C6 . E6 .  G6 . A6 .  G6 . E6 .  D6 . C6 .
+climax.lead p2: A5 . C6 E6  G6 . E6 C6  D6 . E6 G6  A6 . G6 E6
+outro.lead p0: A4 . . C5  . . E5 .  C5 . . .  A4 . . .
 
 # arp: the second melodic line — a sparkly counter-melody an octave above the lead, panned to
 # dance opposite it. Same note grammar. <section>.arp p<N>: 16 slots.
-drop.arp p0: A6 . E6 . C6 . E6 .  A6 . E6 . C6 . D6 .
-drop.arp p1: E6 . A6 . G6 . E6 .  C6 . D6 . E6 . A6 .
-climax.arp p0: A6 E6 C6 E6  A6 E6 G6 E6  A6 E6 C6 E6  D6 E6 G6 A6
-climax.arp p1: C6 E6 A6 E6  C6 E6 G6 E6  D6 E6 A6 E6  C6 D6 E6 G6
-climax.arp p2: A6 . E6 . C6 . D6 .  E6 . G6 . A6 . E6 .
+build.arp p0: . . . .  A5 . . E6  . . C6 .  . . E6 .
+build.arp p1: . A5 . C6  . E6 . G6  . E6 . D6  . C6 . E6
+build.arp fill: A5 C6 E6 G6  A6 . . .  . . . .  . . . .
+drop.arp p0: A5 . E6 . C6 . E6 .  G6 . E6 . D6 . E6 .
+drop.arp p1: A5 . G5 . E6 . C6 .  D6 . E6 . A5 . E6 .
+drop.arp fill: E6 . D6 . C6 . A5 .  G5 . E5 . D5 . E5 .
+breakdown.arp p0: . . . .  E6 . . .  . . C6 .  . . A5 .
+breakdown.arp p1: . . D6 .  . . E6 .  . . C6 .  . A5 . .
+breakdown.arp fill: A5 . C6 .  E6 . G6 .  A6 . G6 .  E6 . . .
+climax.arp p0: A6 . C7 .  E7 . C7 .  G6 . E6 .  D6 . E6 .
+climax.arp p1: C7 . E7 .  G7 . E7 .  A6 . G6 .  E6 . D6 .
+climax.arp p2: A6 C7 E7 .  G7 E7 C7 .  D7 E7 G7 .  A7 G7 E7 .
+outro.arp p0: A5 . . E6  . . C6 .  . . A5 .  . . . .
 
 # dynamics 0..1 per section (`v` constant or `a>b` ramp across the section)
-gain intro 0.5 build 0.85 drop 1 breakdown 0.6 climax 1 outro 0.7
-sub intro 0.25 build 0.25>0.8 drop 1 breakdown 0.15 climax 0.9 outro 0.4
-mids intro 0.5 build 0.7 drop 0.9 breakdown 0.6 climax 1 outro 0.45
+gain intro 0.32>0.55 build 0.55>0.95 drop 0.96 breakdown 0.42 climax 0.82>1 outro 0.58
+sub intro 0.18>0.42 build 0.22>0.88 drop 0.98 breakdown 0.08 climax 0.65>1 outro 0.24
+mids intro 0>0.28 build 0.34>0.86 drop 0.88 breakdown 0.45 climax 0.72>1 outro 0.38

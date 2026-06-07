@@ -91,39 +91,39 @@ fn bass(freq: f32) -> Box<dyn AudioUnit> {
     )
 }
 
-/// Lead: a **forward** voice — detuned saws + a square for body, through a brighter resonant
-/// low-pass, with a longer sustain so it reads as a melody on top rather than background texture.
+/// Lead: detuned saws plus a sine body through a darker filter. Keep it broad/modern rather than
+/// bright square-wave tracker lead.
 fn lead(freq: f32) -> Box<dyn AudioUnit> {
     Box::new(
-        ((saw_hz(freq) + saw_hz(freq * 1.007) + saw_hz(freq * 0.993) + square_hz(freq) * 0.5)
-            * 0.32
-            >> lowpass_hz(3200.0, 1.6))
+        ((saw_hz(freq) + saw_hz(freq * 1.006) + saw_hz(freq * 0.994) + sine_hz(freq * 0.5) * 0.7)
+            * 0.26
+            >> lowpass_hz(2100.0, 1.0))
             * envelope(|t: f32| {
-                let a = 0.012;
+                let a = 0.025;
                 if t < a {
                     t / a
                 } else {
-                    0.25 + 0.75 * (-(t - a) * 1.4).exp() // longer, more sustained tail
+                    0.18 + 0.82 * (-(t - a) * 1.2).exp()
                 }
             })
-            * 0.85,
+            * 0.62,
     )
 }
 
-/// Arp: a bright plucky counter-line (saw + square through a resonant low-pass, fast decay) — the
-/// second melodic voice, an octave up, panned to dance opposite the lead.
+/// Arp: short filtered pluck. Lower and quieter than the old bright square arp so it reads as
+/// motion in the groove, not late-90s game melody.
 fn arp(freq: f32) -> Box<dyn AudioUnit> {
     Box::new(
-        ((saw_hz(freq) + square_hz(freq) * 0.6) * 0.5 >> lowpass_hz(3800.0, 1.2))
+        ((saw_hz(freq) * 0.5 + sine_hz(freq) * 0.7) >> lowpass_hz(2400.0, 0.8))
             * envelope(|t: f32| {
-                let a = 0.004;
+                let a = 0.008;
                 if t < a {
                     t / a
                 } else {
-                    (-(t - a) * 9.0).exp()
+                    (-(t - a) * 7.5).exp()
                 }
             })
-            * 0.45,
+            * 0.24,
     )
 }
 
@@ -166,6 +166,138 @@ fn render_into(
     }
 }
 
+fn pseudo_noise(i: usize) -> f32 {
+    // Integer hash → [-1, 1]. Robust at any sample index: an `f32 sin(i*const)` hash degrades to a
+    // low-entropy near-tone for large `i` (a TL-tube buzz on late risers/impacts); this stays broadband.
+    let mut n = (i as u32).wrapping_add(1).wrapping_mul(0x9E37_79B9);
+    n ^= n >> 15;
+    n = n.wrapping_mul(0x85EB_CA6B);
+    n ^= n >> 13;
+    (n as f32 / u32::MAX as f32) * 2.0 - 1.0
+}
+
+fn add_stereo(buf: &mut [f32], frame: usize, v: f32, pan: f32) {
+    if 2 * frame + 1 >= buf.len() {
+        return;
+    }
+    let (lg, rg) = pan_gains(pan);
+    buf[2 * frame] += v * lg;
+    buf[2 * frame + 1] += v * rg;
+}
+
+/// Noise + tone sweep into a section boundary. This is intentionally simple and deterministic:
+/// enough to make the arrangement breathe without turning the score DSL into an effects tracker.
+fn render_riser(buf: &mut [f32], start_t: f32, dur: f32, amp: f32, pan: f32) {
+    use std::f32::consts::TAU;
+    let sr = SAMPLE_RATE as f32;
+    let start = (start_t.max(0.0) * sr) as usize;
+    let n = (dur.max(0.0) * sr) as usize;
+    let mut phase = 0.0f32;
+    let mut hp = 0.0f32;
+    let denom = std::cmp::max(n, 1) as f32;
+    for i in 0..n {
+        let p = i as f32 / denom;
+        let frame = start + i;
+        let hz = 180.0 + 2400.0 * p * p;
+        phase = (phase + TAU * hz / sr) % TAU;
+        let noise = pseudo_noise(i + start);
+        hp += 0.08 * (noise - hp);
+        let bright = noise - hp;
+        let gate = (p * 16.0).sin().abs() * 0.35 + 0.65;
+        let env = p * p * (1.0 - (p - 0.98).max(0.0) * 50.0).clamp(0.0, 1.0);
+        add_stereo(
+            buf,
+            frame,
+            (phase.sin() * 0.35 + bright * 0.65) * env * gate * amp,
+            pan,
+        );
+    }
+}
+
+/// Low boom + short noisy crack at a downbeat.
+fn render_impact(buf: &mut [f32], t: f32, dur: f32, amp: f32) {
+    use std::f32::consts::TAU;
+    let sr = SAMPLE_RATE as f32;
+    let start = (t.max(0.0) * sr) as usize;
+    let n = (dur.max(0.0) * sr) as usize;
+    let mut phase = 0.0f32;
+    let denom = std::cmp::max(n, 1) as f32;
+    for i in 0..n {
+        let p = i as f32 / denom;
+        let frame = start + i;
+        let hz = 92.0 * (1.0 - p).powf(2.0) + 32.0;
+        phase = (phase + TAU * hz / sr) % TAU;
+        let boom = phase.sin() * (-p * 4.5).exp();
+        let crack = pseudo_noise(i + start * 3) * (-p * 38.0).exp();
+        add_stereo(buf, frame, (boom * 0.9 + crack * 0.25) * amp, 0.0);
+    }
+}
+
+fn section_time(score: &Score, name: &str) -> Option<f32> {
+    score
+        .sections
+        .iter()
+        .position(|s| s.name == name)
+        .map(|i| score.section_start_secs(i))
+}
+
+fn render_intro_bassline(buf: &mut [f32], score: &Score) {
+    let bar = score.bar();
+    let beat = score.beat();
+    let Some(build_t) = section_time(score, "build") else {
+        return;
+    };
+
+    let start_bar = 4;
+    let end_bar = (build_t / bar).floor() as usize;
+    for b in start_bar..end_bar {
+        let t = b as f32 * bar;
+        let root = bass_freq(score.chord_at(t).root);
+        let amp = if b < 6 { 0.18 } else { 0.26 };
+        render_into(buf, t, 0.7, amp, 0.0, bass(root));
+        if b >= 5 {
+            render_into(buf, t + 2.0 * beat, 0.45, amp * 0.75, 0.0, bass(root));
+        }
+        if b >= 7 {
+            render_into(buf, t + 3.0 * beat, 0.35, amp * 0.55, 0.0, bass(root * 1.5));
+        }
+    }
+}
+
+fn render_intro_percussion(kickbuf: &mut [f32], bed: &mut [f32], score: &Score) {
+    let bar = score.bar();
+    let beat = score.beat();
+    let Some(build_t) = section_time(score, "build") else {
+        return;
+    };
+
+    let bars = (build_t / bar).floor() as usize;
+    for b in 2..bars {
+        let base = b as f32 * bar;
+        let k_amp = if b < 4 { 0.22 } else { 0.42 };
+        render_into(kickbuf, base, 0.36, k_amp, 0.0, kick());
+        if b >= 4 {
+            render_into(kickbuf, base + 2.0 * beat, 0.32, k_amp * 0.55, 0.0, kick());
+        }
+        if b >= 5 {
+            render_into(bed, base + beat, 0.10, 0.08, -0.35, hat());
+            render_into(bed, base + 3.0 * beat, 0.10, 0.08, 0.35, hat());
+        }
+        if b >= 6 {
+            for s in 0..8 {
+                render_into(
+                    bed,
+                    base + s as f32 * beat * 0.5,
+                    0.07,
+                    0.045,
+                    if s % 2 == 0 { -0.45 } else { 0.45 },
+                    hat(),
+                );
+            }
+        }
+    }
+}
+
 /// Render the triad as three voices panned across the field (wide chords), via `voice(freq)`.
 fn chord_spread(
     buf: &mut [f32],
@@ -180,6 +312,25 @@ fn chord_spread(
         let pan = (i as f32 - 1.0) * spread; // -spread, 0, +spread
         render_into(buf, t, dur, amp, pan, voice(f));
     }
+}
+
+/// Keep a chord root in the deep sub range. Score roots are parsed around octave 3; the sub layer
+/// wants the same pitch class down around 24-38 Hz, with an added harmonic later for translation on
+/// smaller speakers.
+fn sub_freq(root: f32) -> f32 {
+    let mut f = root;
+    while f > 38.0 {
+        f *= 0.5;
+    }
+    while f < 24.0 {
+        f *= 2.0;
+    }
+    f
+}
+
+/// Punchier bass voice above the sub, locked to the same chord-root pitch class.
+fn bass_freq(root: f32) -> f32 {
+    sub_freq(root) * 2.0
 }
 
 /// Spread reverb send: a mono sum of the stereo bed through 3 damped feedback combs per channel,
@@ -239,9 +390,11 @@ pub fn synth_track(score: &Score) -> Track {
             0.55,
             0.5,
             0.0,
-            bass(score.chord_at(kt).root * 0.5),
+            bass(bass_freq(score.chord_at(kt).root)),
         );
     }
+    render_intro_percussion(&mut kickbuf, &mut bed, score);
+
     for t in score.hits(Inst::Snare) {
         render_into(&mut bed, t, 0.4, 0.5, 0.0, snare());
     }
@@ -261,6 +414,8 @@ pub fn synth_track(score: &Score) -> Track {
             stab,
         );
     }
+    render_intro_bassline(&mut bed, score);
+
     // lead: forward + centre.
     for (t, f) in score.lead_notes() {
         render_into(&mut bed, t, 0.6, 0.22, 0.0, lead(f));
@@ -276,21 +431,50 @@ pub fn synth_track(score: &Score) -> Track {
     for b in 0..nbars {
         let t = b as f32 * bar;
         let m = score.levels(t).mids;
+        let intro_pad = ((t - 6.0 * bar) / (2.0 * bar)).clamp(0.0, 1.0);
         chord_spread(
             &mut bed,
             t,
             bar,
-            0.06 + 0.06 * m,
+            (0.035 + 0.07 * m) * intro_pad,
             0.7,
             score.chord_at(t).triad(),
             pad,
         );
     }
-    // continuous sub-bass (centre) into the bed so it pumps with the sidechain.
+
+    if let Some(t) = section_time(score, "build") {
+        render_riser(&mut bed, t - 2.0 * bar, 2.0 * bar, 0.10, -0.25);
+    }
+    if let Some(t) = section_time(score, "drop") {
+        render_riser(&mut bed, t - 4.0 * bar, 4.0 * bar, 0.26, 0.15);
+        render_impact(&mut bed, t, 1.6, 0.62);
+    }
+    if let Some(t) = section_time(score, "breakdown") {
+        render_impact(&mut bed, t, 2.2, 0.38);
+    }
+    if let Some(t) = section_time(score, "climax") {
+        render_riser(&mut bed, t - 4.0 * bar, 4.0 * bar, 0.34, -0.15);
+        render_impact(&mut bed, t, 2.0, 0.72);
+    }
+    if let Some(t) = section_time(score, "outro") {
+        render_impact(&mut bed, t, 1.8, 0.28);
+    }
+
+    // Continuous sub-bass (centre) into the bed so it pumps with the sidechain. It follows the
+    // chord root with a short glide instead of droning on one fixed A. The fundamental lives low;
+    // a quiet octave harmonic keeps the bass readable on systems that cannot reproduce ~25 Hz.
     let dt = 1.0 / sr;
+    let glide = 1.0 - (-dt / 0.045).exp();
+    let mut phase = 0.0f32;
+    let mut sub_hz = sub_freq(score.chord_at(0.0).root);
     for i in 0..total {
         let t = i as f32 * dt;
-        let s = (TAU * 55.0 * t).sin() * (0.12 + 0.45 * score.levels(t).sub_bass);
+        sub_hz += (sub_freq(score.chord_at(t).root) - sub_hz) * glide;
+        phase = (phase + TAU * sub_hz * dt) % TAU;
+        let fundamental = phase.sin();
+        let harmonic = (phase * 2.0).sin() * 0.32;
+        let s = (fundamental + harmonic) * (0.10 + 0.38 * score.levels(t).sub_bass);
         bed[2 * i] += s;
         bed[2 * i + 1] += s;
     }
