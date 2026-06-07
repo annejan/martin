@@ -1,0 +1,10 @@
+# martin — "Ægg flow": the Ægg sampled to GENERATED SPLATS (mesh: surface-samples the badge into
+# gaussians), then the morph engine flows those particles smoothly into the doggo and a title.
+# This is the smooth "mesh → generated splats → hondje/text" — all one gaussian morph. Run:
+#
+#   MARTIN_PLY=assets/doggo.ply MARTIN_SEQ=assets/aegg-flow.seq \
+#   MARTIN_MESH_COUNT=250000 MARTIN_MORPH_COUNT=250000 MARTIN_BEAT=2 cargo +nightly run --release
+
+mesh:aegg.dae      @3,3     ~ball ^twist     # the Ægg as generated splats — assembles, curling
+splat:doggo.ply    @2,3.5   ~swarm           # the particles SWARM into the doggo
+text:deFEEST       @3,3     ~swarm           # …and flow on into a title
