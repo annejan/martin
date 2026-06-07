@@ -46,6 +46,10 @@ fn main() {
     for name in &names {
         let path = asset_dir.join(name);
         println!("cargo:rerun-if-changed={}", path.display());
+        // a `.mtl` sibling is optional — an .obj without one just renders with the flat fallback.
+        if name.ends_with(".mtl") && !path.exists() {
+            continue;
+        }
         let bytes = std::fs::read(&path)
             .unwrap_or_else(|e| panic!("bundle: missing asset {}: {e}", path.display()));
         files.push((name.clone(), bytes));
@@ -114,13 +118,19 @@ fn read_or_inline(spec: &str) -> String {
     std::fs::read_to_string(spec).unwrap_or_else(|_| spec.to_string())
 }
 
-/// Every `splat:`/`image:`/`mesh:` filename in a show spec (the same token grammar martin parses).
+/// Every asset filename a show spec references — `splat:`/`image:`/`mesh:`/`glb:`/`gltf:`/`model:`
+/// (the same token grammar martin parses), plus the sibling `.mtl` of any `.obj` (Wavefront
+/// references its material by name from inside the file, so it must ship alongside).
 fn referenced_assets(spec: &str) -> Vec<String> {
     let mut names = Vec::new();
     let mut push = |n: &str| {
         let n = n.trim();
-        if !n.is_empty() && !names.contains(&n.to_string()) {
-            names.push(n.to_string());
+        if n.is_empty() || names.contains(&n.to_string()) {
+            return;
+        }
+        names.push(n.to_string());
+        if let Some(stem) = n.strip_suffix(".obj") {
+            names.push(format!("{stem}.mtl")); // ship the material beside the .obj
         }
     };
     for line in spec.split([';', '\n']) {
@@ -131,6 +141,12 @@ fn referenced_assets(spec: &str) -> Vec<String> {
             } else if let Some(p) = tok.strip_prefix("image:") {
                 push(p);
             } else if let Some(p) = tok.strip_prefix("mesh:") {
+                push(p);
+            } else if let Some(p) = tok.strip_prefix("glb:") {
+                push(p);
+            } else if let Some(p) = tok.strip_prefix("gltf:") {
+                push(p);
+            } else if let Some(p) = tok.strip_prefix("model:") {
                 push(p);
             }
         }

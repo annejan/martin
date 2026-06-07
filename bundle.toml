@@ -1,14 +1,14 @@
-# bundle.toml — what `./pipeline/release.sh` (or `cargo build --release --features bundle`) bakes
-# into a single self-contained binary. The pipeline reads this, auto-collects every .ply/PNG the
-# show references, lz4-compresses them into the executable, and at startup the binary self-extracts
-# to a temp dir and plays the show with no external files and no env vars (the loader screen runs
-# while the splats decompress). Env vars still override for debugging.
+# bundle.toml — what `cargo build --release --features bundle` (or ./pipeline/release.sh) bakes into
+# ONE self-contained binary. build.rs reads this, auto-collects every asset the show references
+# (splat:/image:/mesh:/glb:/model: filenames + an .obj's .mtl sibling), lz4-compresses them into the
+# executable, and at startup src/bundle.rs self-extracts to a temp dir and plays the show with no
+# external files and no env vars (the loader screen runs while it decompresses). Env still overrides.
 #
-# `seq`/`compose` is a path to a show file or an inline spec. Fonts + the default score are already
-# compiled into martin, so only splats (+ the logo PNG) ship. The referenced .ply must exist locally
-# at build time (they're git-ignored); generate the demo shapes first: python3 pipeline/gen-demo-splats.py
+# `seq`/`compose` is a path to a show file or an inline spec. Fonts + the default score are compiled
+# into martin; only the meshes/PNG ship. The default demo references ONLY the published, licence-
+# cleared mesh + logo assets (no .ply), so this builds straight from a clean checkout — and in CI.
 
-seq = "assets/release.seq"        # the light, self-contained ~song-length showcase
+seq = "assets/demo.seq"           # the default self-contained demo (published meshes + logo, no .ply)
 score = "assets/score.txt"        # the (placeholder) track + the @@anchor timing
 logo = "defeest-logo.png"         # shown on the loader screen
-morph_count = "180000"            # gaussian budget per part (smaller = smaller frames + faster)
+morph_count = "200000"            # gaussian budget per part (smaller = smaller frames + faster)
