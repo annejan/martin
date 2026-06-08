@@ -1,13 +1,23 @@
-# martin — the DEFAULT demo. A self-contained show built only from the PUBLISHED, licence-cleared
-# mesh + logo assets (no .ply needed), so a fresh `cargo +nightly run --release` just works out of
-# the box. Anchored to the built-in score; it's all data — edit the titles, order and effects
-# (~arrival, ^deform, out:departure, rot:) to taste.
+# martin — the DEFAULT demo. A demoscene flashback ride through the years, built only from
+# licence-cleared shipped assets (no .ply files needed). Shows every transition, deform and
+# arrival effect so you can see what the engine can do.
+#
+# Run:  cargo +nightly run --release
+# Record:  ./record.sh out.mp4
 
-# Laid end-to-end (no @@anchors) so a short default demo shows EVERY part in order — the music plays
-# underneath. (Anchor to @@sections only for a full song-length show, where parts are spaced out.)
-glb:defeest.glb                 @7,4               # deFEEST logo: random splats → crisp MESH → dissolve (face-on)
-mesh:bitterbal.obj cluster:9    @6,3   ~drop ^wind  # a serving of 9 brown bitterballen drops in, wobbling
-mesh:aegg.dae                   @6,4   ~rain        # the Bornhack Ægg badge rains in
-wall:GREETINGS|TO ALL|DEMOSCENERS @6,3  ~fade ^wave # a wavy wall of greetings
-image:defeest-logo.png          @5,3   ~ball        # the deFEEST logo (flat image splats)
-text:deFEEST                    @6,3   ~rain ^wind   # outro title, fluttering in the wind
+glb:defeest.glb                 @5,3.5  ~pen-write              # logo dissolves in — handwriting-style
+text:DEMOSCENE FLASHBACK        @3,2.5  ~typewriter ^wave       # title appears, wavy
+text:1980s                      @2,2    ~fade                   # fade in: the early years
+text:C64 SWAPTIONS & CRACKTROS  @3,2    ~swarm                  # the birth of the scene
+text:1990s                      @2,2    ~fade                   # the golden era
+text:THE PC DEMO TAKES OFF      @3,2.5  ~swirl                  # Future Crew, Farbrausch, etc.
+text:320x200 VGA · MOD MUSIC    @3,2    ~typewriter             # the classic formula
+text:2020s                      @2,2    ~fade                   # fast-forward
+mesh:aegg.dae                   @5,3.5  ~rain ^wind             # modern hardware badge rains in, gusting
+mesh:bitterbal.obj cluster:9    @5,3    ~drop ^wind  out:evaporate # bitterballen — deFEEST catering
+text:THE SCENE LIVES            @3,2.5  ~outline ^wave          # proclamation
+wall:CODE · MUSIC · GFX · TEXT  @4,3    ~fade ^wave             # the four pillars
+wall:DEMOSCENE · DEMOPARTY · DEMO @4,3  ~swarm ^wind            # what we do
+image:defeest-logo.png          @4,3    ~sparkle                 # logo sparkles in
+text:a deFEEST production       @4,3.5  ~pen-write ^wave         # outro
+text:THANK YOU                  @5,4    ~vortex                  # spins away
