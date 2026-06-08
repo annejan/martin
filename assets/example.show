@@ -1,0 +1,34 @@
+# example.show — a whole martin show in one file.  Run it with:
+#
+#     MARTIN_SHOW=assets/example.show cargo +nightly run --release
+#     MARTIN_SHOW=assets/example.show ./record.sh example.mp4
+#
+# A .show pulls together everything that used to be a scatter of MARTIN_* env vars plus a separate
+# waypoints.json:  top-level settings, the morph [seq] (the hero), the [compose] stage (objects
+# placed around it), and a music-timed [camera] track.  It is pure sugar — each setting expands to
+# a MARTIN_* var, the [seq]/[compose] bodies are exactly today's .seq / .compose syntax — so an
+# explicit env var on the command line still overrides any setting here.
+
+# --- settings (top-level key = value → MARTIN_<KEY>) ---
+morph_count = 180000
+deform      = wind          # a scene-wide field: gently blows the whole stage (per-object ^name wins)
+bg          = plasma        # animated background shader layer
+
+# --- the hero: a morph timeline (verbatim .seq syntax) ---
+[seq]
+glb:defeest.glb   ~pen       # the logo writes itself on, crisp
+text:DE|FEEST     ~typewriter
+text:2026         ~sparkle
+
+# --- the stage: objects placed around the hero (verbatim .compose syntax) ---
+[compose]
+mesh:bitterbal.obj  @-1.4,.2,0  *.5  ~drop          # a bitterbal drops in on the left
+mesh:bitterbal.obj  @1.4,-.3,0  *.4  ~drop ^turb    # ...and one churning on the right
+
+# --- the camera: a music-timed track (order-free key=value; t = show-time seconds) ---
+# pos = look-at target (x,y,z); dist/yaw/pitch place the orbit camera. Authored live by flying +
+# tapping M (which stamps the clock) — or hand-edit the t's to lock moves to the beat.
+[camera]
+t=0.0   pos=0,0,0   dist=7.0   yaw=0.6   pitch=0.12
+t=4.0   pos=0,0,0   dist=4.5   yaw=1.5   pitch=0.30
+t=9.0   pos=0,0,0   dist=7.0   yaw=2.9   pitch=0.12

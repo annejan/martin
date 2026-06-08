@@ -32,11 +32,22 @@ pub struct Waypoints {
 }
 
 impl Waypoints {
+    /// Load the path from `MARTIN_WAYPOINTS` (M continues it, `MARTIN_FLY` replays it).
     pub fn from_env() -> Self {
+        Self::build(None)
+    }
+
+    /// Use an inline track (from a `.show` file's `[camera]` section) instead of loading the file;
+    /// the file path / fly settings still come from the env (M-saves still target the file).
+    pub fn from_inline(list: Vec<Waypoint>) -> Self {
+        Self::build(Some(list))
+    }
+
+    fn build(inline: Option<Vec<Waypoint>>) -> Self {
         let path = std::env::var("MARTIN_WAYPOINTS").unwrap_or_else(|_| "waypoints.json".into());
         Self {
-            // seed from an existing file so M *continues* a path and MARTIN_FLY can replay it.
-            list: load(&path),
+            // inline wins; else seed from the file so M *continues* a path and MARTIN_FLY replays it.
+            list: inline.unwrap_or_else(|| load(&path)),
             path,
             fly: std::env::var("MARTIN_FLY")
                 .ok()

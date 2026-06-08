@@ -76,8 +76,9 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_REFORM` | — | Morph target: the source splat(s) turn into this one. |
 | `MARTIN_TEXT` | — | Splat-text: this string assembles out of a ball cloud (glowing). |
 | `MARTIN_SEQ` | — | A timeline of parts (see [Sequences](#sequences)). Highest precedence. |
+| `MARTIN_SHOW` | — | A **unified scene file** (`.show`) — settings + `[seq]` + `[compose]` + a `[camera]` track in one file. Expands into the other `MARTIN_*` vars (which still override it). See [The unified scene file](#the-unified-scene-file-martin_show). |
 | `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`rain`/`funnel`/`shatter`/`condense`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
-| `MARTIN_DEFORM` | — | Default **persistent deform** for every part: `wave`/`cloth`/`ripple`/`twist`/`wind` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
+| `MARTIN_DEFORM` | — | Scene-wide **persistent deform** field over every part *and* compose object: `wave`/`cloth`/`ripple`/`twist`/`wind`/`turbulence` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
 | `MARTIN_DEFORM_AMP` | `1.0` | Scales the deform amplitude — **`0.2`–`0.3` ≈ a gentle wobble on a big scene**, `1` = default, higher = wild. |
 | `MARTIN_DEFORM_SPEED` | `2.0` | Deform animation rate — `0.6`–`1` = slow/dreamy, higher = faster. |
 | `MARTIN_BEAT` | `1.0` | **Beat-reactive visuals** strength (`0` = off). The score's drums drive the look: kick → a scale "thump" + camera pump, snare → a bloom flare, hat → a shimmer, and any active `^deform` swells on the beat. See [Beat-reactive visuals](#beat-reactive-visuals). |
@@ -548,6 +549,33 @@ MARTIN_SEQ="text:HELLO ~ball; splat:doggo.ply ~swarm" \
 MARTIN_COMPOSE="mesh:bitterbal.obj @-1.3,.4,0 *.5 spin 0,40,0; text:deFEEST @1.3,.5,0 *.5 sway 0,25,0" \
 cargo +nightly run --release
 ```
+
+## The unified scene file (`MARTIN_SHOW`)
+
+Once a show grows past a one-liner, gather it into a single **`.show` file** instead of juggling a
+pile of `MARTIN_*` vars plus a `waypoints.json`:
+
+```bash
+MARTIN_SHOW=assets/example.show cargo +nightly run --release
+MARTIN_SHOW=assets/example.show ./record.sh example.mp4
+```
+
+A `.show` has four kinds of section — see [`assets/example.show`](assets/example.show):
+
+| section | what it is |
+|---|---|
+| *(top, before any header)* `key = value` | **settings** — each becomes `MARTIN_<KEY>` (`morph_count = 180000` → `MARTIN_MORPH_COUNT`, `deform = wind`, `bg = plasma`, …) |
+| `[seq]` | the **hero** morph timeline — verbatim [`.seq`](#sequences) syntax |
+| `[compose]` | the **stage** of placed objects — verbatim [`.compose`](#composition--the-stage-martin_compose) syntax |
+| `[camera]` | a music-timed **[camera track](#live-keyboard-controls)** — order-free `t=<s> pos=x,y,z dist= yaw= pitch=` lines |
+
+It's deliberately pure sugar: the file **expands into the env** (the settings become `MARTIN_*`, the
+`[seq]`/`[compose]` bodies become `MARTIN_SEQ`/`MARTIN_COMPOSE`), so everything above works exactly
+the same — and **an explicit env var on the command line still wins** over a setting in the file
+(`MARTIN_DEFORM=turbulence MARTIN_SHOW=x.show …` overrides just that one knob). The only part that
+isn't an env var, the inline `[camera]` track, is handed straight to the camera (and auto-enables
+`MARTIN_FLY`). Author the camera live — fly around and tap **M** at musical moments — then paste the
+logged poses into the `[camera]` section, or hand-edit the `t`'s to lock moves to the beat.
 
 ## Music (the synth)
 

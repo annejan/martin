@@ -31,6 +31,7 @@ mod morph;
 mod music;
 mod scene;
 mod score;
+mod show;
 mod splat_image;
 mod text;
 mod waypoints;
@@ -48,6 +49,11 @@ fn main() {
     // the env BEFORE anything reads it (a no-op without `--features bundle`).
     #[cfg(feature = "bundle")]
     bundle::apply();
+
+    // MARTIN_SHOW=<file>.show: a unified scene file — expand it INTO the env (settings → MARTIN_*,
+    // [seq]/[compose] bodies → MARTIN_SEQ/_COMPOSE) so everything below reads it unchanged. Must run
+    // before anything reads the env. Returns the inline [camera] track (empty without a show).
+    let show = show::apply();
 
     // MARTIN_SCORE_DUMP=path: export the built-in score as an editable tracker file, then exit —
     // a ready-to-edit starting point (round-trips through MARTIN_SCORE).
@@ -171,6 +177,12 @@ fn main() {
         })
         .insert_resource(AssetRoot(asset_root_path))
         .insert_resource(ScoreRes(Arc::new(score)))
+        // the camera waypoints: a `.show` inline `[camera]` track, else the MARTIN_WAYPOINTS file.
+        .insert_resource(if show.camera.is_empty() {
+            waypoints::Waypoints::from_env()
+        } else {
+            waypoints::Waypoints::from_inline(show.camera)
+        })
         .add_plugins((
             CameraPlugin,
             ScenePlugin,
