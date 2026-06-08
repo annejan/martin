@@ -60,8 +60,32 @@ pub(crate) enum Transition {
     PenWrite, // text written in pen order on a single-stroke font — true handwriting; text only
 }
 
+/// The source cloud a STANDALONE assemble flies in from (compose objects, and seq part 0). Morph/
+/// Swarm have no "previous shape" here, so they assemble from a ball; per-particle shader
+/// transitions get an identity copy (the shader staggers it). `r` ≈ the content radius.
+pub(crate) fn source_cloud(
+    tr: Transition,
+    shaped: &[Gaussian3d],
+    r: f32,
+) -> Option<Vec<Gaussian3d>> {
+    Some(match tr {
+        Transition::Ball | Transition::Morph | Transition::Swarm => ball_of(shaped, r * BALL_SHELL),
+        Transition::Fade => fade_of(shaped),
+        Transition::Explode => explode_of(shaped, r * 1.6),
+        Transition::Implode => implode_of(shaped),
+        Transition::Drop => drop_of(shaped, r * 2.5),
+        Transition::Rain => rain_of(shaped, r * 3.0),
+        Transition::Funnel => funnel_of(shaped, r * 3.0),
+        Transition::Shatter => shatter_of(shaped, r * 1.4),
+        Transition::Condense => condense_of(shaped, r * 2.2),
+        Transition::Swirl => swirl_of(shaped, 2.4, 1.5),
+        _ if tr.shader_uniforms().is_some() => shaped.to_vec(),
+        _ => return None,
+    })
+}
+
 impl Transition {
-    fn parse(s: &str) -> Option<Transition> {
+    pub(crate) fn parse(s: &str) -> Option<Transition> {
         Some(match s.trim().to_ascii_lowercase().as_str() {
             "morph" => Transition::Morph,
             "swarm" => Transition::Swarm,
@@ -117,7 +141,7 @@ pub(crate) enum Deform {
 }
 
 impl Deform {
-    fn parse(s: &str) -> Option<Deform> {
+    pub(crate) fn parse(s: &str) -> Option<Deform> {
         Some(match s.trim().to_ascii_lowercase().as_str() {
             "wave" | "flag" => Deform::Wave,
             "cloth" | "billow" => Deform::Cloth,
@@ -129,7 +153,7 @@ impl Deform {
     }
 
     /// The `(mode, amp, freq)` uniform triple for the vendored shader deform.
-    fn uniforms(self) -> (u32, f32, f32) {
+    pub(crate) fn uniforms(self) -> (u32, f32, f32) {
         match self {
             Deform::Wave => (1, 0.15, 4.0),
             Deform::Cloth => (2, 0.12, 3.5),
@@ -638,24 +662,13 @@ pub(crate) fn build_sequence(
         // a Morph/Swarm part must assemble fresh from a ball instead.
         let prev_departs = idx > 0 && seq.parts[idx - 1].out.is_some();
         let src: Option<Vec<Gaussian3d>> = match tr {
+            // Morph/Swarm flow from the PREVIOUS part's shape (no source) — unless the previous part
+            // departed (washed away), in which case there's nothing to flow from → assemble fresh.
             Transition::Morph | Transition::Swarm if prev_departs => {
                 Some(ball_of(&shaped, r * BALL_SHELL))
             }
-            Transition::Morph | Transition::Swarm => None, // both flow from the previous shape
-            Transition::Ball => Some(ball_of(&shaped, r * BALL_SHELL)),
-            Transition::Fade => Some(fade_of(&shaped)),
-            Transition::Explode => Some(explode_of(&shaped, r * 1.6)),
-            Transition::Implode => Some(implode_of(&shaped)),
-            Transition::Drop => Some(drop_of(&shaped, r * 2.5)),
-            Transition::Rain => Some(rain_of(&shaped, r * 3.0)),
-            Transition::Funnel => Some(funnel_of(&shaped, r * 3.0)),
-            Transition::Shatter => Some(shatter_of(&shaped, r * 1.4)),
-            Transition::Condense => Some(condense_of(&shaped, r * 2.2)),
-            Transition::Swirl => Some(swirl_of(&shaped, 2.4, 1.5)),
-            // Per-particle (shader) transitions: identity source — positions/opacity match the
-            // target and the vendored shader staggers them per particle over the morph.
-            _ if tr.shader_uniforms().is_some() => Some(shaped.clone()),
-            _ => None,
+            Transition::Morph | Transition::Swarm => None,
+            other => source_cloud(other, &shaped, r),
         };
         // `out:` departure target cloud (faded + displaced) — the part morphs to this as it leaves.
         let out = seq.parts[idx].out.map(|d| match d {

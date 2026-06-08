@@ -520,6 +520,8 @@ mesh:bornhack2026-hardware.dae @0,-1.6,.3  *.7   spin 20,40,0   in climax
 | `bob amp` | vertical bob amplitude |
 | `drift dx,dy,dz` | translation velocity, units/sec |
 | `in <anchor>` / `out <anchor>` | fade in / out at an `@@`-style time (section / `bar:N` / `beat:N` / seconds) |
+| `~transition` | each object **assembles in** via its own arrival (`~ball`/`~rain`/`~funnel`/`~shatter`/…) instead of a plain fade — the same vocabulary as the morph timeline |
+| `^deform` | a persistent **wobble** while it's up (`^wave`/`^wind`/…) |
 
 So objects **fade in on the music** (the stage builds with the track), spin/bob/drift in place, and
 the camera slowly **auto-orbits** the whole arrangement (grab it any time with the arrow keys).

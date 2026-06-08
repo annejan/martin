@@ -5,16 +5,21 @@ use std::f32::consts::PI;
 
 use bevy::gltf::GltfAssetLabel;
 use bevy::prelude::*;
+use bevy_gaussian_splatting::morph::interpolate::GaussianInterpolate;
 use bevy_gaussian_splatting::sort::SortMode;
-use bevy_gaussian_splatting::{CloudSettings, PlanarGaussian3d, PlanarGaussian3dHandle};
+use bevy_gaussian_splatting::{
+    CloudSettings, Gaussian3d, PlanarGaussian3d, PlanarGaussian3dHandle,
+};
 
 use crate::camera::{OrbitCam, DEFAULT_PITCH, FRONT_YAW};
 use crate::capture::RecordState;
 use crate::morph::resample_morton;
 use crate::scene::content::{parse_source, part_gaussians, PartContent};
-use crate::scene::sequence::{SeqState, Sequence};
+use crate::scene::sequence::{source_cloud, Deform, SeqState, Sequence, Transition};
 use crate::scene::{cloud_base_rotation, AssetRoot, SeqClock, NORMALIZE_EXTENT};
 use crate::score;
+
+const COMPOSE_MORPH: f32 = 1.6; // how long a `~transition` compose object takes to assemble in (s)
 
 /// One object placed on the composition stage: a source + where it sits + how it moves.
 #[derive(Clone)]
@@ -22,14 +27,16 @@ pub(crate) struct Composed {
     content: PartContent,
     pos: Vec3,
     scale: f32,
-    rot: Vec3,   // static orientation, euler degrees
-    spin: Vec3,  // auto-rotation, degrees/sec
+    rot: Vec3,                      // static orientation, euler degrees
+    spin: Vec3,                     // auto-rotation, degrees/sec
     sway: Vec3, // oscillating rotation amplitude, degrees (swings front-on; for hollow-back splats)
     bob: f32,   // vertical bob amplitude (units)
     drift: Vec3, // translation velocity (units/sec)
     appear: f32, // fade-in start (s on the show clock)
     out: f32,   // fade-out start (s); f32::MAX = stays to the end
     fade: f32,  // fade in/out duration (s)
+    transition: Option<Transition>, // `~name`: assemble in from a source cloud (vs a plain fade)
+    deform: Option<Deform>, // `^name`: a persistent wobble while it's up
 }
 
 impl Composed {
@@ -39,7 +46,9 @@ impl Composed {
     }
 
     /// The motion state carried on the spawned entity (shared by splat clouds + mesh props).
-    fn anim(&self, base_rot: Quat) -> ComposeAnim {
+    /// `interpolate` = this object is a `GaussianInterpolate` (a `~transition`), so its `cs.time`
+    /// is driven (the assemble) instead of an opacity fade-in.
+    fn anim(&self, base_rot: Quat, interpolate: bool) -> ComposeAnim {
         ComposeAnim {
             base_pos: self.pos,
             base_rot,
@@ -51,6 +60,8 @@ impl Composed {
             appear: self.appear,
             out: self.out,
             fade: self.fade,
+            interpolate,
+            deform: self.deform.map(|d| d.uniforms()),
         }
     }
 }
@@ -91,6 +102,8 @@ pub(crate) struct ComposeAnim {
     appear: f32,
     out: f32,
     fade: f32,
+    interpolate: bool, // a `~transition` object → drive cs.time (assemble), not opacity
+    deform: Option<(u32, f32, f32)>, // `^name` deform uniforms (mode, amp, freq)
 }
 
 /// Parse `MARTIN_COMPOSE` (a file path or inline string). Each line: a `<source>` head (text/splat/
@@ -105,7 +118,23 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Composed> {
         if s.is_empty() {
             continue;
         }
-        let toks: Vec<&str> = s.split_whitespace().collect();
+        // pull the `~transition` + `^deform` tokens (position-independent), keep the rest.
+        let mut transition = None;
+        let mut deform = None;
+        let toks: Vec<&str> = s
+            .split_whitespace()
+            .filter(|t| {
+                if let Some(tr) = t.strip_prefix('~').and_then(Transition::parse) {
+                    transition = Some(tr);
+                    return false;
+                }
+                if let Some(d) = t.strip_prefix('^').and_then(Deform::parse) {
+                    deform = Some(d);
+                    return false;
+                }
+                true
+            })
+            .collect();
         // source = the leading tokens up to the first placement token (so `text:HELLO WORLD` works).
         let split = toks
             .iter()
@@ -156,6 +185,8 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Composed> {
             appear,
             out: out_t,
             fade,
+            transition,
+            deform,
         });
     }
     out
@@ -221,7 +252,7 @@ pub(crate) fn build_composition(
                     rotation: rot,
                     scale: Vec3::splat(obj.scale),
                 },
-                obj.anim(rot),
+                obj.anim(rot, false),
             ));
             placed.push((obj.pos, 1.0)); // rough radius (the mesh size is async); tune with MARTIN_ZOOM
             any_model = true;
@@ -232,40 +263,53 @@ pub(crate) fn build_composition(
             continue;
         }
         crate::morph::normalize_to(&mut raw, NORMALIZE_EXTENT); // centre + ~2 units across
-        let raw = resample_morton(raw, count);
+        let shaped = resample_morton(raw, count);
         let rot = Quat::from_euler(
             EulerRot::XYZ,
             obj.rot.x.to_radians(),
             obj.rot.y.to_radians(),
             obj.rot.z.to_radians(),
         ) * base;
-        let handle = assets.add(PlanarGaussian3d::from(raw));
-        commands.spawn((
-            // A PLAIN static cloud — NOT a GaussianInterpolate. The objects never morph (lhs==rhs),
-            // so wrapping them in GaussianInterpolate ran a full GPU blend-compute every frame that
-            // just bit-copied identical buffers (7× per frame here). `extract_gaussians` renders a
-            // plain `PlanarGaussian3dHandle` directly; `calculate_bounds` adds the Aabb and
-            // `auto_insert_sorted_entries` the sort handle. (An explicit `Visibility` makes sure
-            // `ViewVisibility` gets computed.) NB: no `NoFrustumCulling` — `calculate_bounds` skips
-            // culling-exempt entities, so it would never get an Aabb (the old black-screen bug).
-            PlanarGaussian3dHandle(handle),
-            Visibility::Visible,
-            CloudSettings {
-                sort_mode: SortMode::Radix,
-                time: 0.0,
-                time_start: 0.0,
-                time_stop: 1.0,
-                bulge: 0.0,
-                global_opacity: 0.0, // animate_composition fades it in
-                ..default()
-            },
-            Transform {
-                translation: obj.pos,
-                rotation: rot,
-                scale: Vec3::splat(obj.scale),
-            },
-            obj.anim(rot),
-        ));
+        let cs = CloudSettings {
+            sort_mode: SortMode::Radix,
+            time: 0.0,
+            time_start: 0.0,
+            time_stop: 1.0,
+            bulge: 0.0,
+            global_opacity: 0.0, // animate_composition fades it in (or holds it for a transition)
+            ..default()
+        };
+        let tf = Transform {
+            translation: obj.pos,
+            rotation: rot,
+            scale: Vec3::splat(obj.scale),
+        };
+        // A `~transition` object ASSEMBLES from a source cloud → a GaussianInterpolate (its cs.time
+        // is driven by animate_composition). Without one it's a PLAIN static cloud (a fade-in) — no
+        // per-frame GPU blend. Plain `PlanarGaussian3dHandle` renders directly; `calculate_bounds`
+        // gives both kinds an Aabb (NO NoFrustumCulling — that would skip the Aabb → black screen).
+        if let Some(tr) = obj.transition {
+            let source =
+                source_cloud(tr, &shaped, NORMALIZE_EXTENT * 0.5).unwrap_or_else(|| shaped.clone());
+            commands.spawn((
+                GaussianInterpolate::<Gaussian3d> {
+                    lhs: PlanarGaussian3dHandle(assets.add(PlanarGaussian3d::from(source))),
+                    rhs: PlanarGaussian3dHandle(assets.add(PlanarGaussian3d::from(shaped))),
+                },
+                Visibility::Visible,
+                cs,
+                tf,
+                obj.anim(rot, true),
+            ));
+        } else {
+            commands.spawn((
+                PlanarGaussian3dHandle(assets.add(PlanarGaussian3d::from(shaped))),
+                Visibility::Visible,
+                cs,
+                tf,
+                obj.anim(rot, false),
+            ));
+        }
         placed.push((obj.pos, NORMALIZE_EXTENT * 0.5 * obj.scale));
     }
     // Mesh props need lighting (the splats don't); a key + a soft fill so no side goes black.
@@ -367,7 +411,20 @@ pub(crate) fn animate_composition(
                                                         // kick thumps the scale (bulge is a no-op on a static cloud, so scale carries it too).
         tf.scale = Vec3::splat(a.base_scale * scale_vis * (1.0 + beat.kick * 0.06 * k));
         if let Some(mut cs) = cs {
-            cs.global_opacity = vis * (1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k);
+            // a `~transition` object assembles via the morph (cs.time) — its IN-fade is the morph,
+            // so only apply the OUT fade to opacity; a plain object fades both in and out.
+            let op = if a.interpolate { fout } else { vis };
+            cs.global_opacity = op * (1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k);
+            if a.interpolate {
+                let f = ((t - a.appear.max(0.0)) / COMPOSE_MORPH).clamp(0.0, 1.0);
+                cs.time = f * f * (3.0 - 2.0 * f); // eased assemble
+            }
+            if let Some((mode, amp, freq)) = a.deform {
+                cs.deform_mode = mode;
+                cs.deform_amp = amp * (1.0 + (beat.kick * 0.6 + beat.snare * 0.3) * k);
+                cs.deform_freq = freq;
+                cs.deform_time = t * 2.0;
+            }
         }
     }
 }
