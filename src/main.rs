@@ -76,22 +76,33 @@ fn main() {
         return;
     }
 
-    // MARTIN_COMPOSE: the composition stage (many objects at once). When set it IS the show — the
-    // morph timeline is left empty (build_sequence no-ops) and build_composition drives everything.
+    // MARTIN_COMPOSE: the composition stage (placed objects). It can run TOGETHER with the morph
+    // timeline — the morph track is the "hero", the compose objects are placed around it (tracks).
+    // Compose ALONE (no explicit MARTIN_SEQ/_TEXT/_PLY*) → no morph track. So:
+    //   compose + an explicit seq → both;  compose only → compose;  neither → the default demo.
     let composition = std::env::var("MARTIN_COMPOSE")
         .ok()
         .map(|spec| parse_compose(&spec, &score));
-    let (sequence, asset_root) = if composition.is_some() {
-        let root = std::env::var("MARTIN_PLY").ok().and_then(parent_dir);
+    let explicit_seq = [
+        "MARTIN_SEQ",
+        "MARTIN_TEXT",
+        "MARTIN_PLY",
+        "MARTIN_PLY2",
+        "MARTIN_REFORM",
+    ]
+    .iter()
+    .any(|k| std::env::var(k).is_ok());
+    let (sequence, asset_root) = if explicit_seq || composition.is_none() {
+        sequence_from_env(&score) // the morph track (or the default demo when nothing is set)
+    } else {
+        // compose-only: no morph track.
         (
             Sequence {
                 parts: Vec::new(),
                 count: 0,
             },
-            root,
+            std::env::var("MARTIN_PLY").ok().and_then(parent_dir),
         )
-    } else {
-        sequence_from_env(&score)
     };
     // Asset root: the .ply folder, or `assets` by default. Resolve to an ABSOLUTE path so Bevy's
     // AssetServer (glb:/model: loads) and martin's own std::fs reads (mesh:/image:) agree regardless

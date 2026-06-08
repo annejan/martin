@@ -125,15 +125,20 @@ fn record_driver(
         return;
     }
     let Some(dir) = rec.dir.clone() else { return };
-    // sequence → cue timeline end (last part's start + morph + hold); compose → its object timeline.
-    let dur = if seq_built {
-        match (&seq, &state) {
-            (Some(seq), Some(state)) => show_end(&seq.parts, &state.starts) + 1.0,
-            _ => 12.0,
+    // duration = the longer of the two tracks: the morph timeline's cue end (last part's
+    // start+morph+hold) and the compose stage's object timeline (they can run together).
+    let seq_dur = match (&seq, &state) {
+        (Some(seq), Some(state)) if seq_built && !seq.parts.is_empty() => {
+            show_end(&seq.parts, &state.starts) + 1.0
         }
-    } else {
-        comp.as_ref().map(|c| c.record_secs()).unwrap_or(12.0)
+        _ => 0.0,
     };
+    let comp_dur = if comp_built {
+        comp.as_ref().map(|c| c.record_secs()).unwrap_or(0.0)
+    } else {
+        0.0
+    };
+    let dur = seq_dur.max(comp_dur).max(12.0);
     let total = (dur / rec.dt).ceil() as u32;
     if rec.i >= total {
         // Wait for the async PNG writes to actually land before exiting — a fast (release)

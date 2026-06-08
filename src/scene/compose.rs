@@ -12,7 +12,7 @@ use crate::camera::{OrbitCam, DEFAULT_PITCH, FRONT_YAW};
 use crate::capture::RecordState;
 use crate::morph::resample_morton;
 use crate::scene::content::{parse_source, part_gaussians, PartContent};
-use crate::scene::sequence::SeqState;
+use crate::scene::sequence::{SeqState, Sequence};
 use crate::scene::{cloud_base_rotation, AssetRoot, SeqClock, NORMALIZE_EXTENT};
 use crate::score;
 
@@ -179,12 +179,16 @@ pub(crate) fn build_composition(
     asset_server: Res<AssetServer>,
     comp: Option<ResMut<Composition>>,
     state: Option<Res<SeqState>>,
+    seq: Option<Res<Sequence>>,
     root: Res<AssetRoot>,
     mut cam: Query<&mut OrbitCam>,
 ) {
     let (Some(mut comp), Some(state)) = (comp, state) else {
         return;
     };
+    // A non-empty morph timeline is the "hero" track — it frames the camera; compose objects are
+    // placed around it (tracks). Compose only frames the camera when it's the whole show.
+    let hero = seq.map(|s| !s.parts.is_empty()).unwrap_or(false);
     if comp.built || comp.objects.is_empty() {
         return;
     }
@@ -284,7 +288,8 @@ pub(crate) fn build_composition(
         ));
     }
     comp.built = true;
-    if placed.is_empty() {
+    // a hero morph track owns the camera; with one present, don't re-frame on the compose objects.
+    if placed.is_empty() || hero {
         return;
     }
     let center = placed.iter().map(|(p, _)| *p).sum::<Vec3>() / placed.len() as f32;
@@ -370,10 +375,15 @@ pub(crate) fn animate_composition(
 /// Slowly orbit the camera around the stage (the "flow") — additive with the live arrow keys.
 pub(crate) fn compose_camera(
     comp: Option<Res<Composition>>,
+    seq: Option<Res<Sequence>>,
     rec: Res<RecordState>,
     time: Res<Time>,
     mut cam: Query<&mut OrbitCam>,
 ) {
+    // when a morph hero track is present it owns the camera (its own sway/flypath) — don't add a drift.
+    if seq.map(|s| !s.parts.is_empty()).unwrap_or(false) {
+        return;
+    }
     if comp.map(|c| c.built).unwrap_or(false) {
         let dt = if rec.dir.is_some() {
             1.0 / 60.0

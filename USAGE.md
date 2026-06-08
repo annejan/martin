@@ -522,8 +522,20 @@ mesh:bornhack2026-hardware.dae @0,-1.6,.3  *.7   spin 20,40,0   in climax
 
 So objects **fade in on the music** (the stage builds with the track), spin/bob/drift in place, and
 the camera slowly **auto-orbits** the whole arrangement (grab it any time with the arrow keys).
-`MARTIN_MORPH_COUNT` caps splats **per object**. (When `MARTIN_COMPOSE` is set, the morph timeline
-is empty — the stage is the show.)
+`MARTIN_MORPH_COUNT` caps splats **per object**.
+
+**Stage + timeline together (tracks).** A compose stage can run *alongside* the morph timeline: set
+`MARTIN_COMPOSE` **and** an explicit `MARTIN_SEQ` (or `MARTIN_PLY`/`MARTIN_TEXT`). The morph timeline
+is then the **hero** track (it frames the camera) and the compose objects are placed around it —
+objects, text and meshes living in one scene. (Compose *alone*, with no morph track requested, still
+frames + auto-orbits itself.) Place the objects near the origin (`@±1`) so they sit in the hero's
+frame. Example:
+```bash
+MARTIN_PLY=assets/doggo.ply \
+MARTIN_SEQ="text:HELLO ~ball; splat:doggo.ply ~swarm" \
+MARTIN_COMPOSE="mesh:bitterbal.obj @-1.3,.4,0 *.5 spin 0,40,0; text:deFEEST @1.3,.5,0 *.5 sway 0,25,0" \
+cargo +nightly run --release
+```
 
 ## Music (the synth)
 
