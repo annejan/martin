@@ -196,6 +196,7 @@ fn main() {
             MusicPlugin,
             LoaderPlugin,
             crate::background::BackgroundPlugin,
+            crate::scene::shader_part::ShaderPartPlugin,
         ))
         .run();
 }

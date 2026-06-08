@@ -12,6 +12,7 @@ pub mod content;
 pub mod effects;
 pub mod gl_dissolve;
 pub mod sequence;
+pub mod shader_part;
 
 use compose::Composition;
 use content::PartContent;

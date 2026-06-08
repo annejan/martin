@@ -16,8 +16,9 @@ bg          = plasma        # animated background shader layer
 
 # --- the hero: a morph timeline (verbatim .seq syntax) ---
 [seq]
-glb:defeest.glb   ~pen       # the logo writes itself on, crisp
+glb:defeest.glb   ~pen        # the logo writes itself on, crisp
 text:DE|FEEST     ~typewriter
+shader:tunnel     @3,1        # a fullscreen-effect interlude (splats clear, the tunnel plays)
 text:2026         ~sparkle
 
 # --- the stage: objects placed around the hero (verbatim .compose syntax) ---

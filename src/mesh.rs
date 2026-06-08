@@ -190,18 +190,27 @@ where
     out
 }
 
-/// N fully-transparent gaussians at the origin — a placeholder for a glTF-dissolve part until
-/// `sample_gl_mesh` fills it from the loaded mesh (invisible meanwhile; keeps the morph's count).
+/// N fully-transparent gaussians — a placeholder for a part with no splats of its own (a glTF
+/// dissolve until `sample_gl_mesh` fills it, or a `shader:` interlude). Spread over a small sphere
+/// (golden-angle spiral, deterministic), NOT stacked at the origin: a transparent cloud is sometimes
+/// rendered for real (an interlude holds it for seconds), and 30k coincident splats on one pixel
+/// TDRs the GPU. Spread + a valid scale keeps it invisible (opacity 0) but harmless to rasterize.
 pub fn transparent_placeholder(n: usize) -> Vec<Gaussian3d> {
-    vec![
-        Gaussian3d {
-            position_visibility: [0.0, 0.0, 0.0, 0.0].into(),
-            spherical_harmonic: sh_of([0.0, 0.0, 0.0]),
-            rotation: [0.0, 0.0, 0.0, 1.0].into(),
-            scale_opacity: [0.001, 0.001, 0.001, 0.0].into(),
-        };
-        n.max(1)
-    ]
+    let n = n.max(1);
+    let ga = std::f32::consts::PI * (3.0 - 5.0_f32.sqrt()); // golden angle
+    (0..n)
+        .map(|i| {
+            let y = 1.0 - 2.0 * (i as f32 + 0.5) / n as f32; // -1..1
+            let r = (1.0 - y * y).max(0.0).sqrt();
+            let a = ga * i as f32;
+            Gaussian3d {
+                position_visibility: [r * a.cos() * 0.5, y * 0.5, r * a.sin() * 0.5, 0.0].into(),
+                spherical_harmonic: sh_of([0.0, 0.0, 0.0]),
+                rotation: [0.0, 0.0, 0.0, 1.0].into(),
+                scale_opacity: [0.02, 0.02, 0.02, 0.0].into(),
+            }
+        })
+        .collect()
 }
 
 /// Build flat-disk gaussians from triangles already in their final frame (positions + normals in

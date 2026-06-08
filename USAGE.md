@@ -203,6 +203,9 @@ image:logo.png                   # a PNG in the asset folder, rasterized to gaus
 mesh:logo.dae                    # a 3D mesh (.dae/.obj/.stl/.ply), surface-sampled into gaussians
 glb:badge.glb                    # a real glTF mesh: rendered crisp, THEN dissolves into its own
                                  #   sampled splats (coincident by construction) which morph on
+shader:warp                      # a fullscreen WGSL effect as an INTERLUDE: the splats clear and
+                                 #   the effect plays full-frame (warp/plasma/tunnel/stars), fading
+                                 #   in/out across the part — a demoscene effect between scenes
 splat:name.ply                   # a splat (filename in the asset folder)
 splat:a.ply+b.ply                # several splats, auto-arranged side by side
 …any of the above… @hold,morph,bulge   ~transition   ^deform   out:departure   rot:rx,ry,rz   cluster:N   @@anchor

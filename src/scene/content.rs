@@ -32,6 +32,10 @@ pub(crate) enum PartContent {
     /// that *same* loaded mesh — so the mesh can DISSOLVE into its own splats (which then morph on).
     /// Sequence-only; the gaussians are filled at runtime by `sample_gl_mesh` (see sequence.rs).
     GlMesh(String),
+    /// a **fullscreen WGSL effect** (`shader:warp`/`plasma`/`tunnel`/`stars`) as a timeline interlude:
+    /// the splats clear (this part's gaussians are transparent) and the effect plays full-frame,
+    /// fading in/out across the part. Sequence-only; rendered by `scene::shader_part`.
+    Shader(String),
 }
 
 /// Parse a source head (`text:` / `wall:` / `image:` / `mesh:` / `splat:`) into a `PartContent`.
@@ -55,6 +59,9 @@ pub(crate) fn parse_source(head: &str) -> Option<PartContent> {
         .or_else(|| head.strip_prefix("gltf:"))
     {
         PartContent::GlMesh(name.trim().to_string())
+    } else if let Some(name) = head.strip_prefix("shader:") {
+        // a fullscreen-effect interlude; `name` is an effect (warp/plasma/tunnel/stars), `.wgsl` optional.
+        PartContent::Shader(name.trim().trim_end_matches(".wgsl").to_string())
     } else if let Some(p) = head.strip_prefix("splat:") {
         PartContent::Splats(side_by_side(
             p.split('+').map(str::trim).filter(|x| !x.is_empty()),
@@ -142,6 +149,9 @@ pub(crate) fn part_gaussians(
         // A glTF dissolve part: a transparent placeholder now; sample_gl_mesh fills it from the
         // loaded mesh once it's ready (invisible until then, and the rendered mesh covers it).
         PartContent::GlMesh(_) => mesh::transparent_placeholder(256),
+        // A shader interlude: no splats — transparent placeholder so the morph chain stays valid
+        // (the splats simply clear), while scene::shader_part plays the fullscreen effect over it.
+        PartContent::Shader(_) => mesh::transparent_placeholder(256),
         PartContent::Splats(list) => {
             let mut out = Vec::new();
             for (name, off) in list {

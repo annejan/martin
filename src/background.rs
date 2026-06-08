@@ -38,7 +38,8 @@ impl Material for BgMaterial {
 struct BgQuad;
 
 /// Named modes → the `mode` uniform `bg.wgsl` switches on (a number also works: `MARTIN_BG=2`).
-fn mode_index(name: &str) -> u32 {
+/// Shared with the shader-part interlude (`scene::shader_part`), which uses the same effect set.
+pub(crate) fn mode_index(name: &str) -> u32 {
     match name.trim().to_ascii_lowercase().as_str() {
         "plasma" => 0,
         "tunnel" => 1,

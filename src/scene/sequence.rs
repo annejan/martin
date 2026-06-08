@@ -406,6 +406,7 @@ pub(crate) fn build_sequence(
             PartContent::Mesh(name) => format!("mesh {name}"),
             PartContent::Model(name) => format!("model {name}"),
             PartContent::GlMesh(name) => format!("gl-mesh {name}"),
+            PartContent::Shader(name) => format!("shader {name}"),
             PartContent::Splats(list) => list
                 .iter()
                 .map(|(n, _)| n.as_str())
