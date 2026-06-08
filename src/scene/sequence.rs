@@ -1170,20 +1170,24 @@ pub(crate) fn sample_gl_mesh(
 /// DISSOLVE 1→0 over the last DISSOLVE_LEN of the hold (finishing BEFORE the next part's morph, so
 /// the splats are fully back before they morph on — the dissolve is a distinct step, not overlapped).
 fn gl_mesh_alpha(starts: &[f32], parts: &[Part], p: usize, t: f32) -> f32 {
-    let assemble_end = starts[p] + parts[p].morph;
-    let materialize_end = assemble_end + MODEL_FADE;
+    // PART 0 is the OPENING: the mesh is crisp from the very start (no splat-assemble), so it picks
+    // up exactly where the loader's logo left off — the show flows OUT of the logo (svg→mesh→splats)
+    // rather than ball-assembling. Later parts assemble as splats first, then materialize.
+    let (appear_end, crisp_at) = if p == 0 {
+        (starts[0], starts[0])
+    } else {
+        let assemble_end = starts[p] + parts[p].morph;
+        (assemble_end, assemble_end + MODEL_FADE)
+    };
     // dissolve ends right as the next part starts morphing; carve DISSOLVE_LEN out of the hold for it.
     let (dissolve_start, dissolve_end) = match p + 1 {
-        next if next < parts.len() => (
-            (starts[next] - DISSOLVE_LEN).max(materialize_end),
-            starts[next],
-        ),
+        next if next < parts.len() => ((starts[next] - DISSOLVE_LEN).max(crisp_at), starts[next]),
         _ => (f32::MAX, f32::MAX), // last part: never dissolves, just stays crisp
     };
-    if t < assemble_end {
+    if t < appear_end {
         0.0
-    } else if t < materialize_end {
-        (t - assemble_end) / MODEL_FADE
+    } else if t < crisp_at {
+        (t - appear_end) / MODEL_FADE
     } else if t < dissolve_start {
         1.0
     } else if t < dissolve_end {

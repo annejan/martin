@@ -35,21 +35,22 @@ fn spawn_loader(mut commands: Commands, asset_server: Res<AssetServer>) {
             if let Ok(logo) = std::env::var("MARTIN_LOGO") {
                 p.spawn((
                     Node {
-                        width: Val::Px(360.0),
+                        width: Val::Px(480.0),
                         height: Val::Auto,
                         ..default()
                     },
                     ImageNode::new(asset_server.load(logo)),
                 ));
             }
-            // progress track + fill
+            // progress track + fill — a thin dim sliver; the logo is the star, and the show flows
+            // OUT of it (the loader's logo → the demo's crisp logo mesh → splats).
             p.spawn((
                 Node {
-                    width: Val::Px(360.0),
-                    height: Val::Px(5.0),
+                    width: Val::Px(300.0),
+                    height: Val::Px(3.0),
                     ..default()
                 },
-                BackgroundColor(Color::srgb(0.12, 0.12, 0.16)),
+                BackgroundColor(Color::srgb(0.10, 0.10, 0.13)),
             ))
             .with_children(|track| {
                 track.spawn((
