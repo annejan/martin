@@ -243,6 +243,58 @@ pub fn rain_of(shape: &[Gaussian3d], height: f32) -> Vec<Gaussian3d> {
         .collect()
 }
 
+/// FUNNEL source: particles start in a tall narrow column high above the centre, then fan out and
+/// down into the shape — a pour / funnel (vs `drop`'s straight fall or `rain`'s wide scatter).
+pub fn funnel_of(shape: &[Gaussian3d], height: f32) -> Vec<Gaussian3d> {
+    use std::f32::consts::TAU;
+    shape
+        .iter()
+        .enumerate()
+        .map(|(idx, g)| {
+            let k = idx as u32;
+            let p = g.position_visibility.position;
+            let lift = height * (0.5 + hash01(k, 2_654_435_761));
+            let ang = hash01(k, 40_503) * TAU;
+            let rad = 0.18 * height * hash01(k, 2_246_822_519); // narrow spout
+            let mut s = *g;
+            s.position_visibility.position = [rad * ang.cos(), p[1] + lift, rad * ang.sin()];
+            s
+        })
+        .collect()
+}
+
+/// SHATTER source: the shape broken into ~8 chunks (contiguous Morton blocks ≈ spatial pieces),
+/// each flung out + tumbled; the morph flies them back together — it re-assembles from shards.
+pub fn shatter_of(shape: &[Gaussian3d], spread: f32) -> Vec<Gaussian3d> {
+    use std::f32::consts::TAU;
+
+    use bevy::math::EulerRot;
+    let n = shape.len().max(1);
+    let chunks = 8u32;
+    shape
+        .iter()
+        .enumerate()
+        .map(|(idx, g)| {
+            let c = (idx as u64 * chunks as u64 / n as u64) as u32 + 1; // which shard
+            let q = Quat::from_euler(
+                EulerRot::XYZ,
+                hash01(c, 2_654_435_761) * TAU,
+                hash01(c, 2_246_822_519) * TAU,
+                hash01(c, 3_266_489_917) * TAU,
+            );
+            let off = Vec3::new(
+                (hash01(c, 668_265_263) - 0.5) * 2.0 * spread,
+                (hash01(c, 374_761_393) - 0.5) * 2.0 * spread,
+                (hash01(c, 1_274_126_177) - 0.5) * 2.0 * spread,
+            );
+            let mut s = *g;
+            s.position_visibility.position =
+                (q * Vec3::from_array(s.position_visibility.position) + off).to_array();
+            s
+        })
+        .collect()
+}
+
 // ---- DEPARTURE target clouds: the shape morphs TO one of these as a part LEAVES. All end faded
 // (opacity 0) + displaced, so the object dissolves away rather than cross-morphing to the next. ----
 

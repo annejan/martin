@@ -76,7 +76,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_REFORM` | — | Morph target: the source splat(s) turn into this one. |
 | `MARTIN_TEXT` | — | Splat-text: this string assembles out of a ball cloud (glowing). |
 | `MARTIN_SEQ` | — | A timeline of parts (see [Sequences](#sequences)). Highest precedence. |
-| `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
+| `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`rain`/`funnel`/`shatter`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
 | `MARTIN_DEFORM` | — | Default **persistent deform** for every part: `wave`/`cloth`/`ripple`/`twist`/`wind` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
 | `MARTIN_DEFORM_AMP` | `1.0` | Scales the deform amplitude — **`0.2`–`0.3` ≈ a gentle wobble on a big scene**, `1` = default, higher = wild. |
 | `MARTIN_DEFORM_SPEED` | `2.0` | Deform animation rate — `0.6`–`1` = slow/dreamy, higher = faster. |
@@ -220,6 +220,8 @@ of them). It can sit anywhere on the line, but reads best last:
 | `~implode` | expands out from a dense point |
 | `~drop` | falls straight down into place |
 | `~rain` | falls in from scattered high points — a staggered shower (vs `~drop`'s straight fall) |
+| `~funnel` (`~pour`) | pours in from a tall narrow column above, fanning out + down |
+| `~shatter` (`~shards`) | re-assembles from ~8 tumbling shards (a shattered object flying back together) |
 | `~swirl` | sweeps/spirals in around the vertical axis (cheap, straight-line) |
 
 **Per-particle** (the vendored shader staggers each splat — great for text):

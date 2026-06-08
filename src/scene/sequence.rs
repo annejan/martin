@@ -15,8 +15,8 @@ use bevy_gaussian_splatting::{
 
 use crate::camera::{OrbitCam, DEFAULT_PITCH, FRONT_YAW};
 use crate::morph::{
-    ball_of, disperse_of, drop_of, evaporate_of, explode_of, fade_of, implode_of, rain_of,
-    resample_morton, sink_of, swirl_of, wash_of,
+    ball_of, disperse_of, drop_of, evaporate_of, explode_of, fade_of, funnel_of, implode_of,
+    rain_of, resample_morton, shatter_of, sink_of, swirl_of, wash_of,
 };
 use crate::scene::content::{parse_source, part_gaussians, side_by_side, PartContent};
 use crate::scene::{cloud_base_rotation, file_name_of, parent_dir, AssetRoot, NORMALIZE_EXTENT};
@@ -46,6 +46,8 @@ pub(crate) enum Transition {
     Implode, // expand out from a dense point
     Drop,    // fall straight down into place
     Rain,    // fall in from scattered high points (a shower), staggered
+    Funnel,  // pour in from a tall narrow column above, fanning out + down
+    Shatter, // re-assemble from ~8 tumbling shards
     Swirl,   // sweep/spiral in around the vertical axis
     // --- per-particle (shader transition_mode) ---
     Typewriter, // reveal left→right as a moving edge (great for text)
@@ -68,6 +70,8 @@ impl Transition {
             "implode" => Transition::Implode,
             "drop" => Transition::Drop,
             "rain" => Transition::Rain,
+            "funnel" | "pour" => Transition::Funnel,
+            "shatter" | "shards" => Transition::Shatter,
             "swirl" => Transition::Swirl,
             "typewriter" | "type" => Transition::Typewriter,
             "wipe" => Transition::Wipe,
@@ -642,6 +646,8 @@ pub(crate) fn build_sequence(
             Transition::Implode => Some(implode_of(&shaped)),
             Transition::Drop => Some(drop_of(&shaped, r * 2.5)),
             Transition::Rain => Some(rain_of(&shaped, r * 3.0)),
+            Transition::Funnel => Some(funnel_of(&shaped, r * 3.0)),
+            Transition::Shatter => Some(shatter_of(&shaped, r * 1.4)),
             Transition::Swirl => Some(swirl_of(&shaped, 2.4, 1.5)),
             // Per-particle (shader) transitions: identity source — positions/opacity match the
             // target and the vendored shader staggers them per particle over the morph.
