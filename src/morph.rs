@@ -191,6 +191,63 @@ pub fn flatten_of(shape: &[Gaussian3d]) -> Vec<Gaussian3d> {
         .collect()
 }
 
+/// HELIX source: lay every (paired) particle on a tall vertical spiral column, so the morph reels
+/// them in off the helix into the shape — a logo/word spiralling in from a DNA-like column. `height`
+/// = column length, `turns` = how many full twists. Index-ordered along the column (like the ball:
+/// an assemble-from-a-column, not a warp of the target's own positions).
+pub fn helix_of(shape: &[Gaussian3d], height: f32, turns: f32) -> Vec<Gaussian3d> {
+    use std::f32::consts::TAU;
+    let n = shape.len().max(1) as f32;
+    shape
+        .iter()
+        .enumerate()
+        .map(|(i, g)| {
+            let f = i as f32 / n; // 0..1 along the column
+            let a = f * turns * TAU + hash01(i as u32 + 1, 2_654_435_761) * 0.3;
+            let r = 0.6;
+            let mut s = *g;
+            s.position_visibility = [r * a.cos(), (f - 0.5) * height, r * a.sin(), 1.0].into();
+            s
+        })
+        .collect()
+}
+
+/// FOLD source: the shape collapsed onto a vertical seam (its width axis x→0), so the morph *unfolds*
+/// it sideways out of a line — like opening a folded sheet. Index-paired (keeps each particle's y/z,
+/// only x grows), so it's a clean unfold, not a scatter. Sibling of `flatten_of` on the other axis.
+pub fn fold_of(shape: &[Gaussian3d]) -> Vec<Gaussian3d> {
+    shape
+        .iter()
+        .map(|g| {
+            let mut s = *g;
+            let mut p = s.position_visibility.position;
+            p[0] = 0.0; // collapse width → a vertical seam to unfold from
+            s.position_visibility.position = p;
+            s
+        })
+        .collect()
+}
+
+/// ZOOM source: every (paired) particle scaled `factor`× outward from the centroid, so the morph
+/// *rushes it in* from far — a telescope / hyperspace zoom into place. Uniform scale (vs `explode`'s
+/// random burst), so the shape stays readable as it screams in.
+pub fn zoom_of(shape: &[Gaussian3d], factor: f32) -> Vec<Gaussian3d> {
+    let mut c = Vec3::ZERO;
+    for g in shape {
+        c += Vec3::from_array(g.position_visibility.position);
+    }
+    c /= shape.len().max(1) as f32;
+    shape
+        .iter()
+        .map(|g| {
+            let mut s = *g;
+            let p = Vec3::from_array(s.position_visibility.position);
+            s.position_visibility.position = (c + (p - c) * factor).to_array();
+            s
+        })
+        .collect()
+}
+
 /// EXPLODE source: each (paired) particle flung outward from the centre, so the morph *gathers*
 /// the burst back into the shape. `spread` ≈ object radius.
 pub fn explode_of(shape: &[Gaussian3d], spread: f32) -> Vec<Gaussian3d> {
@@ -554,6 +611,40 @@ mod tests {
             assert!((p[2] - z0).abs() < 1e-6, "z collapsed to one plane");
         }
         assert!(z0.abs() < 0.1); // ~mid-depth of [-0.1, 0.1]
+    }
+
+    #[test]
+    fn fold_collapses_width_keeps_height_and_depth() {
+        let src = vec![g(-4.0, 1.0, 2.0), g(4.0, -1.0, -2.0)];
+        let f = fold_of(&src);
+        for (i, p) in f.iter().enumerate() {
+            let q = p.position_visibility.position;
+            assert_eq!(q[0], 0.0); // width → seam
+            assert_eq!(q[1], src[i].position_visibility.position[1]); // y kept
+            assert_eq!(q[2], src[i].position_visibility.position[2]); // z kept
+        }
+    }
+
+    #[test]
+    fn zoom_scales_out_from_the_centroid_index_paired() {
+        let src = vec![g(2.0, 0.0, 0.0), g(-2.0, 0.0, 0.0)]; // centroid at origin
+        let z = zoom_of(&src, 5.0);
+        assert_eq!(z[0].position_visibility.position[0], 10.0); // 2 * 5
+        assert_eq!(z[1].position_visibility.position[0], -10.0);
+    }
+
+    #[test]
+    fn helix_lays_points_on_a_column_of_the_right_count() {
+        let src: Vec<Gaussian3d> = (0..100).map(|i| g(i as f32, 0.0, 0.0)).collect();
+        let h = helix_of(&src, 4.0, 3.0);
+        assert_eq!(h.len(), 100);
+        // every point sits on the r=0.6 cylinder, spread over the column height.
+        let ys: Vec<f32> = h
+            .iter()
+            .map(|p| p.position_visibility.position[1])
+            .collect();
+        assert!(ys.iter().cloned().fold(f32::MAX, f32::min) < -1.5);
+        assert!(ys.iter().cloned().fold(f32::MIN, f32::max) > 1.5);
     }
 
     #[test]

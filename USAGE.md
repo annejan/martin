@@ -244,6 +244,9 @@ of them). It can sit anywhere on the line, but reads best last:
 | `~condense` (`~fog`/`~haze`) | condenses out of a wide faded haze — positions converge + opacity fades up |
 | `~swirl` | sweeps/spirals in around the vertical axis (cheap, straight-line) |
 | `~extrude` (`~rise`, `~pop`) | rises out of a flat silhouette into 3D — a logo extruding from its 2D shape into its mesh (best head-on, or on a deep object) |
+| `~helix` (`~dna`, `~spiral`) | reels in off a tall spinning column — a DNA / barber-pole assemble |
+| `~fold` (`~unfold`) | unfolds sideways out of a vertical seam, like opening a folded sheet |
+| `~zoom` (`~telescope`, `~warp-in`) | rushes in from far — a telescope / hyperspace zoom into place |
 
 **Per-particle** (the vendored shader staggers each splat — great for text):
 

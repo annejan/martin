@@ -121,7 +121,7 @@ splat:a.ply+b.ply         # several splats, auto-arranged side by side
 ```
 
 The trailing `~transition` picks how a part arrives — data-only `ball` (default), `fade`,
-`explode`, `implode`, `drop`, `swirl`, `extrude`, `morph`, or the per-particle shader transitions
+`explode`, `implode`, `drop`, `swirl`, `extrude`, `helix`, `fold`, `zoom`, `morph`, or the per-particle shader transitions
 `typewriter`, `wipe`, `sparkle`, `slither`, `vortex`, `outline`, `pen-write` (great for text). The ball is just one
 of many; the design + the shader fork are in **[`DESIGN.md`](DESIGN.md)** / **[`SHADER-BLUEPRINT.md`](SHADER-BLUEPRINT.md)**.
 

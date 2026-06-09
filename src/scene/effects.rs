@@ -5,8 +5,8 @@
 use bevy_gaussian_splatting::Gaussian3d;
 
 use crate::morph::{
-    ball_of, condense_of, drop_of, explode_of, fade_of, flatten_of, funnel_of, implode_of, rain_of,
-    shatter_of, swirl_of,
+    ball_of, condense_of, drop_of, explode_of, fade_of, flatten_of, fold_of, funnel_of, helix_of,
+    implode_of, rain_of, shatter_of, swirl_of, zoom_of,
 };
 
 pub(crate) const BALL_SHELL: f32 = 0.9; // intro ball-shell radius, in units of the framed radius
@@ -32,6 +32,9 @@ pub(crate) enum Transition {
     Condense, // condense out of a wide faded haze
     Swirl,    // sweep/spiral in around the vertical axis
     Extrude,  // rise out of a flat silhouette into 3D (a logo extruding from its svg into its mesh)
+    Helix,    // reel in off a tall spinning column (a DNA/barber-pole assemble)
+    Fold,     // unfold sideways out of a vertical seam (like opening a folded sheet)
+    Zoom,     // rush in from far — a telescope / hyperspace zoom into place
     // --- per-particle (shader transition_mode) ---
     Typewriter, // reveal left→right as a moving edge (great for text)
     Wipe,       // hard slab reveal across the x axis
@@ -62,6 +65,9 @@ pub(crate) fn source_cloud(
         Transition::Condense => condense_of(shaped, r * 2.2),
         Transition::Swirl => swirl_of(shaped, 2.4, 1.5),
         Transition::Extrude => flatten_of(shaped),
+        Transition::Helix => helix_of(shaped, r * 3.0, 4.0),
+        Transition::Fold => fold_of(shaped),
+        Transition::Zoom => zoom_of(shaped, 7.0),
         _ if tr.shader_uniforms().is_some() => shaped.to_vec(),
         _ => return None,
     })
@@ -83,6 +89,9 @@ impl Transition {
             "condense" | "fog" | "haze" => Transition::Condense,
             "swirl" => Transition::Swirl,
             "extrude" | "rise" | "pop" => Transition::Extrude,
+            "helix" | "dna" | "spiral" => Transition::Helix,
+            "fold" | "unfold" => Transition::Fold,
+            "zoom" | "telescope" | "warp-in" => Transition::Zoom,
             "typewriter" | "type" => Transition::Typewriter,
             "wipe" => Transition::Wipe,
             "sparkle" => Transition::Sparkle,
@@ -187,6 +196,9 @@ mod tests {
         );
         assert_eq!(Transition::parse("pour"), Some(Transition::Funnel)); // alias
         assert_eq!(Transition::parse("pop"), Some(Transition::Extrude)); // alias
+        assert_eq!(Transition::parse("dna"), Some(Transition::Helix)); // alias
+        assert_eq!(Transition::parse("unfold"), Some(Transition::Fold)); // alias
+        assert_eq!(Transition::parse("telescope"), Some(Transition::Zoom)); // alias
         assert_eq!(Transition::parse("nope"), None);
     }
 
