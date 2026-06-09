@@ -45,8 +45,12 @@ pub(crate) fn mode_index(name: &str) -> u32 {
         "tunnel" => 1,
         "stars" | "starfield" => 2,
         "warp" => 3,
+        "rings" => 4,
+        "grid" => 5,
+        "kaleido" | "kaleidoscope" => 6,
+        "bolt" | "lightning" => 7,
         other => other.parse().unwrap_or_else(|_| {
-            warn!("shader effect '{other}' unknown — using plasma (try plasma/tunnel/stars/warp)");
+            warn!("shader effect '{other}' unknown — using plasma (try plasma/tunnel/stars/warp/rings/grid/kaleido/bolt)");
             0
         }),
     }
@@ -123,5 +127,21 @@ impl Plugin for BackgroundPlugin {
             app.add_plugins(MaterialPlugin::<BgMaterial>::default())
                 .add_systems(Update, (spawn_bg, update_bg));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mode_index;
+
+    #[test]
+    fn mode_index_maps_names_aliases_numbers_and_unknown() {
+        assert_eq!(mode_index("plasma"), 0);
+        assert_eq!(mode_index("warp"), 3);
+        assert_eq!(mode_index("rings"), 4);
+        assert_eq!(mode_index("kaleidoscope"), 6); // alias
+        assert_eq!(mode_index("lightning"), 7); // alias for bolt
+        assert_eq!(mode_index("5"), 5); // a number passes through
+        assert_eq!(mode_index("wat"), 0); // unknown → plasma
     }
 }

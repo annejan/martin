@@ -45,8 +45,29 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         let h = hash21(g);
         let tw = 0.4 + 0.6 * sin(t * 2.5 + h * 40.0);
         col = vec3<f32>(step(0.972, h) * tw);
+    } else if (fx.mode == 4u) {
+        // RINGS — concentric pulsing rings rippling out from the centre
+        let r = length(p);
+        let w = sin(r * 9.0 - t * 3.0);
+        let ring = smoothstep(0.5, 1.0, w);
+        col = (0.5 + 0.5 * cos(vec3<f32>(0.0, 2.0, 4.0) + r * 2.0 - t * 0.5)) * ring * 1.1;
+    } else if (fx.mode == 5u) {
+        // GRID — a neon scrolling grid (flying through a wireframe field)
+        let g = abs(fract(p * 4.0 - vec2<f32>(0.0, t * 0.6)) - 0.5);
+        let line = smoothstep(0.06, 0.0, min(g.x, g.y));
+        col = vec3<f32>(0.2, 0.8, 1.0) * line;
+    } else if (fx.mode == 6u) {
+        // KALEIDO — angular mirror-folded colour wedge spinning slowly
+        let r = length(p);
+        let a = atan2(p.y, p.x);
+        let k = abs(fract(a / 6.28318 * 6.0 + t * 0.08) * 2.0 - 1.0);
+        col = (0.5 + 0.5 * cos(vec3<f32>(0.0, 2.0, 4.0) + k * 5.0 + r * 4.0 - t)) * 0.9;
+    } else if (fx.mode == 7u) {
+        // BOLT — jagged electric bands flickering across the field
+        let v = sin(p.y * 3.0 + t * 5.0 + sin(p.x * 9.0 + t * 2.0) * 2.0);
+        col = vec3<f32>(0.6, 0.85, 1.0) * smoothstep(0.9, 1.0, abs(v));
     } else {
-        // WARP — radial colour swirl
+        // WARP — radial colour swirl (mode 3)
         let r = length(p);
         let a = atan2(p.y, p.x);
         col = (0.5 + 0.5 * cos(vec3<f32>(0.0, 2.0, 4.0) + a * 3.0 + t * 1.5 - r * 4.0)) * 0.8;

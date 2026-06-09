@@ -114,7 +114,7 @@ image:logo.png            # a PNG (in the MARTIN_PLY folder), rasterized to gaus
 svg:logo.svg              # an SVG, rasterized (vector → pixels) into gaussians — any vector art
 mesh:model.dae            # a 3D mesh (.dae/.obj/.stl/.ply), surface-sampled into gaussians
 glb:badge.glb             # a real glTF mesh: rendered crisp, then DISSOLVES into its own splats
-shader:warp               # a fullscreen-effect INTERLUDE (warp/plasma/tunnel/stars); splats clear
+shader:warp               # a fullscreen-effect INTERLUDE (warp/plasma/tunnel/stars/rings/grid/kaleido/bolt); splats clear
 splat:a.ply               # a splat (filename in the MARTIN_PLY folder)
 splat:a.ply+b.ply         # several splats, auto-arranged side by side
 …any part… @hold,morph,bulge ~transition ^deform out:departure @@anchor   # timing · arrival · deform · departure · cue
