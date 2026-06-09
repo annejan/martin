@@ -242,6 +242,7 @@ of them). It can sit anywhere on the line, but reads best last:
 | `~shatter` (`~shards`) | re-assembles from ~8 tumbling shards (a shattered object flying back together) |
 | `~condense` (`~fog`/`~haze`) | condenses out of a wide faded haze — positions converge + opacity fades up |
 | `~swirl` | sweeps/spirals in around the vertical axis (cheap, straight-line) |
+| `~extrude` (`~rise`, `~pop`) | rises out of a flat silhouette into 3D — a logo extruding from its 2D shape into its mesh (best head-on, or on a deep object) |
 
 **Per-particle** (the vendored shader staggers each splat — great for text):
 

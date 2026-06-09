@@ -5,8 +5,8 @@
 use bevy_gaussian_splatting::Gaussian3d;
 
 use crate::morph::{
-    ball_of, condense_of, drop_of, explode_of, fade_of, funnel_of, implode_of, rain_of, shatter_of,
-    swirl_of,
+    ball_of, condense_of, drop_of, explode_of, fade_of, flatten_of, funnel_of, implode_of, rain_of,
+    shatter_of, swirl_of,
 };
 
 pub(crate) const BALL_SHELL: f32 = 0.9; // intro ball-shell radius, in units of the framed radius
@@ -31,6 +31,7 @@ pub(crate) enum Transition {
     Shatter,  // re-assemble from ~8 tumbling shards
     Condense, // condense out of a wide faded haze
     Swirl,    // sweep/spiral in around the vertical axis
+    Extrude,  // rise out of a flat silhouette into 3D (a logo extruding from its svg into its mesh)
     // --- per-particle (shader transition_mode) ---
     Typewriter, // reveal left→right as a moving edge (great for text)
     Wipe,       // hard slab reveal across the x axis
@@ -60,6 +61,7 @@ pub(crate) fn source_cloud(
         Transition::Shatter => shatter_of(shaped, r * 1.4),
         Transition::Condense => condense_of(shaped, r * 2.2),
         Transition::Swirl => swirl_of(shaped, 2.4, 1.5),
+        Transition::Extrude => flatten_of(shaped),
         _ if tr.shader_uniforms().is_some() => shaped.to_vec(),
         _ => return None,
     })
@@ -80,6 +82,7 @@ impl Transition {
             "shatter" | "shards" => Transition::Shatter,
             "condense" | "fog" | "haze" => Transition::Condense,
             "swirl" => Transition::Swirl,
+            "extrude" | "rise" | "pop" => Transition::Extrude,
             "typewriter" | "type" => Transition::Typewriter,
             "wipe" => Transition::Wipe,
             "sparkle" => Transition::Sparkle,

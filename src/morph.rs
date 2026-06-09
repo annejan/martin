@@ -160,6 +160,37 @@ pub fn fade_of(shape: &[Gaussian3d]) -> Vec<Gaussian3d> {
         .collect()
 }
 
+/// EXTRUDE source: the shape collapsed onto a single plane (its thinnest/depth axis flattened to
+/// the mid-depth). The morph back to the shape then makes every particle *rise out of the flat
+/// silhouette into 3D* — a flat logo extruding into its mesh. Index-paired with the target (each
+/// particle keeps its in-plane position, only the depth grows), so it's a clean extrusion, not a
+/// scatter. Great on a `mesh:`/`glb:` logo: svg-flat → mesh → splats in one move.
+pub fn flatten_of(shape: &[Gaussian3d]) -> Vec<Gaussian3d> {
+    // the depth axis = the one with the smallest extent (a logo is wide+tall, thin in depth).
+    let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
+    for g in shape {
+        let p = g.position_visibility.position;
+        for k in 0..3 {
+            lo[k] = lo[k].min(p[k]);
+            hi[k] = hi[k].max(p[k]);
+        }
+    }
+    let thin = (0..3)
+        .min_by(|&a, &b| (hi[a] - lo[a]).total_cmp(&(hi[b] - lo[b])))
+        .unwrap_or(2);
+    let mid = (lo[thin] + hi[thin]) * 0.5;
+    shape
+        .iter()
+        .map(|g| {
+            let mut s = *g;
+            let mut p = s.position_visibility.position;
+            p[thin] = mid; // collapse depth → a flat silhouette
+            s.position_visibility.position = p;
+            s
+        })
+        .collect()
+}
+
 /// EXPLODE source: each (paired) particle flung outward from the centre, so the morph *gathers*
 /// the burst back into the shape. `spread` ≈ object radius.
 pub fn explode_of(shape: &[Gaussian3d], spread: f32) -> Vec<Gaussian3d> {
