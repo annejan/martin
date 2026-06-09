@@ -575,6 +575,11 @@ MARTIN_SHOW=assets/example.show cargo +nightly run --release
 MARTIN_SHOW=assets/example.show ./record.sh example.mp4
 ```
 
+**Galleries** in [`assets/examples/`](assets/examples/) show the palette (text-only, no `.ply` needed):
+`transitions.show` (every `~arrival`), `shaders.show` (every fullscreen effect), `deforms.show`
+(every `^deform`). Run any with `MARTIN_SHOW=assets/examples/<name>.show …`, or read one on paper
+with `MARTIN_VALIDATE=1`.
+
 A `.show` has four kinds of section — see [`assets/example.show`](assets/example.show):
 
 | section | what it is |

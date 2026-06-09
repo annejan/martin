@@ -1,0 +1,26 @@
+# A gallery of every arrival transition — each part is a label that arrives with its own `~name`.
+# Run:  MARTIN_SHOW=assets/examples/transitions.show cargo +nightly run --release
+#       MARTIN_VALIDATE=1 MARTIN_SHOW=assets/examples/transitions.show cargo run --release   # the timeline on paper
+morph_count = 80000
+
+[seq]
+text:BALL        @1.2,0.8  ~ball
+text:FADE        @1.2,0.8  ~fade
+text:EXPLODE     @1.2,0.8  ~explode
+text:IMPLODE     @1.2,0.8  ~implode
+text:DROP        @1.2,0.8  ~drop
+text:RAIN        @1.2,0.8  ~rain
+text:FUNNEL      @1.2,0.8  ~funnel
+text:SHATTER     @1.2,0.8  ~shatter
+text:CONDENSE    @1.2,0.8  ~condense
+text:SWIRL       @1.2,0.8  ~swirl
+text:HELIX       @1.2,0.8  ~helix
+text:ZOOM        @1.2,0.8  ~zoom
+text:SWARM       @1.2,0.8  ~swarm
+text:TYPEWRITER  @1.2,0.8  ~typewriter
+text:WIPE        @1.2,0.8  ~wipe
+text:SPARKLE     @1.2,0.8  ~sparkle
+text:SLITHER     @1.2,0.8  ~slither
+text:VORTEX      @1.2,0.8  ~vortex
+text:OUTLINE     @1.2,0.8  ~outline
+text:PEN WRITE   @1.5,1.0  ~pen-write

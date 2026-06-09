@@ -35,7 +35,7 @@ SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
-path = ["assets/*.seq", "assets/*.txt", "assets/*.json", "assets/*.compose", "assets/*.show", "assets/*.wgsl"]
+path = ["assets/*.seq", "assets/*.txt", "assets/*.json", "assets/*.compose", "assets/*.show", "assets/examples/*.show", "assets/*.wgsl"]
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 

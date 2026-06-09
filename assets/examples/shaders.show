@@ -1,0 +1,13 @@
+# A gallery of the fullscreen shader effects, each as a `shader:` interlude (splats clear, effect plays).
+# Run:  MARTIN_SHOW=assets/examples/shaders.show cargo +nightly run --release
+morph_count = 30000
+
+[seq]
+shader:plasma   @2,0.4
+shader:tunnel   @2,0.4
+shader:stars    @2,0.4
+shader:warp     @2,0.4
+shader:rings    @2,0.4
+shader:grid     @2,0.4
+shader:kaleido  @2,0.4
+shader:bolt     @2,0.4
