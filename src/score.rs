@@ -847,3 +847,55 @@ fn ramp_str(r: &Ramp) -> String {
         format!("{}>{}", fnum(r.a), fnum(r.b))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn grid_is_consistent() {
+        let s = Score::builtin();
+        assert!(s.bpm > 0.0);
+        assert!(s.beat() > 0.0);
+        assert!((s.bar() - BEATS_PER_BAR * s.beat()).abs() < 1e-6);
+        assert!(s.demo_len() > 0.0);
+        assert!(!s.sections.is_empty());
+    }
+
+    #[test]
+    fn section_starts_are_monotonic_and_first_is_zero() {
+        let s = Score::builtin();
+        assert_eq!(s.sections[0].start_bar, 0);
+        let mut prev = 0;
+        for sec in &s.sections {
+            assert!(sec.start_bar >= prev, "sections must be in order");
+            prev = sec.start_bar;
+        }
+        assert_eq!(s.section_start_secs(0), 0.0);
+    }
+
+    #[test]
+    fn anchor_seconds_resolves_every_form() {
+        let s = Score::builtin();
+        assert_eq!(s.anchor_seconds("start"), Some(0.0));
+        // a real section name (the first) resolves to its start.
+        let first = s.sections[0].name.clone();
+        assert_eq!(s.anchor_seconds(&first), Some(0.0));
+        // bar / beat forms, with and without the colon.
+        assert_eq!(s.anchor_seconds("bar1"), Some(s.bar()));
+        assert_eq!(s.anchor_seconds("bar:2"), Some(2.0 * s.bar()));
+        assert_eq!(s.anchor_seconds("beat4"), Some(4.0 * s.beat()));
+        // a plain number is seconds; whitespace + case are tolerated.
+        assert_eq!(s.anchor_seconds("  2.5 "), Some(2.5));
+        assert_eq!(s.anchor_seconds("nope"), None);
+    }
+
+    #[test]
+    fn drum_hits_are_ordered_and_in_range() {
+        let s = Score::builtin();
+        let hits = s.hits(Inst::Kick);
+        assert!(!hits.is_empty(), "the built-in track should kick");
+        assert!(hits.windows(2).all(|w| w[0] <= w[1]), "hits in time order");
+        assert!(hits.iter().all(|&t| t >= 0.0 && t <= s.demo_len()));
+    }
+}

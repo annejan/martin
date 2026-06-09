@@ -269,6 +269,46 @@ mod tests {
     }
 
     #[test]
+    fn pose_at_endpoints_and_midpoint() {
+        let path = [wp(None, 6.0, 0.0), wp(None, 2.0, 1.0)];
+        assert!((pose_at(&path, 0.0).unwrap().dist - 6.0).abs() < 1e-3);
+        // p=1.0 is clamped just shy of the exact end (segs - 1e-4), so compare approximately.
+        assert!((pose_at(&path, 1.0).unwrap().dist - 2.0).abs() < 1e-2);
+        let mid = pose_at(&path, 0.5).unwrap(); // smoothstep(0.5) = 0.5
+        assert!((mid.dist - 4.0).abs() < 1e-4);
+        assert!(pose_at(&[], 0.5).is_none());
+    }
+
+    #[test]
+    fn save_then_load_round_trips() {
+        let path = std::env::temp_dir().join("martin_wp_roundtrip_test.json");
+        let p = path.to_str().unwrap();
+        let list = vec![
+            Waypoint {
+                target: Vec3::new(1.0, 2.0, 3.0),
+                dist: 5.0,
+                yaw: 1.4,
+                pitch: 0.1,
+                t: Some(2.5),
+            },
+            wp(None, 4.0, 0.6), // an untimed marker (no `t` key)
+        ];
+        save(&list, p).unwrap();
+        let back = load(p);
+        assert_eq!(back.len(), 2);
+        assert_eq!(back[0].target, Vec3::new(1.0, 2.0, 3.0));
+        assert_eq!(back[0].t, Some(2.5));
+        assert_eq!(back[1].t, None); // untimed survived as untimed
+        assert!((back[1].dist - 4.0).abs() < 1e-6);
+        let _ = std::fs::remove_file(p);
+    }
+
+    #[test]
+    fn load_missing_file_is_empty() {
+        assert!(load("/no/such/martin/waypoints.json").is_empty());
+    }
+
+    #[test]
     fn parse_camera_resolves_anchors_and_numbers() {
         let score = crate::score::Score::builtin();
         let lines = vec![

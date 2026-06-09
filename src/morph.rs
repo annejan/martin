@@ -653,4 +653,52 @@ mod tests {
         assert_eq!(resample_morton(src.clone(), 200).len(), 200); // up-sample
         assert_eq!(resample_morton(src, 10).len(), 10); // down-sample
     }
+
+    #[test]
+    fn fade_zeroes_opacity_keeps_positions() {
+        let src = vec![g(1.0, 2.0, 3.0)];
+        let f = fade_of(&src);
+        assert_eq!(f[0].scale_opacity.opacity, 0.0);
+        assert_eq!(f[0].position_visibility.position, [1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn ball_keeps_count_and_lands_on_the_shell() {
+        let src: Vec<Gaussian3d> = (0..200).map(|i| g(i as f32, 0.0, 0.0)).collect();
+        let b = ball_of(&src, 2.0);
+        assert_eq!(b.len(), 200);
+        // every point within the shell radius (0.45..1.0 of r=2 → ≤2).
+        assert!(b
+            .iter()
+            .all(|p| { Vec3::from_array(p.position_visibility.position).length() <= 2.01 }));
+    }
+
+    #[test]
+    fn rotate_identity_is_noop_180_flips_signs() {
+        let mut v = vec![g(1.0, 2.0, 3.0)];
+        rotate_gaussians(&mut v, Quat::IDENTITY);
+        assert_eq!(v[0].position_visibility.position, [1.0, 2.0, 3.0]);
+        rotate_gaussians(&mut v, Quat::from_rotation_y(std::f32::consts::PI)); // 180° about y
+        let p = v[0].position_visibility.position;
+        assert!((p[0] + 1.0).abs() < 1e-4 && (p[2] + 3.0).abs() < 1e-4); // x,z negated
+        assert!((p[1] - 2.0).abs() < 1e-4); // y unchanged
+    }
+
+    #[test]
+    fn normalize_centres_and_scales_to_the_target_extent() {
+        let mut v = vec![g(10.0, 10.0, 10.0), g(14.0, 10.0, 10.0)]; // 4 units wide, off-centre
+        let (c, _k) = normalize_to(&mut v, 2.0);
+        assert!((c - Vec3::new(12.0, 10.0, 10.0)).length() < 1e-3); // returned the old centroid
+        assert!((extent_of(&v) - 2.0).abs() < 1e-3); // largest dim now == target
+        let nc = (Vec3::from_array(v[0].position_visibility.position)
+            + Vec3::from_array(v[1].position_visibility.position))
+            * 0.5;
+        assert!(nc.length() < 1e-3); // re-centred on the origin
+    }
+
+    #[test]
+    fn cluster_replicates_the_shape() {
+        let src: Vec<Gaussian3d> = (0..30).map(|i| g(i as f32 * 0.1, 0.0, 0.0)).collect();
+        assert_eq!(cluster_of(&src, 9).len(), 30 * 9);
+    }
 }

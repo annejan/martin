@@ -261,3 +261,55 @@ pub(crate) fn animate_seq_model(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scene::content::PartContent;
+
+    fn part(hold: f32, morph: f32) -> Part {
+        Part {
+            content: PartContent::Text("x".into()),
+            hold,
+            morph,
+            bulge: 0.0,
+            transition: None,
+            anchor: None,
+            deform: None,
+            out: None,
+            rot: None,
+            cluster: None,
+        }
+    }
+
+    #[test]
+    fn part0_logo_is_crisp_from_the_start() {
+        // the opening glb: must be at full alpha at t=0 (the show flows OUT of the logo).
+        let parts = vec![part(5.0, 3.0), part(3.0, 2.0)];
+        let starts = vec![0.0, 8.0];
+        assert_eq!(gl_mesh_alpha(&starts, &parts, 0, 0.0), 1.0);
+    }
+
+    #[test]
+    fn later_part_assembles_holds_then_dissolves_before_the_next() {
+        // part 1: starts 8, morph 2 → assembled at 10, crisp at 10+MODEL_FADE; next part at 16,
+        // so it dissolves over [16-DISSOLVE_LEN, 16].
+        let parts = vec![part(5.0, 3.0), part(4.0, 2.0), part(3.0, 2.0)];
+        let starts = vec![0.0, 8.0, 16.0];
+        assert_eq!(gl_mesh_alpha(&starts, &parts, 1, 8.5), 0.0); // still assembling as splats
+        let crisp_at = 10.0 + MODEL_FADE;
+        assert_eq!(gl_mesh_alpha(&starts, &parts, 1, crisp_at + 0.5), 1.0); // crisp hold
+        assert_eq!(gl_mesh_alpha(&starts, &parts, 1, 16.0), 0.0); // fully dissolved by the next start
+        let mid = 16.0 - DISSOLVE_LEN / 2.0; // halfway through the dissolve
+        let a = gl_mesh_alpha(&starts, &parts, 1, mid);
+        assert!(a > 0.2 && a < 0.8, "mid-dissolve alpha {a}");
+    }
+
+    #[test]
+    fn last_part_never_dissolves() {
+        let parts = vec![part(5.0, 3.0), part(3.0, 2.0)];
+        let starts = vec![0.0, 8.0];
+        let crisp = 8.0 + 2.0 + MODEL_FADE;
+        assert_eq!(gl_mesh_alpha(&starts, &parts, 1, crisp + 100.0), 1.0); // stays crisp forever
+    }
+}
