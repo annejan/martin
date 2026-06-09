@@ -838,3 +838,80 @@ pub(crate) fn seq_no_cull(
         commands.entity(e).insert(NoFrustumCulling);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parts(spec: &str) -> Vec<Part> {
+        parse_seq(spec, &score::Score::builtin())
+    }
+
+    #[test]
+    fn parse_seq_reads_heads_timing_and_modifiers() {
+        let p = parts("text:HELLO @4,2 ~fade ^wave out:sink rot:0,90,0 cluster:3");
+        assert_eq!(p.len(), 1);
+        assert!(matches!(&p[0].content, PartContent::Text(s) if s == "HELLO"));
+        assert_eq!(p[0].hold, 4.0);
+        assert_eq!(p[0].morph, 2.0);
+        assert_eq!(p[0].transition, Some(Transition::Fade));
+        assert_eq!(p[0].deform, Some(Deform::Wave));
+        assert_eq!(p[0].out, Some(Departure::Sink));
+        assert_eq!(p[0].cluster, Some(3));
+        assert!(p[0].rot.is_some());
+    }
+
+    #[test]
+    fn parse_seq_splits_parts_and_skips_unknown_heads() {
+        // `txet:` is a typo → that part is skipped (warned), the others survive.
+        let p = parts("text:A; txet:B; text:C");
+        assert_eq!(p.len(), 2);
+        assert!(matches!(&p[0].content, PartContent::Text(s) if s == "A"));
+        assert!(matches!(&p[1].content, PartContent::Text(s) if s == "C"));
+    }
+
+    #[test]
+    fn unknown_modifier_is_consumed_not_leaked_into_the_head() {
+        // a typo'd transition must NOT end up as part of the text.
+        let p = parts("text:HELLO ~explod");
+        assert_eq!(p.len(), 1);
+        assert!(matches!(&p[0].content, PartContent::Text(s) if s == "HELLO"));
+        assert_eq!(p[0].transition, None);
+    }
+
+    #[test]
+    fn comment_with_a_semicolon_does_not_resurrect_a_bogus_part() {
+        // regression: a `;` inside a `#` comment used to split it and parse the tail as a part.
+        let p = parts("text:A   # note; with a ~semicolon and ~fade inside\ntext:B");
+        assert_eq!(p.len(), 2);
+        assert!(matches!(&p[0].content, PartContent::Text(s) if s == "A"));
+        assert!(matches!(&p[1].content, PartContent::Text(s) if s == "B"));
+        assert_eq!(p[0].transition, None); // the ~fade was inside the comment
+    }
+
+    #[test]
+    fn part_starts_lay_end_to_end_then_honour_anchors() {
+        let p = parts("text:A @2,1; text:B @3,1; text:C @1,1");
+        let s = part_starts(&p);
+        assert_eq!(s[0], 0.0);
+        assert_eq!(s[1], 3.0); // 0 + morph 1 + hold 2
+        assert_eq!(s[2], 7.0); // 3 + 1 + 3
+        assert_eq!(show_end(&p, &s), 9.0); // 7 + 1 + 1
+    }
+
+    #[test]
+    fn active_part_picks_the_latest_started() {
+        let starts = [0.0, 3.0, 7.0];
+        assert_eq!(active_part(&starts, 0.0), 0);
+        assert_eq!(active_part(&starts, 2.9), 0);
+        assert_eq!(active_part(&starts, 3.0), 1);
+        assert_eq!(active_part(&starts, 100.0), 2);
+    }
+
+    #[test]
+    fn parse_euler_deg_needs_three_components() {
+        assert!(parse_euler_deg("0,90,0").is_some());
+        assert!(parse_euler_deg("0,90").is_none());
+        assert!(parse_euler_deg("x,y,z").is_none());
+    }
+}

@@ -58,6 +58,9 @@ jobs:
       - name: Build (release)
         run: cargo build --release
 
+      - name: Test (pure unit tests — parsers, timeline, effects; no GPU)
+        run: cargo test --release
+
       - name: Report binary size
         shell: bash
         run: ls -lh target/release/martin* 2>/dev/null || true

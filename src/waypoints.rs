@@ -225,3 +225,62 @@ fn shortest_angle(d: f32) -> f32 {
     use std::f32::consts::{PI, TAU};
     (d + PI).rem_euclid(TAU) - PI
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn wp(t: Option<f32>, dist: f32, yaw: f32) -> Waypoint {
+        Waypoint {
+            target: Vec3::ZERO,
+            dist,
+            yaw,
+            pitch: 0.0,
+            t,
+        }
+    }
+
+    #[test]
+    fn is_track_needs_two_fully_timed_points() {
+        assert!(is_track(&[
+            wp(Some(0.0), 5.0, 0.0),
+            wp(Some(3.0), 4.0, 0.0)
+        ]));
+        assert!(!is_track(&[wp(Some(0.0), 5.0, 0.0), wp(None, 4.0, 0.0)])); // one untimed
+        assert!(!is_track(&[wp(Some(0.0), 5.0, 0.0)])); // need ≥2
+    }
+
+    #[test]
+    fn pose_at_time_clamps_ends_and_interpolates_middle() {
+        let track = [wp(Some(0.0), 6.0, 0.0), wp(Some(4.0), 2.0, 0.0)];
+        assert_eq!(pose_at_time(&track, -1.0).unwrap().dist, 6.0); // before → first
+        assert_eq!(pose_at_time(&track, 10.0).unwrap().dist, 2.0); // after → last
+        let mid = pose_at_time(&track, 2.0).unwrap(); // halfway, smoothstep(0.5)=0.5
+        assert!((mid.dist - 4.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn yaw_interpolates_the_short_way_around() {
+        // 0.1 → just below TAU should cross through 0, not sweep all the way back.
+        let d = shortest_angle(-0.2);
+        assert!(d.abs() < 0.3);
+        use std::f32::consts::PI;
+        assert!(shortest_angle(2.0 * PI - 0.1).abs() < 0.2); // ~ -0.1
+    }
+
+    #[test]
+    fn parse_camera_resolves_anchors_and_numbers() {
+        let score = crate::score::Score::builtin();
+        let lines = vec![
+            "t=@@intro dist=6 yaw=1.4 pitch=0.1".to_string(),
+            "t=2.5 dist=4 pos=1,2,3".to_string(),
+            "t=@@bogus dist=5".to_string(), // unknown anchor → untimed
+        ];
+        let cam = parse_camera(&lines, &score);
+        assert_eq!(cam.len(), 3);
+        assert_eq!(cam[0].t, Some(0.0)); // intro starts at bar 0
+        assert_eq!(cam[1].t, Some(2.5));
+        assert_eq!(cam[1].target, Vec3::new(1.0, 2.0, 3.0));
+        assert_eq!(cam[2].t, None); // bogus anchor left untimed
+    }
+}

@@ -173,3 +173,58 @@ impl Departure {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn transition_parse_names_aliases_and_case() {
+        assert_eq!(Transition::parse("fade"), Some(Transition::Fade));
+        assert_eq!(
+            Transition::parse("  PEN-WRITE "),
+            Some(Transition::PenWrite)
+        );
+        assert_eq!(Transition::parse("pour"), Some(Transition::Funnel)); // alias
+        assert_eq!(Transition::parse("pop"), Some(Transition::Extrude)); // alias
+        assert_eq!(Transition::parse("nope"), None);
+    }
+
+    #[test]
+    fn deform_and_departure_parse() {
+        assert_eq!(Deform::parse("flag"), Some(Deform::Wave)); // alias
+        assert_eq!(Deform::parse("churn"), Some(Deform::Turbulence));
+        assert_eq!(Deform::parse("xxx"), None);
+        assert_eq!(Departure::parse("dust"), Some(Departure::Disperse));
+        assert_eq!(Departure::parse("fall"), Some(Departure::Sink));
+        assert_eq!(Departure::parse("gone"), None);
+    }
+
+    #[test]
+    fn shader_transitions_carry_uniforms_data_ones_dont() {
+        assert!(Transition::Typewriter.shader_uniforms().is_some());
+        assert!(Transition::PenWrite.shader_uniforms().is_some());
+        assert!(Transition::Fade.shader_uniforms().is_none());
+        assert!(Transition::Extrude.shader_uniforms().is_none());
+    }
+
+    #[test]
+    fn every_deform_has_distinct_nonzero_mode() {
+        let modes: Vec<u32> = [
+            Deform::Wave,
+            Deform::Cloth,
+            Deform::Ripple,
+            Deform::Twist,
+            Deform::Wind,
+            Deform::Turbulence,
+        ]
+        .iter()
+        .map(|d| d.uniforms().0)
+        .collect();
+        assert!(modes.iter().all(|&m| m != 0)); // 0 = "off" in the shader
+        let mut sorted = modes.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), modes.len()); // all distinct
+    }
+}

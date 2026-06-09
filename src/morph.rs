@@ -523,3 +523,43 @@ pub fn normalize_to(v: &mut [Gaussian3d], target: f32) -> (Vec3, f32) {
     }
     (Vec3::from_array(center), s)
 }
+
+#[cfg(test)]
+mod tests {
+    use bevy_gaussian_splatting::Gaussian3d;
+
+    use super::*;
+
+    fn g(x: f32, y: f32, z: f32) -> Gaussian3d {
+        Gaussian3d {
+            position_visibility: [x, y, z, 1.0].into(),
+            rotation: [0.0, 0.0, 0.0, 1.0].into(),
+            scale_opacity: [0.01, 0.01, 0.01, 1.0].into(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn flatten_collapses_the_thinnest_axis_and_keeps_the_others() {
+        // wide in x, tall in y, THIN in z → flatten should equalise z, preserve x/y, index-paired.
+        let src = vec![g(-5.0, -3.0, 0.1), g(5.0, 3.0, -0.1), g(0.0, 0.0, 0.05)];
+        let flat = flatten_of(&src);
+        assert_eq!(flat.len(), src.len());
+        let z0 = flat[0].position_visibility.position[2];
+        for (i, f) in flat.iter().enumerate() {
+            let p = f.position_visibility.position;
+            let s = src[i].position_visibility.position;
+            assert!((p[0] - s[0]).abs() < 1e-6, "x preserved"); // in-plane kept
+            assert!((p[1] - s[1]).abs() < 1e-6, "y preserved");
+            assert!((p[2] - z0).abs() < 1e-6, "z collapsed to one plane");
+        }
+        assert!(z0.abs() < 0.1); // ~mid-depth of [-0.1, 0.1]
+    }
+
+    #[test]
+    fn resample_morton_hits_the_target_count() {
+        let src: Vec<Gaussian3d> = (0..50).map(|i| g(i as f32, 0.0, 0.0)).collect();
+        assert_eq!(resample_morton(src.clone(), 200).len(), 200); // up-sample
+        assert_eq!(resample_morton(src, 10).len(), 10); // down-sample
+    }
+}

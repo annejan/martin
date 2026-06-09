@@ -216,3 +216,70 @@ pub(crate) fn part_gaussians(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_source_recognises_each_head() {
+        assert!(matches!(parse_source("text:HELLO"), Some(PartContent::Text(s)) if s == "HELLO"));
+        assert!(
+            matches!(parse_source("svg:logo.svg"), Some(PartContent::Svg(s)) if s == "logo.svg")
+        );
+        assert!(matches!(
+            parse_source("image:l.png"),
+            Some(PartContent::Image(_))
+        ));
+        assert!(matches!(
+            parse_source("mesh:m.dae"),
+            Some(PartContent::Mesh(_))
+        ));
+        assert!(matches!(
+            parse_source("glb:m.glb"),
+            Some(PartContent::GlMesh(_))
+        ));
+        assert!(matches!(
+            parse_source("gltf:m.gltf"),
+            Some(PartContent::GlMesh(_))
+        )); // alias
+        assert!(matches!(
+            parse_source("model:m.glb"),
+            Some(PartContent::Model(_))
+        ));
+        assert!(matches!(parse_source("shader:warp"), Some(PartContent::Shader(s)) if s == "warp"));
+        assert!(
+            matches!(parse_source("shader:warp.wgsl"), Some(PartContent::Shader(s)) if s == "warp")
+        );
+        assert!(parse_source("bogus:x").is_none());
+        assert!(parse_source("nonsense").is_none());
+    }
+
+    #[test]
+    fn wall_splits_on_pipe() {
+        let c = parse_source("wall:A|B|C").unwrap();
+        assert!(matches!(c, PartContent::Text(s) if s == "A\nB\nC"));
+    }
+
+    #[test]
+    fn splat_side_by_side_centres_and_strips_path() {
+        // one splat → at the origin; a path is reduced to its file name.
+        let one = side_by_side(["dir/dog.ply"].into_iter());
+        assert_eq!(one.len(), 1);
+        assert_eq!(one[0].0, "dog.ply");
+        assert_eq!(one[0].1, Vec3::ZERO);
+        // several → symmetric about x=0.
+        let many = side_by_side(["a.ply", "b.ply", "c.ply"].into_iter());
+        assert_eq!(many.len(), 3);
+        assert!(many[0].1.x < 0.0 && many[2].1.x > 0.0);
+        assert!((many[1].1.x).abs() < 1e-6);
+        assert!((many[0].1.x + many[2].1.x).abs() < 1e-6); // mirror
+    }
+
+    #[test]
+    fn labels_are_descriptive() {
+        assert_eq!(PartContent::Text("HI".into()).label(), "text \"HI\"");
+        assert_eq!(PartContent::Svg("x.svg".into()).label(), "svg x.svg");
+        assert_eq!(PartContent::Shader("warp".into()).label(), "shader warp");
+    }
+}
