@@ -34,6 +34,7 @@ mod score;
 mod show;
 mod splat_image;
 mod text;
+mod validate;
 mod waypoints;
 
 use crate::camera::CameraPlugin;
@@ -117,6 +118,25 @@ fn main() {
             std::env::var("MARTIN_PLY").ok().and_then(parent_dir),
         )
     };
+    // The camera waypoints: a `.show` inline `[camera]` track, else the MARTIN_WAYPOINTS file.
+    let waypoints = if show.camera.is_empty() {
+        waypoints::Waypoints::from_env()
+    } else {
+        waypoints::Waypoints::from_inline(show.camera)
+    };
+
+    // MARTIN_VALIDATE=1: a dry run — print the parsed timeline (with the parse diagnostics already
+    // on stderr) and exit, no window/render. A fast authoring check.
+    if std::env::var_os("MARTIN_VALIDATE").is_some() {
+        validate::report(
+            &sequence,
+            composition.as_deref().unwrap_or(&[]),
+            &waypoints,
+            &score,
+        );
+        return;
+    }
+
     // Asset root: the .ply folder, or `assets` by default. Resolve to an ABSOLUTE path so Bevy's
     // AssetServer (glb:/model: loads) and martin's own std::fs reads (mesh:/image:) agree regardless
     // of how the binary is launched (`cargo run` uses CARGO_MANIFEST_DIR; a bare `./target/release/
@@ -183,12 +203,7 @@ fn main() {
         })
         .insert_resource(AssetRoot(asset_root_path))
         .insert_resource(ScoreRes(Arc::new(score)))
-        // the camera waypoints: a `.show` inline `[camera]` track, else the MARTIN_WAYPOINTS file.
-        .insert_resource(if show.camera.is_empty() {
-            waypoints::Waypoints::from_env()
-        } else {
-            waypoints::Waypoints::from_inline(show.camera)
-        })
+        .insert_resource(waypoints)
         .add_plugins((
             CameraPlugin,
             ScenePlugin,

@@ -366,15 +366,8 @@ pub(crate) fn build_sequence(
         })
         .collect();
 
-    // Absolute start time (s) of each part: its `@@anchor` (locked to the music clock), else
-    // laid end-to-end after the previous part (start + morph + hold). This is the cue timeline.
-    let mut starts: Vec<f32> = Vec::with_capacity(seq.parts.len());
-    let mut cursor = 0.0_f32;
-    for (i, part) in seq.parts.iter().enumerate() {
-        let start = part.anchor.unwrap_or(if i == 0 { 0.0 } else { cursor });
-        starts.push(start);
-        cursor = start + part.morph + part.hold;
-    }
+    // Absolute start time (s) of each part — the cue timeline (anchors, else laid end-to-end).
+    let starts = part_starts(&seq.parts);
 
     // read every part's gaussians once, so count==0 can mean "size N to the largest part"
     // (every part is then resampled to that single N — required by the shared morph output).
@@ -424,20 +417,7 @@ pub(crate) fn build_sequence(
         .unwrap_or(true);
     let mut scene_norm = (Vec3::ZERO, 1.0); // part 0's (center, scale) — to transform camera poses
     for (i, (raw, part)) in raws.iter_mut().zip(&seq.parts).enumerate() {
-        let label = match &part.content {
-            PartContent::Text(s) => format!("text \"{s}\""),
-            PartContent::Image(name) => format!("image {name}"),
-            PartContent::Svg(name) => format!("svg {name}"),
-            PartContent::Mesh(name) => format!("mesh {name}"),
-            PartContent::Model(name) => format!("model {name}"),
-            PartContent::GlMesh(name) => format!("gl-mesh {name}"),
-            PartContent::Shader(name) => format!("shader {name}"),
-            PartContent::Splats(list) => list
-                .iter()
-                .map(|(n, _)| n.as_str())
-                .collect::<Vec<_>>()
-                .join("+"),
-        };
+        let label = part.content.label();
         info!(
             "part {label}: raw extent {:.2} units ({} gaussians)",
             crate::morph::extent_of(raw),
@@ -650,6 +630,20 @@ pub(crate) fn active_part(starts: &[f32], t: f32) -> usize {
         }
     }
     idx
+}
+
+/// Absolute start time (s) of each part: its `@@anchor` (locked to the music clock) if set, else
+/// laid end-to-end after the previous part (`prev.start + prev.morph + prev.hold`). The cue
+/// timeline — shared by `build_sequence` and the `MARTIN_VALIDATE` dry-run.
+pub(crate) fn part_starts(parts: &[Part]) -> Vec<f32> {
+    let mut starts = Vec::with_capacity(parts.len());
+    let mut cursor = 0.0_f32;
+    for (i, part) in parts.iter().enumerate() {
+        let start = part.anchor.unwrap_or(if i == 0 { 0.0 } else { cursor });
+        starts.push(start);
+        cursor = start + part.morph + part.hold;
+    }
+    starts
 }
 
 /// End of the cue timeline: the latest part's `start + morph + hold` (anchors can push it past a

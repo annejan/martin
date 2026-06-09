@@ -17,7 +17,7 @@ pub(crate) const BALL_SHELL: f32 = 0.9; // intro ball-shell radius, in units of 
 /// last group are *per-particle* transitions driven by the vendored shader (`transition_mode`
 /// uniform): the source is an identity copy and the shader staggers opacity/position per
 /// particle (see `SHADER-BLUEPRINT.md`).
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum Transition {
     Morph,    // prev shape → this shape (with bulge ball-pulse); the original behaviour
     Swarm,    // like Morph but particles flock/swarm along curled paths between the two scenes
@@ -112,7 +112,7 @@ impl Transition {
 /// plays once on arrival), this keeps running while the part is **held** — so a `wall:` of text
 /// can ripple, billow or curl the whole time it's on screen. Drives the vendored shader's deform
 /// uniforms (see SHADER-BLUEPRINT.md); default-off, so an unset part renders plain.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum Deform {
     Wave,       // flag-like ripple travelling across x
     Cloth,      // 2D billow (x and y out of phase)
@@ -151,7 +151,7 @@ impl Deform {
 /// How a part *leaves* (`out:name`). Where a `~transition` says how a part ARRIVES, this says how it
 /// DEPARTS: it morphs to a faded "gone" cloud as a distinct step at the end of its hold (before the
 /// next part arrives), so the object dissolves away instead of cross-morphing straight to the next.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum Departure {
     Wash,      // flows off sideways and fades — washed away
     Disperse,  // scatters outward in all directions and fades — blown to dust

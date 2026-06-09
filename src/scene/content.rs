@@ -41,6 +41,26 @@ pub(crate) enum PartContent {
     Shader(String),
 }
 
+impl PartContent {
+    /// A short human label for logs / the `MARTIN_VALIDATE` report (e.g. `text "HELLO"`, `svg x.svg`).
+    pub(crate) fn label(&self) -> String {
+        match self {
+            PartContent::Text(s) => format!("text \"{s}\""),
+            PartContent::Image(name) => format!("image {name}"),
+            PartContent::Svg(name) => format!("svg {name}"),
+            PartContent::Mesh(name) => format!("mesh {name}"),
+            PartContent::Model(name) => format!("model {name}"),
+            PartContent::GlMesh(name) => format!("gl-mesh {name}"),
+            PartContent::Shader(name) => format!("shader {name}"),
+            PartContent::Splats(list) => list
+                .iter()
+                .map(|(n, _)| n.as_str())
+                .collect::<Vec<_>>()
+                .join("+"),
+        }
+    }
+}
+
 /// Parse a source head (`text:` / `wall:` / `image:` / `mesh:` / `splat:`) into a `PartContent`.
 /// Shared by the morph timeline (`parse_seq`) and the composition stage (`parse_compose`).
 pub(crate) fn parse_source(head: &str) -> Option<PartContent> {

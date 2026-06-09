@@ -46,6 +46,28 @@ impl Composed {
         &self.content
     }
 
+    /// One-line summary for the `MARTIN_VALIDATE` report.
+    pub(crate) fn summary(&self) -> String {
+        let mut s = format!(
+            "{} @({:.1},{:.1},{:.1}) *{:.2}",
+            self.content.label(),
+            self.pos.x,
+            self.pos.y,
+            self.pos.z,
+            self.scale
+        );
+        if let Some(t) = self.transition {
+            s += &format!(" ~{t:?}");
+        }
+        if let Some(d) = self.deform {
+            s += &format!(" ^{d:?}");
+        }
+        if self.appear >= 0.0 {
+            s += &format!(" in@{:.1}s", self.appear);
+        }
+        s
+    }
+
     /// The motion state carried on the spawned entity (shared by splat clouds + mesh props).
     /// `interpolate` = this object is a `GaussianInterpolate` (a `~transition`), so its `cs.time`
     /// is driven (the assemble) instead of an opacity fade-in. `field` is the scene-wide default
