@@ -1,13 +1,14 @@
 # martin score — tracker DSL. Edit + load with MARTIN_SCORE=<this file>.
 #
-# THEME: camping — fun in nature with friends. A drum-&-bass / techno-glitch take on Ome Henk's
-# "Op de camping" (1995), a 1:1 cover of Village People's "In the Navy" (1979). The recognizable
-# CHORUS is bright G MAJOR, so the hook is uplifting: D D B G ("Op-de-cam-ping", descending the G
-# major triad to the tonic), answer rising G B C D. Real chorus harmony G–Am–G–D (+ a C–D–Em lift).
-# Half-time/two-step DnB groove, glitchy hats, sub-heavy drop; the breakdown stays moody via the
-# dynamics (sparse + quiet), not minor chords — so the whole thing reads cool but sunny.
+# THEME: camping. A moody drum-&-bass / techno-glitch reinterpretation of Ome Henk's "Op de camping"
+# (1995) — a 1:1 cover of Village People's "In the Navy" (1979), which is itself in **G minor**.
+# Real harmony (sourced): verse Gm–Cm–Bb–Eb–D7, chorus G–Am–G–D7, "they want you" bridge Gm.
+# We keep the moody minor (verse/bridge) backbone and the falling chorus-hook contour ("Op-de-cam-
+# ping" → D D Bb G, descending the Gm triad to the tonic). Half-time/two-step DnB groove, glitchy
+# hats, sub-heavy drop. (Melody is reconstructed over the verified chords/key — flip the hook's Bb→B
+# for the bright major chorus if you want it more faithful; tweak any note slot to taste.)
 bpm 172
-chords G Am G D  G Am G D  C D Em D  Am C D D
+chords Gm Cm Bb Eb  Gm Cm D D  Gm Cm Bb Eb  Gm Cm D D
 
 # section <name> <bars> <phase-bars,csv> [fill]
 section intro 8 8
@@ -75,39 +76,37 @@ outro.hat p0: x... ..x. x... ..x.
 outro.stab p0: .... ..x. .... ....
 outro.stab fill: .... ..x. .... ....
 
-# melody: <section>.lead p<N>|fill: 16 note slots. In G MAJOR. The recognizable chorus HOOK is
-# stated plainly with space around it: "In-the-Na-vy" = D D G E (pickup-pickup, leap up to the
-# tonic, settle) — sung twice per phrase, like "in the navy ... in the navy". The "yes-you-can-sail-
-# the-seven-seas" answer descends D C B A → B. (Best-effort reconstruction of the real tune — say
-# which note's off and I'll fix it, or drop a MIDI and I'll transcribe it 1:1.)
-intro.lead p0: . . . .  . . . .  D5 D5 G5 E5  . . . .
-build.lead p0: D5 D5 G5 E5  . . . .  . . . .  . . . .
-build.lead p1: D5 D5 G5 E5  . . . .  D5 D5 G5 D5  . . . .
-build.lead fill: D5 D5 G5 E5  . . D5 C5  B4 . . .  . . . .
-drop.lead p0: D5 D5 G5 E5  . . . .  D5 D5 G5 E5  . . . .
-drop.lead p1: D5 D5 G5 E5  . D5 C5 B4  A4 . B4 .  D5 . . .
-drop.lead fill: D5 D5 G5 E5  . . D5 C5  B4 A4 G4 .  . . . .
-breakdown.lead p0: D5 . G5 .  E5 . . .  . . D5 .  B4 . . .
-breakdown.lead p1: . . D5 D5  G5 . E5 .  . . . .  D5 . . .
-climax.lead p0: D6 D6 G6 E6  . . . .  D6 D6 G6 E6  . . . .
-climax.lead p1: D6 D6 G6 E6  . D6 C6 B5  A5 . B5 .  D6 . . .
-climax.lead p2: D6 D6 G6 E6  D6 D6 G6 E6  D6 C6 B5 A5  B5 . D6 .
-climax.lead fill: D6 D6 G6 E6  . . D6 C6  B5 A5 G5 .  G6 . . .
-outro.lead p0: D5 D5 G5 E5  . . . .  D5 D5 G5 D5  . . . .
+# melody: <section>.lead p<N>|fill: 16 note slots. In G minor. The chorus hook = D D Bb G ("Op-de-
+# cam-ping"), a falling chant down the Gm triad to the tonic; the answer rises G Bb C D.
+intro.lead p0: . . . .  . . . .  G4 . . .  . . . .
+build.lead p0: . . . .  D5 . . .  . . Bb4 .  . . G4 .
+build.lead p1: D5 . . .  Bb4 . G4 .  . . D5 .  Bb4 . . .
+build.lead fill: D5 . Bb4 .  G4 . . .  . . . .  . . . .
+drop.lead p0: D5 . D5 .  Bb4 . G4 .  D5 . D5 .  Bb4 . C5 .
+drop.lead p1: D5 . D5 Bb4  . G4 . .  G4 . Bb4 C5  D5 . . .
+drop.lead fill: D5 . C5 .  Bb4 . G4 .  Bb4 . C5 .  D5 . . .
+breakdown.lead p0: G4 . . .  . . Bb4 .  . . . .  D5 . . .
+breakdown.lead p1: D5 . . .  . . C5 .  . . Bb4 .  . . G4 .
+breakdown.lead fill: G4 . Bb4 .  D5 . . .  C5 . Bb4 .  G4 . . .
+climax.lead p0: D6 . D6 .  Bb5 . G5 .  D6 . D6 .  Bb5 . C6 .
+climax.lead p1: D6 . Bb5 .  G5 . Bb5 .  C6 . D6 .  Bb5 . G5 .
+climax.lead p2: D6 D6 Bb5 G5  D6 D6 Bb5 G5  G5 Bb5 C6 D6  C6 . Bb5 .
+climax.lead fill: D6 . C6 .  Bb5 . G5 .  Bb5 . C6 .  D6 . F6 .
+outro.lead p0: D5 . D5 .  Bb4 . G4 .  . . Bb4 .  G4 . . .
 
 # arp: the second melodic line — a glitchy counter-melody an octave above the lead, panned opposite.
-build.arp p0: . . D6 .  . . B5 .  . . G5 .  . . D6 .
-build.arp p1: D6 . B5 .  G5 . D6 .  B5 . G5 .  D6 . B5 .
-build.arp fill: D6 C6 B5 G5  D6 . . .  . . . .  . . . .
-drop.arp p0: G5 . D6 .  B5 . D6 .  G5 . D6 .  C6 . D6 .
-drop.arp p1: D6 . . B5  . . G5 .  D6 . . C6  . . D6 .
-drop.arp fill: D6 C6 B5 G5  D6 C6 B5 G5  C6 D6 . .  . . . .
-breakdown.arp p0: . . . .  G5 . . .  . . B5 .  . . D6 .
-breakdown.arp p1: . . D6 .  . . B5 .  . . G5 .  . . . .
-climax.arp p0: G6 . D6 .  B5 . D6 .  G6 . D6 .  C6 . D6 .
-climax.arp p1: D6 . B5 .  G5 . B5 .  C6 . D6 .  F#6 . D6 .
-climax.arp p2: G6 D6 B5 D6  G6 D6 B5 D6  C6 D6 F#6 D6  G6 . D6 .
-outro.arp p0: . . D6 .  . . B5 .  . . G5 .  . . . .
+build.arp p0: . . D6 .  . . Bb5 .  . . G5 .  . . D6 .
+build.arp p1: D6 . Bb5 .  G5 . D6 .  Bb5 . G5 .  D6 . Bb5 .
+build.arp fill: D6 C6 Bb5 G5  D6 . . .  . . . .  . . . .
+drop.arp p0: G5 . D6 .  Bb5 . D6 .  G5 . D6 .  C6 . D6 .
+drop.arp p1: D6 . . Bb5  . . G5 .  D6 . . C6  . . D6 .
+drop.arp fill: D6 C6 Bb5 G5  D6 C6 Bb5 G5  C6 D6 . .  . . . .
+breakdown.arp p0: . . . .  G5 . . .  . . Bb5 .  . . D6 .
+breakdown.arp p1: . . D6 .  . . Bb5 .  . . G5 .  . . . .
+climax.arp p0: G6 . D6 .  Bb5 . D6 .  G6 . D6 .  C6 . D6 .
+climax.arp p1: D6 . Bb5 .  G5 . Bb5 .  C6 . D6 .  F6 . D6 .
+climax.arp p2: G6 D6 Bb5 D6  G6 D6 Bb5 D6  C6 D6 F6 D6  G6 . D6 .
+outro.arp p0: . . D6 .  . . Bb5 .  . . G5 .  . . . .
 
 # dynamics 0..1 per section (`v` constant or `a>b` ramp across the section). DnB = sub-heavy drop,
 # moody (quiet, hollow) breakdown, peak climax.
