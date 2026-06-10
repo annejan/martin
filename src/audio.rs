@@ -476,6 +476,13 @@ pub fn synth_track(score: &Score) -> Track {
         let pan = if i % 2 == 0 { 0.55 } else { -0.55 };
         render_into(&mut bed, t, 0.2, 0.11, pan, arp(f));
     }
+
+    // articulated bassline: the `<section>.bass` note-lane (the real funky bass), centred — a punchy
+    // `bass` voice at each onset, riding on top of the continuous drone sub below.
+    for (t, f) in score.bass_notes() {
+        let amp = 0.20 + 0.18 * score.levels(t).sub_bass; // sit with the section's sub level
+        render_into(&mut bed, t, 0.42, amp, 0.0, bass(f));
+    }
     // sustained pad: one chord per bar, spread wide (warmth/body).
     let bar = score.bar();
     let nbars = (score.demo_len() / bar).ceil() as usize;

@@ -1,9 +1,9 @@
 # martin score — tracker DSL. Edit + load with MARTIN_SCORE=<this file>.
 #
-# THEME: camping. The REAL "In the Navy" / "Op de camping" melody (trumpet ch0 of In_The_Navy.mid),
-# transcribed 1:1 and played as multi-bar phrases. Lead = the trumpet, arp = the sax (ch1) an octave
-# below = a two-brass section. Funky / drum-&-bass-leaning, harder & epic in the drop + climax
-# (kick on 1 + the "and of 3", snare on 2 & 4, glitchy hats, rolls). G-major chorus (G Am G D / Em C).
+# THE TRACK: "Op de Camping" — a funky drum-&-bass / hardcore-leaning anthem. The melody is the real
+# "Op de Camping" tune (Ome Henk, 1995), transcribed 1:1 from MIDI and played as multi-bar phrases.
+# Lead = the lead horn, arp = the sax an octave below (a two-brass section), bass = the disco octave
+# bassline. Harder & epic in the drop + climax (DnB two-step, glitchy hats, rolls). G-major chorus.
 bpm 135
 chords G Am G D  G Am G D  Em C G D  Em C D D
 
@@ -71,7 +71,7 @@ outro.hat p0: x..x x..x x..x x..x
 outro.stab p0: .... ..x. .... ....
 outro.stab fill: .... ..x. .... ....
 
-# melody: the REAL In the Navy line (trumpet ch0), multi-bar phrases. build = a 4-bar lead-in,
+# melody: the real "Op de Camping" line (lead horn), multi-bar phrases. build = a 4-bar lead-in,
 # drop = the full 8-bar chorus, climax = the high-belt chorus, outro = a fading statement.
 build.lead p0: B4 . . .  G4 . . .  . . D4 .  D4 . D4 .   G4 . A4 .  B4 C5 . D5  . . . .  C5 . . B4   C5 . . .  A4 . . .  . . D4 .  D4 . D4 .   A4 . B4 .  C5 D5 . E5  . . . .  C5 . . B4
 drop.lead p0: B4 . . .  G4 . . .  . . D4 .  D4 . D4 .   G4 . A4 .  B4 C5 . D5  . . . .  C5 . . B4   C5 . . .  A4 . . .  . . D4 .  D4 . D4 .   A4 . B4 .  C5 D5 . E5  . . . .  C5 . . B4   C5 . . .  A4 . . .  . . D4 .  D4 . D4 .   A4 . B4 .  C5 D5 . E5  . . . .  B4 . . A4   B4 . . .  G4 . . .  . . . .  G5 . E5 .   G5 . E5 .  G5 G5 . E5  . . D5 .  D5 . . C5
@@ -83,6 +83,11 @@ outro.lead p0: B4 . . .  G4 . . .  . . D4 .  D4 . D4 .   G4 . A4 .  B4 C5 . D5  
 build.arp p0: B3 . . .  G3 . . .  . . D3 .  D3 . D3 .   G3 . A3 .  B3 C4 . D4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . D3 .  D3 . D3 .   A3 . B3 .  C4 D4 . E4  . . . .  C4 . . B3
 drop.arp p0: B3 . . .  G3 . . .  . . D3 .  D3 . D3 .   G3 . A3 .  B3 C4 . D4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . D3 .  D3 . D3 .   A3 . B3 .  C4 D4 . E4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . D3 .  D3 . D3 .   A3 . B3 .  C4 D4 . E4  . . . .  B3 . . A3   B3 . . .  G3 . . .  . . . .  G4 . E4 .   G4 . E4 .  G4 G4 . E4  . . D4 .  D4 . . C4
 climax.arp p0: B3 . . .  G3 . . .  . . . .  G4 . E4 .   G4 . E4 .  G4 G4 . E4  . . D4 .  D4 . . C4   B3 . . .  G3 . . .  . . D3 .  D3 . D3 .   G3 . A3 .  B3 C4 . D4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . D3 .  D3 . D3 .   A3 . B3 .  C4 . D4 E4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . E4 .  G4 . E4 .   G4 . E4 .  G4 G4 . E4  . . D4 .  B3 . . A3
+
+# bass: the real "Op de Camping" bassline — a disco octave-bounce on the roots (G→G#→A→D walk).
+build.bass p0: G2 . G3 .  G2 . G3 .  G2 . G3 .  G2 . G3 .   G2 . G3 .  G2 . G3 .  G2 . G3 .  G#2 . G#3 .   A2 . A3 .  A2 . A3 .  A2 . A3 .  A2 . A3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .
+drop.bass p0: G2 . G3 .  G2 . G3 .  G2 . G3 .  G2 . G3 .   G2 . G3 .  G2 . G3 .  G2 . G3 .  G#2 . G#3 .   A2 . A3 .  A2 . A3 .  A2 . A3 .  A2 . A3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   A2 . A3 .  A2 . A3 .  A2 . A3 .  A2 . A3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   G2 . G3 .  G2 . G3 .  G2 . G3 .  G2 . G3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .
+climax.bass p0: G2 . G3 .  G2 . G3 .  G2 . G3 .  G2 . G3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   G2 . G3 .  G2 . G3 .  G2 . G3 .  G2 . G3 .   G2 . G3 .  G2 . G3 .  G2 . G3 .  G#2 . G#3 .   A2 . A3 .  A2 . A3 .  A2 . A3 .  A2 . A3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   A2 . A3 .  A2 . A3 .  A2 . A3 .  A2 . A3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .
 
 # dynamics 0..1 per section (`v` constant or `a>b` ramp across the section). Big drop/climax = epic.
 gain intro 0.3>0.55 build 0.55>0.96 drop 1 breakdown 0.42 climax 0.9>1 outro 0.58

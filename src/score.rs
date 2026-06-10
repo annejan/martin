@@ -149,6 +149,7 @@ pub struct Section {
     pub stab: Lane,
     pub lead: NoteLane, // melody (one note per slot); empty = no lead
     pub arp: NoteLane,  // a second melodic line (the plucky counter-melody); empty = no arp
+    pub bass: NoteLane, // an articulated bassline (one note per slot); empty = chord-root sub only
     pub start_bar: u32, // computed by Score::new
 }
 
@@ -168,6 +169,7 @@ impl Section {
             stab: Lane::default(),
             lead: NoteLane::default(),
             arp: NoteLane::default(),
+            bass: NoteLane::default(),
             start_bar: 0,
         }
     }
@@ -360,6 +362,11 @@ impl Score {
         self.note_line(|s| &s.arp)
     }
 
+    /// The `bass` (articulated bassline) onsets — empty unless the score writes a `bass` lane.
+    pub fn bass_notes(&self) -> Vec<(f32, f32)> {
+        self.note_line(|s| &s.bass)
+    }
+
     // --- dynamics -----------------------------------------------------------------------------
     fn section_value<F: Fn(&Section) -> Ramp>(&self, t: f32, pick: &F) -> f32 {
         let i = self.section_index_at(t);
@@ -507,15 +514,15 @@ impl Score {
                             .map_err(|_| format!("line {ln}: bad phase `{phase_tok}`"))?,
                     )
                 };
-                if inst == "lead" || inst == "arp" {
+                if inst == "lead" || inst == "arp" || inst == "bass" {
                     // pitched note lane: a phrase of 1+ bars (16 note tokens each, `A4`/`C#5`/`.`).
                     let grid = parse_notes(pat).ok_or_else(|| {
                         format!("line {ln}: {inst} needs 16 notes/rests (or a multiple of 16)")
                     })?;
-                    let lane = if inst == "arp" {
-                        &mut sections[si].arp
-                    } else {
-                        &mut sections[si].lead
+                    let lane = match inst {
+                        "arp" => &mut sections[si].arp,
+                        "bass" => &mut sections[si].bass,
+                        _ => &mut sections[si].lead,
                     };
                     match phase {
                         None => lane.fill = grid,
@@ -694,6 +701,23 @@ impl Score {
                     "{}.arp fill: {}\n",
                     s.name,
                     notes_phrase(&s.arp.fill)
+                ));
+            }
+        }
+        o.push_str(
+            "\n# bass: <section>.bass p<N>|fill — an articulated bassline, same note grammar\n",
+        );
+        for s in &self.sections {
+            for (p, grid) in s.bass.phases.iter().enumerate() {
+                if NoteLane::any(grid) {
+                    o.push_str(&format!("{}.bass p{p}: {}\n", s.name, notes_phrase(grid)));
+                }
+            }
+            if NoteLane::any(&s.bass.fill) {
+                o.push_str(&format!(
+                    "{}.bass fill: {}\n",
+                    s.name,
+                    notes_phrase(&s.bass.fill)
                 ));
             }
         }
