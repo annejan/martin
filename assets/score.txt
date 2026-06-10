@@ -1,6 +1,13 @@
 # martin score — tracker DSL. Edit + load with MARTIN_SCORE=<this file>.
-bpm 140
-chords Am F C G Dm Am E E F G Am C Dm F E E
+#
+# THEME: camping. A moody drum-&-bass / techno-glitch reinterpretation of the chorus hook of
+# Ome Henk's "Op de camping" (1995) — itself a parody of Village People's "In the Navy" (1979).
+# The recognizable falling chant ("Op-de-cam-ping" → E E C A) is recast in A minor as the lead;
+# the harmony is moodied-down to minor and the groove is half-time/two-step DnB with glitchy hats.
+# (Melody is a transformative minor reinterpretation, not the original major tune — tweak the note
+# slots below to taste; the hook contour is the recognizable bit.)
+bpm 172
+chords Am F C G  Am F C G  Am F C G  Dm F E E
 
 # section <name> <bars> <phase-bars,csv> [fill]
 section intro 8 8
@@ -10,93 +17,99 @@ section breakdown 16 7,8 fill
 section climax 36 11,12,12 fill
 section outro 14 13 fill
 
-# patterns: <section>.<kick|snare|hat|stab> p<N>|fill: 16 steps (x=hit .=rest)
-build.kick p0: x... .... .... x...
-build.kick p1: x... ..x. .... x...
-build.kick fill: x... .... .... ....
+# patterns: <section>.<kick|snare|hat|stab> p<N>|fill: 16 steps (x=hit .=rest). Beats = steps
+# 1/5/9/13; the DnB two-step = kick on 1 (+ "and of 3" = step 11), snare on 5 & 13 (beats 2 & 4).
+intro.kick p0: x... .... .... ....
+intro.hat p0:  x... ..x. x... ..x.
+build.kick p0: x... .... .... ....
+build.kick p1: x... .... ..x. ....
+build.kick fill: x... .... x... x.xx
 build.snare p1: .... x... .... x...
-build.snare fill: .... x... .... ..xx
+build.snare fill: .... x... .... xxxx
 build.hat p0: x... x... x... x...
-build.hat p1: x.x. x.x. x.x. x.x.
-build.hat fill: x.x. x.x. xxxx ....
+build.hat p1: x.x. x.xx x.x. xx.x
+build.hat fill: xxxx xxxx xxxx xxxx
 build.stab p1: .... ..x. .... ....
-build.stab fill: .... .... x... ....
-drop.kick p0: x... x... x... x...
-drop.kick p1: x... x... x... x..x
-drop.kick fill: x... .... .... x...
+build.stab fill: ..x. .... ..x. ....
+drop.kick p0: x... .... ..x. ....
+drop.kick p1: x... .... ..x. ..x.
+drop.kick fill: x... .... x... x...
 drop.snare p0: .... x... .... x...
-drop.snare p1: .... x..x .... x..x
+drop.snare p1: .... x... .x.. x..x
 drop.snare fill: .... x... .... x.xx
-drop.hat p0: xxxx xxxx xxxx xxxx
-drop.hat p1: x.x. xxxx x.x. xxxx
+drop.hat p0: x.xx x.x. xx.x x.x.
+drop.hat p1: xx.x x.xx x.x. xxx.
 drop.hat fill: xxxx x.x. xxxx ....
 drop.stab p0: .... ..x. .... ..x.
-drop.stab p1: .... x... .... x...
+drop.stab p1: ..x. .... ..x. ...x
 drop.stab fill: .... .... .... ...x
 breakdown.kick p0: x... .... .... ....
-breakdown.kick p1: x... .... .... x...
+breakdown.kick p1: x... .... .... ..x.
 breakdown.kick fill: x... .... .... ....
-breakdown.snare p1: .... .... .... x...
-breakdown.snare fill: .... x... .... ..xx
-breakdown.hat p1: x... x... x... x...
+breakdown.snare p1: .... .... x... ....
+breakdown.snare fill: .... .... x... ..xx
+breakdown.hat p1: x... ..x. x... ..x.
 breakdown.hat fill: x.x. x.x. xxxx ....
 breakdown.stab p0: .... .... x... ....
-climax.kick p0: x... x... x... x...
-climax.kick p1: x... x... x... x..x
-climax.kick p2: x... x..x x... x..x
-climax.kick fill: x... .... .... x...
-climax.snare p0: .... x... .... x..x
-climax.snare p1: .... x..x .... x.xx
-climax.snare p2: .... x..x .... x.xx
+climax.kick p0: x... .... ..x. ....
+climax.kick p1: x... ..x. ..x. ....
+climax.kick p2: x..x .... ..x. ..x.
+climax.kick fill: x... .... x... x.xx
+climax.snare p0: .... x... .... x...
+climax.snare p1: .... x... .x.. x..x
+climax.snare p2: .... x..x .x.. x.xx
 climax.snare fill: .... x.xx .... xxxx
-climax.hat p0: xxxx xxxx xxxx xxxx
-climax.hat p1: x.x. xxxx x.x. xxxx
-climax.hat p2: xxxx x.x. xxxx x.x.
+climax.hat p0: x.xx x.x. xx.x x.x.
+climax.hat p1: xx.x x.xx x.x. xxx.
+climax.hat p2: xxxx x.xx xx.x xxxx
 climax.hat fill: xxxx x.x. xxxx ....
-climax.stab p0: .... ..x. ..x. ..x.
-climax.stab p1: .x.. ..x. .x.. ..x.
-climax.stab p2: x... ..x. .... ..x.
+climax.stab p0: .... ..x. .... ..x.
+climax.stab p1: ..x. ...x ..x. ...x
+climax.stab p2: x.x. ..x. x.x. ..x.
 climax.stab fill: .... .... .... ...x
-outro.kick p0: x... .... x... ....
+outro.kick p0: x... .... .... ....
 outro.kick fill: x... .... .... ....
-outro.snare p0: .... x... .... x...
-outro.snare fill: .... x... .... ....
-outro.hat p0: x.x. x.x. x.x. x.x.
+outro.snare p0: .... .... x... ....
+outro.snare fill: .... .... x... ....
+outro.hat p0: x... ..x. x... ..x.
 outro.stab p0: .... ..x. .... ....
 outro.stab fill: .... ..x. .... ....
 
-# melody: <section>.lead p<N>|fill: 16 note slots (A4 C#5 . E5 …; . = rest)
-build.lead p0: A4 . . .  . . C5 .  . . E5 .  . . . .
-build.lead p1: A4 . . C5  . . E5 .  . G5 . E5  . D5 . .
-build.lead fill: A4 . C5 .  E5 . G5 .  A5 . . .  . . . .
-drop.lead p0: A5 . C6 .  E6 . C6 .  G5 . E5 .  D5 . E5 .
-drop.lead p1: A5 . G5 .  E5 . C5 .  D5 . E5 .  A5 . . .
-drop.lead fill: E6 . D6 .  C6 . A5 .  G5 . E5 .  D5 . E5 .
-breakdown.lead p0: E5 . . C5  . . A4 .  . . C5 .  . . . .
-breakdown.lead p1: D5 . . E5  . . C5 .  . . A4 .  . . . .
-breakdown.lead fill: A4 . C5 .  E5 . G5 .  A5 . G5 .  E5 . . .
-climax.lead p0: A5 . C6 .  E6 . G6 .  A6 . G6 .  E6 . D6 .
-climax.lead p1: C6 . E6 .  G6 . A6 .  G6 . E6 .  D6 . C6 .
-climax.lead p2: A5 . C6 E6  G6 . E6 C6  D6 . E6 G6  A6 . G6 E6
-outro.lead p0: A4 . . C5  . . E5 .  C5 . . .  A4 . . .
+# melody: <section>.lead p<N>|fill: 16 note slots. The chorus hook = E E C A ("Op-de-cam-ping"),
+# a falling chant resolving to the A-minor tonic; the answer rises A C D E.
+intro.lead p0: . . . .  . . . .  A4 . . .  . . . .
+build.lead p0: . . . .  E5 . . .  . . C5 .  . . A4 .
+build.lead p1: E5 . . .  C5 . A4 .  . . E5 .  C5 . . .
+build.lead fill: E5 . C5 .  A4 . . .  . . . .  . . . .
+drop.lead p0: E5 . E5 .  C5 . A4 .  E5 . E5 .  C5 . D5 .
+drop.lead p1: E5 . E5 C5  . A4 . .  A4 . C5 D5  E5 . . .
+drop.lead fill: E5 . D5 .  C5 . A4 .  C5 . D5 .  E5 . . .
+breakdown.lead p0: A4 . . .  . . C5 .  . . . .  E5 . . .
+breakdown.lead p1: E5 . . .  . . D5 .  . . C5 .  . . A4 .
+breakdown.lead fill: A4 . C5 .  E5 . . .  D5 . C5 .  A4 . . .
+climax.lead p0: E6 . E6 .  C6 . A5 .  E6 . E6 .  C6 . D6 .
+climax.lead p1: E6 . C6 .  A5 . C6 .  D6 . E6 .  C6 . A5 .
+climax.lead p2: E6 E6 C6 A5  E6 E6 C6 A5  A5 C6 D6 E6  D6 . C6 .
+climax.lead fill: E6 . D6 .  C6 . A5 .  C6 . D6 .  E6 . G6 .
+outro.lead p0: E5 . E5 .  C5 . A4 .  . . C5 .  A4 . . .
 
-# arp: the second melodic line — a sparkly counter-melody an octave above the lead, panned to
-# dance opposite it. Same note grammar. <section>.arp p<N>: 16 slots.
-build.arp p0: . . . .  A5 . . E6  . . C6 .  . . E6 .
-build.arp p1: . A5 . C6  . E6 . G6  . E6 . D6  . C6 . E6
-build.arp fill: A5 C6 E6 G6  A6 . . .  . . . .  . . . .
-drop.arp p0: A5 . E6 . C6 . E6 .  G6 . E6 . D6 . E6 .
-drop.arp p1: A5 . G5 . E6 . C6 .  D6 . E6 . A5 . E6 .
-drop.arp fill: E6 . D6 . C6 . A5 .  G5 . E5 . D5 . E5 .
-breakdown.arp p0: . . . .  E6 . . .  . . C6 .  . . A5 .
-breakdown.arp p1: . . D6 .  . . E6 .  . . C6 .  . A5 . .
-breakdown.arp fill: A5 . C6 .  E6 . G6 .  A6 . G6 .  E6 . . .
-climax.arp p0: A6 . C7 .  E7 . C7 .  G6 . E6 .  D6 . E6 .
-climax.arp p1: C7 . E7 .  G7 . E7 .  A6 . G6 .  E6 . D6 .
-climax.arp p2: A6 C7 E7 .  G7 E7 C7 .  D7 E7 G7 .  A7 G7 E7 .
-outro.arp p0: A5 . . E6  . . C6 .  . . A5 .  . . . .
+# arp: the second melodic line — a glitchy counter-melody an octave above the lead, panned opposite.
+build.arp p0: . . E6 .  . . C6 .  . . A5 .  . . E6 .
+build.arp p1: E6 . C6 .  A5 . E6 .  C6 . A5 .  E6 . C6 .
+build.arp fill: E6 D6 C6 A5  E6 . . .  . . . .  . . . .
+drop.arp p0: A5 . E6 .  C6 . E6 .  A5 . E6 .  D6 . E6 .
+drop.arp p1: E6 . . C6  . . A5 .  E6 . . D6  . . E6 .
+drop.arp fill: E6 D6 C6 A5  E6 D6 C6 A5  D6 E6 . .  . . . .
+breakdown.arp p0: . . . .  A5 . . .  . . C6 .  . . E6 .
+breakdown.arp p1: . . E6 .  . . C6 .  . . A5 .  . . . .
+breakdown.arp fill: A5 . C6 .  E6 . . .  D6 . C6 .  A5 . . .
+climax.arp p0: A6 . E6 .  C6 . E6 .  A6 . E6 .  D6 . E6 .
+climax.arp p1: E6 . C6 .  A5 . C6 .  D6 . E6 .  G6 . E6 .
+climax.arp p2: A6 E6 C6 E6  A6 E6 C6 E6  D6 E6 G6 E6  A6 . E6 .
+outro.arp p0: . . E6 .  . . C6 .  . . A5 .  . . . .
 
-# dynamics 0..1 per section (`v` constant or `a>b` ramp across the section)
-gain intro 0.32>0.55 build 0.55>0.95 drop 0.96 breakdown 0.42 climax 0.82>1 outro 0.58
-sub intro 0.18>0.42 build 0.22>0.88 drop 0.98 breakdown 0.08 climax 0.65>1 outro 0.24
-mids intro 0>0.28 build 0.34>0.86 drop 0.88 breakdown 0.45 climax 0.72>1 outro 0.38
+# dynamics 0..1 per section (`v` constant or `a>b` ramp across the section). DnB = sub-heavy drop,
+# moody (quiet, hollow) breakdown, peak climax.
+gain intro 0.25>0.5 build 0.5>0.92 drop 0.96 breakdown 0.4 climax 0.82>1 outro 0.5
+sub intro 0.2>0.5 build 0.3>0.92 drop 1 breakdown 0.14 climax 0.72>1 outro 0.2
+mids intro 0.08>0.3 build 0.32>0.84 drop 0.86 breakdown 0.4 climax 0.74>1 outro 0.36
