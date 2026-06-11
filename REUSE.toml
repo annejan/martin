@@ -108,6 +108,7 @@ SPDX-License-Identifier = "MIT OR Apache-2.0"
 
 [[annotations]]
 path = [
+    "AGENTS.md",
     "README.md",
     "ART-DIRECTION.md",
     "DESIGN.md",
