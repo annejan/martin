@@ -77,3 +77,6 @@ assets/greetings-logos
 
 # local mesh->splat A/B render artifacts (not assets)
 mesh-ab/
+
+# scratch greetings crawl — not used in current demos, intentionally untracked
+greetings.seq
