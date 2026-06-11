@@ -18,7 +18,7 @@ ply = assets/aegg-baked.ply
 #     major chorus/climax carry "MET deFEEST", and the TRAGIC minor breakdown carries "ZONDER... kut".
 [seq]
 image:defeest-logo.png       @@intro      @8,3    ~sparkle                # deFEEST logo opens the show
-mesh:evoke-23.glb              @6,3                ~swarm      ^wave        # at EVOKE — the demoparty
+mesh:evoke-23.dae              @6,3                ~swarm      ^wave        # at EVOKE — the demoparty
 splat:aegg-baked.ply         @@build      @14,3   ~swarm      ^twist       # the badge.team Ægg swarms in
 text:OP DE CAMPING            @15,3,1.2           ~typewriter ^wave        # the dream builds over the couplet
 splat:doggo.ply              @@drop       @14,4   ~ball       ^wave        # the DOG — pure joy on the chorus
@@ -32,7 +32,7 @@ text:MET deFEEST              @12,4              ~explode     ^wave        # the
 splat:galaxy.ply              @13,3             ~vortex       ^turbulence  # the energy peak spins out
 splat:doggo.ply               @14,4             ~ball         ^wave        # the dog returns, jubilant
 text:HET ULTIEME GENOT       @@outro      @11,4   ~pen-write  ^wave        # the payoff lands on the outro
-mesh:defeest.glb               @11,3             ~sparkle      ^wave        # the deFEEST 3D logo blooms
+mesh:defeest.dae               @11,3             ~sparkle      ^wave        # the deFEEST 3D logo blooms
 wall:ANUS|KLOOT|CINDER        @10,4             ~fade                      # the crew, as the blast hits
 
 # --- the camera: a directed track (t = show-time seconds), tuned to the ~228s score timeline:

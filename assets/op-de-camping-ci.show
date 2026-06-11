@@ -15,7 +15,7 @@ ply = assets/galaxy.ply              # sets the .ply root to assets/ so the gene
 # --- the show: meshes + procedural splats @@anchored to the score's sections, words = the emotion ---
 [seq]
 image:defeest-logo.png            @@intro      @8,3    ~sparkle                # deFEEST logo opens
-mesh:aegg.glb                       @6,3                ~swarm      ^wave        # the badge.team Ægg (mesh)
+mesh:aegg.dae                       @6,3                ~swarm      ^wave        # the badge.team Ægg (mesh)
 text:OP DE CAMPING                @@build      @14,3   ~typewriter ^wave        # the dream builds over the couplet
 splat:galaxy.ply                  @@drop       @14,4   ~ball       ^turbulence  # the party erupts — a galaxy of joy
 text:MET deFEEST                   @12,4               ~explode    ^wave        # op de camping MET deFEEST
@@ -28,7 +28,7 @@ text:MET deFEEST                   @12,4              ~explode     ^wave        
 splat:galaxy.ply                   @13,3             ~vortex       ^turbulence  # the peak spins out into a galaxy
 mesh:bornhack2026-hardware.dae     @14,3             ~drop         ^wind        # the badge board drops in
 text:HET ULTIEME GENOT            @@outro      @11,4   ~pen-write  ^wave        # the payoff lands on the outro
-mesh:defeest.glb                    @11,3             ~sparkle      ^wave        # the deFEEST 3D logo blooms
+mesh:defeest.dae                    @11,3             ~sparkle      ^wave        # the deFEEST 3D logo blooms
 wall:ANUS|KLOOT|CINDER             @10,4             ~fade                      # the crew, as the blast hits
 
 # --- the camera: a directed 3D track (t = show-time seconds), tuned to the ~228s score timeline:
