@@ -52,6 +52,17 @@ SPDX-FileCopyrightText = [
 ]
 SPDX-License-Identifier = "MIT"
 
+# op-de-camping.mid is the score exported to MIDI (pipeline/score_to_midi.py) to share with
+# composers/arrangers — same derivation + source credits as the score it came from.
+[[annotations]]
+path = "op-de-camping.mid"
+SPDX-FileCopyrightText = [
+    "2026 Anne Jan Brouwer <brouwer@annejan.com>",
+    "1995 Ome Henk — Op de Camping",
+    "1979 Village People — In the Navy",
+]
+SPDX-License-Identifier = "MIT"
+
 [[annotations]]
 path = "assets/font.ttf"
 SPDX-FileCopyrightText = "2003 Bitstream, Inc."
@@ -84,7 +95,7 @@ SPDX-License-Identifier = "LicenseRef-Maali"
 
 # logo / asset-import tooling + render harness.
 [[annotations]]
-path = ["pipeline/svg_extrude_logo.py", "pipeline/svg_import.py", "pipeline/logo-check.compose"]
+path = ["pipeline/svg_extrude_logo.py", "pipeline/svg_import.py", "pipeline/logo-check.compose", "pipeline/score_to_midi.py"]
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
