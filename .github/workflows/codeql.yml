@@ -33,7 +33,7 @@ jobs:
         language: [rust, python, actions]
 
     steps:
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       # Give the Rust extractor the same headers a real build needs (udev/alsa/wayland/xkbcommon),
       # so it can resolve the crate + its deps instead of bailing on missing system libraries.
