@@ -74,10 +74,11 @@ jobs:
             target/release/martin.exe
           if-no-files-found: ignore
 
-  # The packaged deal: ONE self-contained binary. build.rs (--features bundle) bakes the published-
-  # asset demo (assets/demo.show → licence-cleared meshes + logo, no .ply) into the executable; it
-  # self-extracts to a temp dir at startup and plays with no external files and no env vars. Because
-  # the demo uses only in-repo published assets, this builds straight from a clean checkout in CI.
+  # The packaged deal: ONE self-contained binary — the "Op de Camping" demo. build.rs
+  # (--features bundle) bakes the show's assets into the executable; it self-extracts to a temp dir
+  # at startup and plays with no external files and no env vars. We use the CI-SAFE show
+  # (op-de-camping-ci.show): repo-tracked licence-cleared meshes (the Ægg/deFEEST/bitterbal/bornhack)
+  # + procedural splats generated fresh here — so it builds straight from a clean checkout.
   bundle:
     name: single binary (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -101,8 +102,16 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Build single binary (--features bundle)
-        run: cargo build --release --features bundle
+      # The show's procedural splats (galaxy/supershape/knot/…) aren't in the repo (.ply is gitignored)
+      # — generate them fresh so build.rs can bake them in. The character captures (dog/Martins) are
+      # NOT used by the CI-safe show; only repo-tracked meshes + these generated shapes.
+      - name: Generate procedural splats
+        shell: bash
+        run: python3 pipeline/gen-demo-splats.py assets
+
+      - name: Build single binary (the Op de Camping demo, --features bundle)
+        shell: bash
+        run: MARTIN_BUNDLE=bundle-camping.toml cargo build --release --features bundle
 
       - name: Report binary size
         shell: bash
@@ -111,7 +120,7 @@ jobs:
       - name: Upload single binary
         uses: actions/upload-artifact@v4
         with:
-          name: martin-bundle-${{ matrix.os }}
+          name: op-de-camping-${{ matrix.os }}
           path: |
             target/release/martin
             target/release/martin.exe

@@ -1,0 +1,53 @@
+# martin — the "OP DE CAMPING" demo, CI-SAFE variant: built ONLY from repo-tracked, licence-cleared
+# assets (meshes + logo) + procedural splats that pipeline/gen-demo-splats.py generates fresh. This is
+# what the downloadable single-binary bundle ships (the full op-de-camping.show uses the gitignored
+# dog/Martin captures, so it's a LOCAL-only rich render).
+#
+#   python3 pipeline/gen-demo-splats.py assets      # generate the procedural shapes (galaxy, …)
+#   MARTIN_BUNDLE=bundle-camping.toml cargo build --release --features bundle
+#
+# (No song lyrics on screen — only the deFEEST parody messaging + the title hook + credits.)
+
+# --- settings (each → MARTIN_<KEY>) ---
+morph_count = 140000
+ply = assets/galaxy.ply              # sets the .ply root to assets/ so the generated `splat:` shapes resolve
+
+# --- the show: meshes + procedural splats @@anchored to the score's sections, words = the emotion ---
+[seq]
+image:defeest-logo.png            @@intro      @8,3    ~sparkle                # deFEEST logo opens
+glb:aegg.glb                       @6,3                ~swarm      ^wave        # the badge.team Ægg (mesh)
+text:OP DE CAMPING                @@build      @14,3   ~typewriter ^wave        # the dream builds over the couplet
+splat:galaxy.ply                  @@drop       @14,4   ~ball       ^turbulence  # the party erupts — a galaxy of joy
+text:MET deFEEST                   @12,4               ~explode    ^wave        # op de camping MET deFEEST
+splat:supershape.ply               @13,3              ~vortex      ^turbulence  # euphoric morph spins out
+mesh:bitterbal.obj cluster:7       @14,3              ~drop        ^wind        # deFEEST catering — bitterballen rain
+text:ZONDER deFEEST               @@breakdown  @14,3   ~swirl                   # the tragic turn (minor breakdown)...
+text:IS HET KUT                    @14,3              ~fade        ^wave        # ...is kut
+splat:knot.ply                    @@climax     @13,4   ~swarm      ^wave        # the energy knots up — euphoric reprise
+text:MET deFEEST                   @12,4              ~explode     ^wave        # the ultimate joy
+splat:galaxy.ply                   @13,3             ~vortex       ^turbulence  # the peak spins out into a galaxy
+mesh:bornhack2026-hardware.dae     @14,3             ~drop         ^wind        # the badge board drops in
+text:HET ULTIEME GENOT            @@outro      @11,4   ~pen-write  ^wave        # the payoff lands on the outro
+glb:defeest.glb                    @11,3             ~sparkle      ^wave        # the deFEEST 3D logo blooms
+wall:ANUS|KLOOT|CINDER             @10,4             ~fade                      # the crew, as the blast hits
+
+# --- the camera: a directed 3D track (t = show-time seconds), tuned to the ~228s score timeline:
+#     intro 0 · build 14 · drop 43 · breakdown 99 · climax 129 · outro 185 · end 228. ---
+[camera]
+t=0.0     pos=-0.8,-0.3,0  dist=2.9   yaw=1.50   pitch=0.10   # logo enters from the left
+t=11.0    pos=0,0,0         dist=2.6   yaw=1.35   pitch=0.14   # settle centre as intro peaks
+t=14.0    pos=0,0,0         dist=2.5   yaw=1.20   pitch=0.16   # OP DE CAMPING — drift left
+t=28.0    pos=0.6,-0.2,0.3  dist=2.4   yaw=1.10   pitch=0.18   # arc right through the build
+t=42.0    pos=0,0,0         dist=2.2   yaw=1.50   pitch=0.20   # snap back centre, tense before drop
+t=43.0    pos=0,0,0         dist=1.8   yaw=1.50   pitch=0.22   # PUSH IN HARD on the drop
+t=60.0    pos=-0.4,0.2,0.2  dist=2.0   yaw=1.62   pitch=0.16   # drift left, ride the chorus
+t=80.0    pos=0.5,0,0       dist=2.3   yaw=1.42   pitch=0.14   # arc back right through the drop
+t=99.0    pos=0.8,0.3,0.4   dist=2.8   yaw=1.20   pitch=0.12   # pull back + drift right for breakdown
+t=114.0   pos=0.2,-0.2,0    dist=3.0   yaw=1.30   pitch=0.10   # sag — the "kut" moment
+t=128.0   pos=0,0,0         dist=2.5   yaw=1.45   pitch=0.16   # recentre for the climax
+t=129.0   pos=0,0,0         dist=1.8   yaw=1.55   pitch=0.24   # CLIMAX — in tight, looking up
+t=150.0   pos=-0.6,-0.1,0   dist=2.0   yaw=1.70   pitch=0.20   # intense left orbit
+t=170.0   pos=0.5,0.2,0     dist=2.2   yaw=1.35   pitch=0.18   # swing right, ride the high
+t=185.0   pos=0,0,0         dist=2.5   yaw=1.50   pitch=0.14   # outro — credits centre
+t=210.0   pos=0,0,0         dist=2.0   yaw=1.58   pitch=0.18   # lean in for the blast
+t=225.0   pos=0,0,-1.2      dist=3.5   yaw=1.40   pitch=0.08   # BLOWN BACK — the final hit kicks you out

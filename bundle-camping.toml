@@ -9,6 +9,6 @@
 # supershape splats + the evoke/defeest glb + the bitterbal mesh + the logo PNG), lz4-compresses them
 # into the binary; src/bundle.rs self-extracts to a temp dir at startup and runs it.
 
-show = "assets/op-de-camping.show"   # the full splat demo (seq + 3D camera)
+show = "assets/op-de-camping-ci.show"   # the full splat demo (seq + 3D camera)
 score = "assets/score.txt"           # the Op de Camping track + @@anchor timing
 logo = "defeest-logo.png"            # the loader screen while it decompresses
