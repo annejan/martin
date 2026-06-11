@@ -379,23 +379,26 @@ fn render_riser(buf: &mut [f32], start_t: f32, dur: f32, amp: f32, pan: f32) {
 /// crackle. Game/chiptune music is dead-silent between notes; produced trip-hop/downtempo records
 /// (Massive Attack / Portishead) always sit on a dusty textured floor — that bed is a big part of
 /// what reads as "a record" instead of "a bright synth preset". Kept low + slightly decorrelated L/R.
-fn render_atmosphere(bed: &mut [f32], sr: f32) {
+fn render_atmosphere(bed: &mut [f32], sr: f32, start_t: f32) {
     use std::f32::consts::TAU;
     let total = bed.len() / 2;
+    let start = (start_t.max(0.0) * sr) as usize;
+    let fade = (1.5 * sr) as usize; // ease the floor in over ~1.5 s so it doesn't just switch on
     let (mut lp, mut hp) = (0.0f32, 0.0f32);
     let a = 1.0 - (-TAU * 2000.0 / sr).exp();
     let ah = 1.0 - (-TAU * 350.0 / sr).exp();
-    for i in 0..total {
+    for i in start..total {
+        let g = ((i - start) as f32 / fade as f32).min(1.0);
         let n = pseudo_noise(i * 2 + 7);
         lp += a * (n - lp); // low-pass...
         hp += ah * (lp - hp); // ...minus a high-pass = a soft ~350-2000 Hz band (warm hiss, no fizz)
-        let floor = (lp - hp) * 0.010;
-        let crackle = if pseudo_noise(i * 3 + 1) > 0.9994 {
-            pseudo_noise(i * 7) * 0.045 // sparse dust clicks
+        let floor = (lp - hp) * 0.008;
+        let crackle = if pseudo_noise(i * 3 + 1) > 0.9996 {
+            pseudo_noise(i * 7) * 0.03 // sparser, quieter dust clicks
         } else {
             0.0
         };
-        let v = floor + crackle;
+        let v = (floor + crackle) * g;
         bed[2 * i] += v;
         bed[2 * i + 1] += v * 0.92;
     }
@@ -740,8 +743,8 @@ pub fn synth_track(score: &Score) -> Track {
     for (t, f) in score.lead_notes() {
         let v = vel(t, beat, 0x1A);
         let gt = groove(t, beat, 0x3A, 0.005, 0.005);
-        render_into(&mut bed, gt, 0.6, 0.55 * v, 0.0, lead(f, v)); // main lead — up from 0.50
-        render_into(&mut bed, gt, 0.6, 0.15 * v, 0.0, lead(f * 2.0, v)); // octave sheen
+        render_into(&mut bed, gt, 0.6, 0.82 * v, 0.0, lead(f, v)); // main lead — the STAR, up front + loud
+        render_into(&mut bed, gt, 0.6, 0.20 * v, 0.0, lead(f * 2.0, v)); // octave sheen
         if let Some((s0, s1)) = climax {
             if (s0..s1).contains(&t) {
                 render_into(&mut bed, gt, 0.6, 0.18 * v, 0.0, lead(f * 2.0, v)); // extra sheen in climax
@@ -854,7 +857,7 @@ pub fn synth_track(score: &Score) -> Track {
     // CASIO comp: a cheesy off-beat chord "chnk" on every up-beat (the "and"), gated to the END of
     // the track (climax + outro) where the Ome-Henk electric piano creeps in.
     let half = score.beat() / 2.0;
-    for name in ["climax", "outro"] {
+    for name in ["outro"] {
         if let Some((s0, s1)) = section_window(score, name) {
             let mut t = (s0 / score.beat()).ceil() * score.beat() + half; // first up-beat
             while t < s1 {
@@ -915,19 +918,21 @@ pub fn synth_track(score: &Score) -> Track {
         sub_hz += (sub_freq(score.chord_at(t).root) - sub_hz) * glide;
         phase = (phase + TAU * sub_hz * dt) % TAU;
         let fundamental = phase.sin();
-        let harmonic = (phase * 2.0).sin() * 0.32;
-        let s = (fundamental + harmonic) * (0.10 + 0.38 * score.levels(t).sub_bass);
+        let harmonic = (phase * 2.0).sin() * 0.42; // more 2nd harmonic = an EPIC sub that translates
+        let third = (phase * 3.0).sin() * 0.16; // a little grit so it reads on small speakers
+        let s = (fundamental + harmonic + third) * (0.14 + 0.46 * score.levels(t).sub_bass);
         bed[2 * i] += s;
         bed[2 * i + 1] += s;
     }
 
-    // atmosphere: a dusty noise floor + sparse vinyl crackle under everything — the textured bed that
-    // reads as "a record" instead of a silent-between-notes synth preset (depth/feel, even if faked).
-    render_atmosphere(&mut bed, sr);
+    // atmosphere: a dusty noise floor + sparse crackle — but ONLY from the build onward (it fades in
+    // as the demo kicks off). The intro stays CLEAN sub-bass only; the floor would just read as crowd
+    // "juich" noise over the bare intro.
+    render_atmosphere(&mut bed, sr, section_time(score, "build").unwrap_or(0.0));
 
     // sidechain pump: a fast dip right on each kick recovering over ~0.11s → the dance "breath".
     let mut duck = vec![1.0f32; total];
-    let (depth, tau) = (0.7f32, 0.08f32);
+    let (depth, tau) = (0.78f32, 0.085f32); // deeper pump → a cleaner kick-then-bass pocket
     for &kt in &kicks {
         let k0 = (kt * sr) as usize;
         for j in 0..(0.34 * sr) as usize {
@@ -980,6 +985,12 @@ pub fn synth_track(score: &Score) -> Track {
     let mut gr = 1.0f32;
     let atk = 1.0 - (-1.0 / (0.0006 * sr)).exp(); // fast attack catches the hard-kick/blast transients
     let rel = 1.0 - (-1.0 / (0.12 * sr)).exp();
+    // bus GLUE compressor (slow, ~2:1) — pulls every voice under ONE shared envelope so the pile of
+    // isolated voices reads as a single cohesive performance, and lifts the body so it's not soft.
+    let mut glue = 1.0f32;
+    let g_atk = 1.0 - (-1.0 / (0.010 * sr)).exp(); // 10 ms
+    let g_rel = 1.0 - (-1.0 / (0.18 * sr)).exp(); // 180 ms
+    let mut g_env = 0.0f32;
     for i in 0..total {
         let t = i as f32 * dt;
         let fade_in = (t / 1.5).clamp(0.0, 1.0);
@@ -1008,6 +1019,14 @@ pub fn synth_track(score: &Score) -> Track {
             let hi_s = (hi_x * 1.25).tanh();
             pre[c] = (lo[c] + hi_s) * g;
         }
+        // bus glue: one slow detector for both channels (2:1 above ~0.5), + makeup so it's LOUDER.
+        let det = pre[0].abs().max(pre[1].abs());
+        g_env += (det - g_env) * if det > g_env { g_atk } else { g_rel };
+        let thr = 0.5;
+        let gtarget = if g_env > thr { (thr / g_env).sqrt() } else { 1.0 }; // 2:1
+        glue += (gtarget - glue) * if gtarget < glue { g_atk } else { g_rel };
+        pre[0] *= glue * 1.18; // makeup (+~1.4 dB)
+        pre[1] *= glue * 1.18;
         // shared soft peak-limiter (one gain for both channels → image stays centred)
         let peak = pre[0].abs().max(pre[1].abs());
         let target = if peak > 0.93 { 0.93 / peak } else { 1.0 };
