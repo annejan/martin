@@ -125,6 +125,7 @@ path = [
     ".github/dependabot.yml",
     ".github/workflows/build.yml",
     ".github/workflows/codeql.yml",
+    ".github/workflows/dependabot-automerge.yml",
     ".github/codeql/codeql-config.yml",
 ]
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"

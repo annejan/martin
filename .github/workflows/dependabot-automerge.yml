@@ -1,0 +1,30 @@
+# Auto-merge Dependabot PRs once CI is green — but ONLY patch + minor bumps; majors (which tend to
+# need code changes) stay manual. The merge is gated by branch protection's required status checks
+# (rustfmt, REUSE, the build matrix, CodeQL), so `--auto` only completes after they pass. Keeps the
+# dependency pins fresh hands-off without merging anything red.
+name: dependabot-automerge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    # only act on Dependabot's own PRs
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      # Enable auto-merge for patch/minor only — GitHub then merges once the required checks pass.
+      - name: Enable auto-merge (patch/minor)
+        if: contains(fromJSON('["version-update:semver-patch", "version-update:semver-minor"]'), steps.meta.outputs.update-type)
+        run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
