@@ -40,7 +40,7 @@ gltf = { version = "1.4", default-features = false, features = ["import", "utils
 fundsp = { version = "0.23.0", default-features = false, features = ["std"] }
 # Decompress the embedded asset archive in a `--features bundle` single-binary build. Pure Rust
 # (no C toolchain → clean cross-compiles), only pulled in for bundled builds.
-lz4_flex = { version = "0.11", default-features = false, features = ["std"], optional = true }
+lz4_flex = { version = "0.13", default-features = false, features = ["std"], optional = true }
 
 [features]
 # `cargo build --release --features bundle` IS the bundling pipeline: build.rs reads bundle.toml,
@@ -50,7 +50,7 @@ bundle = ["dep:lz4_flex"]
 
 # Compress the assets at build time for a bundled build (pure Rust; only used when `bundle` is on).
 [build-dependencies]
-lz4_flex = { version = "0.11", default-features = false, features = ["std"] }
+lz4_flex = { version = "0.13", default-features = false, features = ["std"] }
 
 # Faster iteration: optimize deps hard, our crate lightly.
 [profile.dev]
