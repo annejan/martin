@@ -22,8 +22,9 @@ text:MET deFEEST!        @3,2     ~explode   ^wave         # the joy lands
 
 # --- camera: a gentle bright drift around FRONT_YAW (1.4), push-in on the party peak. ---
 [camera]
-t=0.0   pos=0,0,0  dist=2.6  yaw=1.40  pitch=0.10   # open on the gem, head-on
-t=5.0   pos=0,0,0  dist=2.3  yaw=1.22  pitch=0.16   # drift left on the tagline
+t=0.0   pos=0,0,0  dist=1.9  yaw=1.42  pitch=0.36   # open close on the gem, schuin van boven voren
+t=3.0   pos=0,0,0  dist=1.7  yaw=1.40  pitch=0.44   # push in — the capture angle
+t=5.0   pos=0,0,0  dist=2.3  yaw=1.22  pitch=0.16   # pull back + drift left on the tagline
 t=10.0  pos=0,0,0  dist=2.5  yaw=1.58  pitch=0.12   # swing right for the dog
 t=15.0  pos=0,0,0  dist=2.2  yaw=1.30  pitch=0.20   # push in + up on the star burst
 t=20.0  pos=0,0,0  dist=2.6  yaw=1.45  pitch=0.12   # settle for the peace + joy

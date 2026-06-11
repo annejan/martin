@@ -43,8 +43,9 @@ wall:ANUS|KLOOT|CINDER        @10,4             ~fade                      # the
 [camera]
 t=0.0     pos=-0.8,-0.3,0  dist=2.9   yaw=1.50   pitch=0.10   # logo enters from the left
 t=11.0    pos=0,0,0         dist=2.6   yaw=1.35   pitch=0.14   # settle centre as intro peaks
-t=14.0    pos=0,0,0         dist=2.5   yaw=1.20   pitch=0.16   # OP VAKANTIE — drift left
-t=28.0    pos=0.6,-0.2,0.3  dist=2.4   yaw=1.10   pitch=0.18   # arc right through the build
+t=14.0    pos=0,0,0         dist=2.0   yaw=1.45   pitch=0.34   # the Ægg GEM — push in, above-front
+t=22.0    pos=0,0,0         dist=1.65  yaw=1.42   pitch=0.44   # closest, schuin van boven voren (the capture angle)
+t=28.0    pos=0.5,-0.1,0.25 dist=2.3   yaw=1.18   pitch=0.20   # ease out + arc right for OP DE CAMPING
 t=42.0    pos=0,0,0         dist=2.2   yaw=1.50   pitch=0.20   # snap back centre, tense before drop
 t=43.0    pos=0,0,0         dist=1.8   yaw=1.50   pitch=0.22   # PUSH IN HARD on the drop
 t=60.0    pos=-0.4,0.2,0.2  dist=2.0   yaw=1.62   pitch=0.16   # drift left, ride the chorus
