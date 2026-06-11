@@ -1148,7 +1148,10 @@ fn render_fx(bed: &mut [f32], score: &Score, total: usize) {
         render_snare_roll(bed, bs, build, score.beat()); // accelerating roll INTO the blast
         render_riser(bed, bs, build, 0.42, 0.0); // a rising uplifter under the roll
         render_jet(bed, end - 2.6, 2.0, 0.6); // jet screams down into the hit
-        render_impact(bed, end - 2.2, 3.2, 1.0); // THE blast — rings out through the master fade
+        render_impact(bed, end - 1.9, 2.2, 1.0); // THE blast lands + rings
+                                                 // a FINAL knal right at the very end: it's caught at its loud transient when the track stops,
+                                                 // so the demo ENDS ON A BANG (no gentle fade-out — see the declick-only fade in `master`).
+        render_impact(bed, end - 0.45, 1.0, 1.0);
     }
 
     // Continuous sub-bass (centre) into the bed so it pumps with the sidechain. It follows the
@@ -1301,7 +1304,9 @@ fn master(
     for i in 0..total {
         let t = i as f32 * dt;
         let fade_in = (t / 1.5).clamp(0.0, 1.0);
-        let fade_out = ((demo - t) / 2.0).clamp(0.0, 1.0);
+        // END ON THE BANG: only a ~25 ms declick at the very end (not a 2 s fade-down), so the final
+        // blast rings out at full and the track stops ON the hit instead of gently fading away.
+        let fade_out = ((demo - t) / 0.025).clamp(0.0, 1.0);
         let g = fade_in * fade_out * score.gain_at(t);
         // split each channel into a clean low band + an upper band
         let mut lo = [0.0f32; 2];
