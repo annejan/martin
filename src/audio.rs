@@ -251,6 +251,34 @@ fn donk(freq: f32) -> Box<dyn AudioUnit> {
     )
 }
 
+/// House organ stab: the classic early-90s "M1 organ" rave/house chord stab — Haddaway "What Is Love",
+/// Snap!, Cappella. A drawbar-organ tone (fundamental + octave + the nasal fifth + 2-octave partial,
+/// like organ drawbars) with a hair of detuned saw for bite, a percussive pluck attack and a short
+/// sustain through a bright resonant filter. Hollow + euphoric, but the drive + minor chords keep the
+/// dark edge. Rendered per triad note so the chord can be panned wide.
+fn houseorg(freq: f32) -> Box<dyn AudioUnit> {
+    let organ = (sine_hz(freq)              // 16' fundamental
+        + sine_hz(freq * 2.0) * 0.7         // 8'  octave
+        + sine_hz(freq * 3.0) * 0.5         // 5⅓' fifth — the nasal organ honk
+        + sine_hz(freq * 4.0) * 0.32        // 4'  two octaves up
+        + saw_hz(freq * 1.005) * 0.28       // detuned saw pair = the "zaag" bite + width
+        + saw_hz(freq * 0.995) * 0.28)
+        * 0.17;
+    let cut = envelope(|t: f32| 1200.0 + 3600.0 * (-t * 8.5).exp()); // bright pluck that settles fast
+    Box::new(
+        ((organ | cut) >> lowpass_q(1.1) >> shape(Tanh(1.3)))
+            * envelope(|t: f32| {
+                let a = 0.004;
+                if t < a {
+                    t / a
+                } else {
+                    0.22 + 0.78 * (-(t - a) * 7.0).exp() // percussive attack → a short organ sustain
+                }
+            })
+            * 0.44,
+    )
+}
+
 /// CASIO / electric-piano: a tine-ish voice (sine carrier + a bell "ting" harmonic + a hair of saw
 /// cheese) with a pluck-to-light-sustain envelope — the kitschy Ome-Henk keyboard comping.
 fn casio(freq: f32) -> Box<dyn AudioUnit> {
@@ -928,8 +956,10 @@ pub fn synth_track(score: &Score) -> Track {
     }
 
     // epic supersaw chord wall: wide detuned saws on the chords, one per bar, gated to the BIG
-    // sections (drop + climax) so the dynamic range stays — quiet intro/breakdown → wall in the drop.
-    for name in ["drop", "climax"] {
+    // sections (drop + climax + the OUTRO finale) so the dynamic range stays — quiet intro/breakdown →
+    // wall in the drop. The outro carries the wall so the ending rings out as a full anthem, not a thin
+    // lead over drums.
+    for name in ["drop", "climax", "outro"] {
         if let Some((s0, s1)) = section_window(score, name) {
             let mut b = (s0 / bar).ceil() as usize;
             while (b as f32) * bar < s1 {
@@ -952,6 +982,35 @@ pub fn synth_track(score: &Score) -> Track {
         }
     }
 
+    // SHIMMER: an airy octave-UP choir pad that eases in across the climax AND the outro — the
+    // euphoric, almost-angelic top that lifts the final sections into the payoff (they read as weak/
+    // thin without an opening "bloom" over them). Additive, wide, and gated to those two sections.
+    // (`set shimmer=0` off.)
+    let shimmer = score.param("shimmer", 0.09);
+    if shimmer > 0.001 {
+        for name in ["climax", "outro"] {
+            if let Some((s0, s1)) = section_window(score, name) {
+                let mut b = (s0 / bar).ceil() as usize;
+                while (b as f32) * bar < s1 {
+                    let t = b as f32 * bar;
+                    let ramp = ((t - s0) / ((s1 - s0) * 0.6)).clamp(0.0, 1.0); // swells in over the first 60%
+                    for &f in score.chord_at(t).triad().iter() {
+                        render_into(&mut bed, t, bar, shimmer * ramp, -0.85, choir(f * 2.0));
+                        render_into(
+                            &mut bed,
+                            t,
+                            bar,
+                            shimmer * ramp,
+                            0.85,
+                            choir(f * 2.0 * 1.004),
+                        );
+                    }
+                    b += 1;
+                }
+            }
+        }
+    }
+
     // euphoric off-beat "DONK" stab — happy-hardcore / house party energy: a bright plucky chord
     // bounce on every up-beat (the "and") through the drop + climax, under the held wall.
     let hb = score.beat() / 2.0;
@@ -968,6 +1027,29 @@ pub fn synth_track(score: &Score) -> Track {
                     0.55,
                     score.chord_at(t).triad(),
                     donk,
+                );
+                t += score.beat();
+            }
+        }
+    }
+
+    // CLASSIC HOUSE ORGAN STAB — the early-90s "M1 organ" rave/house sound (Haddaway / Snap!): a wide
+    // organ chord bouncing on the off-beats through the euphoric majors + the finale. This is the "zaag
+    // orgel house" the track was missing; it sits ON TOP of the (now quieter) donk pluck so the off-beat
+    // reads as organ + bite, and it rides the minor/major chords so the dark edge survives the happiness.
+    for name in ["drop", "climax", "outro"] {
+        if let Some((s0, s1)) = section_window(score, name) {
+            let mut t = (s0 / score.beat()).ceil() * score.beat() + hb; // first up-beat
+            while t < s1 {
+                let m = score.levels(t).mids;
+                chord_spread(
+                    &mut bed,
+                    groove(t, beat, 0x40, 0.004, 0.0),
+                    hb * 0.95,
+                    (score.param("house", 0.12) + 0.06 * m) * vel(t, beat, 0x40), // `set house=`
+                    0.7,
+                    score.chord_at(t).triad(),
+                    houseorg,
                 );
                 t += score.beat();
             }
@@ -1013,17 +1095,20 @@ pub fn synth_track(score: &Score) -> Track {
         render_jet(&mut bed, t - 4.0 * bar, 4.0 * bar, 0.5); // a screaming jet rips into the climax
         render_impact(&mut bed, t, 2.0, 0.72);
     }
-    // EXPLOSIVE finale (demoscene big ending): an accelerating snare-roll + riser crescendo through
-    // the whole outro into a MASSIVE final impact that rings out through the master fade — not a
-    // gentle fade-down. A couple of building hits lead the eye to the blast.
+    // EXPLOSIVE finale — but CLEAN. The outro is the anthem: the chorus melody + the full epic wall
+    // (extended above) + the crescendo gain carry it, ringing out with power. The FX stay out of the
+    // way: ONE impact lands the outro downbeat, then a SINGLE accelerating snare-roll + riser + jet in
+    // the LAST few bars builds into ONE massive final blast. (The old version ran a roll + risers + a
+    // mid-outro hit across the WHOLE ~40 s outro — that read as messy noise, not a rising, epic finale.)
     if let Some(t0) = section_time(score, "outro") {
         let end = score.demo_len();
-        render_snare_roll(&mut bed, t0, (end - t0 - 0.2).max(0.5), score.beat());
-        render_riser(&mut bed, t0, (end - t0).min(7.0), 0.36, 0.0);
-        render_impact(&mut bed, t0, 1.6, 0.45); // the outro lands
-        render_impact(&mut bed, (t0 + end) * 0.5, 1.6, 0.55); // a mid-outro hit
-        render_jet(&mut bed, end - 4.0, 2.2, 0.6); // a jet screams down into the blast
-        render_impact(&mut bed, end - 2.4, 3.2, 1.0); // THE blast — decays through the fade
+        render_impact(&mut bed, t0, 1.4, 0.5); // land the outro downbeat — then let the anthem ring
+        let build = (4.0 * bar).min(end - t0 - 0.1).max(0.5); // the final build window only
+        let bs = end - build;
+        render_snare_roll(&mut bed, bs, build, score.beat()); // accelerating roll INTO the blast
+        render_riser(&mut bed, bs, build, 0.42, 0.0); // a rising uplifter under the roll
+        render_jet(&mut bed, end - 2.6, 2.0, 0.6); // jet screams down into the hit
+        render_impact(&mut bed, end - 2.2, 3.2, 1.0); // THE blast — rings out through the master fade
     }
 
     // Continuous sub-bass (centre) into the bed so it pumps with the sidechain. It follows the
@@ -1069,6 +1154,42 @@ pub fn synth_track(score: &Score) -> Track {
     }
 
     let wet = reverb_send(&bed, sr);
+
+    // reverb-depth AUTOMATION: instead of one flat wet send, open the space in the sparse/emotional
+    // sections (intro/breakdown/outro — size + feeling) and pull it back in the punchy drops (so the
+    // kick + wall stay tight and dry). Automating the reverb like this is a big part of what reads as a
+    // produced, 3D record vs a flat one. A per-section target, one-pole smoothed so it glides at the
+    // boundaries. (`set reverbauto=0` → flat send.)
+    let reverbauto = score.param("reverbauto", 1.0);
+    let mut rv_env = vec![1.0f32; total];
+    {
+        let secmul = |name: &str| match name {
+            "intro" => 1.5,
+            "build" => 1.15,
+            "drop" => 0.7,
+            "breakdown" => 1.7,
+            "climax" => 0.85,
+            "outro" => 1.25,
+            _ => 1.0,
+        };
+        let mut target = vec![1.0f32; total];
+        for s in &score.sections {
+            if let Some((s0, s1)) = section_window(score, &s.name) {
+                let i0 = (s0 * sr) as usize;
+                let i1 = std::cmp::min((s1 * sr) as usize, total);
+                let mul = secmul(&s.name);
+                for v in target.iter_mut().take(i1).skip(i0) {
+                    *v = mul;
+                }
+            }
+        }
+        let sm = 1.0 - (-dt / 0.3).exp(); // ~0.3 s glide between sections
+        let mut e = target.first().copied().unwrap_or(1.0);
+        for i in 0..total {
+            e += (target[i] - e) * sm;
+            rv_env[i] = 1.0 + reverbauto * (e - 1.0); // blend toward flat as reverbauto→0
+        }
+    }
 
     // Haas-style stereo widen on the lead: a 12 ms offset between L and R channels makes the
     // lead read as a wide stereo presence without audible echo. Apply ONLY to the lead's
@@ -1131,7 +1252,9 @@ pub fn synth_track(score: &Score) -> Track {
         let mut lo = [0.0f32; 2];
         let mut hi = [0.0f32; 2];
         for c in 0..2 {
-            let x = kickbuf[2 * i + c] + bed[2 * i + c] * duck[i] + wet[2 * i + c] * reverb_amt;
+            let x = kickbuf[2 * i + c]
+                + bed[2 * i + c] * duck[i]
+                + wet[2 * i + c] * reverb_amt * rv_env[i];
             lp[c] += split_k * (x - lp[c]);
             lo[c] = lp[c];
             hi[c] = x - lp[c];
