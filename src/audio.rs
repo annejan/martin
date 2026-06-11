@@ -27,18 +27,6 @@ impl Track {
 
 // ---- voices (FunDSP graphs; each is a 0-input → 1-output unit) ------------------------------
 
-/// Kick: a sine swept from ~125 Hz down to 45 Hz with a fast amplitude decay, plus a short
-/// high-passed noise CLICK on the transient so it cuts through a busy mix (modern DnB punch) instead
-/// of reading as a soft 90s drum-machine thud.
-fn kick() -> Box<dyn AudioUnit> {
-    Box::new(
-        (envelope(|t: f32| 45.0 + 80.0 * (-t * 38.0).exp()) >> sine())
-            * envelope(|t: f32| (-t * 11.0).exp())
-            + (noise() >> highpass_hz(1800.0, 0.7)) * envelope(|t: f32| (-t * 130.0).exp()) * 0.6
-            + (noise() >> bandpass_hz(4000.0, 0.8)) * envelope(|t: f32| (-t * 200.0).exp()) * 0.3,
-    )
-}
-
 /// Snare: high-passed noise burst + a short tone body.
 fn snare() -> Box<dyn AudioUnit> {
     Box::new(
@@ -159,9 +147,10 @@ fn supersaw(freq: f32) -> Box<dyn AudioUnit> {
         * 0.13;
     let cut = envelope(|t: f32| 1300.0 + 3200.0 * (t * 1.0).min(1.0)); // filter swells open
     Box::new(
-        ((saws | cut) >> lowpass_q(0.7) >> highpass_hz(180.0, 0.7)) // HP off the sub so it's huge, not muddy
+        // HP off the sub, then DRIVE it (rawstyle screech grit) — a hard wall, not a polite pad.
+        ((saws | cut) >> lowpass_q(0.7) >> highpass_hz(180.0, 0.7) >> shape(Tanh(1.8)))
             * envelope(|t: f32| (t * 3.0).min(1.0))
-            * 0.5,
+            * 0.42,
     )
 }
 
@@ -272,6 +261,43 @@ fn render_riser(buf: &mut [f32], start_t: f32, dur: f32, amp: f32, pan: f32) {
             (phase.sin() * 0.35 + bright * 0.65) * env * gate * amp,
             pan,
         );
+    }
+}
+
+/// Modern hardstyle / rawstyle KICK, tuned per hit to the chord root: a tight click transient → a
+/// heavily DISTORTED pitch-swept body (sine + a saw partial driven through tanh then hard-clipped =
+/// the "zaag"/gabber grit) → a pitched tonal TAIL on the root pitch-class (the "piep" — the kick is
+/// melodic and sings the progression). This is the centre of a modern hard production, not a soft
+/// 90s drum-machine thud.
+fn render_hardkick(buf: &mut [f32], t: f32, root: f32, amp: f32) {
+    use std::f32::consts::TAU;
+    let sr = SAMPLE_RATE as f32;
+    let start = (t.max(0.0) * sr) as usize;
+    let n = (0.5 * sr) as usize;
+    // pitch the tonal tail to the root pitch-class in a punchy 55-90 Hz window
+    let mut tail_hz = root;
+    while tail_hz > 90.0 {
+        tail_hz *= 0.5;
+    }
+    while tail_hz < 55.0 {
+        tail_hz *= 2.0;
+    }
+    let (mut ph_b, mut ph_t) = (0.0f32, 0.0f32);
+    for i in 0..n {
+        let tt = i as f32 / sr;
+        let frame = start + i;
+        // body: a fast pitch sweep from ~300 Hz down to the tail pitch over ~13 ms
+        let body_hz = tail_hz + (300.0 - tail_hz) * (-tt * 75.0).exp();
+        ph_b = (ph_b + TAU * body_hz / sr) % TAU;
+        let raw = ph_b.sin() + ((ph_b / TAU) * 2.0 - 1.0) * 0.5; // sine + saw partial (the "zaag")
+        let driven = (raw * 5.0).tanh(); // overdrive
+        let body = (driven * 1.6).clamp(-1.0, 1.0) * (-tt * 9.0).exp(); // + hard-clip edge, fast decay
+        // tonal tail: the pitched "piep", distorted, slower decay
+        ph_t = (ph_t + TAU * tail_hz / sr) % TAU;
+        let tail = (ph_t.sin() * 3.0).tanh() * (-tt * 5.0).exp();
+        // click transient: bright noise blip for the attack snap
+        let click = pseudo_noise(i + start * 11) * (-tt * 300.0).exp() * 0.6;
+        add_stereo(buf, frame, (body * 0.95 + tail * 0.45 + click) * amp, 0.0);
     }
 }
 
@@ -389,10 +415,11 @@ fn render_intro_percussion(kickbuf: &mut [f32], bed: &mut [f32], score: &Score) 
     let bars = (build_t / bar).floor() as usize;
     for b in 2..bars {
         let base = b as f32 * bar;
-        let k_amp = if b < 4 { 0.22 } else { 0.42 };
-        render_into(kickbuf, base, 0.36, k_amp, 0.0, kick());
+        let k_amp = if b < 4 { 0.30 } else { 0.55 };
+        let root = score.chord_at(base).root;
+        render_hardkick(kickbuf, base, root, k_amp);
         if b >= 4 {
-            render_into(kickbuf, base + 2.0 * beat, 0.32, k_amp * 0.55, 0.0, kick());
+            render_hardkick(kickbuf, base + 2.0 * beat, root, k_amp * 0.55);
         }
         if b >= 5 {
             render_into(bed, base + beat, 0.10, 0.08, -0.35, hat());
@@ -505,12 +532,13 @@ pub fn synth_track(score: &Score) -> Track {
 
     let kicks = score.hits(Inst::Kick);
     for &kt in &kicks {
-        render_into(&mut kickbuf, kt, 0.45, 0.7, 0.0, kick());
+        render_hardkick(&mut kickbuf, kt, score.chord_at(kt).root, 0.92);
+        // a light bass reinforcement under the kick (the pitched kick tail carries most of the low end)
         render_into(
             &mut bed,
             kt,
-            0.55,
             0.5,
+            0.3,
             0.0,
             bass(bass_freq(score.chord_at(kt).root)),
         );

@@ -11,15 +11,19 @@
 # --- settings (each → MARTIN_<KEY>) ---
 morph_count = 160000
 
-# --- the show: text parts @@anchored to the score's sections, so the words hit with the music ---
+# --- the show: text parts @@anchored to the score's sections so the WORDS MATCH THE EMOTION. The
+#     narrative: op de camping MET deFEEST = the ultimate joy; ZONDER deFEEST = kut. So the euphoric
+#     major chorus/climax carry "MET deFEEST", and the TRAGIC minor breakdown carries "ZONDER... kut".
 [seq]
 image:defeest-logo.png      @@intro      @12,3  ~sparkle              # deFEEST logo opens the show
-text:OP VAKANTIE            @@build      @28,3  ~typewriter  ^wave    # the parody setup (1st couplet)
-text:OP DE CAMPING          @@drop       @56,4  ~explode     ^wave    # THE HOOK — lands on the chorus
-text:MET deFEEST            @@breakdown  @28,3  ~swirl        ^wave   # the parody payoff (2nd couplet)
-text:OP DE CAMPING          @@climax     @52,4  ~outline     ^wave    # the big reprise, high + epic
-wall:ANUS|KLOOT|CINDER      @@outro      @12,4  ~fade                 # the crew, as the blast hits
-text:a deFEEST production    @10,4               ~pen-write   ^wave    # outro tag
+text:OP DE CAMPING          @@build      @28,3  ~typewriter  ^wave    # the dream builds over the couplet
+text:MET deFEEST            @@drop       @56,4  ~explode     ^wave    # JOY on the chorus: op de camping MET deFEEST
+text:ZONDER deFEEST         @@breakdown  @15,3  ~swirl               # the tragic turn (minor breakdown)...
+text:IS HET KUT             @15,3               ~fade         ^wave   # ...is kut
+text:OP DE CAMPING          @@climax     @28,4  ~outline     ^wave    # the triumphant euphoric reprise...
+text:MET deFEEST            @28,4               ~explode     ^wave    # ...MET deFEEST — the ultimate joy
+text:HET ULTIEME GENOT      @@outro      @12,4  ~pen-write   ^wave    # the payoff lands on the outro
+wall:ANUS|KLOOT|CINDER       @10,4               ~fade                 # the crew, as the blast hits
 
 # --- the camera: a directed track (t = show-time seconds), tuned to the ~222s score timeline:
 #     intro 0 · build/couplet 14 · drop/chorus 44 · breakdown 103 · climax 133 · outro 192 · end 222.
