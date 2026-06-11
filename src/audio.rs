@@ -108,8 +108,8 @@ fn bass(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
 ///   • woozy/unstable pitch — a ~4 Hz vibrato + a slower ~0.6 Hz drift on EACH oscillator (at
 ///     different rates/phases) on top of ±12-cent detuning, so the three voices beat against each
 ///     other and the pitch drifts. Best on HELD notes (it needs time to develop). A palette voice —
-///     wire it into the score where a sustained woozy sub fits (audition it with `woozbass_demo`).
-#[allow(dead_code)]
+///     wire it into the score where a sustained woozy sub fits (`set woozbass=1` swaps it into the
+///     bass note-lane; audition the voice alone with the `woozbass_demo` test).
 fn woozbass(freq: f32) -> Box<dyn AudioUnit> {
     use std::f32::consts::TAU;
     // independent vibrato + slow drift per oscillator → they never lock, so the pitch feels unstable.
@@ -877,17 +877,24 @@ pub fn synth_track(score: &Score) -> Track {
     }
 
     // articulated bassline: the `<section>.bass` note-lane (the real funky bass), centred — a punchy
-    // `bass` voice at each onset, riding on top of the continuous drone sub below.
+    // `bass` voice at each onset, riding on top of the continuous drone sub below. `set woozbass=1`
+    // swaps in the dark/growl/woozy `woozbass` voice (held a touch longer so its growl can bloom).
+    let wooz = score.param("woozbass", 0.0) > 0.5;
     for (t, f) in score.bass_notes() {
         let v = vel(t, beat, 0xB5);
         let amp = (0.20 + 0.18 * score.levels(t).sub_bass) * v; // sit with the section's sub level
+        let (dur, voice): (f32, Box<dyn AudioUnit>) = if wooz {
+            (0.6, woozbass(f))
+        } else {
+            (0.42, bass(f, v))
+        };
         render_into(
             &mut bed,
             groove(t, beat, 0xB5, 0.003, 0.0),
-            0.42,
+            dur,
             amp,
             0.0,
-            bass(f, v),
+            voice,
         );
     }
     // sustained pad: one chord per bar, spread wide (warmth/body) with a SLOW auto-pan LFO so the
