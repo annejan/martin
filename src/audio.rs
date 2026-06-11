@@ -27,18 +27,25 @@ impl Track {
 
 // ---- voices (FunDSP graphs; each is a 0-input → 1-output unit) ------------------------------
 
-/// Snare: high-passed noise burst + a short tone body.
+/// Snare: high-passed noise crack + a short tone body + a clap layer (low-passed noise with slower
+/// decay for that back-breaking demoscene crack — the clap fills the low-mids the crack misses).
 fn snare() -> Box<dyn AudioUnit> {
     Box::new(
         ((noise() >> highpass_hz(1200.0, 0.7)) * envelope(|t: f32| (-t * 26.0).exp())
-            + sine_hz(190.0) * envelope(|t: f32| (-t * 24.0).exp()) * 0.5)
-            * 0.7,
+            + sine_hz(190.0) * envelope(|t: f32| (-t * 24.0).exp()) * 0.5
+            + (noise() >> highpass_hz(280.0, 0.6)) * envelope(|t: f32| (-t * 16.0).exp()) * 0.35)
+            * 0.75,
     )
 }
 
-/// Hat: very short bright high-passed noise.
+/// Hat: bright high-passed noise crack + a body layer (lower, slower) so it has a "tick" body
+/// behind the sizzle — without it every hat is a wisp, not a percussion hit.
 fn hat() -> Box<dyn AudioUnit> {
-    Box::new((noise() >> highpass_hz(7000.0, 0.7)) * envelope(|t: f32| (-t * 80.0).exp()))
+    Box::new(
+        ((noise() >> highpass_hz(7000.0, 0.7)) * envelope(|t: f32| (-t * 80.0).exp()) * 0.55
+            + (noise() >> highpass_hz(3500.0, 0.5)) * envelope(|t: f32| (-t * 40.0).exp()) * 0.45)
+            * 0.9,
+    )
 }
 
 /// Stab: one chord note as a saw through a low-pass with a plucky attack (rendered per triad note
@@ -159,6 +166,22 @@ fn supersaw(freq: f32) -> Box<dyn AudioUnit> {
     )
 }
 
+/// Choir / ensemble pad: a wide bank of detuned saws + a sub-octave sine body through a soft filter
+/// with a slow swell — lush grandeur layered UNDER the supersaw wall in the big sections (it carries
+/// the warmth/size while the supersaw carries the bright edge). The new diffuse reverb makes it bloom.
+fn choir(freq: f32) -> Box<dyn AudioUnit> {
+    let saws = (saw_hz(freq)
+        + saw_hz(freq * 1.004)
+        + saw_hz(freq * 0.996)
+        + saw_hz(freq * 1.009)
+        + saw_hz(freq * 0.991)
+        + sine_hz(freq * 0.5) * 0.6)
+        * 0.15;
+    Box::new(
+        (saws >> lowpass_hz(2600.0, 0.7)) * envelope(|t: f32| (t * 1.0).min(1.0)) * 0.3,
+    )
+}
+
 /// CASIO / electric-piano: a tine-ish voice (sine carrier + a bell "ting" harmonic + a hair of saw
 /// cheese) with a pluck-to-light-sustain envelope — the kitschy Ome-Henk keyboard comping.
 fn casio(freq: f32) -> Box<dyn AudioUnit> {
@@ -258,6 +281,39 @@ fn groove(t: f32, beat: f32, seed: u32, jit: f32, lay: f32) -> f32 {
     let swing = if s.rem_euclid(2) == 1 { 0.10 * sl } else { 0.0 };
     let j = pseudo_noise((t * 4099.0) as usize ^ seed as usize) * jit;
     (t + swing + lay + j).max(0.0)
+}
+
+/// Ping-pong delay: a stereo delay line where each tap alternates L-R-L-R so the delayed
+/// repeats bounce across the stereo field. Used on the arp to give it motion and space.
+fn render_pingpong(buf: &mut [f32], delay_s: f32, feedback: f32, wet: f32) {
+    let sr = SAMPLE_RATE as f32;
+    let d = (delay_s * sr) as usize;
+    if d < 2 {
+        return;
+    }
+    let frames = buf.len() / 2;
+    let mut line = vec![0f32; d * 2];
+    let mut w = 0usize;
+    let mut alt = 0u32;
+    for i in 0..frames {
+        let l = buf[2 * i];
+        let r = buf[2 * i + 1];
+        let mono = l + r;
+        let dl = line[2 * w];
+        let dr = line[2 * w + 1];
+        buf[2 * i] += dl * wet;
+        buf[2 * i + 1] += dr * wet;
+        let fb = mono * feedback * 0.5;
+        if alt & 1 == 0 {
+            line[2 * w] = fb * 0.45;
+            line[2 * w + 1] = fb;
+        } else {
+            line[2 * w] = fb;
+            line[2 * w + 1] = fb * 0.45;
+        }
+        alt = alt.wrapping_add(1);
+        w = (w + 1) % d;
+    }
 }
 
 fn add_stereo(buf: &mut [f32], frame: usize, v: f32, pan: f32) {
@@ -525,30 +581,55 @@ fn reverb_send(bed: &[f32], sr: f32) -> Vec<f32> {
         hp += a * (*s - hp);
         *s -= hp;
     }
-    let comb = |delays: &[(f32, f32)]| -> Vec<f32> {
+    // ~22 ms pre-delay: the gap before the tail that makes the space read as a big, real hall.
+    let pre = (0.022 * sr) as usize;
+    // 6 prime-length feedback combs per tank — the modes interleave into a smooth dense tail instead
+    // of a few resonant metallic rings. Two decorrelated delay sets feed the L and R tanks (width).
+    let comb = |delays: &[usize]| -> Vec<f32> {
         let mut wet = vec![0f32; frames];
-        for &(ds, fb) in delays {
-            let d = (ds * sr) as usize;
-            if d == 0 {
-                continue;
-            }
+        for &d in delays {
             let mut line = vec![0f32; frames];
             let mut lp = 0f32;
             for i in 0..frames {
+                let src = if i >= pre { mono[i - pre] } else { 0.0 };
                 let fb_in = if i >= d { line[i - d] } else { 0.0 };
                 lp += damp * (fb_in - lp);
-                line[i] = mono[i] + fb * lp;
-                wet[i] += fb * lp;
+                line[i] = src + 0.88 * lp;
+                wet[i] += 0.88 * lp;
             }
+        }
+        for w in wet.iter_mut() {
+            *w *= 0.5; // 6 combs sum hot — tame before diffusion so the wet doesn't pump the limiter
         }
         wet
     };
-    let wl = comb(&[(0.0297, 0.78), (0.0371, 0.80), (0.0411, 0.76)]);
-    let wr = comb(&[(0.0319, 0.79), (0.0353, 0.77), (0.0431, 0.80)]);
+    // in-place series all-pass diffuser: smears the comb echoes into a smooth, diffuse tail.
+    let allpass = |x: &mut [f32], d: usize, g: f32| {
+        let mut buf = vec![0f32; x.len()];
+        for i in 0..x.len() {
+            let dl = if i >= d { buf[i - d] } else { 0.0 };
+            let y = -g * x[i] + dl;
+            buf[i] = x[i] + g * y;
+            x[i] = y;
+        }
+    };
+    let mut wl = comb(&[1117, 1188, 1277, 1356, 1422, 1491]);
+    let mut wr = comb(&[1129, 1213, 1291, 1373, 1447, 1499]);
+    for &d in &[0.0051f32, 0.0167, 0.0097] {
+        allpass(&mut wl, (d * sr) as usize, 0.7);
+    }
+    for &d in &[0.0047f32, 0.0153, 0.0089] {
+        allpass(&mut wr, (d * sr) as usize, 0.7);
+    }
+    // darken the wet return (~6.5 kHz one-pole LP) so the tail sits behind the mix like a real room.
+    let ad = 1.0 - (-std::f32::consts::TAU * 6500.0 / sr).exp();
+    let (mut dl, mut dr) = (0.0f32, 0.0f32);
     let mut out = vec![0f32; bed.len()];
     for i in 0..frames {
-        out[2 * i] = wl[i];
-        out[2 * i + 1] = wr[i];
+        dl += ad * (wl[i] - dl);
+        dr += ad * (wr[i] - dr);
+        out[2 * i] = dl;
+        out[2 * i + 1] = dr;
     }
     out
 }
@@ -582,11 +663,14 @@ pub fn synth_track(score: &Score) -> Track {
     }
     render_intro_percussion(&mut kickbuf, &mut bed, score);
 
-    for t in score.hits(Inst::Snare) {
-        render_into(&mut bed, groove(t, beat, 0x55, 0.003, 0.004), 0.4, 0.5 * vel(t, beat, 0x55), 0.0, snare());
+    for (i, t) in score.hits(Inst::Snare).into_iter().enumerate() {
+        // snares alternate left/centre/right — they're the backbeat anchor, spread them so the
+        // groove breathes across the field instead of sitting dead centre.
+        let pan = match i % 3 { 0 => -0.2, 1 => 0.15, _ => -0.05 };
+        render_into(&mut bed, groove(t, beat, 0x55, 0.003, 0.004), 0.4, 0.5 * vel(t, beat, 0x55), pan, snare());
     }
     for (i, t) in score.hits(Inst::Hat).into_iter().enumerate() {
-        let pan = if i % 2 == 0 { 0.5 } else { -0.5 }; // hats dance across the field
+        let pan = if i % 2 == 0 { 0.65 } else { -0.65 }; // hats dance wider across the field
         render_into(&mut bed, groove(t, beat, 0x77, 0.006, 0.0), 0.12, 0.2 * vel(t, beat, 0x77), pan, hat());
     }
     for t in score.hits(Inst::Stab) {
@@ -596,32 +680,39 @@ pub fn synth_track(score: &Score) -> Track {
             groove(t, beat, 0x6E, 0.004, 0.0),
             0.5,
             (0.10 + 0.10 * m) * vel(t, beat, 0x6E),
-            0.6,
+            0.75,
             score.chord_at(t).triad(),
             stab,
         );
     }
     render_intro_bassline(&mut bed, score);
 
-    // lead: forward + centre — louder so it carries the melody, with an always-on octave-up sheen
-    // (extra in the climax) so it reads as present, not ethereal.
+    // lead: forward + centre — the HOOK, push it up so it cuts through the wall. The lead is the
+    // melody the viewer hums leaving the tent; it does NOT sit behind the drums.
     let climax = section_window(score, "climax");
     for (t, f) in score.lead_notes() {
         let v = vel(t, beat, 0x1A);
         let gt = groove(t, beat, 0x3A, 0.005, 0.005);
-        render_into(&mut bed, gt, 0.6, 0.34 * v, 0.0, lead(f, v));
-        render_into(&mut bed, gt, 0.6, 0.08 * v, 0.0, lead(f * 2.0, v)); // octave sheen everywhere
+        render_into(&mut bed, gt, 0.6, 0.55 * v, 0.0, lead(f, v)); // main lead — up from 0.50
+        render_into(&mut bed, gt, 0.6, 0.15 * v, 0.0, lead(f * 2.0, v)); // octave sheen
         if let Some((s0, s1)) = climax {
             if (s0..s1).contains(&t) {
-                render_into(&mut bed, gt, 0.6, 0.10 * v, 0.0, lead(f * 2.0, v));
+                render_into(&mut bed, gt, 0.6, 0.18 * v, 0.0, lead(f * 2.0, v)); // extra sheen in climax
             }
         }
     }
-    // arp counter-line: a score note-lane (`<section>.arp` in assets/score.txt), panned alternately.
+    // arp counter-line into its OWN buffer so we can process it (ping-pong delay) without
+    // smearing the drums or the lead — spatial separation is the whole trick.
+    let mut arp_buf = vec![0f32; stereo];
     for (i, (t, f)) in score.arp_notes().into_iter().enumerate() {
-        let pan = if i % 2 == 0 { 0.55 } else { -0.55 };
+        let pan = if i % 2 == 0 { 0.7 } else { -0.7 };
         let v = vel(t, beat, 0x2B);
-        render_into(&mut bed, groove(t, beat, 0x9C, 0.006, 0.0), 0.2, 0.15 * v, pan, arp(f, v));
+        render_into(&mut arp_buf, groove(t, beat, 0x9C, 0.006, 0.0), 0.2, 0.20 * v, pan, arp(f, v));
+    }
+    // ping-pong delay: 8th note at 140 BPM, bounces L-R-L-R, 3–4 repeats, glued under the lead.
+    render_pingpong(&mut arp_buf, 60.0 / beat / 2.0, 0.35, 0.30);
+    for i in 0..stereo {
+        bed[i] += arp_buf[i];
     }
 
     // articulated bassline: the `<section>.bass` note-lane (the real funky bass), centred — a punchy
@@ -631,19 +722,22 @@ pub fn synth_track(score: &Score) -> Track {
         let amp = (0.20 + 0.18 * score.levels(t).sub_bass) * v; // sit with the section's sub level
         render_into(&mut bed, groove(t, beat, 0xB5, 0.003, 0.0), 0.42, amp, 0.0, bass(f, v));
     }
-    // sustained pad: one chord per bar, spread wide (warmth/body).
+    // sustained pad: one chord per bar, spread wide (warmth/body) with a SLOW auto-pan LFO so the
+    // pad breathes and rotates across the stereo field — a static pad reads as wallpaper, a
+    // moving one as atmosphere.
     let bar = score.bar();
     let nbars = (score.demo_len() / bar).ceil() as usize;
     for b in 0..nbars {
         let t = b as f32 * bar;
         let m = score.levels(t).mids;
         let intro_pad = ((t - 6.0 * bar) / (2.0 * bar)).clamp(0.0, 1.0);
+        let pan_spread = 0.5 + 0.25 * (t * 0.4 / bar * TAU).sin();
         chord_spread(
             &mut bed,
             t,
             bar,
-            (0.06 + 0.10 * m) * intro_pad, // fuller pad body so the mix isn't empty between hits
-            0.7,
+            (0.06 + 0.10 * m) * intro_pad,
+            pan_spread,
             score.chord_at(t).triad(),
             pad,
         );
@@ -664,6 +758,9 @@ pub fn synth_track(score: &Score) -> Track {
                 for &f in score.chord_at(t).triad().iter() {
                     render_into(&mut bed, t, bar, amp * 0.7, -0.95, supersaw(f));
                     render_into(&mut bed, t, bar, amp * 0.7, 0.95, supersaw(f * 1.004));
+                    // lush choir bed an octave below the wall — grandeur/warmth under the bright saws
+                    render_into(&mut bed, t, bar, amp * 0.5, -0.6, choir(f * 0.5));
+                    render_into(&mut bed, t, bar, amp * 0.5, 0.6, choir(f * 0.5 * 1.003));
                 }
                 b += 1;
             }
@@ -742,7 +839,7 @@ pub fn synth_track(score: &Score) -> Track {
 
     // sidechain pump: a fast dip right on each kick recovering over ~0.11s → the dance "breath".
     let mut duck = vec![1.0f32; total];
-    let (depth, tau) = (0.58f32, 0.09f32);
+    let (depth, tau) = (0.7f32, 0.08f32);
     for &kt in &kicks {
         let k0 = (kt * sr) as usize;
         for j in 0..(0.34 * sr) as usize {
@@ -759,6 +856,29 @@ pub fn synth_track(score: &Score) -> Track {
 
     let wet = reverb_send(&bed, sr);
 
+    // Haas-style stereo widen on the lead: a 12 ms offset between L and R channels makes the
+    // lead read as a wide stereo presence without audible echo. Apply ONLY to the lead's
+    // frequency range (600 Hz–6 kHz) so we don't smear the bass.
+    let haas_d = (0.012 * sr) as usize;
+    let mut haas_buf = vec![0f32; haas_d];
+    let hp_a = 1.0 - (-TAU * 600.0 / sr).exp();
+    let lp_a = 1.0 - (-TAU * 6000.0 / sr).exp();
+    let mut hp = 0.0f32;
+    let mut bp = 0.0f32;
+    for i in 0..total {
+        let m = 0.5 * (bed[2 * i] + bed[2 * i + 1]);
+        hp += hp_a * (m - hp);
+        let h = m - hp; // high-passed at 600
+        // band-pass: one-pole low-pass at 6000 after the HP
+        bp += lp_a * (h - bp);
+        // write the band-passed signal into the delay line, read from it offset by haas_d
+        let delayed = if i >= haas_d { haas_buf[(i - haas_d) % haas_d] } else { 0.0 };
+        haas_buf[i % haas_d] = bp;
+        // add delayed copy to R channel only (Haas: L arrives first, R arrives late → brain
+        // hears a wide phantom image anchored on the left side).
+        bed[2 * i + 1] += delayed * 0.25;
+    }
+
     // master: a 2-BAND mastering chain instead of a single full-bus tanh (which glazed the whole mix
     // into an organ). Per channel: split at ~160 Hz → keep the sub + kick CLEAN; on the UPPER band
     // only: mid/side WIDEN (lows stay mono-tight), add an HF-AIR exciter (the "crisp" sparkle the
@@ -770,8 +890,8 @@ pub fn synth_track(score: &Score) -> Track {
     let mut lp = [0.0f32; 2];
     let mut air_lp = [0.0f32; 2];
     let mut gr = 1.0f32;
-    let atk = 1.0 - (-1.0 / (0.002 * sr)).exp();
-    let rel = 1.0 - (-1.0 / (0.15 * sr)).exp();
+    let atk = 1.0 - (-1.0 / (0.0006 * sr)).exp(); // fast attack catches the hard-kick/blast transients
+    let rel = 1.0 - (-1.0 / (0.12 * sr)).exp();
     for i in 0..total {
         let t = i as f32 * dt;
         let fade_in = (t / 1.5).clamp(0.0, 1.0);
@@ -781,14 +901,14 @@ pub fn synth_track(score: &Score) -> Track {
         let mut lo = [0.0f32; 2];
         let mut hi = [0.0f32; 2];
         for c in 0..2 {
-            let x = kickbuf[2 * i + c] + bed[2 * i + c] * duck[i] + wet[2 * i + c] * 0.2;
+            let x = kickbuf[2 * i + c] + bed[2 * i + c] * duck[i] + wet[2 * i + c] * 0.35;
             lp[c] += split_k * (x - lp[c]);
             lo[c] = lp[c];
             hi[c] = x - lp[c];
         }
         // mid/side widen the UPPER band only (low end stays mono → translates + stays tight)
         let m = 0.5 * (hi[0] + hi[1]);
-        let s = 0.5 * (hi[0] - hi[1]) * 1.35;
+        let s = 0.5 * (hi[0] - hi[1]) * 1.55;
         hi[0] = m + s;
         hi[1] = m - s;
         // HF-air exciter + gentle saturation on the upper band, recombined with the clean lows
@@ -802,7 +922,7 @@ pub fn synth_track(score: &Score) -> Track {
         }
         // shared soft peak-limiter (one gain for both channels → image stays centred)
         let peak = pre[0].abs().max(pre[1].abs());
-        let target = if peak > 0.88 { 0.88 / peak } else { 1.0 };
+        let target = if peak > 0.93 { 0.93 / peak } else { 1.0 };
         if target < gr {
             gr += (target - gr) * atk;
         } else {
