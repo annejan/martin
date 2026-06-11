@@ -17,20 +17,23 @@ ply = assets/aegg-baked.ply
 #     narrative: op de camping MET deFEEST = the ultimate joy; ZONDER deFEEST = kut. So the euphoric
 #     major chorus/climax carry "MET deFEEST", and the TRAGIC minor breakdown carries "ZONDER... kut".
 [seq]
-image:defeest-logo.png     @@intro      @11,3   ~sparkle                # deFEEST logo opens the show
-splat:aegg-baked.ply       @@build      @14,3   ~swarm      ^wave       # the badge.team Ægg swarms in
-text:OP DE CAMPING          @15,3,1.2           ~typewriter ^wave       # the dream, over the couplet
-splat:doggo.ply            @@drop       @20,4   ~ball       ^wave       # the DOG — pure joy on the chorus
-text:MET deFEEST            @18,4               ~explode    ^wave       # op de camping MET deFEEST
-splat:martin.ply            @18,3              ~swirl       ^twist      # a Martin grooves through the drop
-text:ZONDER deFEEST        @@breakdown  @14,3   ~swirl                  # the tragic turn (minor breakdown)...
-text:IS HET KUT             @14,3              ~fade        ^wave       # ...is kut
-splat:martin-peace.ply     @@climax     @17,4   ~swarm      ^wave       # Martin ✌ — the euphoric reprise
-text:MET deFEEST            @18,4              ~explode     ^wave       # the ultimate joy
-splat:doggo.ply             @18,4             ~ball         ^wave       # the dog returns, jubilant
-text:HET ULTIEME GENOT     @@outro      @12,4   ~pen-write  ^wave       # the payoff lands on the outro
-splat:aegg-baked.ply        @12,3             ~swarm        ^wave       # the Ægg, one last time
-wall:ANUS|KLOOT|CINDER      @11,4              ~fade                     # the crew, as the blast hits
+image:defeest-logo.png       @@intro      @8,3    ~sparkle                # deFEEST logo opens the show
+glb:evoke-23.glb              @6,3                ~swarm      ^wave        # at EVOKE — the demoparty
+splat:aegg-baked.ply         @@build      @14,3   ~swarm      ^twist       # the badge.team Ægg swarms in
+text:OP DE CAMPING            @15,3,1.2           ~typewriter ^wave        # the dream builds over the couplet
+splat:doggo.ply              @@drop       @14,4   ~ball       ^wave        # the DOG — pure joy on the chorus
+text:MET deFEEST              @12,4               ~explode    ^wave        # op de camping MET deFEEST
+splat:supershape.ply          @13,3              ~vortex      ^turbulence  # euphoric party morph spins out
+mesh:bitterbal.obj cluster:7  @14,3              ~drop        ^wind        # deFEEST catering — bitterballen rain
+text:ZONDER deFEEST          @@breakdown  @14,3   ~swirl                   # the tragic turn (minor breakdown)...
+text:IS HET KUT               @14,3              ~fade        ^wave        # ...is kut
+splat:martin-peace.ply       @@climax     @13,4   ~swarm      ^wave        # Martin ✌ — the euphoric reprise
+text:MET deFEEST              @12,4              ~explode     ^wave        # the ultimate joy
+splat:galaxy.ply              @13,3             ~vortex       ^turbulence  # the energy peak spins out
+splat:doggo.ply               @14,4             ~ball         ^wave        # the dog returns, jubilant
+text:HET ULTIEME GENOT       @@outro      @11,4   ~pen-write  ^wave        # the payoff lands on the outro
+glb:defeest.glb               @11,3             ~sparkle      ^wave        # the deFEEST 3D logo blooms
+wall:ANUS|KLOOT|CINDER        @10,4             ~fade                      # the crew, as the blast hits
 
 # --- the camera: a directed track (t = show-time seconds), tuned to the ~228s score timeline:
 #     intro 0 · build 14 · drop 43 · breakdown 99 · climax 129 · outro 185 · end 228.
