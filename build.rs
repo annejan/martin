@@ -33,6 +33,12 @@ fn main() {
         _ => panic!("bundle: bundle.toml needs a `show = …`, `seq = …` or `compose = …`"),
     };
     // The show spec is a file path (read its content) or an inline string — same rule martin uses.
+    // Re-run if the show FILE changes (else an incremental bundle build bakes in a STALE show), and
+    // if MARTIN_BUNDLE selects a different manifest.
+    println!("cargo:rerun-if-env-changed=MARTIN_BUNDLE");
+    if Path::new(show_spec).is_file() {
+        println!("cargo:rerun-if-changed={show_spec}");
+    }
     let show_src = read_or_inline(show_spec);
 
     // Auto-collect: every `splat:`/`image:`/`mesh:` filename the show references, + the logo.
