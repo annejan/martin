@@ -28,6 +28,24 @@ jobs:
           components: rustfmt
       - run: cargo fmt --all --check
 
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - name: Install Linux deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libudev-dev libasound2-dev libwayland-dev libxkbcommon-dev
+      - uses: dtolnay/rust-toolchain@5b842231ba77f5c045dba54ac5560fed2db780e2 # nightly
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      # Default features (the bundle feature's build.rs needs gitignored .ply assets, not present on a
+      # clean checkout). -D warnings so a new lint can't slip in — the few intentional ones are #[allow]ed.
+      - run: cargo clippy --all-targets -- -D warnings
+
   build:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

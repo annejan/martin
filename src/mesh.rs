@@ -114,6 +114,7 @@ fn push_disk(
 /// oriented to the interpolated vertex normal (face normal fallback), coloured by `color(tri, bw,
 /// bu, bv)`. `flip_y` negates Y (the file path stores Y-down so `cloud_base_rotation` flips it
 /// upright; the glTF path samples in the mesh's own frame so it coincides with the rendered mesh).
+#[allow(clippy::too_many_arguments)] // geometry + 3 disk-style knobs (splat/thin/alpha) + colour closure
 fn sample_surface_disks<F>(
     tris: &[[[f32; 3]; 3]],
     tri_norms: &[Option<[[f32; 3]; 3]>],
@@ -155,7 +156,7 @@ where
         );
         let n = ((target_count as f32 * weights[ti] / total).round() as usize).max(1);
         for _ in 0..n {
-            const A1: f32 = 0.754_877_67; // 1/plastic
+            const A1: f32 = 0.754_877_7; // 1/plastic
             const A2: f32 = 0.569_840_3; // 1/plastic²
             r2u = (r2u + A1).fract();
             r2v = (r2v + A2).fract();
