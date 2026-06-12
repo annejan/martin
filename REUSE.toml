@@ -24,7 +24,6 @@ path = [
     "USAGE.md",
     "build.rs",
     "bundle.toml",
-    "bundle-camping.toml",
 ]
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
@@ -37,6 +36,12 @@ SPDX-License-Identifier = "MIT"
 
 [[annotations]]
 path = ["assets/*.seq", "assets/*.txt", "assets/*.json", "assets/*.compose", "assets/*.show", "assets/examples/*.show", "assets/*.wgsl"]
+SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
+SPDX-License-Identifier = "MIT"
+
+# Productions (one folder per demo: showbook, .show files, bundle recipe) + the shared part library.
+[[annotations]]
+path = ["productions/**", "parts/**"]
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 

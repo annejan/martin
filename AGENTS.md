@@ -6,7 +6,7 @@ Transform the "Op de Camping" (Ome Henk, 1995) demoscene track from a basic plac
 ## File Structure
 - `assets/score.txt`: Tracker DSL — BPM, sections, chords, pattern tables, per-drum-lane hit patterns, gain/sub/mids curves. Editable at runtime (no recompile).
 - `src/audio.rs`: FunDSP voice synthesis — kick, snare, hat, lead, arp, bass, stab, pad, sub, reverb, sidechain, master limiter. Requires recompile.
-- `assets/op-de-camping.show`: Unified show format — camera track, text sequence with @@anchors to score sections.
+- `productions/camping/camping.show`: Unified show format — camera track, text sequence with @@anchors to score sections.
 - `src/score.rs`: Parser for score.txt — resolves section timing, drum hits, note lanes, phase lookup.
 - `src/music.rs`: Bevy plugin binding between score and audio playback.
 

@@ -111,7 +111,7 @@ jobs:
   # The packaged deal: ONE self-contained binary — the "Op de Camping" demo. build.rs
   # (--features bundle) bakes the show's assets into the executable; it self-extracts to a temp dir
   # at startup and plays with no external files and no env vars. We use the CI-SAFE show
-  # (op-de-camping-ci.show): repo-tracked licence-cleared meshes (the Ægg/deFEEST/bitterbal/bornhack)
+  # (productions/camping/camping-ci.show): repo-tracked licence-cleared meshes (the Ægg/deFEEST/bitterbal/bornhack)
   # + procedural splats generated fresh here — so it builds straight from a clean checkout.
   bundle:
     name: single binary (${{ matrix.os }})
@@ -164,7 +164,7 @@ jobs:
 
       - name: Build single binary (the Op de Camping demo, --features bundle)
         shell: bash
-        run: MARTIN_BUNDLE=bundle-camping.toml cargo build --release --features bundle
+        run: MARTIN_BUNDLE=productions/camping/bundle.toml cargo build --release --features bundle
 
       - name: Report binary size
         shell: bash

@@ -26,6 +26,9 @@ current nightly).
 - **[`USAGE.md`](USAGE.md)** — the full env-var reference and the `MARTIN_SEQ` timeline.
 - **[`ART-DIRECTION.md`](ART-DIRECTION.md)** — how to **shoot and prep good splats** for the
   demo (capture recipe, lighting, the two splat "flavours", cleanup).
+- **[`productions/`](productions/README.md)** — one folder per demo (showbook, show, bundle,
+  captures); the engine stays theme-agnostic. Current: **camping** (in design — see its
+  [SHOWBOOK](productions/camping/SHOWBOOK.md)). Shared building blocks: [`parts/`](parts/README.md).
 
 ## Make your own splats
 

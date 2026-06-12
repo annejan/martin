@@ -2,10 +2,10 @@
 # to the Op de Camping score (Ome Henk-flavoured DnB): the parody tagline OP VAKANTIE / MET deFEEST
 # builds over the couplets, and the hook OP DE CAMPING lands on every chorus drop. The full-fat demo:
 # uses the big local .ply captures (the real Ægg gem, the dog, the Martins) — NOT CI-safe. For the
-# repo-only / CI build see op-de-camping-ci.show.
+# repo-only / CI build see camping-ci.show.
 #
-#   MARTIN_SHOW=assets/op-de-camping.show cargo +nightly run --release
-#   MARTIN_SHOW=assets/op-de-camping.show ./record.sh op-de-camping.mp4
+#   MARTIN_SHOW=productions/camping/camping.show cargo +nightly run --release
+#   MARTIN_SHOW=productions/camping/camping.show ./record.sh op-de-camping.mp4
 #
 # (No song lyrics on screen — just the title hook, the deFEEST parody tagline and the credits.)
 

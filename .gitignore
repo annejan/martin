@@ -89,3 +89,7 @@ greetings.seq
 /assets/go_trimmed.ply
 /assets/trellis.glb
 /scratch/
+
+# Production captures: real splats are large + personal — track the manifest, not the data
+productions/*/captures/*.ply
+productions/*/captures/*.glb

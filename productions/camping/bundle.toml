@@ -1,15 +1,15 @@
-# bundle-camping.toml — the "Op de Camping" demo as ONE self-contained executable.
+# productions/camping/bundle.toml — the "Op de Camping" demo as ONE self-contained executable.
 # Build it WITHOUT touching the CI-safe default bundle (which stays demo.show — these .ply splats are
 # gitignored, so they can't ship in a clean checkout):
 #
-#   MARTIN_BUNDLE=bundle-camping.toml cargo build --release --features bundle
+#   MARTIN_BUNDLE=productions/camping/bundle.toml cargo build --release --features bundle
 #   ./target/release/martin            # plays the whole demo, no external files, no env vars
 #
-# build.rs auto-collects every asset op-de-camping.show references (the Ægg / dog / Martin / galaxy /
+# build.rs auto-collects every asset the show references (the Ægg / dog / Martin / galaxy /
 # supershape splats + the evoke/defeest glb + the bitterbal mesh + the logo PNG), lz4-compresses them
 # into the binary; src/bundle.rs self-extracts to a temp dir at startup and runs it.
 
-show = "assets/op-de-camping-ci.show"   # the full splat demo (seq + 3D camera)
-score = "assets/score.txt"           # the Op de Camping track + @@anchor timing
+show = "productions/camping/camping-ci.show"   # the full splat demo (seq + 3D camera)
+score = "assets/score.txt"           # the Op de Camping track + @@anchor timing (engine-embedded for now, see SHOWBOOK)
 logo = "defeest-logo.png"            # the loader screen while it decompresses
 music = "assets/op-de-camping.wav"     # pre-rendered track baked in (no ~30s live render -> instant, in sync)

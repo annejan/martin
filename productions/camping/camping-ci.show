@@ -1,10 +1,10 @@
 # martin — the "OP DE CAMPING" demo, CI-SAFE variant: built ONLY from repo-tracked, licence-cleared
 # assets (meshes + logo) + procedural splats that pipeline/gen-demo-splats.py generates fresh. This is
-# what the downloadable single-binary bundle ships (the full op-de-camping.show uses the gitignored
+# what the downloadable single-binary bundle ships (the full camping.show uses the gitignored
 # dog/Martin captures, so it's a LOCAL-only rich render).
 #
 #   python3 pipeline/gen-demo-splats.py assets      # generate the procedural shapes (galaxy, …)
-#   MARTIN_BUNDLE=bundle-camping.toml cargo build --release --features bundle
+#   MARTIN_BUNDLE=productions/camping/bundle.toml cargo build --release --features bundle
 #
 # (No song lyrics on screen — only the deFEEST parody messaging + the title hook + credits.)
 
