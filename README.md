@@ -3,9 +3,11 @@
 [![build](https://github.com/annejan/evoke-martin/actions/workflows/build.yml/badge.svg)](https://github.com/annejan/evoke-martin/actions/workflows/build.yml)
 
 A standalone **Bevy + Vulkan** demo that flies a camera around 3D Gaussian splats while they
-**morph into one another** — a title, two faces, a dog — entirely **without CUDA or ROCm**
-(CPU + Vulkan / Mesa RADV; built for an AMD Ryzen AI 7 PRO 350 / Radeon 860M on openSUSE
-Tumbleweed). Demoscene spirit, all-AMD metal. 🪩
+**morph into one another** — a title, two faces, a dog — entirely **without CUDA or ROCm**.
+Developed and previewed on a modest **AMD Ryzen AI 7 PRO 350 / Radeon 860M iGPU** (CPU + Vulkan /
+Mesa RADV, openSUSE Tumbleweed); the released demo targets bigger metal at showtime, so it can afford
+heavier clouds and the `sh3` view-dependent profile (see [build profiles](#build-profiles)). Demoscene
+spirit, all-AMD dev box. 🪩
 
 ```bash
 cargo +nightly run --release     # a splat assembles out of a ball cloud
@@ -140,6 +142,25 @@ MARTIN_SEQ="text:MARTIN GAUS @2,3,0; splat:doggo.ply @2,3,0.9; text:GREETINGS @1
 cargo +nightly run --release
 #   ./record.sh out.mp4   renders the whole timeline to video
 ```
+
+## Build profiles
+
+The **spherical-harmonic degree** is a compile-time choice (one-hot in the splat crate), exposed as two
+build profiles. Synthetic content (text/morph) looks identical in both — only real captures differ:
+
+| profile | what | when |
+| :-- | :-- | :-- |
+| **`sh0`** (default) | one flat colour per splat — lean, fast | the synthetic demo; the AMD iGPU dev box |
+| **`sh3`** | full degree-3 **view-dependent** colour (specular glint) | real captures (camping footage → Brush); the showtime machine |
+
+```bash
+cargo b-sh0      # = cargo build --release            → target/release/martin    (sh0, default)
+cargo b-sh3      # sh3 build into target/sh3/release/martin (both binaries coexist; r-sh0 / r-sh3 to run)
+```
+
+`sh3` costs ~16× the per-splat colour data in VRAM **for captures** (synthetic clouds compress that away),
+so the lean `sh0` stays the default; flip to `sh3` once camping captures land. The aliases live in
+[`.cargo/config.toml`](.cargo/config.toml).
 
 ## Single-binary bundle
 

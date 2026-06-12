@@ -54,6 +54,23 @@ stay easy to rebase onto upstream and to submit back as a PR later. Edit shaders
 branch and `cargo update -p bevy_gaussian_splatting`; for heavy local iteration, temporarily point the
 patch at a checkout (`path = "../bgs-fork"`).
 
+## SH build profiles (sh0 / sh3)
+
+Spherical-harmonic degree is a **one-hot compile-time crate feature**, so it can't be a runtime switch.
+martin exposes it as two profiles (`Cargo.toml [features]`): **`sh0`** (default — flat colour, lean) and
+**`sh3`** (degree-3 view-dependent colour, for real captures). Build either with the `.cargo/config.toml`
+aliases — `cargo b-sh3` targets `target/sh3/` so the sh0 and sh3 binaries coexist (switching is a disk
+cost, not a recompile):
+
+```bash
+cargo b-sh0 / cargo r-sh0     # sh0 (default) — plain target/release/
+cargo b-sh3 / cargo r-sh3     # sh3           — target/sh3/release/
+```
+
+Because the two are mutually exclusive, sh3 needs `--no-default-features` (the alias handles it). Bundled
+sh3: `cargo build --release --no-default-features --features sh3,bundle`. Synthetic content (text/morph)
+renders identically in both — verify any SH change against a real capture, not just the demo.
+
 ## Commits
 
 Conventional-ish, imperative subject (`area: what`), a body that says *why*. Keep diffs coherent;

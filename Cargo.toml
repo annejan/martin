@@ -8,11 +8,11 @@ description = "Fly a camera around a Gaussian splat (and, soon, explode it). Rus
 # `wav` enables rodio's WAV decoder — the live synth playback feeds bevy_audio a hand-rolled WAV,
 # and Bevy's default audio features are vorbis-only (without this, playback panics UnrecognizedFormat).
 bevy = { version = "0.18", features = ["wav"] }
-# Select features explicitly (mirrors the crate's defaults) so **sh0** is a feature
-# CHOICE here, not a fork Cargo.toml edit — our splats are SH degree-0 only.
-# Needs nightly (nightly_generic_alias); io_ply + planar load our .ply.
+# Select features explicitly (mirrors the crate's defaults). The **SH degree** is NOT pinned here —
+# it's a one-hot crate feature selected via martin's own `sh0`/`sh3` features (see [features] below),
+# so you can build either profile. Needs nightly (nightly_generic_alias); io_ply + planar load our .ply.
 bevy_gaussian_splatting = { version = "7.0.2", default-features = false, features = [
-    "io_flexbuffers", "io_ply", "planar", "buffer_storage", "sh0",
+    "io_flexbuffers", "io_ply", "planar", "buffer_storage",
     "query_select", "morph_interpolate", "nightly_generic_alias",
     "sort_bitonic", "sort_radix", "sort_rayon", "sort_std",
     "tooling", "viewer", "file_asset", "web_asset",
@@ -43,6 +43,19 @@ fundsp = { version = "0.23.0", default-features = false, features = ["std"] }
 lz4_flex = { version = "0.13", default-features = false, features = ["std"], optional = true }
 
 [features]
+default = ["sh0"]
+
+# SH degree is a one-hot compile-time choice in the splat crate, so it can't be a runtime switch.
+# `sh0` (default) = one flat colour per splat: lean + fast, ideal for our synthetic text/morph demo.
+# `sh3` = full degree-3 view-dependent colour (specular glint), worth it for REAL captures (camping
+# footage → Brush). Synthetic content is unaffected either way (its higher-SH coeffs are zero).
+# Because the two are mutually exclusive, build sh3 with --no-default-features (see .cargo/config.toml
+# aliases `cargo b-sh3` / `cargo r-sh3`, which target a separate dir so both binaries coexist):
+#   sh0:  cargo build --release
+#   sh3:  cargo build --release --no-default-features --features sh3
+sh0 = ["bevy_gaussian_splatting/sh0"]
+sh3 = ["bevy_gaussian_splatting/sh3"]
+
 # `cargo build --release --features bundle` IS the bundling pipeline: build.rs reads bundle.toml,
 # auto-collects the .ply/PNG the show references, compresses them into the binary; at startup the
 # binary self-extracts to a temp dir and plays the baked-in show (no asset files, no env needed).

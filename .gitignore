@@ -82,3 +82,6 @@ mesh-ab/
 
 # scratch greetings crawl — not used in current demos, intentionally untracked
 greetings.seq
+
+# Large external splat assets pulled in for experiments (go_trimmed.ply etc.) — never commit
+/scratch/

@@ -106,6 +106,7 @@ path = [
     "pipeline/release.sh",
     ".gitignore",
     ".gitattributes",
+    ".cargo/config.toml",
     ".github/dependabot.yml",
     ".github/workflows/build.yml",
     ".github/workflows/codeql.yml",

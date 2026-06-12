@@ -1,0 +1,14 @@
+# Convenience aliases for the two SH build profiles (see Cargo.toml [features]). The sh3 builds go to
+# a SEPARATE target dir so the sh0 and sh3 binaries coexist — switching profiles costs disk, not a
+# recompile (target/ is gitignored). sh0 is the default profile and just uses the normal target/.
+#
+#   cargo b-sh0 / cargo r-sh0   → sh0 (flat, lean) — same as plain cargo build/run --release
+#   cargo b-sh3 / cargo r-sh3   → sh3 (view-dependent glint) in target/sh3/
+#
+# Bundled single-binary of either: add `--features bundle` (sh3 needs the no-default-features form,
+# e.g. `cargo build --release --no-default-features --features sh3,bundle`).
+[alias]
+b-sh0 = "build --release"
+r-sh0 = "run --release"
+b-sh3 = "build --release --no-default-features --features sh3 --target-dir target/sh3"
+r-sh3 = "run --release --no-default-features --features sh3 --target-dir target/sh3"
