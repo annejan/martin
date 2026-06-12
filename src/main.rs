@@ -32,6 +32,7 @@ mod bundle;
 mod camera;
 mod capture;
 mod envvar;
+mod glb;
 mod loader;
 mod mesh;
 mod morph;
@@ -114,7 +115,17 @@ fn main() {
     ]
     .iter()
     .any(|k| std::env::var(k).is_ok());
-    let (sequence, asset_root) = if explicit_seq || composition.is_none() {
+    let (sequence, asset_root) = if let Ok(glb) = std::env::var("MARTIN_GLB") {
+        // MARTIN_GLB: a standalone KHR_gaussian_splatting scene (glb::GlbScenePlugin spawns it) — no
+        // morph track. Asset root = the .glb's folder so the typed GaussianScene load resolves.
+        (
+            Sequence {
+                parts: Vec::new(),
+                count: 0,
+            },
+            parent_dir(glb),
+        )
+    } else if explicit_seq || composition.is_none() {
         sequence_from_env(&score) // the morph track (or the default demo when nothing is set)
     } else {
         // compose-only: no morph track.
@@ -221,6 +232,7 @@ fn main() {
             LoaderPlugin,
             crate::background::BackgroundPlugin,
             crate::scene::shader_part::ShaderPartPlugin,
+            crate::glb::GlbScenePlugin,
         ))
         .run();
 }
