@@ -32,6 +32,7 @@ mod bundle;
 mod camera;
 mod capture;
 mod envvar;
+mod fourd;
 mod glb;
 mod loader;
 mod mesh;
@@ -115,12 +116,15 @@ fn main() {
     ]
     .iter()
     .any(|k| std::env::var(k).is_ok());
-    let glb_alone = std::env::var("MARTIN_GLB").is_ok() && !explicit_seq && composition.is_none();
+    let glb_alone = (std::env::var("MARTIN_GLB").is_ok() || std::env::var("MARTIN_4D_TEST").is_ok())
+        && !explicit_seq
+        && composition.is_none();
     let (sequence, asset_root) = if glb_alone {
         // MARTIN_GLB alone: a standalone KHR_gaussian_splatting scene (glb::GlbScenePlugin spawns
         // it) — no morph track. Asset root = the .glb's folder so the typed GaussianScene load
         // resolves. COMBINED with a seq/compose show, the glb is set dressing instead: the normal
         // branches below run and the .glb must sit in that show's asset root (e.g. assets/).
+        // (MARTIN_4D_TEST rides the same standalone branch — fourd.rs frames + builds itself.)
         (
             Sequence {
                 parts: Vec::new(),
@@ -236,6 +240,7 @@ fn main() {
             crate::background::BackgroundPlugin,
             crate::scene::shader_part::ShaderPartPlugin,
             crate::glb::GlbScenePlugin,
+            crate::fourd::FourDTestPlugin,
         ))
         .run();
 }
