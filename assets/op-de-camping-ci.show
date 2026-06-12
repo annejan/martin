@@ -11,6 +11,11 @@
 # --- settings (each → MARTIN_<KEY>) ---
 morph_count = 140000
 ply = assets/galaxy.ply              # sets the .ply root to assets/ so the generated `splat:` shapes resolve
+# camping at NIGHT: a starfield behind the whole show (beat-reactive, dimmed low) + a bloom flash
+# on each part cut. (No trellis set dressing here — that .glb is a fetched, full-fat-only asset.)
+bg = stars
+bg_dim = 0.35
+flash = 0.45
 
 # --- the show: meshes + procedural splats @@anchored to the score's sections, words = the emotion ---
 [seq]

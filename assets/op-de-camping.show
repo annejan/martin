@@ -13,6 +13,18 @@
 morph_count = 160000
 # sets the .ply root to assets/ so `splat:` filenames resolve (badge.team Ægg, the dog, the Martins).
 ply = assets/aegg-baked.ply
+# camping at NIGHT: a starfield behind the whole show (beat-reactive — the kick brightens it),
+# dimmed low so the glowing text/splats stay the hero.
+bg = stars
+bg_dim = 0.35
+# the garden trellis (KHR splat scene; fetched by pipeline/fetch-demo-assets.sh — full-fat-only,
+# like the big .ply captures) parked right-and-back as campsite set dressing; the camera arcs
+# swing it in and out of frame.
+glb = assets/trellis.glb
+glb_scale = 1.5
+glb_pos = 2.4,-0.55,-1.6
+# over-bright bloom flash on each part cut, riding the @@anchored beats.
+flash = 0.45
 
 # --- the show: text parts @@anchored to the score's sections so the WORDS MATCH THE EMOTION. The
 #     narrative: op de camping MET deFEEST = the ultimate joy; ZONDER deFEEST = kut. So the euphoric

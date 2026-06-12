@@ -39,11 +39,19 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         let c = 0.5 + 0.5 * sin(vec3<f32>(0.0, 2.0, 4.0) + u * 50.24 + v * 3.0);
         col = c * smoothstep(0.0, 0.5, r) * 0.28;
     } else if (bg.mode == 2u) {
-        // STARFIELD — twinkling grid
-        let g = floor(uv * vec2<f32>(90.0, 50.0));
+        // STARFIELD — small round twinkling points. Each cell of the (square-celled) grid hosts at
+        // most one star at a hashed offset with a hashed size, instead of lighting the WHOLE cell
+        // (which read as big grey blocks). Cool-white, soft falloff, per-star twinkle phase.
+        let cell = uv * vec2<f32>(90.0, 50.0);
+        let g = floor(cell);
         let h = hash21(g);
-        let tw = 0.4 + 0.6 * sin(t * 2.5 + h * 40.0);
-        col = vec3<f32>(step(0.986, h) * tw) * 0.9;
+        let f = fract(cell) - 0.5;
+        let off = (vec2<f32>(hash21(g + 17.0), hash21(g + 41.0)) - 0.5) * 0.6;
+        let d = length(f - off);
+        let size = 0.05 + 0.06 * hash21(g + 7.0);
+        let tw = 0.55 + 0.45 * sin(t * 2.5 + h * 40.0);
+        let star = smoothstep(size, 0.0, d) * step(0.93, h) * tw;
+        col = vec3<f32>(0.75, 0.85, 1.0) * star;
     } else if (bg.mode == 4u) {
         // RINGS — concentric pulsing rings rippling out from the centre
         let r = length(p);
