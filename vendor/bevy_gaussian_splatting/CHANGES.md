@@ -1,14 +1,16 @@
 # Local fork — change log
 
-**Forked from:** `bevy_gaussian_splatting` **7.0.1** (crates.io), patched in via
-`[patch.crates-io]` in `../../Cargo.toml`.
+**Forked from:** `bevy_gaussian_splatting` **7.0.2** (crates.io), patched in via
+`[patch.crates-io]` in `../../Cargo.toml`. (Rebased 7.0.1 → 7.0.2: the only upstream
+code change since 7.0.1 was the `DynamicUniformIndex<CloudUniform>` fix in the radix
+dispatch (#228), now incorporated in `src/sort/radix.rs` underneath our sort edits.)
 
 This file lists every edit we made to the upstream sources, so the fork can be
 re-applied (or dropped) when bumping the crate. Keep it current when you touch the
 vendor tree. To see the raw diff against a clean 7.0.1 checkout:
 
 ```bash
-cargo package --no-verify  # or: download the 7.0.1 .crate and `diff -ru`
+cargo package --no-verify  # or: download the 7.0.2 .crate and `diff -ru`
 ```
 
 Feature selection (e.g. `sh0`) is **not** a fork — it's set in `../../Cargo.toml`
@@ -46,7 +48,8 @@ Drives the ball-pulse amplitude per cloud. `encase`/std140 layout couples these:
 ## 3. Sort optimizations  (`src/sort/radix.{rs,wgsl}`, `src/render/mod.rs`)
 
 ~2.4× faster radix sort on the iGPU, correctness preserved (LSD-stable, reads live GPU
-positions → no holes). Candidates to **upstream as a PR**.
+positions → no holes). **Opened upstream as mosure/bevy_gaussian_splatting#229** (branch
+`perf/radix-sort-2x` on the `annejan/bevy_gaussian_splatting` fork, based on 7.0.2 main).
 
 - `render/mod.rs` `ShaderDefines::default()` — `radix_digit_places = 2` (was `32/bits` = 4):
   16-bit depth key → halves the radix C-pass cost (65536 buckets is ample).

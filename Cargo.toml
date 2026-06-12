@@ -11,7 +11,7 @@ bevy = { version = "0.18", features = ["wav"] }
 # Select features explicitly (mirrors the crate's defaults) so **sh0** is a feature
 # CHOICE here, not a vendored-Cargo.toml edit — our splats are SH degree-0 only.
 # Needs nightly (nightly_generic_alias); io_ply + planar load our .ply.
-bevy_gaussian_splatting = { version = "7.0.1", default-features = false, features = [
+bevy_gaussian_splatting = { version = "7.0.2", default-features = false, features = [
     "io_flexbuffers", "io_ply", "planar", "buffer_storage", "sh0",
     "query_select", "morph_interpolate", "nightly_generic_alias",
     "sort_bitonic", "sort_radix", "sort_rayon", "sort_std",
