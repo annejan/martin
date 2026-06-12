@@ -14,7 +14,7 @@ pub(crate) const BALL_SHELL: f32 = 0.9; // intro ball-shell radius, in units of 
 /// How a part *arrives*. `Morph` (the default after part 0) flows from the previous part's
 /// shape, Morton-paired, with the optional ball-pulse `bulge`. The next group build a source
 /// cloud from the part's own shape and morph in from that — the ball is just one of them. The
-/// last group are *per-particle* transitions driven by the vendored shader (`transition_mode`
+/// last group are *per-particle* transitions driven by the fork shader (`transition_mode`
 /// uniform): the source is an identity copy and the shader staggers opacity/position per
 /// particle (see `SHADER-BLUEPRINT.md`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -104,7 +104,7 @@ impl Transition {
     }
 
     /// Per-particle shader transitions use an identity source cloud (same as the target);
-    /// the vendored shader staggers opacity/position. Returns the `(mode, softness, axis)`
+    /// the fork shader staggers opacity/position. Returns the `(mode, softness, axis)`
     /// uniform triple, or `None` for the data-only / Morph transitions.
     pub(crate) fn shader_uniforms(self) -> Option<(u32, f32, u32)> {
         match self {
@@ -122,7 +122,7 @@ impl Transition {
 
 /// A *persistent* vertex deform (`^name` token / `MARTIN_DEFORM`). Unlike a `Transition` (which
 /// plays once on arrival), this keeps running while the part is **held** — so a `wall:` of text
-/// can ripple, billow or curl the whole time it's on screen. Drives the vendored shader's deform
+/// can ripple, billow or curl the whole time it's on screen. Drives the fork shader's deform
 /// uniforms (see SHADER-BLUEPRINT.md); default-off, so an unset part renders plain.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum Deform {
@@ -153,7 +153,7 @@ impl Deform {
         })
     }
 
-    /// The `(mode, amp, freq)` uniform triple for the vendored shader deform.
+    /// The `(mode, amp, freq)` uniform triple for the fork shader deform.
     pub(crate) fn uniforms(self) -> (u32, f32, f32) {
         match self {
             Deform::Wave => (1, 0.15, 4.0),

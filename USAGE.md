@@ -248,7 +248,7 @@ of them). It can sit anywhere on the line, but reads best last:
 | `~fold` (`~unfold`) | unfolds sideways out of a vertical seam, like opening a folded sheet |
 | `~zoom` (`~telescope`, `~warp-in`) | rushes in from far — a telescope / hyperspace zoom into place |
 
-**Per-particle** (the vendored shader staggers each splat — great for text):
+**Per-particle** (the fork shader staggers each splat — great for text):
 
 | `~name` | How it arrives |
 |---|---|
@@ -433,7 +433,7 @@ wall:GREETINGS|TO ALL|DEMOSCENERS   @8,1   ~fade   ^wave
 every placed compose object — `MARTIN_DEFORM=wind` blows the whole stage at once. An explicit
 per-part / per-object `^name` always wins over the field.
 The deform is independent of the arrival transition, so a part can `~fade` in *and* `^wave`. (Off
-by default → no movement; it's a default-off branch in the vendored shader, see `CHANGES.md §5`.)
+by default → no movement; it's a default-off branch in the fork shader, see the fork's `CHANGES.md §5`.)
 **`MARTIN_DEFORM_AMP`** scales the wobble (`0.2`–`0.3` ≈ gentle on a whole scene) and
 **`MARTIN_DEFORM_SPEED`** its rate — so you can load a scene and softly wobble it while you fly
 around it:

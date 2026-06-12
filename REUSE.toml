@@ -101,12 +101,6 @@ SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
-path = "vendor/**"
-precedence = "aggregate"
-SPDX-FileCopyrightText = "2026 bevy_gaussian_splatting contributors"
-SPDX-License-Identifier = "MIT OR Apache-2.0"
-
-[[annotations]]
 path = [
     "AGENTS.md",
     "README.md",

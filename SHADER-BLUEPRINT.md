@@ -3,7 +3,7 @@
 > **STATUS: BLUEPRINT / REFERENCE ONLY — DO NOT APPLY YET.**
 >
 > This is the companion reference that `DESIGN.md` §5 points to. It is martin's
-> *single* deliberate vendored-shader fork edit, and it is **gated behind
+> *single* deliberate fork-shader edit, and it is **gated behind
 > `DESIGN.md` OQ#12** ("do the one deliberate per-particle-phase edit now, or stay
 > data-only?" — i.e. *do step 8 at all*). That is a morning **co-design** decision,
 > not a thing to arrive pre-written. Nothing here is to be committed until OQ#12
@@ -124,7 +124,11 @@ let mt = clamp((gaussian_uniforms.time - gaussian_uniforms.time_start) / denom, 
 
 ---
 
-## 3. The WGSL diff (`vendor/bevy_gaussian_splatting/src/render/gaussian.wgsl`)
+## 3. The WGSL diff (`src/render/gaussian.wgsl` in the fork)
+
+> Paths below are **fork-relative** — `src/...` means the `annejan/bevy_gaussian_splatting`
+> `martin` branch (consumed via `[patch.crates-io]`), not this repo. martin no longer keeps a
+> `vendor/` copy.
 
 All references below are to the **live** file. The relevant landmarks I verified:
 
@@ -321,7 +325,7 @@ implicit tail padding. So we append **four** members: the three reals + one
 WGSL struct, the Rust struct, and anyone reading the diff in lock-step — and makes
 the next person's append start cleanly on a 16-byte boundary.)
 
-### Spot 1 — `vendor/bevy_gaussian_splatting/src/render/bindings.wgsl` (`bindings.wgsl:13-27`)
+### Spot 1 — `src/render/bindings.wgsl` (`bindings.wgsl:13-27`)
 
 **Before:**
 
@@ -367,7 +371,7 @@ struct GaussianUniforms {
 };
 ```
 
-### Spot 2 — `CloudUniform` Rust mirror, `vendor/bevy_gaussian_splatting/src/render/mod.rs` (`mod.rs:970-984`)
+### Spot 2 — `CloudUniform` Rust mirror, `src/render/mod.rs` (`mod.rs:970-984`)
 
 This struct `#[derive(ShaderType)]` and **must mirror the WGSL field order exactly**
 (`bulge` at `mod.rs:979`, `min`/`max` at `mod.rs:982-983` — verified).
@@ -432,7 +436,7 @@ at `mod.rs:1040`):
         };
 ```
 
-### Spot 4 — `CloudSettings`, `vendor/bevy_gaussian_splatting/src/gaussian/settings.rs`
+### Spot 4 — `CloudSettings`, `src/gaussian/settings.rs`
 
 > **DISCREPANCY (corrected).** `DESIGN.md` §5 / §1.2 cite this as `settings.rs:71-80`.
 > The file is actually at **`src/gaussian/settings.rs`** (not `src/settings.rs`), and
@@ -699,7 +703,7 @@ to `bevy_gaussian_splatting`, not a divergent fork martin has to carry forever:
 ### Ready-to-paste CHANGES.md entry
 
 > **Do NOT edit `CHANGES.md` now** — this is the *proposed* text to paste into
-> `/home/annejan/Projects/martin/vendor/bevy_gaussian_splatting/CHANGES.md` **if and
+> the fork's `CHANGES.md` (`annejan/bevy_gaussian_splatting`, branch `martin`) **if and
 > when** OQ#12 says yes and the edit is applied. Reproduced here only.
 
 ```markdown
@@ -743,7 +747,7 @@ shares the same `transition_mode`). Do not "tidy" it into a `switch` later.
 
 1. **`settings.rs` path is wrong in DESIGN.md.** DESIGN.md (§5, §1.2) cites
    `settings.rs:71-80`. The file is actually at
-   **`vendor/bevy_gaussian_splatting/src/gaussian/settings.rs`** (under `gaussian/`).
+   **`src/gaussian/settings.rs`** (under `gaussian/`).
    The `CloudSettings` struct spans lines **60-81** (`bulge` at line 80), with the
    `time/time_scale/num_classes/color_space` cluster at lines 71-76. Line range is
    approximately right; the path is wrong.

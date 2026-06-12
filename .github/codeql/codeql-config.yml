@@ -6,13 +6,6 @@ name: "martin CodeQL config"
 queries:
   - uses: security-and-quality
 
-# Don't analyse the vendored upstream crate. We keep our edits to bevy_gaussian_splatting minimal +
-# gated for a future upstream PR (so they stay easy to rebase) — its own lint findings (unused
-# variables, etc.) aren't ours to fix. (Rust uses the no-build extractor here, so paths-ignore filters
-# results by location as expected.)
-paths-ignore:
-  - vendor/**
-
 query-filters:
   # morph.rs `hash01(k, seed)` is a deterministic per-particle PRNG for procedural gaussian scatter
   # (`k.wrapping_mul(seed) >> 8`) — NOT cryptography; this codebase does no crypto at all. CodeQL's

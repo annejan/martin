@@ -753,7 +753,7 @@ pub(crate) fn part_director(
     } else {
         0.0
     };
-    // per-particle shader transitions (typewriter/sparkle/…): drive the vendored uniforms only
+    // per-particle shader transitions (typewriter/sparkle/…): drive the fork's uniforms only
     // while morphing in; otherwise mode 0 = off (held shape renders plain, fully sort-safe).
     let (mode, soft, axis) = arriving
         .then(|| state.transitions[idx].shader_uniforms())

@@ -7,10 +7,11 @@
 //!   * the **composition stage** (`scene::compose`) — many objects on one stage at once
 //!     (`MARTIN_COMPOSE`), placed and animated, with the camera flowing among them.
 //!
-//! Rendering: the vendored `bevy_gaussian_splatting` fork (GPU blend + radix depth sort + HDR
-//! bloom on black). This file is just the wiring — each feature lives behind a plugin:
-//! `CameraPlugin`, `ScenePlugin`, `CapturePlugin`, `MusicPlugin`. See `USAGE.md` for the env
-//! reference and `vendor/.../CHANGES.md` for the shader edits.
+//! Rendering: our `bevy_gaussian_splatting` fork (GPU blend + radix depth sort + HDR
+//! bloom on black), pulled in as a git dep (the `martin` branch of
+//! `annejan/bevy_gaussian_splatting`). This file is just the wiring — each feature lives behind
+//! a plugin: `CameraPlugin`, `ScenePlugin`, `CapturePlugin`, `MusicPlugin`. See `USAGE.md` for
+//! the env reference and the fork's `CHANGES.md` for the shader edits.
 
 // edition-2024 stabilised let-chains, so clippy now suggests collapsing every `if cond { if let … }`
 // into one let-chain. That's a pure style call — the nested form reads fine here — so don't enforce

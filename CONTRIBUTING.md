@@ -45,10 +45,14 @@ The track is `assets/score.txt` — a tracker DSL parsed by `src/score.rs`, synt
 lints the score — run with `MARTIN_SCORE_STRICT=1` to make a phase/bar typo fatal. See the comments at
 the top of `assets/score.txt`, plus `assets/tropical.txt` / `assets/rain.txt` for the range.
 
-## The vendored crate
+## The splat-renderer fork
 
-`vendor/bevy_gaussian_splatting` is a fork. Keep edits **minimal, gated, and documented** so they
-stay easy to rebase onto upstream and to submit back as a PR later.
+`bevy_gaussian_splatting` is patched to our fork (the `martin` branch of
+`annejan/bevy_gaussian_splatting`) via `[patch.crates-io]` in `Cargo.toml`; `Cargo.lock` pins the
+exact commit. Keep edits **minimal, gated, and documented** (see the branch's `CHANGES.md`) so they
+stay easy to rebase onto upstream and to submit back as a PR later. Edit shaders by committing to the
+branch and `cargo update -p bevy_gaussian_splatting`; for heavy local iteration, temporarily point the
+patch at a checkout (`path = "../bgs-fork"`).
 
 ## Commits
 

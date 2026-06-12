@@ -74,8 +74,8 @@ this doc warns against.
 
 ### 1.1 The engine in 30 seconds
 
-martin is a standalone Bevy 0.18 + `bevy_gaussian_splatting` 7.0.1 (vendored
-fork). CUDA-free: wgpu → Vulkan / Mesa RADV on AMD. It flies an orbit camera around
+martin is a standalone Bevy 0.18 + `bevy_gaussian_splatting` 7.0.2 (our fork, a git
+dep). CUDA-free: wgpu → Vulkan / Mesa RADV on AMD. It flies an orbit camera around
 3D Gaussian splats while they morph into one another.
 
 The whole thing is **one timeline of parts** (`main.rs`):
@@ -110,15 +110,15 @@ frame-indexed and deterministic.
 These are ground truth. Every recommendation below stays inside them unless it
 *explicitly* proposes a fork edit and says so.
 
-1. **Toolchain/platform:** nightly Rust (pinned), Bevy 0.18, vendored crate via
-   `[patch.crates-io]`. wgpu → Vulkan / Mesa RADV, AMD, **no CUDA / no ROCm**.
+1. **Toolchain/platform:** nightly Rust (pinned), Bevy 0.18, the splat-renderer fork via
+   `[patch.crates-io]` (git). wgpu → Vulkan / Mesa RADV, AMD, **no CUDA / no ROCm**.
 2. **One shared morph buffer → ONE count `N`.** Every part is `resample_morton`'d
    to the same `N`. Parts cannot have differing gaussian counts.
 3. **Exactly ONE `GaussianInterpolate` entity** for the whole show, retargeted by
    swapping `lhs`/`rhs`. No multi-entity / layered compositing today.
 4. **`CloudSettings.time` is one global per-frame scalar** applied identically to
    every particle. Any per-particle or staggered/time-offset effect **requires a
-   shader change** in the vendored crate — there is no per-particle time/phase
+   shader change** in the fork — there is no per-particle time/phase
    input today.
 5. **Record mode must stay deterministic:** `record_driver` is frame-indexed
    (`clock.t = i*dt`, `dt=1/60`; yaw from frame index); `controls` /
@@ -799,7 +799,7 @@ Spawn N `GaussianInterpolate` entities per part, each with its own
 `lhs/rhs/CloudSettings/Transform`. **This directly relaxes constraint #3 (exactly ONE
 entity) and constraint #2 (one shared `N`).** Per the doc's own rule — constraints are
 ground truth "unless it explicitly proposes a fork edit and says so" — *this is that
-explicit relaxation, flagged here.* It is not a shader/vendor fork; it's an app-side
+explicit relaxation, flagged here.* It is not a shader/fork edit; it's an app-side
 structural change.
 
 **Trade-offs:** per-element *independent* morph/hold becomes possible (new expressive
@@ -971,7 +971,7 @@ composition requires generalizing it (and `state.entity`, and the record path, �
 to a `Vec<TrackState>`. **This is the largest structural change proposed in this whole
 document — label it HARD, not surgical.** Option A (one merged cloud) avoids all of it
 and stays inside the constraints, which is exactly why it's the safe v1 and the hybrid
-is the ceiling (→ OQ#8). **No WGSL/vendor edit is required** for either A or the
+is the ceiling (→ OQ#8). **No WGSL/fork edit is required** for either A or the
 track-based B — the fork stays as-is unless you later want staggered time *within* a
 track (then it's §5).
 

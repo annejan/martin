@@ -20,8 +20,8 @@ updates:
       prefix: "ci"
 
   # The Rust crates (root Cargo.toml). Bevy's tree is large, so group all minor+patch bumps into one
-  # PR and only raise majors individually (they tend to need code changes). The vendored
-  # bevy_gaussian_splatting is a local path dep — Dependabot leaves it alone.
+  # PR and only raise majors individually (they tend to need code changes). bevy_gaussian_splatting is
+  # patched to our own fork branch (a git dep) — we bump it by hand via `cargo update`, not Dependabot.
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:

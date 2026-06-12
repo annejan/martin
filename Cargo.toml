@@ -9,7 +9,7 @@ description = "Fly a camera around a Gaussian splat (and, soon, explode it). Rus
 # and Bevy's default audio features are vorbis-only (without this, playback panics UnrecognizedFormat).
 bevy = { version = "0.18", features = ["wav"] }
 # Select features explicitly (mirrors the crate's defaults) so **sh0** is a feature
-# CHOICE here, not a vendored-Cargo.toml edit — our splats are SH degree-0 only.
+# CHOICE here, not a fork Cargo.toml edit — our splats are SH degree-0 only.
 # Needs nightly (nightly_generic_alias); io_ply + planar load our .ply.
 bevy_gaussian_splatting = { version = "7.0.2", default-features = false, features = [
     "io_flexbuffers", "io_ply", "planar", "buffer_storage", "sh0",
@@ -66,7 +66,10 @@ lto = "thin"
 codegen-units = 1
 strip = true
 
-# Vendored fork of the splat renderer so we can inject the explosion displacement
-# into its WGSL (shaders load via hardcoded-UUID internal assets — no app-side hook).
+# Fork of the splat renderer so we can inject the explosion displacement into its WGSL
+# (shaders load via hardcoded-UUID internal assets — no app-side hook). Tracked as the
+# `martin` branch of annejan/bevy_gaussian_splatting (= upstream 7.0.2 + our §1–7 edits,
+# documented in that branch's CHANGES.md); Cargo.lock pins the exact commit. To hack the
+# shaders locally, point this at a checkout instead: `path = "../bgs-fork"`.
 [patch.crates-io]
-bevy_gaussian_splatting = { path = "vendor/bevy_gaussian_splatting" }
+bevy_gaussian_splatting = { git = "https://github.com/annejan/bevy_gaussian_splatting", branch = "martin" }

@@ -54,7 +54,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       # Fetch the dependency SOURCES so the Rust extractor can resolve calls/types INTO them (Bevy,
-      # wgpu, fundsp, the vendored splatting crate, …). Without the deps present the no-build extractor
+      # wgpu, fundsp, the splatting fork, …). Without the deps present the no-build extractor
       # can't see them, and the "calls with a known target" quality metric drops under CodeQL's
       # threshold (the "problems identifying dependencies" warning). build-mode stays `none`.
       - name: Fetch Rust dependencies
