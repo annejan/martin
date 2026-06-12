@@ -1,7 +1,7 @@
 [package]
 name = "martin"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Fly a camera around a Gaussian splat (and, soon, explode it). Rust + wgpu -> Vulkan, no CUDA."
 
 [dependencies]

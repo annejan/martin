@@ -23,17 +23,18 @@ pub fn or<T: FromStr>(key: &str, default: T) -> T {
 mod tests {
     #[test]
     fn unset_defaults_valid_parses_and_bad_falls_back() {
+        // SAFETY: a unique key only this single-threaded test touches.
         let key = "MARTIN_TEST_ENVVAR_OR";
-        std::env::remove_var(key);
+        unsafe { std::env::remove_var(key) };
         assert_eq!(super::or(key, 7u32), 7, "unset → default");
-        std::env::set_var(key, "42");
+        unsafe { std::env::set_var(key, "42") };
         assert_eq!(super::or(key, 7u32), 42, "set + valid → parsed");
-        std::env::set_var(key, "nope");
+        unsafe { std::env::set_var(key, "nope") };
         assert_eq!(
             super::or(key, 7u32),
             7,
             "set + invalid → default (warns to stderr)"
         );
-        std::env::remove_var(key);
+        unsafe { std::env::remove_var(key) };
     }
 }

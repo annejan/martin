@@ -25,7 +25,8 @@ pub fn apply() {
     // Only set what the user hasn't overridden — a bundled binary is still tweakable via env.
     let set = |k: &str, v: &str| {
         if std::env::var_os(k).is_none() {
-            std::env::set_var(k, v);
+            // SAFETY: self-extract runs at the very start of main(), single-threaded, pre-app.
+            unsafe { std::env::set_var(k, v) };
         }
     };
     match SHOW_KIND {

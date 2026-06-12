@@ -96,7 +96,8 @@ fn parse_and_apply(text: &str) -> Show {
     // An inline `[camera]` section is a track → make sure it actually plays (`MARTIN_FLY` may still
     // override the pace; for a timed track the value is ignored anyway, see `flypath`).
     if !camera.is_empty() && std::env::var("MARTIN_FLY").is_err() {
-        std::env::set_var("MARTIN_FLY", "1");
+        // SAFETY: the show is parsed at startup, single-threaded, before the Bevy app spawns threads.
+        unsafe { std::env::set_var("MARTIN_FLY", "1") };
     }
     Show { camera }
 }
@@ -109,6 +110,7 @@ fn set_if_absent(key: &str, value: &str) {
     }
     let var = format!("MARTIN_{}", key.to_ascii_uppercase());
     if std::env::var(&var).is_err() {
-        std::env::set_var(var, value);
+        // SAFETY: show settings are applied at startup, single-threaded, before any threads spawn.
+        unsafe { std::env::set_var(var, value) };
     }
 }

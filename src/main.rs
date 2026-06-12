@@ -12,6 +12,11 @@
 //! `CameraPlugin`, `ScenePlugin`, `CapturePlugin`, `MusicPlugin`. See `USAGE.md` for the env
 //! reference and `vendor/.../CHANGES.md` for the shader edits.
 
+// edition-2024 stabilised let-chains, so clippy now suggests collapsing every `if cond { if let … }`
+// into one let-chain. That's a pure style call — the nested form reads fine here — so don't enforce
+// it crate-wide. (All the correctness/perf/suspicious clippy lints stay on, gated by CI.)
+#![allow(clippy::collapsible_if)]
+
 use std::sync::Arc;
 
 use bevy::asset::AssetPlugin;
@@ -42,9 +47,9 @@ use crate::camera::CameraPlugin;
 use crate::capture::CapturePlugin;
 use crate::loader::LoaderPlugin;
 use crate::music::{MusicPlugin, ScoreRes};
-use crate::scene::compose::{parse_compose, Composition};
-use crate::scene::sequence::{sequence_from_env, Sequence};
-use crate::scene::{parent_dir, AssetRoot, ScenePlugin};
+use crate::scene::compose::{Composition, parse_compose};
+use crate::scene::sequence::{Sequence, sequence_from_env};
+use crate::scene::{AssetRoot, ScenePlugin, parent_dir};
 
 fn main() {
     // Bundled single-binary build: self-extract the embedded assets + seed the baked-in show into
@@ -55,7 +60,8 @@ fn main() {
     // With nothing requested, play the bundled flagship show (assets/demo.show) — a fresh `cargo run`
     // is a working demo. Set it as MARTIN_SHOW so it flows through the one unified-show path below.
     if std::env::var("MARTIN_SHOW").is_err() && scene::no_content_requested() {
-        std::env::set_var("MARTIN_SHOW", "assets/demo.show");
+        // SAFETY: top of main(), single-threaded, before the Bevy app (and its threads) start.
+        unsafe { std::env::set_var("MARTIN_SHOW", "assets/demo.show") };
     }
 
     // MARTIN_SHOW=<file>.show: a unified scene file — expand it INTO the env (settings → MARTIN_*,
