@@ -173,7 +173,8 @@ impl Score {
         let i = self.section_index_at(t);
         let s = &self.sections[i];
         let into = (self.bar_idx_at(t) as i64 - s.start_bar as i64).max(0) as u32;
-        pick(s).bar(into)
+        let is_fill = s.fill && into == s.bars - 1;
+        pick(s).bar(into, is_fill)
     }
 
     /// Every note of a note-lane as (time, freq) across the whole track — the synth builds a voice

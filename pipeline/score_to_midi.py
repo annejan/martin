@@ -42,6 +42,7 @@ def chord_notes(tok):
 def parse(path):
     bpm, gchords, sections, order = 120.0, [], {}, []
     lead, arp, bass, schords = {}, {}, {}, {}
+    fill_lead, fill_arp, fill_bass = {}, {}, {}
     for raw in Path(path).read_text().splitlines():
         # keep sharps: only strip a '#' that starts a comment (drop after ' #').
         line = re.split(r'\s#', raw)[0].strip()
@@ -62,10 +63,15 @@ def parse(path):
             vals = rest.split()
             if inst == 'chords':
                 schords[sec] = vals
-            elif inst in ('lead', 'arp', 'bass') and head.strip().endswith('p0'):
+            elif inst in ('lead', 'arp', 'bass'):
                 bars = [[note_midi(v) for v in vals[i:i + 16]] for i in range(0, len(vals), 16)]
-                {'lead': lead, 'arp': arp, 'bass': bass}[inst][sec] = bars
-    return bpm, gchords, order, sections, lead, arp, bass, schords
+                target = {'lead': lead, 'arp': arp, 'bass': bass}[inst]
+                if head.strip().endswith('p0'):
+                    target[sec] = bars
+                elif head.strip().endswith('fill'):
+                    fill = {'lead': fill_lead, 'arp': fill_arp, 'bass': fill_bass}[inst]
+                    fill[sec] = bars
+    return bpm, gchords, order, sections, lead, arp, bass, schords, fill_lead, fill_arp, fill_bass
 
 
 def vlq(n):
@@ -85,25 +91,27 @@ def track(events):
     return b'MTrk' + struct.pack('>I', len(body)) + bytes(body)
 
 
-def lane_events(phrase_by_sec, order, sections, ch, gate_until_next, vel=90):
+def lane_events(phrase_by_sec, fill_by_sec, order, sections, ch, gate_until_next, vel=90):
     ev, bar0 = [], 0
     for sec in order:
         nb = sections[sec]
         bars = phrase_by_sec.get(sec)
+        fill_bars = fill_by_sec.get(sec)
         for b in range(nb):
-            if bars:
-                row = bars[b % len(bars)]
-                for s, n in enumerate(row):
-                    if n is None:
-                        continue
-                    on = (bar0 + b) * 16 * SIXTEENTH + s * SIXTEENTH
-                    # duration: until the next non-rest slot in this bar (legato) or one 16th
-                    dur = SIXTEENTH
-                    if gate_until_next:
-                        nxt = next((k for k in range(s + 1, 16) if row[k] is not None), 16)
-                        dur = (nxt - s) * SIXTEENTH
-                    ev.append((on, 0x90 | ch, n, vel))
-                    ev.append((on + dur - 2, 0x80 | ch, n, 0))
+            is_fill = fill_bars is not None and b == nb - 1
+            row = fill_bars[0] if is_fill else (bars[b % len(bars)] if bars else None)
+            if row is None:
+                continue
+            for s, n in enumerate(row):
+                if n is None:
+                    continue
+                on = (bar0 + b) * 16 * SIXTEENTH + s * SIXTEENTH
+                dur = SIXTEENTH
+                if gate_until_next:
+                    nxt = next((k for k in range(s + 1, 16) if row[k] is not None), 16)
+                    dur = (nxt - s) * SIXTEENTH
+                ev.append((on, 0x90 | ch, n, vel))
+                ev.append((on + dur - 2, 0x80 | ch, n, 0))
         bar0 += nb
     return ev
 
@@ -126,7 +134,7 @@ def chord_events(gchords, schords, order, sections, ch=3):
 def main():
     src = sys.argv[1] if len(sys.argv) > 1 else 'assets/score.txt'
     out = sys.argv[2] if len(sys.argv) > 2 else 'op-de-camping.mid'
-    bpm, gchords, order, sections, lead, arp, bass, schords = parse(src)
+    bpm, gchords, order, sections, lead, arp, bass, schords, f_lead, f_arp, f_bass = parse(src)
     tempo = int(60_000_000 / bpm)
     tbody = vlq(0) + b'\xff\x51\x03' + struct.pack('>I', tempo)[1:]
     tbody += vlq(0) + b'\xff\x03' + vlq(len(b'Op de Camping')) + b'Op de Camping'
@@ -135,9 +143,9 @@ def main():
 
     tracks = [
         meta,
-        track(lane_events(lead, order, sections, 0, True, 96)),
-        track(lane_events(arp, order, sections, 1, True, 78)),
-        track(lane_events(bass, order, sections, 2, False, 88)),
+        track(lane_events(lead, f_lead, order, sections, 0, True, 96)),
+        track(lane_events(arp, f_arp, order, sections, 1, True, 78)),
+        track(lane_events(bass, f_bass, order, sections, 2, False, 88)),
         track(chord_events(gchords, schords, order, sections, 3)),
     ]
     header = b'MThd' + struct.pack('>IHHH', 6, 1, len(tracks), PPQ)

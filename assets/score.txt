@@ -156,6 +156,24 @@ breakdown.arp p0: A#3 . A3 .  A#3 . A3 .  A#3 . . .  A3 . A#3 .   . . A3 .  A#3 
 climax.arp p0: . . . .  . . . .  . . . .  D4 . . C4   B3 . . .  G3 . . .  . . D3 .  D3 . D3 .   G3 . A3 .  B3 C4 . D4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . D3 .  D3 . D3 .   A3 . B3 .  C4 D4 . E4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . D3 .  D3 . D3 .   A3 . B3 .  C4 D4 . E4  . . . .  B3 . . A3   B3 . . .  G3 . . .  . . . .  G4 . E4 .   G4 . E4 .  G4 G4 . E4  . . D4 .  D4 . . C4   B3 . . .  G3 . . .  . . D3 .  D3 . D3 .   G3 . A3 .  B3 C4 . D4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . D3 .  D3 . D3 .   A3 . B3 .  C4 . D4 E4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . E4 .  G4 . E4 .   G4 . E4 .  G4 G4 . E4  . . D4 .  B3 . . A3   . . . .  . . . .  . . . .  . . . .
 outro.arp p0: . . . .  . . . .  . . . .  D4 . . C4   B3 . . .  G3 . . .  . . D3 .  D3 . D3 .   G3 . A3 .  B3 C4 . D4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . D3 .  D3 . D3 .   A3 . B3 .  C4 D4 . E4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . D3 .  D3 . D3 .   A3 . B3 .  C4 D4 . E4  . . . .  B3 . . A3   B3 . . .  G3 . . .  . . . .  G4 . E4 .   G4 . E4 .  G4 G4 . E4  . . D4 .  D4 . . C4   B3 . . .  G3 . . .  . . D3 .  D3 . D3 .   G3 . A3 .  B3 C4 . D4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . D3 .  D3 . D3 .   A3 . B3 .  C4 . D4 E4  . . . .  C4 . . B3   C4 . . .  A3 . . .  . . E4 .  G4 . E4 .   G4 . E4 .  G4 G4 . E4  . . D4 .  B3 . . A3   . . . .  . . . .  . . . .  . . . .
 
+# fill-bar overrides: melodic lanes are SILENT on the fill bar so the verse pickup (A#4 A4 A#4 A4…)
+# doesn't bleed into the chorus transition — the drums + fx get the fill to themselves.
+build.lead fill:  . . . .  . . . .  . . . .  . . . .
+build.arp fill:   . . . .  . . . .  . . . .  . . . .
+build.bass fill:  . . . .  . . . .  . . . .  . . . .
+drop.lead fill:   . . . .  . . . .  . . . .  . . . .
+drop.arp fill:    . . . .  . . . .  . . . .  . . . .
+drop.bass fill:   . . . .  . . . .  . . . .  . . . .
+breakdown.lead fill:  . . . .  . . . .  . . . .  . . . .
+breakdown.arp fill:   . . . .  . . . .  . . . .  . . . .
+breakdown.bass fill:  . . . .  . . . .  . . . .  . . . .
+climax.lead fill: . . . .  . . . .  . . . .  . . . .
+climax.arp fill:  . . . .  . . . .  . . . .  . . . .
+climax.bass fill: . . . .  . . . .  . . . .  . . . .
+outro.lead fill:  . . . .  . . . .  . . . .  . . . .
+outro.arp fill:   . . . .  . . . .  . . . .  . . . .
+outro.bass fill:  . . . .  . . . .  . . . .  . . . .
+
 # bass: the disco octave-bounce, tracking the chord roots. Holds the groove THROUGH the lead's breath
 # bar (it doesn't rest when the horns do).
 build.bass p0: G2 . G3 .  G2 . G3 .  G2 . G3 .  G2 . G3 .   G2 . G3 .  G2 . G3 .  G2 . G3 .  G2 . G3 .   G2 . G3 .  G2 . G3 .  G2 . G3 .  G2 . G3 .   A#1 . A#2 .  A#1 . A#2 .  A#1 . A#2 .  A#1 . A#2 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   A#1 . A#2 .  A#1 . A#2 .  A#1 . A#2 .  A#1 . A#2 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .

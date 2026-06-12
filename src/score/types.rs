@@ -74,7 +74,14 @@ impl NoteLane {
     /// loops CONTINUOUSLY across the whole section — independent of the drum phases and the fill
     /// bar — so a through-composed line plays as one uninterrupted statement (and breathes over a
     /// drum fill) instead of being chopped/restarted at every phase boundary.
-    pub(super) fn bar(&self, into: u32) -> [Option<f32>; 16] {
+    ///
+    /// When `fill_active` is true and the lane has a fill phrase, that fill is returned instead of
+    /// the looped p0 phrase — so a per-section `<section>.lead fill: <16 rests>` silences the
+    /// melody on the drum-fill bar, preventing the verse's pickup from bleeding into the chorus.
+    pub(super) fn bar(&self, into: u32, fill_active: bool) -> [Option<f32>; 16] {
+        if fill_active && !self.fill.is_empty() {
+            return self.fill[(into as usize).min(self.fill.len() - 1)];
+        }
         let phrase = self.phases.first().map(Vec::as_slice).unwrap_or(&[]);
         if phrase.is_empty() {
             [None; 16]
