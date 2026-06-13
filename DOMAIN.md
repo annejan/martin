@@ -233,9 +233,11 @@ Aliasing is idiomatic in martin's parsers, so every DSL rename is additive and b
 - **Stage 0 — doc-only (zero risk).** This file; glossary updates in `DESIGN.md` / `AGENTS.md` /
   `ART-DIRECTION.md`; rewrite both Showbook headers to the §7 dope-sheet panel + two-layer
   (Section/Scene) framing; scrub "scene"/"transition"/"cue" ambiguity from prose.
-- **Stage 1 — DSL token aliases (additive).** Add canonical tokens beside the old ones:
-  `[reel]`, promote `[stage]`, `exit:`, `flock:`, `backdrop:`, `budget=`. Migrate the two shipped shows;
-  keep aliases indefinitely. Old shows still parse.
+- **Stage 1 — DSL token aliases (additive). ✅ LANDED.** Canonical tokens beside the old ones:
+  `[reel]`, `[stage]`, `~entrance`, `exit:`, `flock:`, `backdrop:`, `budget=`. All shipped shows
+  migrated; old spellings still parse. Plus two beyond the original Stage 1: **`kind = intro|demo`**
+  (the production-kind / asset-budget check, the L1 layer) and **`[scenes]`** (the L2 arc-authoring
+  layer that flattens to `[reel]`). Still pending in this stage: nothing.
 - **Stage 2 — internal struct/field renames (no DSL impact).** `Part→Shot`, `count→budget`,
   `sources→origins`, `Composed→Prop`, `Waypoint→Key`. Compiler-checked, mechanical.
 - **Stage 3 — small new enums.** `AnchorKind` (refactor `anchor_seconds` to build/match it),

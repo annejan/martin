@@ -32,6 +32,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   parsing as aliases. Plus a production **kind**: `kind = intro|demo`. An `intro` is self-contained +
   asset-budgeted (bundles into the single binary); `MARTIN_VALIDATE` reports its asset budget and
   warns on heavy / missing / capture-only assets. A `demo` is full-fat (local captures allowed).
+- **`[scenes]` authoring** — write a show as the Showbook **arc** of named **Scenes** instead of a flat
+  reel: each `scene` line opens a beat and sets its look (`@@anchor` / `backdrop:` / `^deform`), which
+  the Shots under it inherit (a Shot's own modifier wins). Flattens to the exact `[reel]` the engine
+  already runs — pure sugar, content-agnostic. Example: `assets/examples/arc.show`. (`[arc]` aliases it.)
 - Raster modes (`raster:<mode>` per-part token + `MARTIN_RASTER` global default): expose the fork's
   RasterizeMode debug-shading views — `color`/`depth`/`normal`/`position`/`classification`/`flow`/
   `velocity`. `position` colours each gaussian by XYZ (a rainbow gradient) — e.g.

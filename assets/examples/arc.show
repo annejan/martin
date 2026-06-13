@@ -1,0 +1,32 @@
+# martin — the [scenes] authoring layer (DOMAIN.md L2): write a show as the Showbook ARC of named
+# SCENES instead of a flat reel. Each `scene` line opens a beat and sets its look; the Shots under it
+# inherit that look. It flattens to the exact [reel] the engine runs — pure sugar. Content-agnostic:
+# a Shot is any splat:/mesh:/wall:/image:/svg:/glb:/shader: line.
+#
+#   MARTIN_SHOW=assets/examples/arc.show cargo +nightly run --release
+#
+# Inheritance on flatten: the scene's @@anchor stamps its FIRST shot only (the rest flow after it);
+# the scene's backdrop:/^deform apply to every shot that doesn't set its own.
+
+[settings]
+kind = intro
+budget = 120000
+score = assets/score.txt              # section names drive the scene @@anchors
+
+[scenes]
+scene opener   @@intro   backdrop:off
+  glb:defeest.glb       @8,3   ~morph   exit:explode      # the brand dissolves in, then bursts
+
+scene party    @@drop    backdrop:plasma   ^wave          # the whole scene waves on a plasma backdrop
+  splat:galaxy.ply      @5,2   ~morph
+  splat:knot.ply        @5,2   ~morph   backdrop:bolt      # this shot overrides the scene backdrop
+  text:splats that morph @4,2  ~typewriter                # inherits ^wave + plasma
+
+scene credits  @@outro   backdrop:stars
+  text:deFEEST          @5,4   ~pen-write ^wave
+  wall:Anus|Bevy|Mosure @4,3   ~morph   exit:evaporate
+
+[camera]
+t=@@intro  pos=0,0,0 dist=2.8 yaw=1.45 pitch=0.10
+t=@@drop   pos=0,0,0 dist=2.0 yaw=1.45 pitch=0.18
+t=@@outro  pos=0,0,0 dist=3.0 yaw=1.42 pitch=0.06

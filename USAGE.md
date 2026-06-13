@@ -227,6 +227,28 @@ splat:a.ply+b.ply                # several splats, auto-arranged side by side
 > `[seq]`→`[reel]`, `~transition`→`~entrance` (the `~` slot), `out:`→`exit:`, `cluster:`→`flock:`,
 > `bg:`→`backdrop:`, and the setting `morph_count`→`budget`. New shows should use the canonical words.
 
+### `[scenes]` — write the show as an arc of scenes
+
+Instead of a flat `[reel]`, you can author the **Showbook arc directly**: a `[scenes]` block groups
+Shots under named **Scenes**, and each Scene's look is inherited by its Shots. It flattens to the exact
+`[reel]` the engine runs — pure sugar, content-agnostic (a Shot is any `splat:`/`mesh:`/`wall:`/
+`image:`/`svg:`/`glb:`/`shader:` line). Example ships at `assets/examples/arc.show`:
+
+```
+[scenes]
+scene opener  @@intro  backdrop:off                 # a scene opens a beat + sets its look
+  glb:defeest.glb  @8,3  ~morph  exit:explode
+scene party   @@drop   backdrop:plasma  ^wave        # the whole scene waves on a plasma backdrop
+  splat:galaxy.ply  @5,2  ~morph
+  splat:knot.ply    @5,2  ~morph  backdrop:bolt      # a Shot's own backdrop overrides the scene's
+  text:HELLO        @4,2  ~typewriter                # inherits ^wave + plasma
+```
+
+On flatten: the Scene's `@@anchor` stamps its **first** Shot (the rest flow after it); the Scene's
+`backdrop:`/`^deform` apply to every Shot that doesn't set its own. (`[arc]` is an alias of `[scenes]`.
+If a show has *both* `[scenes]` and an explicit `[reel]`, the `[reel]` wins.) A future revision may add
+per-Scene camera moves and density — see [`DOMAIN.md`](DOMAIN.md) §5/§9.
+
 **Per-part raster mode** (`raster:<mode>`): the fork's debug-shading views, colour each gaussian by a
 channel instead of its RGB. `color` (default, normal render) · `depth` · `normal` · `position`
 (colour by XYZ → a rainbow gradient) · `classification` · `flow` (optical-flow) · `velocity`. Set

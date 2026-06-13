@@ -35,6 +35,7 @@ pub fn apply() -> Show {
 enum Section {
     Settings,
     Seq,
+    Scenes,
     Compose,
     Camera,
 }
@@ -43,6 +44,7 @@ impl From<&str> for Section {
     fn from(s: &str) -> Self {
         match s.to_ascii_lowercase().as_str() {
             "reel" | "seq" | "sequence" | "morph" => Section::Seq,
+            "scenes" | "arc" => Section::Scenes,
             "stage" | "compose" => Section::Compose,
             "camera" | "cam" => Section::Camera,
             _ => Section::Settings, // `[settings]`, or anything unknown → top-level knobs
@@ -50,9 +52,80 @@ impl From<&str> for Section {
     }
 }
 
+/// Flatten a `[scenes]` body into a plain `[reel]` body (the domain-driven authoring layer, L2). A
+/// `[scenes]` block is the Showbook arc made executable: you group Shots under named **Scenes**, and
+/// each Scene's look is inherited by its Shots. It is pure sugar — it compiles to the exact reel the
+/// engine already runs, so nothing downstream changes.
+///
+/// Grammar:
+/// ```text
+/// scene <name> [@@anchor] [backdrop:NAME] [^deform]   # opens a scene; the rest are its defaults
+///   <shot line>                                        # any normal reel Shot (indent optional)
+///   <shot line>
+/// scene <name2> …
+/// ```
+/// Inheritance, on flatten: the Scene's `@@anchor` is stamped on its **first** Shot only (the rest
+/// flow sequentially after it); the Scene's `backdrop:` / `^deform` are appended to every Shot that
+/// doesn't set its own. Content-agnostic — a Shot is any `splat:`/`mesh:`/`wall:`/`image:`/… line.
+fn flatten_scenes(body: &str) -> String {
+    let mut reel = String::new();
+    // The current scene's inherited defaults: (anchor token, backdrop token, deform token).
+    let (mut anchor, mut backdrop, mut deform) = (None, None, None);
+    let mut first_shot_pending = false; // the scene's anchor goes on its first shot only
+    for raw in body.lines() {
+        let line = raw.split('#').next().unwrap_or("").trim();
+        if line.is_empty() {
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("scene ").or(line.strip_prefix("scene\t")) {
+            // open a scene: pull its inherited-look tokens out of the header.
+            (anchor, backdrop, deform) = (None, None, None);
+            for tok in rest.split_whitespace() {
+                if tok.starts_with("@@") {
+                    anchor = Some(tok.to_string());
+                } else if tok.starts_with("backdrop:") || tok.starts_with("bg:") {
+                    backdrop = Some(tok.to_string());
+                } else if tok.starts_with('^') {
+                    deform = Some(tok.to_string());
+                }
+                // the scene name + anything else is just a label — ignored on flatten.
+            }
+            first_shot_pending = true;
+            continue;
+        }
+        // a Shot line: apply the scene's inherited defaults it didn't override.
+        let mut shot = line.to_string();
+        if first_shot_pending {
+            if let Some(a) = &anchor {
+                if !shot.contains("@@") {
+                    shot.push(' ');
+                    shot.push_str(a);
+                }
+            }
+            first_shot_pending = false;
+        }
+        if let Some(b) = &backdrop {
+            if !shot.contains("backdrop:") && !shot.contains("bg:") {
+                shot.push(' ');
+                shot.push_str(b);
+            }
+        }
+        if let Some(d) = &deform {
+            if !shot.contains('^') {
+                shot.push(' ');
+                shot.push_str(d);
+            }
+        }
+        reel.push_str(&shot);
+        reel.push('\n');
+    }
+    reel
+}
+
 fn parse_and_apply(text: &str) -> Show {
     let mut section = Section::Settings;
     let (mut seq, mut compose) = (String::new(), String::new());
+    let mut scenes = String::new();
     let mut camera = Vec::new();
     for raw in text.lines() {
         let line = raw.trim();
@@ -74,6 +147,11 @@ fn parse_and_apply(text: &str) -> Show {
                 seq.push_str(raw);
                 seq.push('\n');
             }
+            // `[scenes]` is the domain arc; collected raw, flattened to a reel after the loop.
+            Section::Scenes => {
+                scenes.push_str(raw);
+                scenes.push('\n');
+            }
             Section::Compose => {
                 compose.push_str(raw);
                 compose.push('\n');
@@ -86,6 +164,10 @@ fn parse_and_apply(text: &str) -> Show {
                 }
             }
         }
+    }
+    // `[scenes]` flattens into the reel. If a show has both, the explicit `[reel]` wins (don't double).
+    if seq.trim().is_empty() && !scenes.trim().is_empty() {
+        seq = flatten_scenes(&scenes);
     }
     if !seq.trim().is_empty() {
         set_if_absent("seq", seq.trim());
@@ -122,5 +204,32 @@ fn set_if_absent(key: &str, value: &str) {
     if std::env::var(&var).is_err() {
         // SAFETY: show settings are applied at startup, single-threaded, before any threads spawn.
         unsafe { std::env::set_var(var, value) };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scenes_flatten_to_a_reel_with_inheritance() {
+        let body = "\
+scene opener @@intro backdrop:off
+  glb:defeest.glb @8,3 ~morph
+scene party @@drop backdrop:plasma ^wave
+  splat:galaxy.ply @5,2 ~morph
+  splat:knot.ply @5,2 ~morph backdrop:bolt   # own backdrop wins
+  text:HELLO @4,2 ~outline ^twist            # own deform wins
+";
+        let reel: Vec<String> = flatten_scenes(body).lines().map(String::from).collect();
+        assert_eq!(reel.len(), 4);
+        // scene anchor stamped on the FIRST shot of each scene only.
+        assert!(reel[0].contains("@@intro") && reel[0].contains("backdrop:off"));
+        assert!(reel[1].contains("@@drop") && reel[1].contains("backdrop:plasma") && reel[1].contains("^wave"));
+        assert!(!reel[2].contains("@@")); // second shot of the scene flows sequentially
+        // per-shot overrides beat the scene defaults (no double backdrop / deform).
+        assert!(reel[2].contains("backdrop:bolt") && !reel[2].contains("backdrop:plasma"));
+        assert!(reel[3].contains("^twist") && !reel[3].contains("^wave"));
+        assert!(reel[3].contains("backdrop:plasma")); // but it DOES inherit the scene backdrop
     }
 }
