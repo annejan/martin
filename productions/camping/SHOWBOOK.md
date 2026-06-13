@@ -10,12 +10,12 @@ verhuist naar deze map zodra er een tweede productie met eigen muziek is).
 **Secties:** intro 0 · build 14 · drop 43 · breakdown 99 · climax 129 · outro 185 · einde 228.
 **Show-file:** `camping.show` (full-fat, lokale captures; de CI/bundle-etalage is `productions/intro/`).
 
-## De arc: werkelijkheid ↔ magie
+## De arc (besloten 2026-06-13)
 
-Eén verhaal in plaats van losse objecten. **Zonder deFEEST** is de camping een doods stilleven;
-**met deFEEST** komt ze tot leven. Visueel: de show begint en eindigt *fotorealistisch* (echte
-captures, rustige camera) en wordt in het midden *magisch* (de werkelijkheid ontbindt in deeltjes,
-danst, en komt weer samen). De reis werkelijkheid → magie → werkelijkheid volgt de muziek exact.
+deFEEST drijft in → het deFEEST-dorp bouwt op de camping → het feest barst los → **zonder deFEEST
+is het kut** (nacht, triest) → **met deFEEST = het ultieme genot** (peak party) → greetings & credits.
+Emotionele ruggengraat: de zonder-deFEEST-dip (breakdown) maakt de met-deFEEST-climax groter.
+Merk + camping-props zijn echte captures; de blobs/splats ⇄ mesh dissolves zijn de magie ertussen.
 
 Spelregel per scène: **één idee per scène, en per scène veranderen de régels** (dichtheid,
 camera-regime, look) — niet alleen de content. Niets staat ooit stil in beeld; alles wat verschijnt
@@ -25,12 +25,12 @@ heeft een entree én een aftocht.
 
 | # | sectie (tijd) | werktitel | wat zie je | camera | status |
 |---|---|---|---|---|---|
-| 1 | intro (0–14) | **Vuurvliegjes** | Pikdonker. Een handvol lichtpuntjes drijft in, zwermt, condenseert tot het deFEEST-logo. | bijna statisch, heel licht drijvend | □ idee |
-| 2 | build (14–43) | **De tent op** | Typografie bouwt op: OP DE CAMPING wordt een muur/tunnel; sterren faden in; eerste capture-glimp. | van orbit naar langzame push vooruit | □ idee |
-| 3 | drop (43–99) | **Het feest barst los** | De muur explodeert in de captures (Ægg, dog, …): snelle morphs op 4-bar-grenzen, zwerm-erupties, flash op de hits. | snel, zwiepend, push-ins op de beat | □ idee |
-| 4 | breakdown (99–129) | **Zonder deFEEST** | Alles loopt leeg: de camping als bevroren, grijs stilleven; deeltjes regenen weg; sterren dimmen. ZONDER deFEEST / IS HET KUT. | zakt, drift traag weg | □ idee |
-| 5 | climax (129–185) | **Met deFEEST** | Voor het eerst alles tegelijk op het podium (compose): captures + tekst + zwermen, camera vliegt ertussendoor. | flythrough tussen de objecten | □ idee |
-| 6 | outro (185–228) | **De deeltjes gaan slapen** | Credits (pen-write), logo; de wolk verstrooit terug naar vuurvliegjes → zwart. Symmetrie met scène 1. | trekt langzaam terug | □ idee |
+| 1 | intro (0–14) | **deFEEST drijft in** | Pikdonker. De 3D deFEEST-mesh drijft in beeld, draait zacht, dissolved dan tot blobs/splats (`glb:defeest.glb` mesh⇄splat). Het merk opent, wordt deeltjes. | langzaam indrijven, zacht om de mesh | ◪ uitgewerkt |
+| 2 | build (14–43) | **deFEEST-dorp op de camping** | De deFEEST-blobs hervormen tot camping-scenery: het deFEEST-dorp op de camp, props die indrijven (bier/krat, club-mate, BBQ, tent). Bouwt op met de muziek. **Vereist echte captures.** | orbit → langzame push vooruit | ◪ uitgewerkt (captures nodig) |
+| 3 | drop (43–99) | **Het feest barst los** | De hele camping leeft: deFEEST-splats die overal **golven** (`^wave`), happy **regenboog-backdrop-shader**, meer props — tafel vol eten, deFEEST-leden die juichen. Snelle ball-pulse morphs op de beat. **Vereist captures.** | snel maar frontaal, push-ins op de hits | ◪ uitgewerkt (captures nodig) |
+| 4 | breakdown (99–129) | **Zonder deFEEST** | Nacht. `bg:stars` sterrenveld, gedimd. Trieste tekst over hoe het leven kut is zónder deFEEST (ZONDER deFEEST / IS HET KUT). Camp leegt weg. **Geen captures (tekst + bg).** | zakt, drift traag weg | ◪ uitgewerkt |
+| 5 | climax (129–185) | **Met deFEEST** | Peak party: meer juichende deFEEST-leden, regenbogen, grote "explosies" (= dikke ball-pulse morph-bursts, de sexy soort, géén scatter), bitterballen-regen (`bitterbal.obj`, bestaat). MET deFEEST = het ultieme genot. **Captures (leden) nodig.** | energiek maar frontaal, push-ins op de hits | ◪ uitgewerkt (captures nodig) |
+| 6 | outro (185–228) | **Greetings & credits** | Greetings naar andere scene- + camping-groepen (scroll/walls), dan de credits (crew: ANUS\|KLOOT\|CINDER), deFEEST-signature (pen-write); dissolve → zwart. **Geen captures (tekst).** Greet-namen nog invullen. | frontaal, trekt langzaam terug | ◪ uitgewerkt |
 
 *Status-trap: □ idee → ◪ uitgewerkt (shots + timing hieronder) → ▣ gebouwd (in camping.show) → ★ goedgekeurd.*
 
@@ -47,12 +47,14 @@ mesh-route (`model:`/`glb:`) of accepteer de zachtheid.
 
 | capture | rol in de show | notities | status |
 |---|---|---|---|
-| krat bier (40 cm) | **schaal-ijk** voor álle captures + prop | COLMAP-schaal is willekeurig: het krat is de meetlat | □ |
+| krat bier (40 cm) | **schaal-ijk** voor álle captures + prop (scène 2) | COLMAP-schaal is willekeurig: het krat is de meetlat | □ |
+| club-mate fles | prop (scène 2) | herkenbaar silhouet; etiket leest leuk in splats | □ |
 | campingstoel | prop, breakdown/climax | open vouwstoel leest beter dan dichte | □ |
 | tent(je) | hero-prop, build/climax | doek = goed splatbaar; stokken worden zacht | □ |
-| gasstel/BBQ | prop + bron van vuurvliegjes (scène 1!) | met rooster/pannetje voor herkenbaarheid | □ |
+| gasstel/BBQ | prop, scène 2 + bron van vuurvliegjes | met rooster/pannetje voor herkenbaarheid | □ |
 | de camping-hoek | **hero-omgeving** (backdrop) | alleen vanuit de gefilmde kijkhoek gebruiken | □ |
-| mensen/de crew | climax | bewegend = lastig; stilstaand poseren | □ |
+| tafel vol eten | prop (scène 3) | volle tafel = rommelig = splat prachtig | □ |
+| deFEEST-leden juichend | scène 3 + climax | bewegend = lastig; juichen = stil poseren, armen omhoog | □ |
 
 **Capture-regels** (uitgebreider in `ART-DIRECTION.md`):
 1. **Eén licht-sessie.** Splats bakken hun belichting in — alle props onder hetzelfde licht
@@ -72,7 +74,13 @@ mesh-route (`model:`/`glb:`) of accepteer de zachtheid.
 - **Harde cuts** — instant part-wissel op de beat (morph ≈ 0 + flash). → scène 3.
 - **Beat-reactie-variatie** — nu bounced álles altijd op de kick (MARTIN_BEAT is globaal); per scène
   moet de reactie kunnen wisselen (thump / flare / shimmer / niets). → alle scènes.
+- **Happy regenboog-backdrop** — bg.wgsl heeft plasma/kaleido (regenboog-achtig) maar geen expliciete
+  vrolijke "rainbow" mode; evt. een nieuwe bg-mode toevoegen. → scène 3.
 
 ## Logboek
 
 - 2026-06-13 — productie-structuur opgezet (`productions/camping/`), arc + scène-raamwerk + boodschappenlijst neergezet. Trellis-als-permanent-decor verworpen: alles op het scherm heeft een levenscyclus nodig.
+- 2026-06-13 — alle 6 scènes □→◪ besloten (samen, na het beluisteren van de track). Scènes 1/4/6
+  bouwbaar zónder captures (mesh-open / nacht-tekst / greetings+credits); 2/3/5 vereisen echte
+  captures (camp-props, eten-tafel, juichende leden). Captures-lijst aangevuld (club-mate, eten-tafel,
+  leden). Engine-vraag toegevoegd: happy regenboog-bg-mode.
