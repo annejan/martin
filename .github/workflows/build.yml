@@ -139,8 +139,8 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       # The show's procedural splats (galaxy/supershape/knot/helix/torus) aren't in the repo (.ply is
-      # gitignored) — build.rs synthesizes any that are missing (the Rust port of gen-demo-splats.py),
-      # so no python/numpy step is needed: the bundle build below generates + bakes them in.
+      # gitignored) — build.rs synthesizes any that are missing (build/gen_splats.rs), so no
+      # python/numpy step is needed: the bundle build below generates + bakes them in.
 
       # Pre-render the track to a WAV and bake it into the bundle, so the demo plays the music
       # INSTANTLY + in sync (the live synth render takes ~30s — too slow for a one-click demo).

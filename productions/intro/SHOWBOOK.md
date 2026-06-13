@@ -2,7 +2,7 @@
 
 **Doel:** de kleine, altijd-bouwbare productie — wat CI bakt en wat een vreemde downloadt. Eén
 belofte: *een schone checkout → een werkende, muzikale splat-demo van ~2:40.* Geen captures, geen
-gefetchte files; alleen repo-assets + de procedurele shapes uit `pipeline/gen-demo-splats.py`.
+gefetchte files; alleen repo-assets + de procedurele shapes uit `build/gen_splats.rs` (door build.rs).
 
 **Muziek:** eigen track (`score.txt`) — zonnige, bouncy tropical-house in C, **124 BPM, ~89 s**
 (46 bars; helderdere mix dan de 102-cut). Secties (s): intro 0 · build 7.7 · drop 19.4 · breakdown

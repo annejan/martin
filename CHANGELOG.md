@@ -59,9 +59,9 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ### Content & productions
 - The **default show is the intro production** — a bare `cargo run` (and a fresh `git clone`) plays
   the same showcase CI bundles into the single binary. Its procedural splats are synthesized by
-  `build.rs` (a Rust port of `gen-demo-splats.py`) if missing, so a clean checkout builds + runs with
-  no python/numpy step; CI dropped its pip/numpy generate step. The older effect-catalogue demo stays
-  at `assets/demo.show`.
+  `build.rs` (via `build/gen_splats.rs`, all 11 shapes) if missing, so a clean checkout builds + runs
+  with no python/numpy step; CI dropped its pip/numpy generate step and the old
+  `pipeline/gen-demo-splats.py` was removed. The older effect-catalogue demo stays at `assets/demo.show`.
 - `productions/` — one folder per demo (showbook + `.show` + bundle recipe). **intro**: the
   licence-cleared, repo-only showcase CI bakes into the single-binary. **camping**: the full-fat
   "Op de Camping" demo (designed showbook-first; uses the big local captures, stand-ins until shot).

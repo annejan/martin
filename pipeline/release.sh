@@ -22,11 +22,8 @@ cd "$HERE"
 MANIFEST="${1:-bundle.toml}"
 TARGET_GLIBC="${TARGET_GLIBC:-2.31}"
 
-echo "==> demo shapes (generate once if missing)"
-if [ ! -f assets/sphere.ply ]; then
-  python3 pipeline/gen-demo-splats.py assets/demo 140000
-  cp assets/demo/*.ply assets/
-fi
+# The bundle's procedural splats are synthesized by build.rs (build/gen_splats.rs) during the cargo
+# build below if missing — no separate generate step needed.
 
 if command -v cargo-zigbuild >/dev/null && command -v zig >/dev/null; then
   echo "==> building PORTABLE bundled binary from $MANIFEST (zigbuild, glibc $TARGET_GLIBC)"

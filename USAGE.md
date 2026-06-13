@@ -781,8 +781,9 @@ older ones (`GLIBC_2.xx not found`). `release.sh` links against an **old glibc**
 runs everywhere; the GPU/audio/window libs are dlopen'd and present on any desktop. One-time setup:
 `cargo install cargo-zigbuild` + put `zig` on `PATH`. Native fallback (+ a warning) otherwise.
 
-Generate the procedural demo shapes (`sphere`/`cube`/`torus`/`helix`/`galaxy`/`star`/`wave`/`ring`/
-`knot`/`mobius`/`supershape`) the release show uses with `python3 pipeline/gen-demo-splats.py`.
+The procedural demo shapes (`sphere`/`cube`/`torus`/`helix`/`galaxy`/`star`/`wave`/`ring`/`knot`/
+`mobius`/`supershape`) are synthesized by **`build.rs`** (`build/gen_splats.rs`) — any one a show
+references is generated on build if its `.ply` is missing, so no separate step is needed.
 Mesh → "proper" splat (offline Blender→Brush bake, all-AMD): `pipeline/mesh-splat.sh`.
 
 ## Performance notes (Radeon 860M iGPU, Vulkan)

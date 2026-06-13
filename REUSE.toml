@@ -114,7 +114,6 @@ path = [
     "pipeline/splat.sh",
     "pipeline/mesh-splat.sh",
     "pipeline/render_orbit.py",
-    "pipeline/gen-demo-splats.py",
     "pipeline/bundle.sh",
     "pipeline/release.sh",
     "pipeline/fetch-demo-assets.sh",
