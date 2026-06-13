@@ -574,9 +574,10 @@ mod tests {
             eprintln!("skip bornhack_diag: not present");
             return;
         }
-        let fallback = [0.8_f32, 0.85, 0.95];
-        let g = build_mesh_gaussians(&p, 60_000, 1.2, 0.2, 1.0, Some(fallback));
-        let grey = sh_of(fallback);
+        // None = no explicit MARTIN_MESH_RGB, so the mesh's own material colours must drive it
+        // (a grey result then means materials weren't read). MESH_FALLBACK_RGB is that grey.
+        let g = build_mesh_gaussians(&p, 60_000, 1.2, 0.2, 1.0, None);
+        let grey = sh_of(MESH_FALLBACK_RGB);
         let n_grey = g
             .iter()
             .filter(|gg| {

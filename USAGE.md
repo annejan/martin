@@ -401,8 +401,11 @@ Tips so it reads well once sampled into splats:
 - **Bornhack Ægg / badge board** (`aegg.dae`/`.glb`, `bornhack2026-hardware.dae`) — from
   [codeberg.org/Ranzbak/bornhack2026-hardware](https://codeberg.org/Ranzbak/bornhack2026-hardware),
   **MIT © Badge.Team**.
-- **`bitterbal.obj`** — © [Maali](https://maali.nl), used **with Maali's permission**
-  (`LICENSES/LicenseRef-Maali.txt`).
+- **`bitterbal.obj`** (+ `bitterbal.glb`, derived via `pipeline/bitterbal_glb.py`) — © [Maali](https://maali.nl),
+  used **with Maali's permission** (`LICENSES/LicenseRef-Maali.txt`).
+- **BornHack logo** — the host camp's wordmark, from the
+  [bornhack-website](https://github.com/bornhack/bornhack-website) repo (**BSD-3-Clause © 2016–2018 BornHack**);
+  `bornhack.glb`/`.dae` are extruded from `bornhack.svg` (`pipeline/svg_import.py`).
 - `bawl-e.dae` — [bawlsec.com](https://bawlsec.com/)'s logo (Anne Jan's object via scene.rs/deFEEST,
   originally from [M42D](https://bawlsec.com/authors/m42d.html)) — stays **local** (gitignored, not
   published). The large splat bakes (`*.ply`) stay out of git too — regenerate from the meshes.

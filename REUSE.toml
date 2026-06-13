@@ -83,14 +83,22 @@ SPDX-FileCopyrightText = "2025 Badge.Team"
 SPDX-License-Identifier = "MIT"
 
 # Bitterbal model — © Maali (maali.nl), used with permission (see LICENSES/LicenseRef-Maali.txt).
+# bitterbal.glb is derived from the same model (pipeline/bitterbal_glb.py) → same licence.
 [[annotations]]
-path = ["assets/bitterbal.obj", "assets/bitterbal.mtl"]
+path = ["assets/bitterbal.obj", "assets/bitterbal.mtl", "assets/bitterbal.glb"]
 SPDX-FileCopyrightText = "Maali <https://maali.nl>"
 SPDX-License-Identifier = "LicenseRef-Maali"
 
+# BornHack logo — the host camp. Wordmark from the bornhack-website repo (BSD-3-Clause);
+# .glb/.dae are extruded from bornhack.svg (pipeline/svg_import.py) so they carry the same licence.
+[[annotations]]
+path = ["assets/bornhack.svg", "assets/bornhack.glb", "assets/bornhack.dae"]
+SPDX-FileCopyrightText = "2016-2018 BornHack <https://bornhack.dk>"
+SPDX-License-Identifier = "BSD-3-Clause"
+
 # logo / asset-import tooling + render harness.
 [[annotations]]
-path = ["pipeline/svg_extrude_logo.py", "pipeline/svg_import.py", "pipeline/logo-check.compose", "pipeline/score_to_midi.py"]
+path = ["pipeline/svg_extrude_logo.py", "pipeline/svg_import.py", "pipeline/bitterbal_glb.py", "pipeline/logo-check.compose", "pipeline/score_to_midi.py"]
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
