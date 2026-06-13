@@ -108,11 +108,12 @@ jobs:
             target/release/martin.exe
           if-no-files-found: ignore
 
-  # The packaged deal: ONE self-contained binary — the "Op de Camping" demo. build.rs
-  # (--features bundle) bakes the show's assets into the executable; it self-extracts to a temp dir
-  # at startup and plays with no external files and no env vars. We use the CI-SAFE show
-  # (productions/camping/camping-ci.show): repo-tracked licence-cleared meshes (the Ægg/deFEEST/bitterbal/bornhack)
-  # + procedural splats generated fresh here — so it builds straight from a clean checkout.
+  # The packaged deal: ONE self-contained binary — the INTRO production (productions/intro/), the
+  # small always-buildable engine showcase with its own simple track. build.rs (--features bundle)
+  # bakes the show's assets into the executable; it self-extracts to a temp dir at startup and plays
+  # with no external files and no env vars. Built only from repo-tracked licence-cleared assets +
+  # procedural splats generated fresh here — straight from a clean checkout. (The camping demo's
+  # bundle is full-fat/local-only — its captures can't ship in a clean checkout.)
   bundle:
     name: single binary (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -142,10 +143,9 @@ jobs:
         with:
           python-version: "3.x"
 
-      # The show's procedural splats (galaxy/supershape/knot/…) aren't in the repo (.ply is gitignored)
-      # — generate them fresh so build.rs can bake them in. The character captures (dog/Martins) are
-      # NOT used by the CI-safe show; only repo-tracked meshes + these generated shapes. (numpy isn't
-      # preinstalled on the runners.)
+      # The show's procedural splats (galaxy/supershape/knot/helix/…) aren't in the repo (.ply is
+      # gitignored) — generate them fresh so build.rs can bake them in. (numpy isn't preinstalled
+      # on the runners.)
       - name: Generate procedural splats
         shell: bash
         run: |
@@ -157,14 +157,14 @@ jobs:
       - name: Render the music
         shell: bash
         env:
-          MARTIN_SYNTH_WAV: assets/op-de-camping.wav
-          MARTIN_SCORE: assets/score.txt
+          MARTIN_SYNTH_WAV: productions/intro/intro.wav
+          MARTIN_SCORE: productions/intro/score.txt
           MARTIN_SCORE_STRICT: "1" # fail the build on any score lint warning (phase/bar mismatch, …)
         run: cargo run --release   # the MARTIN_SYNTH_WAV path renders the WAV and exits (no window)
 
-      - name: Build single binary (the Op de Camping demo, --features bundle)
+      - name: Build single binary (the intro production, --features bundle)
         shell: bash
-        run: MARTIN_BUNDLE=productions/camping/bundle.toml cargo build --release --features bundle
+        run: MARTIN_BUNDLE=productions/intro/bundle.toml cargo build --release --features bundle
 
       - name: Report binary size
         shell: bash
@@ -173,7 +173,7 @@ jobs:
       - name: Upload single binary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: op-de-camping-${{ matrix.os }}
+          name: martin-intro-${{ matrix.os }}
           path: |
             target/release/martin
             target/release/martin.exe

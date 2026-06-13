@@ -1,0 +1,82 @@
+# productions/intro/score.txt — the intro production's track: bright C-major tropical-house
+# groove (102 BPM), adapted from the engine example assets/tropical.txt. Standard section
+# names (intro/build/drop/breakdown/climax/outro) so the show's @@anchors land on them.
+bpm 102
+chords C Am F G
+
+# sunny + wide: woozbass OFF, house+donk for the tropical-house offbeat, lots of air, no dark.
+set lead=0.82 sub=0.4 supersaw=0.05 choir=0.42 donk=0.13 house=0.06 reverb=0.46 sidechain=0.6 widen=1.7 makeup=1.12 ceiling=0.94 woozbass=0 shimmer=0.12 reverbauto=1 hats=0.34 snares=0.4 atmosphere=0.3
+
+section intro 8 8
+section build 9 8 fill
+section drop 17 8,8 fill
+section breakdown 9 8 fill
+section climax 17 8,8 fill
+section outro 9 8 fill
+
+# this is a BEACH, not a battle: keep the party layers (wall/donk/house/shimmer) + the riser sweeps,
+# but opt OUT of the demoscene jets, the impact-booms and the final bang — tropical fades out gently.
+# (Without these lines the standard names drop/climax/outro would inherit all of that by default.)
+drop.fx: wall donk house riser
+climax.fx: wall donk house shimmer riser
+outro.fx: wall house casio shimmer
+
+# --- drums: four-on-floor kick, clap on 2&4, offbeat shaker hats, offbeat skank stabs ---
+intro.kick p0: x... .... x... ....
+intro.hat p0: ..x. ..x. ..x. ..x.
+build.kick p0: x... .... x... ....
+build.hat p0: ..x. ..x. ..x. ..x.
+build.kick fill: x... x... x.x. xxxx
+build.snare fill: ..x. ..x. x.x. xxxx
+build.hat fill: xxxx xxxx xxxx xxxx
+drop.kick p0: x... x... x... x...
+drop.kick p1: x... x... x... x...
+drop.snare p0: .... x... .... x...
+drop.snare p1: .... x... .... x...
+drop.hat p0: ..x. ..x. ..x. ..x.
+drop.hat p1: x.xx x.xx x.xx x.xx
+drop.kick fill: x.x. xxxx x.x. xxxx
+drop.snare fill: ..x. ..x. x.x. xxxx
+drop.hat fill: xxxx xxxx xxxx xxxx
+drop.stab p0: ..x. ..x. ..x. ..x.
+drop.stab p1: ..x. ..x. ..x. ..x.
+breakdown.kick p0: x... .... .... ....
+breakdown.hat p0: ..x. ..x. ..x. ..x.
+breakdown.snare fill: .... .... ..x. .xxx
+climax.kick p0: x... x... x... x...
+climax.kick p1: x... x... x... x...
+climax.snare p0: .... x... .... x...
+climax.snare p1: .... x... .... x...
+climax.hat p0: x.xx x.xx x.xx x.xx
+climax.hat p1: xxxx xxxx xxxx xxxx
+climax.kick fill: x.x. xxxx x.x. xxxx
+climax.snare fill: xxxx xxxx xxxx xxxx
+climax.hat fill: xxxx xxxx xxxx xxxx
+climax.stab p0: ..x. ..x. ..x. ..x.
+climax.stab p1: ..x. ..x. ..x. ..x.
+outro.kick p0: x... .... x... ....
+outro.hat p0: ..x. ..x. ..x. ..x.
+outro.snare fill: .... .... ..x. .xxx
+
+# --- melody: a bright C-major-pentatonic island line (4-bar phrase over C Am F G, loops) ---
+build.lead p0: E4 . G4 .  A4 . G4 .  E4 . . .  C4 . D4 .   E4 . . .  A4 . C5 .  A4 . G4 .  . . . .   A4 . C5 .  D5 . C5 .  A4 . . .  F4 . G4 .   G4 . A4 .  B4 . D5 .  G4 . . .  . . . .
+drop.lead p0: E4 . G4 .  A4 . G4 .  E4 . . .  C4 . D4 .   E4 . . .  A4 . C5 .  A4 . G4 .  . . . .   A4 . C5 .  D5 . C5 .  A4 . . .  F4 . G4 .   G4 . A4 .  B4 . D5 .  G4 . . .  . . . .
+breakdown.lead p0: E4 . G4 .  A4 . G4 .  E4 . . .  C4 . D4 .   E4 . . .  A4 . C5 .  A4 . G4 .  . . . .   A4 . C5 .  D5 . C5 .  A4 . . .  F4 . G4 .   G4 . A4 .  B4 . D5 .  G4 . . .  . . . .
+climax.lead p0: E4 . G4 .  A4 . G4 .  E4 . . .  C4 . D4 .   E4 . . .  A4 . C5 .  A4 . G4 .  . . . .   A4 . C5 .  D5 . C5 .  A4 . . .  F4 . G4 .   G4 . A4 .  B4 . D5 .  G4 . . .  . . . .
+outro.lead p0: E4 . G4 .  A4 . G4 .  E4 . . .  C4 . D4 .   E4 . . .  A4 . C5 .  A4 . G4 .  . . . .   A4 . C5 .  D5 . C5 .  A4 . . .  F4 . G4 .   G4 . A4 .  B4 . D5 .  G4 . . .  . . . .
+
+# --- arp: a marimba-ish bright pluck ostinato (1-bar, loops) ---
+drop.arp p0: . . C5 .  . . E5 .  . . G4 .  . . E5 .
+climax.arp p0: . . C5 .  . . E5 .  . . G4 .  . . E5 .
+
+# --- bass: a bouncy tropical octave-bounce (4-bar, roots C A F G) ---
+build.bass p0: C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F2 . . .  F3 . F2 .  . . F3 .  F2 . . .   G2 . . .  G3 . G2 .  . . G3 .  G2 . . .
+drop.bass p0: C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F2 . . .  F3 . F2 .  . . F3 .  F2 . . .   G2 . . .  G3 . G2 .  . . G3 .  G2 . . .
+breakdown.bass p0: C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F2 . . .  F3 . F2 .  . . F3 .  F2 . . .   G2 . . .  G3 . G2 .  . . G3 .  G2 . . .
+climax.bass p0: C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F2 . . .  F3 . F2 .  . . F3 .  F2 . . .   G2 . . .  G3 . G2 .  . . G3 .  G2 . . .
+outro.bass p0: C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F2 . . .  F3 . F2 .  . . F3 .  F2 . . .   G2 . . .  G3 . G2 .  . . G3 .  G2 . . .
+
+# dynamics: sunny + bouncy, gentle wind-down (no explosive ending — it's a beach, not a battle).
+gain intro 0.3>0.5 build 0.45>0.8 drop 0.95 breakdown 0.55 climax 0.7>1.0 outro 0.8>0.4
+sub intro 0.2 build 0.3>0.55 drop 0.7 breakdown 0.4 climax 0.7 outro 0.5>0.2
+mids intro 0.2>0.4 build 0.4>0.7 drop 0.9 breakdown 0.55 climax 0.9 outro 0.7>0.3

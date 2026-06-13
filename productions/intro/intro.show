@@ -1,0 +1,48 @@
+# martin — the INTRO production: a short, sunny engine showcase built ONLY from repo-tracked,
+# licence-cleared assets + the procedural splats `pipeline/gen-demo-splats.py` generates fresh.
+# This is what CI bakes into the downloadable single-binary (productions/intro/bundle.toml) — it
+# must build and play from a clean checkout, no captures, no fetched files.
+#
+#   python3 pipeline/gen-demo-splats.py assets      # once: the procedural shapes (galaxy, knot, …)
+#   MARTIN_SHOW=productions/intro/intro.show cargo +nightly run --release
+#   MARTIN_BUNDLE=productions/intro/bundle.toml cargo build --release --features bundle
+
+# --- settings (each → MARTIN_<KEY>) ---
+morph_count = 120000
+ply = assets/galaxy.ply              # .ply root = assets/ so the generated `splat:` shapes resolve
+score = productions/intro/score.txt  # the production's own track (tropical groove, ~162s)
+# a neon scrolling grid behind the show — pure demoscene, dimmed so the splats stay the hero —
+# and an over-bright bloom flash on the @@anchored cuts.
+bg = grid
+bg_dim = 0.35
+flash = 0.4
+
+# --- the show: a tour of what the engine does (morph, swarm, per-particle transitions, deforms),
+#     @@anchored to the score's sections. ~162s. ---
+[seq]
+image:defeest-logo.png        @@intro      @10,3   ~sparkle                 # the logo sparkles in
+text:MARTIN                    @6,3                ~typewriter ^wave        # the engine introduces itself
+splat:galaxy.ply              @@build      @9,3    ~swarm      ^twist       # a galaxy swarms together
+text:SPLATS THAT MORPH         @9,3                ~typewriter ^wave        # what you're looking at
+splat:knot.ply                @@drop       @12,3   ~vortex     ^turbulence  # the party: knot…
+splat:supershape.ply           @12,3               ~explode    ^wave        # …bursts into a supershape
+mesh:bitterbal.obj cluster:7   @10,3               ~drop       ^wind        # deFEEST catering — bitterballen rain
+text:CODE · SPLATS · MUSIC    @@breakdown  @8,4    ~fade       ^wave        # the calm explainer
+splat:helix.ply               @@climax     @12,3   ~swarm      ^turbulence  # energy returns — a helix
+splat:galaxy.ply               @12,3               ~vortex     ^wave        # spins out into the galaxy
+text:deFEEST                  @@outro      @8,3    ~pen-write  ^wave        # the signature
+wall:ANUS|KLOOT|CINDER         @8,3                ~fade                    # the crew
+
+# --- the camera: a gentle continuous drift with push-ins on the drop and climax (~162s). ---
+[camera]
+t=0.0     pos=0,0,0   dist=2.8   yaw=1.40   pitch=0.12   # open on the logo
+t=12.0    pos=0,0,0   dist=2.5   yaw=1.25   pitch=0.16   # drift left for MARTIN
+t=22.0    pos=0,0,0   dist=2.4   yaw=1.50   pitch=0.20   # the galaxy build
+t=40.0    pos=0,0,0   dist=1.9   yaw=1.45   pitch=0.22   # PUSH IN on the drop
+t=58.0    pos=-0.4,0.1,0.2 dist=2.2 yaw=1.60 pitch=0.16  # arc left through the party
+t=75.0    pos=0.4,0,0  dist=2.3   yaw=1.30   pitch=0.14   # swing right for the bitterballen
+t=84.0    pos=0,0,0    dist=2.9   yaw=1.42   pitch=0.10   # pull back, calm breakdown
+t=104.0   pos=0,0,0    dist=2.0   yaw=1.52   pitch=0.22   # in tight for the climax
+t=128.0   pos=-0.5,0.1,0 dist=2.2 yaw=1.65   pitch=0.18   # orbit the galaxy
+t=144.0   pos=0,0,0    dist=2.5   yaw=1.45   pitch=0.14   # settle for the signature
+t=158.0   pos=0,0,0    dist=3.1   yaw=1.55   pitch=0.10   # drift out on the credits

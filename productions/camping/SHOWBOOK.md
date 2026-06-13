@@ -8,7 +8,7 @@
 **Muziek:** Op de Camping (Ome Henk-flavoured DnB, Gm, 125 BPM) — `assets/score.txt` (engine-embedded;
 verhuist naar deze map zodra er een tweede productie met eigen muziek is).
 **Secties:** intro 0 · build 14 · drop 43 · breakdown 99 · climax 129 · outro 185 · einde 228.
-**Show-file:** `camping.show` (full-fat, lokale captures) · `camping-ci.show` (repo-only, voor de bundle).
+**Show-file:** `camping.show` (full-fat, lokale captures; de CI/bundle-etalage is `productions/intro/`).
 
 ## De arc: werkelijkheid ↔ magie
 

@@ -1,0 +1,12 @@
+# productions/intro/bundle.toml — the INTRO production as ONE self-contained executable: the
+# CI-buildable engine showcase (repo assets + generated procedural splats only). This is the bundle
+# CI builds and uploads from every clean checkout:
+#
+#   python3 pipeline/gen-demo-splats.py assets
+#   MARTIN_SYNTH_WAV=productions/intro/intro.wav MARTIN_SCORE=productions/intro/score.txt cargo run --release
+#   MARTIN_BUNDLE=productions/intro/bundle.toml cargo build --release --features bundle
+
+show = "productions/intro/intro.show"     # the engine-showcase show (seq + camera)
+score = "productions/intro/score.txt"     # the production's own tropical track + @@anchor timing
+logo = "defeest-logo.png"                 # the loader screen while it decompresses
+music = "productions/intro/intro.wav"     # pre-rendered track baked in (instant + in sync; gitignored)

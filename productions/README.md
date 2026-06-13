@@ -16,8 +16,10 @@ The split test for any new work: *is this an engine feature or production conten
 density ramps, camera regimes → engine (`src/`). The fireflies-from-the-BBQ idea → the production's
 showbook. Reusable, tested building blocks → `parts/`.
 
-Current productions: **camping** (Op de Camping — in design, see its SHOWBOOK). Future candidates:
-kantoor, supermarkt, koffieshop, …
+Current productions: **camping** (Op de Camping — the main demo, in design, see its SHOWBOOK) and
+**intro** (the small always-buildable engine showcase that CI bakes into the downloadable bundle —
+repo assets + procedural splats only, its own simple track). Future candidates: kantoor, supermarkt,
+koffieshop, …
 
 Known theme-leak, deliberate for now: the *engine* still embeds the camping score as its built-in
 default (`assets/score.txt` via `include_str!`) because the default demo plays it. It moves here
