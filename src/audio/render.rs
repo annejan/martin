@@ -191,6 +191,7 @@ pub(super) fn render_voices(bed: &mut [f32], score: &Score, stereo: usize) {
                     render_into(bed, gt, 0.6, 0.18 * v, 0.0, lead(f * 2.0, v)); // climax sheen
                 }
             }
+            super::progress_tick();
         });
         // lead depth: a dotted-8th ping-pong of the lead in its own buffer; only the WET (echoes)
         // is added so the dry lead stays up front while its repeats open a 3D space behind it.
@@ -213,6 +214,7 @@ pub(super) fn render_voices(bed: &mut [f32], score: &Score, stereo: usize) {
             for i in 0..stereo {
                 lead_echo[i] -= lead_dry[i]; // echoes only — the dry lead is the lane above
             }
+            super::progress_tick();
         });
         // arp counter-line into its OWN buffer so we can process it (ping-pong delay) without
         // smearing the drums or the lead — spatial separation is the whole trick.
@@ -233,6 +235,7 @@ pub(super) fn render_voices(bed: &mut [f32], score: &Score, stereo: usize) {
             // ping-pong delay: 8th note, bounces L-R-L-R, 3–4 repeats, glued under the lead.
             // (`beat` is seconds-per-beat, so an 8th note is beat/2 — NOT 60/beat.)
             render_pingpong(&mut arp_buf, beat / 2.0, 0.35, 0.30);
+            super::progress_tick();
         });
         // articulated bassline: the `<section>.bass` note-lane (the real funky bass), centred — a
         // punchy `bass` voice at each onset, riding on top of the continuous drone sub below.
@@ -256,6 +259,7 @@ pub(super) fn render_voices(bed: &mut [f32], score: &Score, stereo: usize) {
                 voice,
             );
         }
+        super::progress_tick();
     });
     // sum in the original lane order: intro-bass+lead, echo wet, arp, bass.
     for i in 0..stereo {
@@ -300,6 +304,7 @@ pub(super) fn render_harmony(bed: &mut [f32], score: &Score) {
                     pad,
                 );
             }
+            super::progress_tick();
         });
         // epic supersaw chord wall: wide detuned saws on the chords, one per bar, in the sections
         // whose fx include `wall` (the big drop/climax + the OUTRO finale by default), so the
@@ -345,6 +350,7 @@ pub(super) fn render_harmony(bed: &mut [f32], score: &Score) {
                     }
                 }
             }
+            super::progress_tick();
         });
         // SHIMMER: an airy octave-UP choir pad that eases in across the sections whose fx include
         // `shimmer` (climax + outro by default) — the euphoric top that lifts the payoff sections
@@ -386,6 +392,7 @@ pub(super) fn render_harmony(bed: &mut [f32], score: &Score) {
                     }
                 }
             }
+            super::progress_tick();
         });
 
         // the off-beat stab layers (light) stay on this thread, straight into `bed` — they're the
@@ -465,6 +472,7 @@ pub(super) fn render_harmony(bed: &mut [f32], score: &Score) {
                 }
             }
         }
+        super::progress_tick();
     });
     // Sum the threaded layers. Note the regrouping: the stabs accumulated into `bed` during the
     // scope, so per-sample this adds (pad+wall+shimmer) AFTER them instead of before — float

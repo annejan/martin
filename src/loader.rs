@@ -1,8 +1,10 @@
-//! A minimal loading screen (`MARTIN_LOADER=1`, set automatically in a bundled build): a black
-//! cover with the logo (`MARTIN_LOGO=<png OR svg in the asset root>`) and a slim progress bar that
-//! tracks how many splats have loaded, then cross-fades into the show's opening logo. A `.svg` logo
-//! is rasterized so it can be the *same* artwork the opening mesh was extruded from — a 1-to-1
-//! loader→intro handoff. Off by default — dev runs skip it.
+//! A minimal loading screen: a black cover with the logo (`MARTIN_LOGO=<png OR svg in the asset
+//! root>`) and a slim progress bar, cross-fading into the show's opening once everything is ready.
+//! Active when `MARTIN_LOADER=1` (bundled builds set it) **or when the live synth has to render
+//! first** (no `MARTIN_MUSIC`): the show clock holds for the track (`music::AudioGate`), and a
+//! black screen with nothing on it reads as a hang — so the bar tracks splat loading AND the synth
+//! render (`audio::synth_progress`), and lift-off waits for both. A `.svg` logo is rasterized so it
+//! can be the *same* artwork the opening mesh was extruded from — a 1-to-1 loader→intro handoff.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::image::Image;
@@ -10,6 +12,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy_gaussian_splatting::PlanarGaussian3d;
 
+use crate::music::AudioGate;
 use crate::scene::AssetRoot;
 use crate::scene::compose::Composition;
 use crate::scene::sequence::SeqState;
@@ -128,6 +131,7 @@ fn update_loader(
     assets: Res<Assets<PlanarGaussian3d>>,
     state: Option<Res<SeqState>>,
     comp: Option<Res<Composition>>,
+    gate: Option<Res<AudioGate>>,
     mut fill: Query<&mut Node, With<LoaderFill>>,
     mut bg: Query<&mut BackgroundColor, With<LoaderFade>>,
     mut img: Query<&mut ImageNode, With<LoaderFade>>,
@@ -145,14 +149,19 @@ fn update_loader(
             )
         })
         .unwrap_or((0, 1));
-    let pct = (loaded as f32 / total as f32 * 100.0).clamp(0.0, 100.0);
+    // Fold the live synth render into the bar (its lanes/passes count as units next to the splat
+    // loads), so the wait for the music is visible progress instead of a frozen screen.
+    let (sdone, stotal) = crate::audio::synth_progress();
+    let (done_u, total_u) = (loaded as u32 + sdone, total as u32 + stotal);
+    let pct = (done_u as f32 / total_u.max(1) as f32 * 100.0).clamp(0.0, 100.0);
     for mut node in &mut fill {
         node.width = Val::Percent(pct);
     }
-    // Lift off once the show is built AND the logo has been up long enough to register (so the
-    // cross-fade is visible even when the build is instant) — then fade the cover out.
+    // Lift off once the show is built AND the music is ready (gate open, when there is one) AND the
+    // logo has been up long enough to register — then cross-fade the cover out.
     let built = state.map(|s| s.built).unwrap_or(false) || comp.map(|c| c.built).unwrap_or(false);
-    if !built || *shown < MIN_SHOW {
+    let audio_ready = gate.map(|g| g.ready).unwrap_or(true);
+    if !built || !audio_ready || *shown < MIN_SHOW {
         return;
     }
     *fade += time.delta_secs();
@@ -170,12 +179,18 @@ fn update_loader(
     }
 }
 
-/// The loading screen — only active when `MARTIN_LOADER` is set (bundled builds set it).
+/// The loading screen — active when `MARTIN_LOADER` is set (bundled builds), or when a live run
+/// will render the synth first (audio wanted, no pre-rendered `MARTIN_MUSIC`) so the wait shows
+/// progress instead of a black screen.
 pub(crate) struct LoaderPlugin;
 
 impl Plugin for LoaderPlugin {
     fn build(&self, app: &mut App) {
-        if std::env::var_os("MARTIN_LOADER").is_some() {
+        let synth_wait = std::env::var("MARTIN_RECORD").is_err()
+            && std::env::var("MARTIN_SHOT").is_err()
+            && std::env::var("MARTIN_MUTE").is_err()
+            && std::env::var("MARTIN_MUSIC").is_err();
+        if std::env::var_os("MARTIN_LOADER").is_some() || synth_wait {
             app.add_systems(Startup, spawn_loader)
                 .add_systems(Update, update_loader);
         }

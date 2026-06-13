@@ -33,6 +33,29 @@ pub(super) fn oversampling() -> bool {
     OVERSAMPLE.with(|c| c.get())
 }
 
+// Coarse render progress for the loader screen: one tick per completed lane/pass (the units the
+// parallel render naturally falls apart into). Free-function atomics, not a resource — the render
+// runs on plain threads outside the ECS.
+static SYNTH_DONE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+static SYNTH_TOTAL: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
+/// `(done, total)` lane/pass units of the running synth render — `total == 0` means no render
+/// started (or none pending). Read by the loader to show a real bar during the live-audio wait.
+pub fn synth_progress() -> (u32, u32) {
+    use std::sync::atomic::Ordering::Relaxed;
+    (SYNTH_DONE.load(Relaxed), SYNTH_TOTAL.load(Relaxed))
+}
+
+fn progress_begin(total: u32) {
+    use std::sync::atomic::Ordering::Relaxed;
+    SYNTH_DONE.store(0, Relaxed);
+    SYNTH_TOTAL.store(total, Relaxed);
+}
+
+pub(super) fn progress_tick() {
+    SYNTH_DONE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+
 /// Seed a worker thread's `OVERSAMPLE` thread_local (the parallel render passes spawn threads;
 /// each must carry the flag over or an `oversample=1` score would lose its anti-alias path there).
 pub(super) fn set_oversampling(v: bool) {
@@ -212,6 +235,7 @@ pub(super) fn section_window(score: &Score, name: &str) -> Option<(f32, f32)> {
 pub fn synth_track(score: &Score) -> Track {
     let oversample = score.param("oversample", 0.0) > 0.5; // `set oversample=1` — anti-alias
     OVERSAMPLE.with(|c| c.set(oversample));
+    progress_begin(11); // drums + 4 voice lanes + 4 harmony lanes + fx + master
     let sr = SAMPLE_RATE as f32;
     let total = (score.demo_len() * sr).ceil() as usize;
     let stereo = total * 2;
@@ -236,13 +260,16 @@ pub fn synth_track(score: &Score) -> Track {
         s.spawn(|| {
             OVERSAMPLE.with(|c| c.set(oversample));
             render::render_fx(&mut bed_fx, score, total);
+            progress_tick();
         });
         render::render_drums(&mut kickbuf, &mut bed, score, &kicks);
+        progress_tick();
     });
     for i in 0..stereo {
         bed[i] = ((bed[i] + bed_voices[i]) + bed_harmony[i]) + bed_fx[i];
     }
     let buf = render::master(&kickbuf, &mut bed, score, &kicks, total, stereo);
+    progress_tick();
     Track {
         samples: Arc::new(buf),
     }
