@@ -105,7 +105,7 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 | `MARTIN_REFORM=dog.ply` | The source(s) **morph** into this one (Morton-paired particle flow). |
 | `MARTIN_TEXT="MARTIN GAUS"` | **Splat-text**: the title assembles out of a ball cloud (glowing). |
 | `MARTIN_SEQ="…"` | **Timeline** — a chain of parts that morph into one another (see below). |
-| `MARTIN_COMPOSE=stage.compose` | **Composition** — many objects on one stage at once, placed + spinning/bobbing/drifting, fading in on the music, camera auto-orbiting (vs the morph timeline). Example: `assets/stage.compose`. |
+| `MARTIN_COMPOSE=stage.compose` | **Composition** — many objects on one stage at once, placed + spinning/bobbing/drifting, fading in on the music, camera auto-orbiting (vs the morph timeline). Example: `assets/examples/stage.show`. |
 | `MARTIN_FPS=1` / **`I`** key | Log FPS + splat count (the `I` key toggles it live + logs a snapshot). |
 | `MARTIN_BULGE=0.9` | Ball-cloud explosiveness at a morph's midpoint (`0` = clean reorder). |
 | `MARTIN_TRANSITION=fade` | How each part **arrives**: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl`, or the shader ones `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-part `~name` wins). `swarm` = like `morph` but the splats flock along curled paths *between* the two scenes (the `@_,_,N` value tunes the swarm strength). |
@@ -212,11 +212,11 @@ in) from `bundle.toml`, then verifies it self-extracts and plays:
 ./target/release/martin               # plays the baked-in show anywhere
 ```
 
-`bundle.toml` points at the release show (`assets/release.seq` — a ~song-length showcase using only
-*light* assets: the procedural demo shapes + doggo + the Martins + text, so it stays self-contained
-without the 500 MB photogrammetry scenes). The example bundles to ~182 MB (Bevy base ~75 MB + ~108 MB
-lz4-compressed splats). To shrink it: ship fewer / **downsampled** `.ply` (the real lever — splat
-floats dominate), or trim the show.
+CI bakes the **intro** production into the download (`productions/intro/bundle.toml` → `intro.show`);
+the root `bundle.toml` defaults to `assets/demo.show`. Either stays self-contained by using only
+*light* assets — procedural demo shapes + a few tracked meshes + text, no 500 MB photogrammetry
+scenes. A bundle lands around ~180 MB (Bevy base ~75 MB + lz4-compressed splats). To shrink it: ship
+fewer / **downsampled** `.ply` (the real lever — splat floats dominate), or trim the show.
 
 **Portability (run on other distros).** A binary linked against this dev box's glibc (openSUSE
 Tumbleweed = bleeding-edge) fails on older distros with `version 'GLIBC_2.xx' not found`. So

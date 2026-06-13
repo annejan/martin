@@ -1,0 +1,23 @@
+# martin — composition stage: many objects on one stage at once, animated, camera auto-orbiting, on
+# the music (vs the morph timeline, which morphs one object into the next). Unified .show format with
+# a [compose] body.
+#
+#   MARTIN_SHOW=assets/examples/stage.show cargo +nightly run --release
+#
+# Each [compose] line:  <source> [@x,y,z] [*scale] [rot a,b,c] [spin a,b,c (deg/s)] [sway a,b,c (deg)]
+#   [bob amp] [drift dx,dy,dz (units/s)] [in <anchor>] [out <anchor>]   (@@: section/bar/beat/secs)
+# Objects fade in at their `in` time, so the stage builds with the track; morph_count caps splats PER
+# object. `spin` rotates all the way around (fine for a full capture like the dog); `sway` swings back
+# and forth around the front, so a single-image splat (the Martins, hollow-backed) never shows its
+# empty back.
+
+[settings]
+morph_count = 120000           # caps splats PER object (.ply root defaults to assets/)
+
+[compose]
+splat:doggo.ply                 @0,0,0       *1.1   spin 0,18,0
+splat:martin.ply                @-1.9,.3,0   *.7    sway 0,28,0    in build
+splat:martin-peace.ply          @1.9,.3,0    *.7    sway 0,28,0    in build
+text:deFEEST                    @0,1.7,0     *.8    bob .12        in drop
+mesh:bornhack2026-hardware.dae  @0,-1.6,.3   *.7    spin 20,40,0   in climax
+image:defeest-logo.png          @0,0,-2.6    *1.0   bob .08        in outro

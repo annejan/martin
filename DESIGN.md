@@ -1030,7 +1030,7 @@ primitives are now several (§4.1 — `Ball`/`Fade`/etc. all ship), but for a lo
   It's a lovely future fork edit (the §5 blueprint, mode 4) but out of scope for
   today's engine. For now, assemble+glow is the right in-budget choice.
 
-### 7.4 Copy-paste branded show (`show.seq`)
+### 7.4 Copy-paste branded show (a `.show` `[seq]` body)
 
 ```text
 # martin — a deFEEST production. code: annejan & Kloot / music: Cinder (deFEEST)

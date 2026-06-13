@@ -113,6 +113,7 @@ path = [
     "pipeline/splat-setup.sh",
     "pipeline/splat.sh",
     "pipeline/mesh-splat.sh",
+    "pipeline/fetch-aerial.sh",
     "pipeline/render_orbit.py",
     "pipeline/bundle.sh",
     "pipeline/release.sh",

@@ -1,0 +1,21 @@
+# martin — the "director" example: visuals locked to the score's sections via @@anchors, so the whole
+# thing rides the music (see assets/score.txt + USAGE "Score file" / @@anchor). Unified .show format.
+#
+#   MARTIN_SHOW=assets/examples/director.show cargo +nightly run --release
+#
+# Edit the music with your own assets/score.txt (the @@anchors below follow its section names). Each
+# part: content  @@anchor  @hold,morph,bulge  ~transition. (train.ply/truck.ply are gitignored —
+# supply them locally, or swap in shapes you have.)
+
+[settings]
+ply = assets/doggo.ply        # .ply root
+morph_count = 500000
+score = assets/score.txt      # section names drive the @@anchors
+
+[seq]
+text:deFEEST           @@intro      @5,3      ~pen-write    # handwriting draws on over the intro
+text:PRESENTS          @@build      @3,2      ~typewriter   # types in as the drums build
+splat:doggo.ply        @@drop       @9,2.5,0.6 ~morph       # the dog assembles ON the drop
+splat:train.ply        @@breakdown  @5,3,0    ~morph        # straight morph dog → train
+splat:truck.ply        @@climax     @9,3,0    ~morph        # train → truck through the climax
+image:defeest-logo.png @@outro      @6,3      ~ball         # logo coalesces for the outro

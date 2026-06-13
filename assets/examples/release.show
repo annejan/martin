@@ -1,10 +1,18 @@
-# martin — the RELEASE show: a self-contained ~song-length (~205s) showcase using only LIGHT assets
-# (the procedural demo shapes + doggo + the two Martins + text), so it bundles into a reasonably-
-# sized single binary (no 500MB photogrammetry scenes). This is what `bundle.toml` bakes in.
+# martin — RELEASE showcase: a ~song-length morph reel using only LIGHT assets (the procedural demo
+# shapes + doggo + the two Martins + text), so it bundles into a reasonably-sized single binary (no
+# 500 MB photogrammetry scenes). A self-contained example in the unified .show format.
 #
-# Live:  MARTIN_PLY=assets/doggo.ply MARTIN_SEQ=assets/release.seq MARTIN_BEAT=2 cargo +nightly run --release
-# Bundle: ./pipeline/release.sh   (→ one self-contained binary)
+#   MARTIN_SHOW=assets/examples/release.show cargo +nightly run --release
+#   MARTIN_SHOW=assets/examples/release.show ./record.sh release.mp4
+#
+# (The procedural splats are synthesized by build.rs when referenced by the default show; the rest of
+#  the .ply are gitignored — generate/fetch them locally first.)
 
+[settings]
+ply = assets/doggo.ply        # .ply root = assets/ so the splat: filenames resolve
+beat = 2
+
+[seq]
 # --- intro ---
 text:martin GAUS      @4,4    ~typewriter ^wave
 splat:sphere.ply      @3.5,4  ~swarm

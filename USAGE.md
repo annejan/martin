@@ -518,7 +518,7 @@ MARTIN_SEQ="text:MARTIN GAUS @2,2.5,0; splat:doggo.ply @2,3,0.9; text:GREETINGS 
 cargo +nightly run --release
 ```
 
-**File example** — put this in `show.seq`:
+**File example** — put this in a file (say `my-show.seq`):
 
 ```
 # Martin Gaus — title → two faces → dog → greetings → credits
@@ -532,11 +532,12 @@ text:CODE ANNEJAN @2.5,3,0.6
 …and run it:
 
 ```bash
-MARTIN_PLY=assets/doggo.ply MARTIN_SEQ=~/show.seq cargo +nightly run --release
+MARTIN_PLY=assets/doggo.ply MARTIN_SEQ=~/my-show.seq cargo +nightly run --release
 ```
 
-A ready-to-run example ships at **`assets/show.seq`** — a full director sequence with every part
-`@@`-anchored to the score's sections (intro→build→drop→…→outro), so the visuals ride the music.
+A ready-to-run example ships at **`assets/examples/director.show`** (`MARTIN_SHOW=assets/examples/director.show`)
+— a full director sequence with every part `@@`-anchored to the score's sections
+(intro→build→drop→…→outro), so the visuals ride the music.
 
 All parts are resampled to one gaussian count (`MARTIN_MORPH_COUNT`, default 200k in
 sequences) and the camera is framed once over everything, so it never pops between parts.
@@ -547,12 +548,14 @@ sequences) and the camera is framed once over everything, so it never pops betwe
 
 Where `MARTIN_SEQ` is a *timeline* (one object morphs into the next), `MARTIN_COMPOSE=<file>` is a
 **stage**: many objects on screen **at once**, each placed + animated, the camera flowing around
-them. The shipped example is **`assets/stage.compose`**:
+them. The shipped, ready-to-run example is **`assets/examples/stage.show`**:
 
 ```bash
-MARTIN_PLY=assets/doggo.ply MARTIN_COMPOSE=assets/stage.compose MARTIN_MORPH_COUNT=120000 \
-  cargo +nightly run --release
+MARTIN_SHOW=assets/examples/stage.show cargo +nightly run --release
 ```
+
+(`MARTIN_COMPOSE=<file>` loads a bare compose body directly — the same lines that go under a `.show`'s
+`[compose]` section.)
 
 Each line is one object: a `<source>` (any of `text:` / `wall:` / `image:` / `mesh:` / `splat:`)
 followed by placement + motion tokens:
@@ -739,14 +742,12 @@ MARTIN_SEQ="text:MARTIN GAUS; splat:doggo.ply; text:CODE ANNEJAN" \
 
 The clip length is computed automatically from the parts' `@hold,morph` (and `@@anchor`) timings.
 
-**Flagship example — the whole story in assets** (`assets/truck-show.seq`): the truck rides the
-music while wavy neon titles draw on, the camera flies the marked waypoint path, and it morphs into
-the deFEEST logo mesh for the outro:
+**Flagship example — the whole story in assets** (`assets/examples/truck-show.show`): the truck rides
+the music while wavy neon titles draw on, the camera flies the marked waypoint path, and it morphs
+into the deFEEST logo mesh for the outro (score + camera path are referenced from the `.show` itself):
 
 ```bash
-MARTIN_PLY=assets/truck.ply MARTIN_SEQ=assets/truck-show.seq MARTIN_SCORE=assets/score.txt \
-  MARTIN_WAYPOINTS=assets/truck-path.json MARTIN_FLY=2 MARTIN_MORPH_COUNT=500000 \
-  ./record.sh truck_show.mp4
+MARTIN_SHOW=assets/examples/truck-show.show ./record.sh truck_show.mp4
 ```
 
 To grab a single still instead:
@@ -771,8 +772,9 @@ show — a `seq`/`compose` + `score`/`logo`/`morph_count`), auto-collects every 
 references, lz4-compresses them into the executable, and bakes the show string in. At startup the
 binary self-extracts to a temp dir and plays the show (loader screen while it decompresses); env
 vars still override for debugging. Fonts + the default score are already compiled in, so only splats
-(+ a logo PNG) ship. `bundle.toml` ships pointed at **`assets/release.seq`** — a ~song-length
-showcase using only *light* assets (the procedural demo shapes + doggo + Martins + text), ~182 MB.
+(+ a logo PNG) ship. CI bakes the **intro** production (`productions/intro/bundle.toml` → `intro.show`);
+the root `bundle.toml` defaults to `assets/demo.show`. Both use only *light* assets (procedural demo
+shapes + a few tracked meshes + text), so a bundle lands around ~180 MB.
 
 **Portability.** A binary linked on a bleeding-edge distro (openSUSE Tumbleweed, glibc 2.43) fails on
 older ones (`GLIBC_2.xx not found`). `release.sh` links against an **old glibc** via
@@ -785,6 +787,8 @@ The procedural demo shapes (`sphere`/`cube`/`torus`/`helix`/`galaxy`/`star`/`wav
 `mobius`/`supershape`) are synthesized by **`build.rs`** (`build/gen_splats.rs`) — any one a show
 references is generated on build if its `.ply` is missing, so no separate step is needed.
 Mesh → "proper" splat (offline Blender→Brush bake, all-AMD): `pipeline/mesh-splat.sh`.
+Export a score to a standard MIDI file (to share an arrangement with a DAW / notation tool):
+`python3 pipeline/score_to_midi.py [assets/score.txt] [out.mid]` — lead / sax / bass / chord tracks.
 
 ## Performance notes (Radeon 860M iGPU, Vulkan)
 
