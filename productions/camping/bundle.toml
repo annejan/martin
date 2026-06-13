@@ -10,6 +10,6 @@
 # src/bundle.rs self-extracts to a temp dir at startup and runs it.
 
 show = "productions/camping/camping.show"   # the full splat demo (seq + 3D camera)
-score = "assets/score.txt"           # the Op de Camping track + @@anchor timing (engine-embedded for now, see SHOWBOOK)
+score = "productions/camping/score.txt" # the Op de Camping arrangement (this production owns it)
 logo = "defeest-logo.png"            # the loader screen while it decompresses
 music = "assets/op-de-camping.wav"     # pre-rendered track baked in (render it first — see above; gitignored)

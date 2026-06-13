@@ -13,6 +13,8 @@
 morph_count = 160000
 # sets the .ply root to assets/ so `splat:` filenames resolve (badge.team Ægg, the dog, the Martins).
 ply = assets/aegg-baked.ply
+# the camping arrangement (Op de Camping parody) — this production's OWN track, not the engine builtin.
+score = productions/camping/score.txt
 # camping at NIGHT: a starfield behind the whole show (beat-reactive — the kick brightens it),
 # dimmed low so the glowing text/splats stay the hero.
 bg = stars

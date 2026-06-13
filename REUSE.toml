@@ -45,11 +45,11 @@ path = ["productions/**", "parts/**"]
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
-# assets/score.txt is the music arrangement in the tracker DSL. Its melody + chords are a heavily
+# productions/camping/score.txt is the camping arrangement in the tracker DSL. Its melody + chords are a heavily
 # derived transcription of "Op de Camping" (Ome Henk, 1995) — itself a parody/cover of "In the Navy"
 # (Village People, 1979) — so both source works are credited alongside the arrangement.
 [[annotations]]
-path = "assets/score.txt"
+path = "productions/camping/score.txt"
 precedence = "override"
 SPDX-FileCopyrightText = [
     "2026 Anne Jan Brouwer <brouwer@annejan.com>",

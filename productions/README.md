@@ -21,6 +21,7 @@ Current productions: **camping** (Op de Camping — the main demo, in design, se
 repo assets + procedural splats only, its own simple track). Future candidates: kantoor, supermarkt,
 koffieshop, …
 
-Known theme-leak, deliberate for now: the *engine* still embeds the camping score as its built-in
-default (`assets/score.txt` via `include_str!`) because the default demo plays it. It moves here
-when a second production brings its own music.
+The engine's built-in default score (`assets/score.txt`, `include_str!`'d) is theme-AGNOSTIC — a
+generic tropical-house groove — so the default demo + example shows don't ship a theme. Each
+production owns its own score (e.g. `productions/camping/score.txt`, the Op de Camping arrangement;
+`productions/intro/score.txt`, the 124-BPM intro cut) and points its `.show`/`bundle.toml` at it.
