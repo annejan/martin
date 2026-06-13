@@ -1,22 +1,22 @@
-# productions/intro/score.txt — the intro production's track: bright C-major tropical-house
-# groove (102 BPM), adapted from the engine example assets/tropical.txt. Standard section
-# names (intro/build/drop/breakdown/climax/outro) so the show's @@anchors land on them.
-bpm 102
+# productions/intro/score.txt — the intro production's track: a bright, BOUNCY C-major
+# tropical-house groove. Punchy 124 BPM, ~89 s (46 bars) — a short, sunny engine showcase.
+# Standard section names so the show's @@anchors land on them.
+bpm 124
 chords C Am F G
 
-# sunny + wide: woozbass OFF, house+donk for the tropical-house offbeat, lots of air, no dark.
-set lead=0.82 sub=0.4 supersaw=0.05 choir=0.42 donk=0.13 house=0.06 reverb=0.46 sidechain=0.6 widen=1.7 makeup=1.12 ceiling=0.94 woozbass=0 shimmer=0.12 reverbauto=1 hats=0.34 snares=0.4 atmosphere=0.3
+# sunnier + bouncier than the 102 cut: more donk/house bite + shimmer, brighter lead, drier (less
+# reverb wash so the groove pops), louder makeup, lighter noise floor. woozbass OFF, no dark.
+set lead=0.85 sub=0.42 supersaw=0.06 choir=0.4 donk=0.2 house=0.14 reverb=0.36 sidechain=0.62 widen=1.7 makeup=1.18 ceiling=0.94 woozbass=0 shimmer=0.2 reverbauto=1 hats=0.4 snares=0.46 atmosphere=0.2
 
-section intro 8 8
-section build 9 8 fill
-section drop 17 8,8 fill
-section breakdown 9 8 fill
-section climax 17 8,8 fill
-section outro 9 8 fill
+# ~46 bars: intro 4 · build 6 · drop 12 · breakdown 4 · climax 12 · outro 8
+section intro 4 4
+section build 6 5 fill
+section drop 12 8,3 fill
+section breakdown 4 3 fill
+section climax 12 8,3 fill
+section outro 8 7 fill
 
-# this is a BEACH, not a battle: keep the party layers (wall/donk/house/shimmer) + the riser sweeps,
-# but opt OUT of the demoscene jets, the impact-booms and the final bang — tropical fades out gently.
-# (Without these lines the standard names drop/climax/outro would inherit all of that by default.)
+# a beach, not a battle: party layers + riser sweeps, but no demoscene jets / impacts / final bang.
 drop.fx: wall donk house riser
 climax.fx: wall donk house shimmer riser
 outro.fx: wall house casio shimmer
@@ -77,6 +77,6 @@ climax.bass p0: C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   A1 . . .  A2 . A1 .  .
 outro.bass p0: C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F2 . . .  F3 . F2 .  . . F3 .  F2 . . .   G2 . . .  G3 . G2 .  . . G3 .  G2 . . .
 
 # dynamics: sunny + bouncy, gentle wind-down (no explosive ending — it's a beach, not a battle).
-gain intro 0.3>0.5 build 0.45>0.8 drop 0.95 breakdown 0.55 climax 0.7>1.0 outro 0.8>0.0
+gain intro 0.35>0.55 build 0.5>0.9 drop 1.0 breakdown 0.5 climax 0.75>1.05 outro 0.9>0.0
 sub intro 0.2 build 0.3>0.55 drop 0.7 breakdown 0.4 climax 0.7 outro 0.5>0.2
-mids intro 0.2>0.4 build 0.4>0.7 drop 0.9 breakdown 0.55 climax 0.9 outro 0.7>0.3
+mids intro 0.25>0.45 build 0.45>0.75 drop 0.95 breakdown 0.55 climax 0.95 outro 0.7>0.3

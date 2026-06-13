@@ -1,90 +1,62 @@
-# martin — the INTRO production: a short engine showcase built ONLY from repo-tracked,
+# martin — the INTRO production: a short, sunny engine showcase built ONLY from repo-tracked,
 # licence-cleared assets + the procedural splats `pipeline/gen-demo-splats.py` generates fresh.
-# This is what CI bakes into the downloadable single-binary (productions/intro/bundle.toml) — it
-# must build and play from a clean checkout, no captures, no fetched files.
+# This is what CI bakes into the downloadable single-binary (productions/intro/bundle.toml).
 #
-#   python3 pipeline/gen-demo-splats.py assets      # once: the procedural shapes (galaxy, knot, …)
+#   python3 pipeline/gen-demo-splats.py assets
 #   MARTIN_SHOW=productions/intro/intro.show cargo +nightly run --release
 #   MARTIN_BUNDLE=productions/intro/bundle.toml cargo build --release --features bundle
 #
-# V2 — the expert-panel cut (showbook log 2026-06-13): an escalating, bar-locked, black-bracketed
-# ride. Holds SHRINK across the show (12s intro → 4-bar drop cuts → 1-bar climax cuts), every cut
-# lands on a musical seam (@@bar:N), the per-part bg: arc is a second energy curve, and the camera
-# performs (freeze → crash-in, hard wide/close cuts on the climax grid, one long final pull-back).
+# V3 — tight 90s cut. Faster/brighter track (124 BPM, ~89s); section starts (s): intro 0 ·
+# build 7.7 · drop 19.4 · breakdown 42.6 · climax 50.3 · outro 73.5 · end 89. The camera stays
+# FRONT-FACING (yaw ~1.0-1.8, never orbits to the back) so every text + the credits read head-on;
+# energy comes from push-ins / pull-backs, not whip-orbits. bar @124 ≈ 1.935 s.
 
 # --- settings (each → MARTIN_<KEY>) ---
 morph_count = 120000
 ply = assets/galaxy.ply              # .ply root = assets/ so the generated `splat:` shapes resolve
-score = productions/intro/score.txt  # the production's own track (tropical groove, ~162s)
-bg_dim = 0.3
-flash = 0.7                          # cut-density IS the escalation — make the cuts read
-beat = 0.6                           # beat-reaction dialled down; the per-section DEFORM is the beat language
+score = productions/intro/score.txt
+bg_dim = 0.32
+flash = 0.6                          # bloom flash on the @@anchored cuts
+beat = 0.6                           # beat-reaction (the per-section deform is the rest of the language)
 
-# --- the show. Deform = the per-section beat language: none/cloth (intro) → twist (build) →
-#     turbulence/pulse (drop) → ripple (breakdown) → pulse/jitter/spiral (climax) → wave saved
-#     for the signature. NB: the glb: dissolve carries NO deform — a deform waves the sampled
-#     splats THROUGH the real mesh during the crossover. ---
+# --- the show. Deform = the per-section beat language: cloth (intro) → twist (build) →
+#     turbulence/pulse (drop) → ripple (breakdown) → pulse/jitter (climax) → wave for the signature.
+#     The glb: dissolve carries NO deform (a deform would wave the sampled splats through the mesh). ---
 [seq]
-# ---- INTRO (0–18.8) · still, black, no beat-reaction yet
-image:defeest-logo.png        @@intro     @10,3      ~sparkle                bg:off     # logo alone on pure black
-text:martin                    @2.8,3     ~swarm     ^cloth                  bg:stars   # particles flock into the name
-# ---- BUILD (18.8–40) · the engine thesis, then one continuous rise into the riser bar
-glb:defeest.glb               @@build     @5,3       ~fade                   bg:stars   # REAL mesh dissolves into its own splats (no deform!)
-splat:galaxy.ply               @4,2.5     ~swarm     ^twist                  bg:grid    # …which flock into a galaxy; the grid wakes up
-text:splats that morph         @2.5,1.8   ~typewriter ^twist                 bg:grid
-splat:sphere.ply cluster:12   @@bar:16    @1.35,1    ~funnel    ^jitter      bg:grid    # 1-bar visual snare-roll: density spike, shaking
-# ---- DROP (40–80) · hard cuts on the phrase grid, the stage EMPTIES at the end
-splat:knot.ply                @@drop      @8.8,0.6   ~shatter   ^turbulence  bg:bolt    # lands inside one beat — flash + bg state-change
-splat:supershape.ply          @@bar:21    @8.4,1,1.2 ~explode   ^pulse       bg:warp
-splat:mobius.ply              @@bar:25    @4,0.7,1.3 ~vortex    ^twist       bg:tunnel  # hats double — new shape ON the seam
-splat:star.ply                @@bar:27    @3.9,0.8,1.4 ~shatter ^jitter      bg:plasma  # 2-bar stinger sets up the gag
-mesh:bitterbal.obj cluster:7  @@bar:29    @8,1.4     ~drop      ^wind  out:evaporate bg:tunnel  # bitterballen rain, then the stage dies
-splat:sphere.ply              @@bar:33    @1.35,1    ~shatter   ^jitter      bg:bolt    # the drop's fill bar, visualized
-# ---- BREAKDOWN (80–101.2) · pure black, near-still — buys the climax its headroom
-text:code · splats · music    @@breakdown @8,4       ~condense  ^ripple      bg:off     # words resolve out of fog, on black
-splat:sphere.ply               @3.8,3     ~fade      ^cloth                  bg:off     # one quiet sphere, breathing in the dark
-splat:ring.ply                @@bar:42    @1.35,1    ~funnel    ^jitter      bg:stars   # 1-bar riser pours into the climax
-# ---- CLIMAX (101.2–141.2) · blinder, then shrinking holds: 4 → 3 → 2 → 2 → 1 → 1 bars
-shader:bolt                   @@climax    @2.05,0.3                                     # 1-bar fullscreen blinder — detonation
-splat:helix.ply               @@bar:44    @8.6,0.8   ~swarm     ^pulse       bg:warp    # 4 bars
-splat:star.ply cluster:5      @@bar:48    @6.3,0.75  ~shatter   ^pulse       bg:kaleido # 3 bars
-splat:mobius.ply              @@bar:51    @4,0.7     ~vortex    ^spiral      bg:bolt    # hats full 16ths — the cuts halve
-splat:torus.ply               @@bar:53    @4.1,0.6,1.3 ~explode ^jitter      bg:kaleido # 2 bars
-splat:cube.ply cluster:9      @@bar:55    @1.75,0.6  ~shatter   ^jitter      bg:bolt    # 1 bar
-splat:supershape.ply          @@bar:56    @1.75,0.6,1.4 ~explode ^jitter     bg:warp    # 1 bar — peak chaos
-splat:galaxy.ply              @@bar:57    @4.6,2.5   ~condense  ^turbulence  bg:stars   # the release: chaos collapses into the galaxy
-# ---- OUTRO (141.2–162) · the signature in a starfield, credits evaporate into true black
-text:deFEEST                  @@outro     @6,5       ~pen-write ^wave        bg:stars   # ^wave finally earned: tender, once
-wall:Anus|Kloot|Cinder         @5.8,3     ~fade      ^wave  out:evaporate    bg:off     # crew rises away; last photons, then black
+# ---- INTRO (0–7.7) · logo on black, then it becomes the name
+image:defeest-logo.png        @@intro    @4,2       ~sparkle                 bg:off     # logo on pure black
+text:martin                    @1.5,2    ~swarm     ^cloth                   bg:stars   # particles flock into the name
+# ---- BUILD (7.7–19.4) · the engine thesis: a real mesh dissolves into its own splats → a galaxy
+glb:defeest.glb               @@build    @5,2.5     ~fade                    bg:stars   # mesh → its own splats (no deform!)
+splat:galaxy.ply               @4.5,2    ~swarm     ^twist                   bg:grid    # …which flock into a galaxy; grid wakes up
+# ---- DROP (19.4–42.6) · the party: shape morphs on the phrase grid, the bitterballen gag, stage empties
+splat:knot.ply                @@drop     @5.5,0.6   ~shatter   ^turbulence   bg:bolt    # lands in one beat — flash + bg jump
+splat:supershape.ply          @@bar:14   @5,0.8     ~explode   ^pulse        bg:warp
+text:splats that morph        @@bar:18   @4,1       ~typewriter ^wave        bg:grid    # the one-line explainer
+mesh:bitterbal.obj cluster:7   @5,1.2    ~drop      ^wind  out:evaporate     bg:warp    # deFEEST catering, then the stage dies
+# ---- BREAKDOWN (42.6–50.3) · calm on black, buys the climax its headroom
+text:code · splats · music    @@breakdown @6,2      ~condense  ^ripple       bg:off     # words resolve out of fog
+# ---- CLIMAX (50.3–73.5) · the big finish — still FRONTAL, push-ins not orbits
+shader:bolt                   @@climax   @1.4,0.3                                       # 1-bar fullscreen blinder
+splat:helix.ply               @@bar:27   @6.5,0.7   ~swarm     ^pulse        bg:warp
+splat:torus.ply               @@bar:31   @6,0.7,1.3 ~explode   ^jitter       bg:kaleido
+splat:galaxy.ply              @@bar:35   @5.5,1.5   ~condense  ^turbulence   bg:stars   # chaos collapses back into the galaxy
+# ---- OUTRO (73.5–89) · the signature + credits, READ HEAD-ON, then evaporate to black
+text:deFEEST                  @@outro    @5,4       ~pen-write ^wave         bg:stars   # ^wave earned: tender, once
+wall:Anus|Kloot|Cinder         @4.5,2    ~fade      ^wave  out:evaporate     bg:off     # crew rises away into black
 
-# --- the camera as performer: freeze-wide → 0.6s crash-in at the drop; hard wide/close CUTS
-#     (twin waypoints) on the climax bar grid with monotonically climbing yaw (whip-orbit
-#     momentum); then the show's only long unbroken move — an 18s pull-back under the credits. ---
+# --- the camera: FRONT-FACING throughout (yaw stays ~1.05–1.75 — text always faces us), energy from
+#     push-ins on the drop/climax and pull-backs on the breakdown/outro. No back-of-the-subject orbit. ---
 [camera]
-t=0.0          dist=2.9  yaw=1.45  pitch=0.10
-t=10.0         dist=2.7  yaw=1.30  pitch=0.14
-t=@@build      dist=3.0  yaw=1.30  pitch=0.16   # build: one long continuous push-in starts
-t=37.6         dist=3.05 yaw=1.50  pitch=0.12   # pre-drop: pull wide…
-t=39.7         dist=3.05 yaw=1.50  pitch=0.12   # …and FREEZE through the riser bar
-t=40.3         dist=2.0  yaw=1.42  pitch=0.22   # DROP: 0.6s crash-in, closest yet
-t=49.4         dist=2.4  yaw=1.75  pitch=0.24   # arc on
-t=58.7         dist=2.4  yaw=1.80  pitch=0.24
-t=58.9         dist=2.0  yaw=1.10  pitch=0.06   # camera CUT on bar 25 (hat-double) — counter-arc
-t=68.2         dist=2.6  yaw=1.55  pitch=0.30   # rise over the bitterballen
-t=77.6         dist=2.3  yaw=1.40  pitch=0.14
-t=@@breakdown  dist=3.6  yaw=1.45  pitch=0.08   # fall away to the widest shot of the show
-t=98.8         dist=3.6  yaw=1.50  pitch=0.08   # lock-off: ~19s of stillness — hold the breath
-t=100.9        dist=3.4  yaw=1.52  pitch=0.10   # riser lean-in
-t=@@climax     dist=1.7  yaw=2.10  pitch=0.20   # SLAM to the closest of the show, on the blinder
-t=112.8        dist=2.0  yaw=2.45  pitch=0.24
-t=113.1        dist=2.9  yaw=2.95  pitch=0.08   # CUT wide  (bar 48, star cluster)
-t=119.7        dist=2.9  yaw=3.10  pitch=0.08
-t=120.0        dist=1.9  yaw=3.55  pitch=0.28   # CUT close (bar 51, 16th hats) — yaw only climbs from here
-t=124.5        dist=2.2  yaw=3.85  pitch=0.22
-t=124.8        dist=2.8  yaw=4.30  pitch=0.06   # CUT wide  (bar 53, torus)
-t=129.2        dist=2.8  yaw=4.45  pitch=0.06
-t=129.5        dist=1.8  yaw=4.90  pitch=0.26   # CUT close (bar 55) — 1-bar cuts begin
-t=134.1        dist=2.3  yaw=5.15  pitch=0.18   # galaxy release: cuts stop, drift resumes
-t=@@outro      dist=2.5  yaw=5.35  pitch=0.14   # settle for the pen-write
-t=152.0        dist=2.7  yaw=5.45  pitch=0.12
-t=161.5        dist=3.6  yaw=5.60  pitch=0.06   # ONE unbroken pull-back, dissolving to black
+t=0.0     pos=0,0,0   dist=2.8   yaw=1.45   pitch=0.10   # open on the logo, head-on
+t=7.7     pos=0,0,0   dist=2.6   yaw=1.32   pitch=0.14   # ease left for the name + build
+t=14.0    pos=0,0,0   dist=2.7   yaw=1.55   pitch=0.16   # drift right through the galaxy build
+t=19.4    pos=0,0,0   dist=1.95  yaw=1.45   pitch=0.20   # DROP — push in hard, head-on
+t=30.0    pos=0.25,0,0 dist=2.2  yaw=1.60   pitch=0.18   # gentle arc right across the party (stays frontal)
+t=42.6    pos=0,0,0   dist=3.0   yaw=1.40   pitch=0.10   # fall back + centre for the calm breakdown
+t=50.3    pos=0,0,0   dist=1.9   yaw=1.50   pitch=0.20   # CLIMAX — slam in, head-on
+t=60.0    pos=-0.25,0.05,0 dist=2.1 yaw=1.28 pitch=0.20  # ease left, still facing the subject
+t=67.7    pos=0,0,0   dist=2.3   yaw=1.45   pitch=0.16   # recentre as the galaxy reforms
+t=73.5    pos=0,0,0   dist=2.5   yaw=1.42   pitch=0.13   # settle DEAD-ON for the pen-write signature
+t=82.0    pos=0,0,0   dist=2.6   yaw=1.45   pitch=0.12   # hold frontal for the credits
+t=88.5    pos=0,0,0   dist=3.1   yaw=1.45   pitch=0.10   # one gentle pull-back as it evaporates to black
