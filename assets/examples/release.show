@@ -12,7 +12,7 @@
 ply = assets/doggo.ply        # .ply root = assets/ so the splat: filenames resolve
 beat = 2
 
-[seq]
+[reel]
 # --- intro ---
 text:martin GAUS      @4,4    ~typewriter ^wave
 splat:sphere.ply      @3.5,4  ~swarm

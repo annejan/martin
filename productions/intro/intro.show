@@ -13,7 +13,7 @@
 # Section starts (s): intro 0 · build 7.7 · drop 19.4 · breakdown 42.6 · climax 50.3 · outro 73.5.
 
 # --- settings (each → MARTIN_<KEY>) ---
-morph_count = 120000
+budget       = 120000
 ply = assets/galaxy.ply              # .ply root = assets/ so the generated `splat:` shapes resolve
 score = productions/intro/score.txt
 bg_dim = 0.32
@@ -27,27 +27,27 @@ pw_step = 0.42                       # denser stroke sampling → a smoother lin
 #     next (radial, flowing — no falling, no bouncing). A couple of distinct accents (typewriter,
 #     pen-write) for the text. Deforms are rotational (twist/turbulence/spiral), not bob (no pulse/
 #     drop/rain). The glb: dissolve carries NO deform (it would wave the splats through the mesh). ---
-[seq]
+[reel]
 # ---- INTRO (0–7.7) · OPEN on the deFEEST mesh dissolving: splats → crisp 3D mesh → its splats. The
 #      sexy mesh↔splat choreography IS the opener (glb: part-0; no PNG logo first). On black.
-glb:defeest.glb               @@intro    @8,3                                bg:off     # the deFEEST mesh ⇄ splats dissolve
+glb:defeest.glb               @@intro    @8,3                                backdrop:off     # the deFEEST mesh ⇄ splats dissolve
 # ---- BUILD (7.7–19.4) · those deFEEST splats ball-pulse morph into a galaxy
-splat:galaxy.ply              @@build    @5,2.5,1.4 ~morph     ^twist         bg:stars   # ball-pulse morph into a galaxy; stars wake
+splat:galaxy.ply              @@build    @5,2.5,1.4 ~morph     ^twist         backdrop:stars   # ball-pulse morph into a galaxy; stars wake
 # ---- DROP (19.4–42.6) · the party: big ball-pulse morphs between shapes on the phrase grid
-splat:knot.ply                @@drop     @5.5,1.4,1.6 ~morph   ^turbulence   bg:bolt    # SEXY: explodes to a ball, reforms as the knot
-splat:supershape.ply          @@bar:14   @5,1.4,1.6 ~morph     ^turbulence   bg:warp    # the rainbow bloom
-text:splats that morph        @@bar:18   @4,1.2     ~typewriter ^wave        bg:grid    # the one-line explainer (distinct, per-char)
-mesh:bitterbal.glb cluster:7   @5,1.6,1.3 ~morph     ^wind  out:evaporate    bg:warp    # deFEEST catering, then the stage dies
+splat:knot.ply                @@drop     @5.5,1.4,1.6 ~morph   ^turbulence   backdrop:bolt    # SEXY: explodes to a ball, reforms as the knot
+splat:supershape.ply          @@bar:14   @5,1.4,1.6 ~morph     ^turbulence   backdrop:warp    # the rainbow bloom
+text:splats that morph        @@bar:18   @4,1.2     ~typewriter ^wave        backdrop:grid    # the one-line explainer (distinct, per-char)
+mesh:bitterbal.glb flock:7   @5,1.6,1.3 ~morph     ^wind  exit:evaporate    backdrop:warp    # deFEEST catering, then the stage dies
 # ---- BREAKDOWN (42.6–50.3) · calm on black, buys the climax its headroom
-text:code · splats · music    @@breakdown @6,2.5    ~outline    ^wave raster:position bg:off # the disciplines: outline reveal in rainbow position-colour
+text:code · splats · music    @@breakdown @6,2.5    ~outline    ^wave raster:position backdrop:off # the disciplines: outline reveal in rainbow position-colour
 # ---- CLIMAX (50.3–73.5) · the big finish. Helix + torus pulled back + the camera arcs → they rotate.
 shader:bolt                   @@climax   @1.4,0.3                                       # 1-bar fullscreen blinder
-splat:helix.ply               @@bar:27   @6.5,1.3,1.4 ~morph   ^spiral       bg:warp    # ball-pulse into the double helix
-splat:torus.ply rot:62,0,18   @@bar:31   @6,1.3,1.6 ~morph     ^spiral       bg:kaleido # a tilted donut that tumbles
-splat:galaxy.ply              @@bar:35   @5.5,1.6,1.4 ~morph   ^turbulence   bg:stars   # collapses back into the galaxy
+splat:helix.ply               @@bar:27   @6.5,1.3,1.4 ~morph   ^spiral       backdrop:warp    # ball-pulse into the double helix
+splat:torus.ply rot:62,0,18   @@bar:31   @6,1.3,1.6 ~morph     ^spiral       backdrop:kaleido # a tilted donut that tumbles
+splat:galaxy.ply              @@bar:35   @5.5,1.6,1.4 ~morph   ^turbulence   backdrop:stars   # collapses back into the galaxy
 # ---- OUTRO (73.5–89) · the signature + credits, READ HEAD-ON, then evaporate to black
-text:deFEEST                  @@outro    @5,4       ~pen-write ^wave         bg:stars   # the handwriting signature
-wall:Anus|Bevy|Mosure         @4.5,2.5  ~morph     ^wave  out:evaporate     bg:off     # crew reassembles, then rises away into black
+text:deFEEST                  @@outro    @5,4       ~pen-write ^wave         backdrop:stars   # the handwriting signature
+wall:Anus|Bevy|Mosure         @4.5,2.5  ~morph     ^wave  exit:evaporate     backdrop:off     # crew reassembles, then rises away into black
 
 # --- the camera: FRONT-FACING throughout (yaw ~1.05–1.75 — text always faces us). Energy from
 #     push-ins (drop/climax) + pull-backs (breakdown/outro); the climax helix/torus get a pulled-back

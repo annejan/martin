@@ -14,9 +14,9 @@ ply = assets/truck.ply              # .ply root + the truck cloud
 score = assets/score.txt            # section names drive the @@anchors
 waypoints = assets/truck-path.json  # the marked camera path
 fly = 2                             # fly the camera through the waypoints
-morph_count = 500000
+budget       = 500000
 
-[seq]
+[reel]
 splat:truck.ply        @@intro      @8,2       ~fade            # the truck materialises; camera flies in
 text:deFEEST           @@build      @10,3      ~outline ^wave   # a wavy neon title draws on as it builds
 splat:truck.ply        @@drop       @14,3,0    ~morph           # back to the truck on the drop, rotating

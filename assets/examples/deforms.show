@@ -1,8 +1,8 @@
 # A gallery of the persistent deforms — a wall of text held while each `^name` field runs.
 # Run:  MARTIN_SHOW=assets/examples/deforms.show cargo +nightly run --release
-morph_count = 90000
+budget       = 90000
 
-[seq]
+[reel]
 wall:WAVE       @3,1  ~fade  ^wave
 wall:CLOTH      @3,1  ~fade  ^cloth
 wall:RIPPLE     @3,1  ~fade  ^ripple

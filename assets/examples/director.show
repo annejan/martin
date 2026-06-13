@@ -9,10 +9,10 @@
 
 [settings]
 ply = assets/doggo.ply        # .ply root
-morph_count = 500000
+budget       = 500000
 score = assets/score.txt      # section names drive the @@anchors
 
-[seq]
+[reel]
 text:deFEEST           @@intro      @5,3      ~pen-write    # handwriting draws on over the intro
 text:PRESENTS          @@build      @3,2      ~typewriter   # types in as the drums build
 splat:doggo.ply        @@drop       @9,2.5,0.6 ~morph       # the dog assembles ON the drop

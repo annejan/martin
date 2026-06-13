@@ -42,8 +42,8 @@ enum Section {
 impl From<&str> for Section {
     fn from(s: &str) -> Self {
         match s.to_ascii_lowercase().as_str() {
-            "seq" | "sequence" | "morph" => Section::Seq,
-            "compose" | "stage" => Section::Compose,
+            "reel" | "seq" | "sequence" | "morph" => Section::Seq,
+            "stage" | "compose" => Section::Compose,
             "camera" | "cam" => Section::Camera,
             _ => Section::Settings, // `[settings]`, or anything unknown → top-level knobs
         }
@@ -102,13 +102,23 @@ fn parse_and_apply(text: &str) -> Show {
     Show { camera }
 }
 
+/// Canonicalise a settings key: the DOMAIN.md domain spelling → the env var the engine reads. Keeps
+/// the old keys working (an alias, not a replacement). E.g. `budget = 200000` → `MARTIN_MORPH_COUNT`.
+fn canonical_key(key: &str) -> &str {
+    match key.to_ascii_lowercase().as_str() {
+        "budget" => "morph_count", // splat budget (DOMAIN.md): the real meaning of morph_count
+        "backdrop" => "bg",        // default backdrop shader
+        _ => key,
+    }
+}
+
 /// `key = value` → set `MARTIN_<KEY>=value`, but only if that env var isn't already set, so an
 /// explicit CLI env var wins over the file.
 fn set_if_absent(key: &str, value: &str) {
     if key.is_empty() {
         return;
     }
-    let var = format!("MARTIN_{}", key.to_ascii_uppercase());
+    let var = format!("MARTIN_{}", canonical_key(key).to_ascii_uppercase());
     if std::env::var(&var).is_err() {
         // SAFETY: show settings are applied at startup, single-threaded, before any threads spawn.
         unsafe { std::env::set_var(var, value) };

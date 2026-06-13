@@ -10,19 +10,19 @@
 # explicit env var on the command line still overrides any setting here.
 
 # --- settings (top-level key = value → MARTIN_<KEY>) ---
-morph_count = 180000
+budget       = 180000
 deform      = wind          # a scene-wide field: gently blows the whole stage (per-object ^name wins)
 bg          = plasma        # animated background shader layer
 
 # --- the hero: a morph timeline (verbatim .seq syntax) ---
-[seq]
+[reel]
 glb:defeest.glb   ~pen        # the logo writes itself on, crisp
 text:DE|FEEST     ~typewriter
 shader:tunnel     @3,1        # a fullscreen-effect interlude (splats clear, the tunnel plays)
 text:2026         ~sparkle
 
 # --- the stage: objects placed around the hero (verbatim .compose syntax) ---
-[compose]
+[stage]
 mesh:bitterbal.obj  @-1.4,.2,0  *.5  ~drop          # a bitterbal drops in on the left
 mesh:bitterbal.obj  @1.4,-.3,0  *.4  ~drop ^turb    # ...and one churning on the right
 

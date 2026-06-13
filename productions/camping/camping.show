@@ -12,7 +12,7 @@
 # placeholders so the whole 228s show plays end-to-end. Swap the real captures in when they land.
 
 # --- settings (each → MARTIN_<KEY>) ---
-morph_count = 160000
+budget       = 160000
 ply = assets/aegg-baked.ply          # .ply root = assets/ so `splat:` filenames resolve
 score = productions/camping/score.txt # the Op de Camping arrangement (this production owns it)
 bg_dim = 0.35
@@ -22,33 +22,33 @@ pw_splat = 0.004                      # crisp pen-write strokes
 
 # --- the show. BACKBONE = the sexy ball-pulse ~morph (disperse-to-ball → reassemble; bulge = 3rd @).
 #     Deforms rotational/lively (twist/turbulence/wind/wave), not bob. glb: dissolve carries no deform. ---
-[seq]
+[reel]
 # ==== 1 · INTRO (0–14) · deFEEST mesh floats in, dissolves to blobs, then BURSTS ====
-glb:defeest.glb               @@intro    @11,3                  out:explode  bg:off     # deFEEST mesh ⇄ splats → explode
+glb:defeest.glb               @@intro    @11,3                  exit:explode  backdrop:off     # deFEEST mesh ⇄ splats → explode
 # ==== 2 · BUILD (14–43) · BornHack (host camp) reveals + bursts, then the deFEEST village builds ====
-glb:bornhack.glb              @@build    @5,2                   out:explode  bg:stars   # HOST camp: mesh ⇄ splats → explode
-splat:aegg.ply                           @5,2,1.2 ~morph       ^twist        bg:stars   # STAND-IN prop (real: tent/krat)
-mesh:bitterbal.glb cluster:5   @5,2      ~morph     ^wind                    bg:grid    # STAND-IN food/BBQ
-text:OP DE CAMPING             @7,2      ~typewriter ^wave                   bg:grid    # the title lands
+glb:bornhack.glb              @@build    @5,2                   exit:explode  backdrop:stars   # HOST camp: mesh ⇄ splats → explode
+splat:aegg.ply                           @5,2,1.2 ~morph       ^twist        backdrop:stars   # STAND-IN prop (real: tent/krat)
+mesh:bitterbal.glb flock:5   @5,2      ~morph     ^wind                    backdrop:grid    # STAND-IN food/BBQ
+text:OP DE CAMPING             @7,2      ~typewriter ^wave                   backdrop:grid    # the title lands
 # ==== 3 · DROP (43–99) · the party bursts: splats waving, rainbow bg, food + cheering crew ====
-splat:doggo.ply               @@drop     @8,1.4,1.5 ~morph     ^wave         bg:plasma  # STAND-IN cheering crew (real: members)
-splat:supershape.ply          @@bar:34   @8,1.4,1.5 ~morph     ^wave         bg:kaleido # rainbow party morph
-text:MET deFEEST              @@bar:43    @7,1.4    ~explode    ^wave         bg:plasma  # the hook
-mesh:bitterbal.glb cluster:7  @@bar:51    @8,1.6    ~morph     ^wind  out:evaporate bg:kaleido # bitterballen
+splat:doggo.ply               @@drop     @8,1.4,1.5 ~morph     ^wave         backdrop:plasma  # STAND-IN cheering crew (real: members)
+splat:supershape.ply          @@bar:34   @8,1.4,1.5 ~morph     ^wave         backdrop:kaleido # rainbow party morph
+text:MET deFEEST              @@bar:43    @7,1.4    ~explode    ^wave         backdrop:plasma  # the hook
+mesh:bitterbal.glb flock:7  @@bar:51    @8,1.6    ~morph     ^wind  exit:evaporate backdrop:kaleido # bitterballen
 # ==== 4 · BREAKDOWN (99–129) · night, starfield, sad: zonder deFEEST is het kut ====
-text:ZONDER deFEEST          @@breakdown  @12,3     ~morph      ^ripple       bg:stars   # the tragic turn (night)
-text:IS HET KUT               @12,3      ~fade      ^wave                    bg:stars   # …is kut
+text:ZONDER deFEEST          @@breakdown  @12,3     ~morph      ^ripple       backdrop:stars   # the tragic turn (night)
+text:IS HET KUT               @12,3      ~fade      ^wave                    backdrop:stars   # …is kut
 # ==== 5 · CLIMAX (129–185) · peak party: crew, rainbows, ball-pulse bursts, bitterballen rain ====
-splat:martin-peace.ply        @@climax   @9,1.4,1.6 ~morph     ^wave         bg:plasma  # STAND-IN crew (real: cheering members)
-text:MET deFEEST             @@bar:84     @7,1.5    ~explode    ^wave         bg:kaleido # the ultimate joy
-splat:galaxy.ply             @@bar:93     @8,1.4,1.4 ~morph    ^turbulence    bg:plasma  # euphoria spins out
-mesh:bitterbal.glb cluster:9 @@bar:101    @8,1.6    ~morph     ^wind          bg:kaleido # bitterballen rain
+splat:martin-peace.ply        @@climax   @9,1.4,1.6 ~morph     ^wave         backdrop:plasma  # STAND-IN crew (real: cheering members)
+text:MET deFEEST             @@bar:84     @7,1.5    ~explode    ^wave         backdrop:kaleido # the ultimate joy
+splat:galaxy.ply             @@bar:93     @8,1.4,1.4 ~morph    ^turbulence    backdrop:plasma  # euphoria spins out
+mesh:bitterbal.glb flock:9 @@bar:101    @8,1.6    ~morph     ^wind          backdrop:kaleido # bitterballen rain
 # ==== 6 · OUTRO (185–228) · greetings + credits ====
-wall:GREETINGS|TO ALL|SCENE & CAMP @@outro @6,2.5   ~morph      ^wave         bg:stars   # PLACEHOLDER greet — fill real group names
-svg:bornhack.svg               @5,2      ~morph     ^wave                    bg:stars   # …esp. our hosts: BornHack
-wall:ANUS|KLOOT|CINDER         @6,2.5    ~morph     ^wave                    bg:stars   # the crew
-text:deFEEST                   @7,3      ~pen-write ^wave                    bg:stars   # signature
-text:a deFEEST production      @5,2.5    ~fade      ^wave  out:evaporate     bg:off      # …fades to black
+wall:GREETINGS|TO ALL|SCENE & CAMP @@outro @6,2.5   ~morph      ^wave         backdrop:stars   # PLACEHOLDER greet — fill real group names
+svg:bornhack.svg               @5,2      ~morph     ^wave                    backdrop:stars   # …esp. our hosts: BornHack
+wall:ANUS|KLOOT|CINDER         @6,2.5    ~morph     ^wave                    backdrop:stars   # the crew
+text:deFEEST                   @7,3      ~pen-write ^wave                    backdrop:stars   # signature
+text:a deFEEST production      @5,2.5    ~fade      ^wave  exit:evaporate     backdrop:off      # …fades to black
 
 # --- camera: FRONT-FACING (yaw ~1.1–1.7, text/credits read head-on); per-scene regime — float-in
 #     (intro), push (build), energetic push-ins (drop), sink/drift (breakdown), in-tight (climax),

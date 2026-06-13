@@ -1,9 +1,9 @@
 # A gallery of every arrival transition — each part is a label that arrives with its own `~name`.
 # Run:  MARTIN_SHOW=assets/examples/transitions.show cargo +nightly run --release
 #       MARTIN_VALIDATE=1 MARTIN_SHOW=assets/examples/transitions.show cargo run --release   # the timeline on paper
-morph_count = 80000
+budget       = 80000
 
-[seq]
+[reel]
 text:BALL        @1.2,0.8  ~ball
 text:FADE        @1.2,0.8  ~fade
 text:EXPLODE     @1.2,0.8  ~explode

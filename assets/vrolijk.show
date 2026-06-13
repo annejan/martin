@@ -8,11 +8,11 @@
 # Uses the big local .ply captures (aegg/doggo/martin-peace) — NOT CI-safe.
 
 # --- settings ---
-morph_count = 180000
+budget       = 180000
 # the .ply root (so splat: filenames resolve); aegg.ply is the real photogrammetry Ægg.
 ply = assets/aegg.ply
 
-[seq]
+[reel]
 splat:aegg.ply          @3,2     ~sparkle   ^wave         # the glowing Ægg gem opens
 text:LEKKER KAMPEREN     @2.5,1.5 ~explode   ^wave         # cheerful tagline
 splat:doggo.ply          @3,1.5   ~ball      ^wave         # the DOG bounces in — pure joy

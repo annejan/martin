@@ -9,10 +9,10 @@
 #     MARTIN_DEFORM=turbulence cargo +nightly run --release
 
 # --- settings (each → MARTIN_<KEY>) ---
-morph_count = 200000
+budget       = 200000
 
 # --- the show: a morph timeline (verbatim .seq syntax) ---
-[seq]
+[reel]
 glb:defeest.glb                 @5,3.5  ~pen-write              # logo dissolves in — handwriting-style
 text:DEMOSCENE FLASHBACK        @3,2.5  ~typewriter ^wave       # title appears, wavy
 text:1980s                      @2,2    ~fade                   # fade in: the early years
@@ -22,7 +22,7 @@ text:THE PC DEMO TAKES OFF      @3,2.5  ~swirl                  # Future Crew, F
 text:320x200 VGA · MOD MUSIC    @3,2    ~typewriter             # the classic formula
 text:2020s                      @2,2    ~fade                   # fast-forward
 mesh:aegg.dae                   @5,3.5  ~rain ^wind             # modern hardware badge rains in, gusting
-mesh:bitterbal.obj cluster:9    @5,3    ~drop ^wind  out:evaporate # bitterballen — deFEEST catering
+mesh:bitterbal.obj flock:9    @5,3    ~drop ^wind  exit:evaporate # bitterballen — deFEEST catering
 text:THE SCENE LIVES            @3,2.5  ~outline ^wave raster:position # proclamation — outline reveal in rainbow position-colour
 wall:CODE · MUSIC · GFX · TEXT  @4,3    ~fade ^wave             # the four pillars
 wall:DEMOSCENE · DEMOPARTY · DEMO @4,3  ~swarm ^wind            # what we do

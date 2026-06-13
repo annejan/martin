@@ -168,22 +168,22 @@ fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
                             eprintln!("seq: unknown anchor '@@{a}' (no such section/cue) — ignored")
                         }
                     }
-                } else if let Some(d) = tok.strip_prefix("out:") {
+                } else if let Some(d) = tok.strip_prefix("exit:").or(tok.strip_prefix("out:")) {
                     match Departure::parse(d) {
                         Some(dep) => out = Some(dep),
-                        None => eprintln!("seq: unknown departure 'out:{d}' — ignored"),
+                        None => eprintln!("seq: unknown exit 'exit:{d}' — ignored"),
                     }
                 } else if let Some(r) = tok.strip_prefix("rot:") {
                     match parse_euler_deg(r) {
                         Some(q) => rot = Some(q),
                         None => eprintln!("seq: bad 'rot:{r}' (need rx,ry,rz degrees) — ignored"),
                     }
-                } else if let Some(c) = tok.strip_prefix("cluster:") {
+                } else if let Some(c) = tok.strip_prefix("flock:").or(tok.strip_prefix("cluster:")) {
                     match c.parse() {
                         Ok(n) => cluster = Some(n),
-                        Err(_) => eprintln!("seq: bad 'cluster:{c}' (need an integer) — ignored"),
+                        Err(_) => eprintln!("seq: bad 'flock:{c}' (need an integer) — ignored"),
                     }
-                } else if let Some(b) = tok.strip_prefix("bg:") {
+                } else if let Some(b) = tok.strip_prefix("backdrop:").or(tok.strip_prefix("bg:")) {
                     bg = Some(crate::background::bg_token(b)); // warns + falls back inside
                 } else if let Some(r) = tok.strip_prefix("raster:") {
                     match parse_raster(r) {

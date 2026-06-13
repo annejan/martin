@@ -219,8 +219,13 @@ shader:warp                      # a fullscreen WGSL effect as an INTERLUDE: the
                                  #   in/out across the part — a demoscene effect between scenes
 splat:name.ply                   # a splat (filename in the asset folder)
 splat:a.ply+b.ply                # several splats, auto-arranged side by side
-…any of the above… @hold,morph,bulge   ~transition   ^deform   out:departure   rot:rx,ry,rz   cluster:N   @@anchor   bg:name   raster:mode
+…any of the above… @hold,morph,bulge   ~entrance   ^deform   exit:departure   rot:rx,ry,rz   flock:N   @@anchor   backdrop:name   raster:mode
 ```
+
+> **Domain vocabulary** (see [`DOMAIN.md`](DOMAIN.md)): the section is `[reel]` and a line is a **Shot**;
+> the modifiers above are the canonical spellings. Older spellings still parse as aliases:
+> `[seq]`→`[reel]`, `~transition`→`~entrance` (the `~` slot), `out:`→`exit:`, `cluster:`→`flock:`,
+> `bg:`→`backdrop:`, and the setting `morph_count`→`budget`. New shows should use the canonical words.
 
 **Per-part raster mode** (`raster:<mode>`): the fork's debug-shading views, colour each gaussian by a
 channel instead of its RGB. `color` (default, normal render) · `depth` · `normal` · `position`
