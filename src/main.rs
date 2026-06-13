@@ -100,6 +100,16 @@ fn main() {
         return;
     }
 
+    // MARTIN_STREAM_WAV=path: like MARTIN_SYNTH_WAV but via the STREAMING engine — a debug/verify
+    // path to A/B the two renderers on real scores. (Live playback streams; this just dumps it.)
+    if let Ok(path) = std::env::var("MARTIN_STREAM_WAV") {
+        match audio::render_stream_wav(&score, &path) {
+            Ok(()) => eprintln!("stream synth -> {path}"),
+            Err(e) => eprintln!("stream wav error: {e}"),
+        }
+        return;
+    }
+
     // MARTIN_COMPOSE: the composition stage (placed objects). It can run TOGETHER with the morph
     // timeline — the morph track is the "hero", the compose objects are placed around it (tracks).
     // Compose ALONE (no explicit MARTIN_SEQ/_TEXT/_PLY*) → no morph track. So:

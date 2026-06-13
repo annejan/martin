@@ -93,7 +93,8 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_FLASH` | `0` | Over-bright **bloom flash on each part cut** (0 = off; `~0.6` = punchy). Synced to the music when parts are `@@`-anchored to beats/bars. |
 | `MARTIN_SYNTH_WAV` | — | Render the bundled deFEEST synth (Cinder) to a WAV at this path, then exit — for muxing audio onto a recording. See [Music](#music-the-synth). |
 | `MARTIN_MUTE` | — | `=1` silences the **live** synth playback (it plays in the window by default; starts with the show, restarts on Space). Doesn't affect recordings — those mux the WAV. |
-| `MARTIN_MUSIC` | — | Play a **pre-rendered WAV** instead of synthesizing live — the show then starts instantly (this is what the bundle ships). Without it the synth renders multi-core at startup (~10–20 s) and the **show clock holds until it's ready**, so picture + music always leave together at t=0 and the `@@` anchors stay locked. |
+| `MARTIN_MUSIC` | — | Play a **pre-rendered WAV** instead of streaming the synth live (this is what the bundle ships). Either way the synth is **streamed** — playback + the show start together ~1 s after launch (the producer renders ahead in the background, ≈7× realtime), so `@@` anchors stay sample-locked. `MARTIN_MUSIC` just skips the render. |
+| `MARTIN_STREAM_WAV` | — | Debug: render the score via the **streaming** engine to a WAV and exit (cf. `MARTIN_SYNTH_WAV`'s batch render — the two match within ~1 LSB). |
 | `MARTIN_SCORE` | built-in | A **score file** (tracker DSL) defining the music — tempo, sections, drum patterns, dynamics. Drives the synth *and* the `@@anchor` section/bar times. See [The score file](#the-score-file). Example: `assets/score.txt`. |
 | `MARTIN_SCORE_DUMP` | — | Write the built-in score to this path as an editable score file, then exit — a ready-to-edit starting point (round-trips through `MARTIN_SCORE`). |
 | `MARTIN_CAMERAS` | — | A 3DGS/COLMAP `cameras.json` (graphdeco format); parks the camera at a real capture pose (transformed through the same normalize + rotation as the splats). `MARTIN_CAM_INDEX` picks which shot (default 0). *Experimental:* helps cleanly-captured scenes; soft 360° photogrammetry dumps still render abstract (see the scene heads-up above). |
@@ -631,12 +632,12 @@ martin carries a procedural synth + a **section/beat music clock**, ported (MIT)
 is 140 BPM with a six-section arc (`intro → build → drop → breakdown → climax → outro`), an
 Am–F–C–G chord progression driving the bass + stab, and a melodic **lead** — all editable in the
 [score file](#the-score-file). Those section/bar/beat times are what `@@anchor` (above) pins parts to, so the visuals lock to the
-track. It **plays live in the window** so you can tune the score by ear — the track is rendered
-multi-core at startup (~10–20 s) and the **show holds until it's ready**, so picture + music start
-together at t=0; it restarts on **Space** (`MARTIN_MUTE=1` skips the music *and* the wait,
-`MARTIN_MUSIC=<wav>` plays a pre-rendered track instantly). For **recording**, live playback is
-skipped and the synth instead renders **offline to a WAV** that ffmpeg muxes onto the frames
-(sample-accurate):
+track. It **plays live in the window** so you can tune the score by ear — the synth is **streamed**
+(rendered in time-ordered segments on a background thread), so playback + the show start together
+about a second after launch and the producer races ahead; a brief loader covers the lead-in. It
+restarts on **Space** (`MARTIN_MUTE=1` skips the music, `MARTIN_MUSIC=<wav>` plays a pre-rendered
+track). For **recording**, live playback is skipped and the synth instead renders **offline to a
+WAV** (the batch engine) that ffmpeg muxes onto the frames (sample-accurate):
 
 ```bash
 # 1. render the synth to a WAV (renders, then exits — no window)

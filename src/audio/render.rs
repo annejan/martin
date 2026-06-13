@@ -191,7 +191,6 @@ pub(super) fn render_voices(bed: &mut [f32], score: &Score, stereo: usize) {
                     render_into(bed, gt, 0.6, 0.18 * v, 0.0, lead(f * 2.0, v)); // climax sheen
                 }
             }
-            super::progress_tick();
         });
         // lead depth: a dotted-8th ping-pong of the lead in its own buffer; only the WET (echoes)
         // is added so the dry lead stays up front while its repeats open a 3D space behind it.
@@ -214,7 +213,6 @@ pub(super) fn render_voices(bed: &mut [f32], score: &Score, stereo: usize) {
             for i in 0..stereo {
                 lead_echo[i] -= lead_dry[i]; // echoes only — the dry lead is the lane above
             }
-            super::progress_tick();
         });
         // arp counter-line into its OWN buffer so we can process it (ping-pong delay) without
         // smearing the drums or the lead — spatial separation is the whole trick.
@@ -235,7 +233,6 @@ pub(super) fn render_voices(bed: &mut [f32], score: &Score, stereo: usize) {
             // ping-pong delay: 8th note, bounces L-R-L-R, 3–4 repeats, glued under the lead.
             // (`beat` is seconds-per-beat, so an 8th note is beat/2 — NOT 60/beat.)
             render_pingpong(&mut arp_buf, beat / 2.0, 0.35, 0.30);
-            super::progress_tick();
         });
         // articulated bassline: the `<section>.bass` note-lane (the real funky bass), centred — a
         // punchy `bass` voice at each onset, riding on top of the continuous drone sub below.
@@ -259,7 +256,6 @@ pub(super) fn render_voices(bed: &mut [f32], score: &Score, stereo: usize) {
                 voice,
             );
         }
-        super::progress_tick();
     });
     // sum in the original lane order: intro-bass+lead, echo wet, arp, bass.
     for i in 0..stereo {
@@ -304,7 +300,6 @@ pub(super) fn render_harmony(bed: &mut [f32], score: &Score) {
                     pad,
                 );
             }
-            super::progress_tick();
         });
         // epic supersaw chord wall: wide detuned saws on the chords, one per bar, in the sections
         // whose fx include `wall` (the big drop/climax + the OUTRO finale by default), so the
@@ -350,7 +345,6 @@ pub(super) fn render_harmony(bed: &mut [f32], score: &Score) {
                     }
                 }
             }
-            super::progress_tick();
         });
         // SHIMMER: an airy octave-UP choir pad that eases in across the sections whose fx include
         // `shimmer` (climax + outro by default) — the euphoric top that lifts the payoff sections
@@ -392,7 +386,6 @@ pub(super) fn render_harmony(bed: &mut [f32], score: &Score) {
                     }
                 }
             }
-            super::progress_tick();
         });
 
         // the off-beat stab layers (light) stay on this thread, straight into `bed` — they're the
@@ -472,7 +465,6 @@ pub(super) fn render_harmony(bed: &mut [f32], score: &Score) {
                 }
             }
         }
-        super::progress_tick();
     });
     // Sum the threaded layers. Note the regrouping: the stabs accumulated into `bed` during the
     // scope, so per-sample this adds (pad+wall+shimmer) AFTER them instead of before — float
@@ -763,4 +755,412 @@ pub(super) fn master(
         }
     }
     buf
+}
+
+// ============================================================================================
+// STREAMING PATH — collect the score into time-ordered events (one per note/hit/accent), which
+// `stream::produce` renders segment-by-segment so live playback starts in ~1 segment instead of
+// after the whole track. This MIRRORS the pass functions above (drums/voices/harmony/fx) — kept
+// separate (not yet unified) so the proven batch `synth_track` stays byte-for-byte untouched for
+// recordings/the bundle while the live stream is verified by ear. `stream::stream_matches_batch`
+// guards the two against drift. The continuous layers (sub, atmosphere, the two ping-pong delays,
+// reverb, master) are NOT events — they're the resumable finishers in `stream::produce`.
+// ============================================================================================
+use crate::audio::stream::{
+    Event, L_ARP, L_BASS, L_DRUMS, L_ECHO, L_FX, L_LEAD, L_PAD, L_SHIM, L_STABS, L_WALL, LANES,
+};
+
+fn ev(lane: &mut Vec<Event>, t: f32, r: impl FnOnce(&mut [f32], &mut [f32]) + Send + 'static) {
+    lane.push(Event {
+        t,
+        render: Box::new(r),
+    });
+}
+
+pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
+    let mut lanes: [Vec<Event>; LANES] = std::array::from_fn(|_| Vec::new());
+    let beat = score.beat();
+    let bar = score.bar();
+
+    // ---- DRUMS (kick → kickbuf; bass-body/intro-perc/snare/hat/stab → bed) ----
+    let hats_amp = score.param("hats", 0.3);
+    let snare_amp = score.param("snares", 0.58);
+    for kt in score.hits(Inst::Kick) {
+        let root = score.chord_at(kt).root;
+        let kamp = 0.92 * (0.9 + 0.1 * vel(kt, beat, 0));
+        ev(&mut lanes[L_DRUMS], kt, move |_b, k| {
+            render_hardkick(k, kt, root, kamp)
+        });
+        let v = vel(kt, beat, 0x88);
+        let bf = bass_freq(score.chord_at(kt).root);
+        ev(&mut lanes[L_DRUMS], kt, move |b, _| {
+            render_into(b, kt, 0.25, 0.18 * v, 0.0, bass(bf, v))
+        });
+    }
+    // intro percussion (hardkick → kickbuf, hats → bed), bars 2..build
+    if let Some(build_t) = section_time(score, "build") {
+        let bars = (build_t / bar).floor() as usize;
+        for b in 2..bars {
+            let base = b as f32 * bar;
+            let k_amp = if b < 4 { 0.30 } else { 0.55 };
+            let root = score.chord_at(base).root;
+            ev(&mut lanes[L_DRUMS], base, move |_b, k| {
+                render_hardkick(k, base, root, k_amp)
+            });
+            if b >= 4 {
+                ev(&mut lanes[L_DRUMS], base + 2.0 * beat, move |_b, k| {
+                    render_hardkick(k, base + 2.0 * beat, root, k_amp * 0.55)
+                });
+            }
+            if b >= 5 {
+                ev(&mut lanes[L_DRUMS], base + beat, move |b2, _| {
+                    render_into(b2, base + beat, 0.10, 0.12, -0.35, hat())
+                });
+                ev(&mut lanes[L_DRUMS], base + 3.0 * beat, move |b2, _| {
+                    render_into(b2, base + 3.0 * beat, 0.10, 0.12, 0.35, hat())
+                });
+            }
+            if b >= 6 {
+                for s in 0..8 {
+                    let st = base + s as f32 * beat * 0.5;
+                    let pan = if s % 2 == 0 { -0.45 } else { 0.45 };
+                    ev(&mut lanes[L_DRUMS], st, move |b2, _| {
+                        render_into(b2, st, 0.07, 0.07, pan, hat())
+                    });
+                }
+            }
+        }
+    }
+    for (i, t) in score.hits(Inst::Snare).into_iter().enumerate() {
+        let pan = match i % 3 {
+            0 => -0.2,
+            1 => 0.15,
+            _ => -0.05,
+        };
+        let gt = groove(t, beat, 0x55, 0.003, 0.004);
+        let amp = snare_amp * vel(t, beat, 0x55);
+        ev(&mut lanes[L_DRUMS], gt, move |b, _| {
+            render_into(b, gt, 0.4, amp, pan, snare())
+        });
+    }
+    for (i, t) in score.hits(Inst::Hat).into_iter().enumerate() {
+        let pan = if i % 2 == 0 { 0.65 } else { -0.65 };
+        let gt = groove(t, beat, 0x77, 0.006, 0.0);
+        let amp = hats_amp * vel(t, beat, 0x77);
+        ev(&mut lanes[L_DRUMS], gt, move |b, _| {
+            render_into(b, gt, 0.12, amp, pan, hat())
+        });
+    }
+    for t in score.hits(Inst::Stab) {
+        let m = score.levels(t).mids;
+        let gt = groove(t, beat, 0x6E, 0.004, 0.0);
+        let amp = (0.10 + 0.10 * m) * vel(t, beat, 0x6E);
+        let tri = score.chord_at(t).triad();
+        ev(&mut lanes[L_DRUMS], gt, move |b, _| {
+            chord_spread(b, gt, 0.5, amp, 0.75, tri, stab)
+        });
+    }
+
+    // ---- LEAD lane: intro bassline + the forward lead (+ octave/climax sheen) ----
+    if let Some(build_t) = section_time(score, "build") {
+        let end_bar = (build_t / bar).floor() as usize;
+        for b in 4..end_bar {
+            let t = b as f32 * bar;
+            let root = bass_freq(score.chord_at(t).root);
+            let amp = if b < 6 { 0.18 } else { 0.26 };
+            ev(&mut lanes[L_LEAD], t, move |bd, _| {
+                render_into(bd, t, 0.7, amp, 0.0, bass(root, 0.85))
+            });
+            if b >= 5 {
+                let t2 = t + 2.0 * beat;
+                ev(&mut lanes[L_LEAD], t2, move |bd, _| {
+                    render_into(bd, t2, 0.45, amp * 0.75, 0.0, bass(root, 0.7))
+                });
+            }
+            if b >= 7 {
+                let t3 = t + 3.0 * beat;
+                ev(&mut lanes[L_LEAD], t3, move |bd, _| {
+                    render_into(bd, t3, 0.35, amp * 0.55, 0.0, bass(root * 1.5, 0.6))
+                });
+            }
+        }
+    }
+    let climax = section_window(score, "climax");
+    for (t, f) in score.lead_notes() {
+        let v = vel(t, beat, 0x1A);
+        let gt = groove(t, beat, 0x3A, 0.005, 0.005);
+        let lamp = score.param_at(t, "lead", 0.82) * v;
+        let in_climax = climax
+            .map(|(s0, s1)| (s0..s1).contains(&t))
+            .unwrap_or(false);
+        ev(&mut lanes[L_LEAD], gt, move |bd, _| {
+            render_into(bd, gt, 0.6, lamp, 0.0, lead(f, v));
+            render_into(bd, gt, 0.6, 0.20 * v, 0.0, lead(f * 2.0, v));
+            if in_climax {
+                render_into(bd, gt, 0.6, 0.18 * v, 0.0, lead(f * 2.0, v));
+            }
+        });
+    }
+
+    // ---- ECHO lane (lead echo source; ping-pong + dry-subtract happens in produce) ----
+    for (t, f) in score.lead_notes() {
+        let v = vel(t, beat, 0x1A);
+        let gt = groove(t, beat, 0x3A, 0.005, 0.005);
+        let amp = 0.30 * v;
+        let lv = (v * 0.7).max(0.25);
+        ev(&mut lanes[L_ECHO], gt, move |bd, _| {
+            render_into(bd, gt, 0.5, amp, 0.0, lead(f, lv))
+        });
+    }
+
+    // ---- ARP lane (ping-pong happens in produce) ----
+    for (i, (t, f)) in score.arp_notes().into_iter().enumerate() {
+        let pan = if i % 2 == 0 { 0.7 } else { -0.7 };
+        let v = vel(t, beat, 0x2B);
+        let gt = groove(t, beat, 0x9C, 0.006, 0.0);
+        ev(&mut lanes[L_ARP], gt, move |bd, _| {
+            render_into(bd, gt, 0.2, 0.20 * v, pan, arp(f, v))
+        });
+    }
+
+    // ---- BASS lane: the articulated `<section>.bass` note-lane ----
+    let wooz = score.param("woozbass", 0.0) > 0.5;
+    for (t, f) in score.bass_notes() {
+        let v = vel(t, beat, 0xB5);
+        let amp = (0.20 + 0.18 * score.levels(t).sub_bass) * v;
+        let gt = groove(t, beat, 0xB5, 0.003, 0.0);
+        ev(&mut lanes[L_BASS], gt, move |bd, _| {
+            let (dur, voice): (f32, Box<dyn fundsp::prelude32::AudioUnit>) = if wooz {
+                (0.6, woozbass(f))
+            } else {
+                (0.42, bass(f, v))
+            };
+            render_into(bd, gt, dur, amp, 0.0, voice)
+        });
+    }
+
+    // ---- PAD lane: one sustained chord per bar ----
+    let nbars = (score.demo_len() / bar).ceil() as usize;
+    for b in 0..nbars {
+        let t = b as f32 * bar;
+        let m = score.levels(t).mids;
+        let intro_pad = ((t - 6.0 * bar) / (2.0 * bar)).clamp(0.0, 1.0);
+        let amp = (0.06 + 0.10 * m) * intro_pad;
+        let pan_spread = 0.5 + 0.25 * (t * 0.4 / bar * std::f32::consts::TAU).sin();
+        let tri = score.chord_at(t).triad();
+        ev(&mut lanes[L_PAD], t, move |bd, _| {
+            chord_spread(bd, t, bar, amp, pan_spread, tri, pad)
+        });
+    }
+
+    // ---- WALL lane: supersaw + choir wall, sections with fx `wall` ----
+    for sec in &score.sections {
+        if !sec.fx_on("wall") {
+            continue;
+        }
+        if let Some((s0, s1)) = section_window(score, &sec.name) {
+            let mut b = (s0 / bar).ceil() as usize;
+            while (b as f32) * bar < s1 {
+                let t = b as f32 * bar;
+                let m = score.levels(t).mids;
+                let amp = score.param_at(t, "supersaw", 0.07) + 0.07 * m;
+                let ch = score.param_at(t, "choir", 0.5);
+                let tri = score.chord_at(t).triad();
+                ev(&mut lanes[L_WALL], t, move |bd, _| {
+                    for &f in tri.iter() {
+                        render_into(bd, t, bar, amp * 0.7, -0.95, supersaw(f));
+                        render_into(bd, t, bar, amp * 0.7, 0.95, supersaw(f * 1.004));
+                        render_into(bd, t, bar, amp * ch, -0.6, choir(f * 0.5));
+                        render_into(bd, t, bar, amp * ch, 0.6, choir(f * 0.5 * 1.003));
+                    }
+                });
+                b += 1;
+            }
+        }
+    }
+
+    // ---- SHIMMER lane: octave-up choir, sections with fx `shimmer` ----
+    let shimmer = score.param("shimmer", 0.09);
+    if shimmer > 0.001 {
+        for sec in &score.sections {
+            if !sec.fx_on("shimmer") {
+                continue;
+            }
+            if let Some((s0, s1)) = section_window(score, &sec.name) {
+                let mut b = (s0 / bar).ceil() as usize;
+                while (b as f32) * bar < s1 {
+                    let t = b as f32 * bar;
+                    let ramp = ((t - s0) / ((s1 - s0) * 0.6)).clamp(0.0, 1.0);
+                    let tri = score.chord_at(t).triad();
+                    ev(&mut lanes[L_SHIM], t, move |bd, _| {
+                        for &f in tri.iter() {
+                            render_into(bd, t, bar, shimmer * ramp, -0.85, choir(f * 2.0));
+                            render_into(bd, t, bar, shimmer * ramp, 0.85, choir(f * 2.0 * 1.004));
+                        }
+                    });
+                    b += 1;
+                }
+            }
+        }
+    }
+
+    // ---- STABS lane: donk / house organ / casio off-beats ----
+    let hb = beat / 2.0;
+    let stab_layer = |lanes: &mut [Vec<Event>; LANES],
+                      tok: &str,
+                      seed: u32,
+                      def: f32,
+                      mids_k: f32,
+                      spread: f32,
+                      voice: fn(f32) -> Box<dyn fundsp::prelude32::AudioUnit>,
+                      dur: f32| {
+        for sec in &score.sections {
+            if !sec.fx_on(tok) {
+                continue;
+            }
+            if let Some((s0, s1)) = section_window(score, &sec.name) {
+                let mut t = (s0 / beat).ceil() * beat + hb;
+                while t < s1 {
+                    let m = score.levels(t).mids;
+                    let gt = groove(t, beat, seed, 0.004, 0.0);
+                    let amp = (score.param_at(t, tok, def) + mids_k * m) * vel(t, beat, seed);
+                    let tri = score.chord_at(t).triad();
+                    ev(&mut lanes[L_STABS], gt, move |bd, _| {
+                        chord_spread(bd, gt, dur, amp, spread, tri, voice)
+                    });
+                    t += beat;
+                }
+            }
+        }
+    };
+    stab_layer(&mut lanes, "donk", 0xD0, 0.055, 0.05, 0.55, donk, hb * 0.9);
+    stab_layer(
+        &mut lanes,
+        "house",
+        0x40,
+        0.12,
+        0.06,
+        0.7,
+        houseorg,
+        hb * 0.95,
+    );
+    // casio uses a fixed amp formula (not param_at) + 0x4C seed — inline (doesn't fit stab_layer)
+    let half = beat / 2.0;
+    for sec in &score.sections {
+        if !sec.fx_on("casio") {
+            continue;
+        }
+        if let Some((s0, s1)) = section_window(score, &sec.name) {
+            let mut t = (s0 / beat).ceil() * beat + half;
+            while t < s1 {
+                let m = score.levels(t).mids;
+                let gt = groove(t, beat, 0x4C, 0.005, 0.0);
+                let amp = (0.05 + 0.06 * m) * vel(t, beat, 0x4C);
+                let tri = score.chord_at(t).triad();
+                ev(&mut lanes[L_STABS], gt, move |bd, _| {
+                    chord_spread(bd, gt, half * 0.95, amp, 0.5, tri, casio)
+                });
+                t += beat;
+            }
+        }
+    }
+
+    // ---- FX lane: risers / jets / impacts / snare-rolls (sub + atmosphere are finishers) ----
+    if let Some(t) = section_time(score, "build")
+        && score.fx_on("build", "riser")
+    {
+        let s = t - 2.0 * bar;
+        ev(&mut lanes[L_FX], s, move |bd, _| {
+            render_riser(bd, s, 2.0 * bar, 0.10, -0.25)
+        });
+    }
+    if let Some(t) = section_time(score, "drop") {
+        if score.fx_on("drop", "riser") {
+            let s = t - 4.0 * bar;
+            ev(&mut lanes[L_FX], s, move |bd, _| {
+                render_riser(bd, s, 4.0 * bar, 0.26, 0.15)
+            });
+            let r = t - 2.0 * bar;
+            ev(&mut lanes[L_FX], r, move |bd, _| {
+                render_snare_roll(bd, r, 2.0 * bar, beat)
+            });
+        }
+        if score.fx_on("drop", "jet") {
+            let s = t - 3.0 * bar;
+            ev(&mut lanes[L_FX], s, move |bd, _| {
+                render_jet(bd, s, 3.0 * bar, 0.32)
+            });
+        }
+        if score.fx_on("drop", "impact") {
+            ev(&mut lanes[L_FX], t, move |bd, _| {
+                render_impact(bd, t, 1.6, 0.62)
+            });
+        }
+    }
+    if let Some(t) = section_time(score, "breakdown")
+        && score.fx_on("breakdown", "impact")
+    {
+        ev(&mut lanes[L_FX], t, move |bd, _| {
+            render_impact(bd, t, 2.2, 0.38)
+        });
+    }
+    if let Some(t) = section_time(score, "climax") {
+        if score.fx_on("climax", "riser") {
+            let s = t - 4.0 * bar;
+            ev(&mut lanes[L_FX], s, move |bd, _| {
+                render_riser(bd, s, 4.0 * bar, 0.34, -0.15)
+            });
+        }
+        if score.fx_on("climax", "jet") {
+            let s = t - 4.0 * bar;
+            ev(&mut lanes[L_FX], s, move |bd, _| {
+                render_jet(bd, s, 4.0 * bar, 0.5)
+            });
+        }
+        if score.fx_on("climax", "impact") {
+            ev(&mut lanes[L_FX], t, move |bd, _| {
+                render_impact(bd, t, 2.0, 0.72)
+            });
+        }
+    }
+    if let Some(t0) = section_time(score, "outro") {
+        let end = score.demo_len();
+        if score.fx_on("outro", "riser") {
+            let s = t0 - 3.0 * bar;
+            ev(&mut lanes[L_FX], s, move |bd, _| {
+                render_riser(bd, s, 3.0 * bar, 0.30, 0.0)
+            });
+            let r = t0 - 2.0 * bar;
+            ev(&mut lanes[L_FX], r, move |bd, _| {
+                render_snare_roll(bd, r, 2.0 * bar, beat)
+            });
+        }
+        if score.fx_on("outro", "bang") {
+            ev(&mut lanes[L_FX], t0, move |bd, _| {
+                render_impact(bd, t0, 1.4, 0.5)
+            });
+            let build = (4.0 * bar).min(end - t0 - 0.1).max(0.5);
+            let bs = end - build;
+            ev(&mut lanes[L_FX], bs, move |bd, _| {
+                render_snare_roll(bd, bs, build, beat)
+            });
+            ev(&mut lanes[L_FX], bs, move |bd, _| {
+                render_riser(bd, bs, build, 0.42, 0.0)
+            });
+            let j = end - 2.6;
+            ev(&mut lanes[L_FX], j, move |bd, _| {
+                render_jet(bd, j, 2.0, 0.6)
+            });
+            let i1 = end - 1.9;
+            ev(&mut lanes[L_FX], i1, move |bd, _| {
+                render_impact(bd, i1, 2.2, 1.0)
+            });
+            let i2 = end - 0.45;
+            ev(&mut lanes[L_FX], i2, move |bd, _| {
+                render_impact(bd, i2, 1.0, 1.0)
+            });
+        }
+    }
+
+    lanes
 }

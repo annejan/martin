@@ -149,11 +149,17 @@ fn update_loader(
             )
         })
         .unwrap_or((0, 1));
-    // Fold the live synth render into the bar (its lanes/passes count as units next to the splat
-    // loads), so the wait for the music is visible progress instead of a frozen screen.
-    let (sdone, stotal) = crate::audio::synth_progress();
-    let (done_u, total_u) = (loaded as u32 + sdone, total as u32 + stotal);
-    let pct = (done_u as f32 / total_u.max(1) as f32 * 100.0).clamp(0.0, 100.0);
+    // The bar tracks the SLOWER of two readiness fractions: splats loaded, and (when a live synth
+    // render is pending) the stream's lead buffer filling — so the music wait is visible progress
+    // instead of a frozen black screen.
+    let splat_frac = loaded as f32 / total as f32;
+    let synth_frac = if gate.as_ref().map(|g| !g.ready).unwrap_or(false) {
+        let lead = crate::audio::STREAM_LEAD_FRAMES.max(1);
+        (crate::audio::synth_produced_frames() as f32 / lead as f32).min(1.0)
+    } else {
+        1.0 // muted / pre-rendered / already started → no synth wait
+    };
+    let pct = (splat_frac.min(synth_frac) * 100.0).clamp(0.0, 100.0);
     for mut node in &mut fill {
         node.width = Val::Percent(pct);
     }

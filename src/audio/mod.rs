@@ -18,6 +18,7 @@ use crate::score::{Inst, Score};
 
 mod effects;
 mod render;
+pub(crate) mod stream;
 mod voices;
 
 pub const SAMPLE_RATE: u32 = 44_100;
@@ -33,27 +34,24 @@ pub(super) fn oversampling() -> bool {
     OVERSAMPLE.with(|c| c.get())
 }
 
-// Coarse render progress for the loader screen: one tick per completed lane/pass (the units the
-// parallel render naturally falls apart into). Free-function atomics, not a resource — the render
-// runs on plain threads outside the ECS.
-static SYNTH_DONE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-static SYNTH_TOTAL: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+// Streaming-render progress for the loader screen: how many stereo frames the live `stream::produce`
+// has finalized. Free-function atomics, not a resource — the producer runs on a plain thread.
+static SYNTH_DONE_FRAMES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
-/// `(done, total)` lane/pass units of the running synth render — `total == 0` means no render
-/// started (or none pending). Read by the loader to show a real bar during the live-audio wait.
-pub fn synth_progress() -> (u32, u32) {
-    use std::sync::atomic::Ordering::Relaxed;
-    (SYNTH_DONE.load(Relaxed), SYNTH_TOTAL.load(Relaxed))
+/// Stereo frames the running stream producer has finalized so far (0 before it starts).
+pub fn synth_produced_frames() -> usize {
+    SYNTH_DONE_FRAMES.load(std::sync::atomic::Ordering::Acquire)
 }
 
-fn progress_begin(total: u32) {
-    use std::sync::atomic::Ordering::Relaxed;
-    SYNTH_DONE.store(0, Relaxed);
-    SYNTH_TOTAL.store(total, Relaxed);
-}
+/// Playback buffer to accumulate before the show starts (≈2 s); at ~7× realtime the producer fills
+/// it in a fraction of a second and then stays well ahead — the loader covers this brief wait.
+pub const STREAM_LEAD_FRAMES: usize = 2 * SAMPLE_RATE as usize;
 
-pub(super) fn progress_tick() {
-    SYNTH_DONE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+pub(super) fn progress_reset() {
+    SYNTH_DONE_FRAMES.store(0, std::sync::atomic::Ordering::Release);
+}
+pub(super) fn progress_advance(frames: usize) {
+    SYNTH_DONE_FRAMES.fetch_add(frames, std::sync::atomic::Ordering::Release);
 }
 
 /// Seed a worker thread's `OVERSAMPLE` thread_local (the parallel render passes spawn threads;
@@ -229,13 +227,13 @@ pub(super) fn section_window(score: &Score, name: &str) -> Option<(f32, f32)> {
 /// concurrently into their own buffers and are summed afterwards **in the original pass order**,
 /// which keeps the floating-point result bit-for-bit identical to the old sequential accumulation
 /// (`(((drums+voices)+harmony)+fx)` per sample — exactly what the ordered `bed[i] += …` produced).
-/// Only the master pass (sidechain/reverb/limiter, cheap O(n) filters) stays serial. Live playback
-/// holds the show clock until this finishes (`music.rs` AudioGate), so picture + music start
-/// sample-locked at t=0; `MARTIN_MUSIC` (the bundle's pre-rendered WAV) skips the wait entirely.
+/// Only the master pass (sidechain/reverb/limiter, cheap O(n) filters) stays serial. This is the
+/// BATCH path — recordings (`MARTIN_SYNTH_WAV`) + the bundle's pre-rendered WAV use it. LIVE
+/// playback instead STREAMS via `stream::produce` (segmented, starts in ~1 s); the two engines are
+/// the same DSP and match within ~1 LSB (`stream::tests::stream_matches_batch`).
 pub fn synth_track(score: &Score) -> Track {
     let oversample = score.param("oversample", 0.0) > 0.5; // `set oversample=1` — anti-alias
     OVERSAMPLE.with(|c| c.set(oversample));
-    progress_begin(11); // drums + 4 voice lanes + 4 harmony lanes + fx + master
     let sr = SAMPLE_RATE as f32;
     let total = (score.demo_len() * sr).ceil() as usize;
     let stereo = total * 2;
@@ -260,16 +258,13 @@ pub fn synth_track(score: &Score) -> Track {
         s.spawn(|| {
             OVERSAMPLE.with(|c| c.set(oversample));
             render::render_fx(&mut bed_fx, score, total);
-            progress_tick();
         });
         render::render_drums(&mut kickbuf, &mut bed, score, &kicks);
-        progress_tick();
     });
     for i in 0..stereo {
         bed[i] = ((bed[i] + bed_voices[i]) + bed_harmony[i]) + bed_fx[i];
     }
     let buf = render::master(&kickbuf, &mut bed, score, &kicks, total, stereo);
-    progress_tick();
     Track {
         samples: Arc::new(buf),
     }
@@ -302,6 +297,18 @@ pub fn encode_wav(track: &Track) -> Vec<u8> {
 /// Write the track as a `.wav` file so ffmpeg can mux it onto the recorded frames.
 pub fn write_wav(track: &Track, path: &str) -> std::io::Result<()> {
     std::fs::write(path, encode_wav(track))
+}
+
+/// Render the score via the STREAMING producer (not the batch `synth_track`) and write a WAV — a
+/// debug/verification path (`MARTIN_STREAM_WAV`) to A/B the two engines on real scores. Same DSP,
+/// so the result should match `write_wav(&synth_track(..))` within float-summation-order noise.
+pub fn render_stream_wav(score: &Score, path: &str) -> std::io::Result<()> {
+    let mut samples = Vec::new();
+    stream::produce(score, |c| samples.extend_from_slice(c));
+    let track = Track {
+        samples: Arc::new(samples),
+    };
+    write_wav(&track, path)
 }
 
 #[cfg(test)]
