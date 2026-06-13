@@ -26,7 +26,7 @@ heeft een entree én een aftocht.
 | # | sectie (tijd) | werktitel | wat zie je | camera | status |
 |---|---|---|---|---|---|
 | 1 | intro (0–14) | **deFEEST drijft in** | Pikdonker. De 3D deFEEST-mesh drijft in beeld, draait zacht, dissolved dan tot blobs/splats (`glb:defeest.glb` mesh⇄splat). Het merk opent, wordt deeltjes. | langzaam indrijven, zacht om de mesh | ◪ uitgewerkt |
-| 2 | build (14–43) | **deFEEST-dorp op de camping** | De deFEEST-blobs hervormen tot camping-scenery: eerst het **BornHack**-logo (de host-camp, `glb:bornhack.glb` mesh⇄splats), dan het deFEEST-dorp op de camp, props die indrijven (bier/krat, club-mate, BBQ, tent). Bouwt op met de muziek. **Props vereisen echte captures; BornHack-logo staat.** | orbit → langzame push vooruit | ◪ uitgewerkt (captures nodig) |
+| 2 | build (14–43) | **deFEEST-dorp op de camping** | De deFEEST-blobs hervormen tot camping-scenery: het deFEEST-dorp op de camp, props die indrijven (bier/krat, club-mate, BBQ, tent). Bouwt op met de muziek. **Vereist echte captures.** | orbit → langzame push vooruit | ◪ uitgewerkt (captures nodig) |
 | 3 | drop (43–99) | **Het feest barst los** | De hele camping leeft: deFEEST-splats die overal **golven** (`^wave`), happy **regenboog-backdrop-shader**, meer props — tafel vol eten, deFEEST-leden die juichen. Snelle ball-pulse morphs op de beat. **Vereist captures.** | snel maar frontaal, push-ins op de hits | ◪ uitgewerkt (captures nodig) |
 | 4 | breakdown (99–129) | **Zonder deFEEST** | Nacht. `bg:stars` sterrenveld, gedimd. Trieste tekst over hoe het leven kut is zónder deFEEST (ZONDER deFEEST / IS HET KUT). Camp leegt weg. **Geen captures (tekst + bg).** | zakt, drift traag weg | ◪ uitgewerkt |
 | 5 | climax (129–185) | **Met deFEEST** | Peak party: meer juichende deFEEST-leden, regenbogen, grote "explosies" (= dikke ball-pulse morph-bursts, de sexy soort, géén scatter), bitterballen-regen (`bitterbal.glb`, bestaat). MET deFEEST = het ultieme genot. **Captures (leden) nodig.** | energiek maar frontaal, push-ins op de hits | ◪ uitgewerkt (captures nodig) |
@@ -76,13 +76,19 @@ mesh-route (`model:`/`glb:`) of accepteer de zachtheid.
   moet de reactie kunnen wisselen (thump / flare / shimmer / niets). → alle scènes.
 - **Happy regenboog-backdrop** — bg.wgsl heeft plasma/kaleido (regenboog-achtig) maar geen expliciete
   vrolijke "rainbow" mode; evt. een nieuwe bg-mode toevoegen. → scène 3.
+- **Cluster van crispe meshes** — `cluster:N` kloont nu alleen ge-samplede *splats* (`mesh:`), niet de
+  crispe `glb:` dissolve-mesh; en `model:` rendert niet in een `[seq]` (alleen `MARTIN_COMPOSE`). Een
+  echt *bord met 9 scherpe bitterballen* vraagt: cluster:N op de `glb:` dissolve (N scherpe meshes →
+  N splat-clusters). Tot dan = zachte splat-blobs. → scène 3/5 (bitterballen-regen).
 
 ## Logboek
 
 - 2026-06-13 — productie-structuur opgezet (`productions/camping/`), arc + scène-raamwerk + boodschappenlijst neergezet. Trellis-als-permanent-decor verworpen: alles op het scherm heeft een levenscyclus nodig.
 - 2026-06-13 — BornHack-logo (host-camp) toegevoegd: `assets/bornhack.{svg,glb,dae}` (witte fill,
-  via `svg_import.py`). In de show op twee plekken: build (`glb:bornhack.glb` venue-reveal) + outro
-  (`svg:bornhack.svg` greeting). Holds in build+outro ingekort zodat het totaal binnen de 228s track past.
+  via `svg_import.py`). Eerst op twee plekken gezet (build + outro); daarna **uitgedund** — beide
+  logo's tonen nu één keer: deFEEST in de intro (`glb:defeest.glb`), BornHack in de outro-greeting
+  (`svg:bornhack.svg`), z'n narratieve thuis. Bitterballen blijven splat-blobs (`mesh:…cluster:N`):
+  crispe-mesh-cluster is geen engine-feature (zie *Engine-vragen*).
 - 2026-06-13 — alle 6 scènes □→◪ besloten (samen, na het beluisteren van de track). Scènes 1/4/6
   bouwbaar zónder captures (mesh-open / nacht-tekst / greetings+credits); 2/3/5 vereisen echte
   captures (camp-props, eten-tafel, juichende leden). Captures-lijst aangevuld (club-mate, eten-tafel,

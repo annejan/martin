@@ -26,10 +26,9 @@ pw_splat = 0.004                      # crisp pen-write strokes
 # ==== 1 · INTRO (0–14) · deFEEST mesh floats in, dissolves to blobs ====
 glb:defeest.glb               @@intro    @11,3                               bg:off     # deFEEST mesh ⇄ splats opener
 # ==== 2 · BUILD (14–43) · the deFEEST village builds on the camp (props build in) ====
-glb:bornhack.glb              @@build    @5,2                                bg:stars   # the HOST camp: BornHack, mesh ⇄ splats
-splat:aegg.ply                           @5,2,1.2 ~morph       ^twist        bg:stars   # STAND-IN prop (real: tent/krat)
-mesh:bitterbal.glb cluster:5   @5,2      ~morph     ^wind                    bg:grid    # STAND-IN food/BBQ
-text:OP DE CAMPING             @7,2      ~typewriter ^wave                   bg:grid    # the title lands
+splat:aegg.ply                @@build    @8,2.5,1.2 ~morph     ^twist        bg:stars   # STAND-IN prop (real: tent/krat)
+mesh:bitterbal.glb cluster:5   @7,2      ~morph     ^wind                    bg:grid    # STAND-IN food/BBQ
+text:OP DE CAMPING             @9,2      ~typewriter ^wave                   bg:grid    # the title lands
 # ==== 3 · DROP (43–99) · the party bursts: splats waving, rainbow bg, food + cheering crew ====
 splat:doggo.ply               @@drop     @8,1.4,1.5 ~morph     ^wave         bg:plasma  # STAND-IN cheering crew (real: members)
 splat:supershape.ply          @@bar:34   @8,1.4,1.5 ~morph     ^wave         bg:kaleido # rainbow party morph
