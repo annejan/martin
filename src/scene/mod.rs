@@ -71,6 +71,7 @@ pub(crate) struct SeqClock {
 }
 
 /// Live clock advance (record mode drives `SeqClock` itself, deterministically).
+#[allow(clippy::too_many_arguments)]
 fn advance_seq_clock(
     time: Res<Time>,
     rec: Res<RecordState>,
