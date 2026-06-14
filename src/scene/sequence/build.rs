@@ -176,6 +176,16 @@ pub(crate) fn build_sequence(
     let mut shapes = Vec::new();
     let mut sources: Vec<Option<Handle<PlanarGaussian3d>>> = Vec::new();
     let mut out_clouds: Vec<Option<Handle<PlanarGaussian3d>>> = Vec::new();
+    // MARTIN_PAIR=match (or `pair=match` in [settings]): instead of index-rank Morton pairing — which
+    // pinches DISSIMILAR scenes through a centre "ball" — reorder each Morph part so splat k pairs with
+    // a nearby, similar-colour splat in the PREVIOUS part (greedy bijective nearest match, cost =
+    // pos² + color_w·colour²). Short colour-matched moves → a coherent ghostly morph (grass→trees,
+    // tower→tower), no centre-collapse. MARTIN_PAIR_COLOR weights colour vs position (default 0.5).
+    let pair_match = std::env::var("MARTIN_PAIR")
+        .map(|v| v.eq_ignore_ascii_case("match"))
+        .unwrap_or(false);
+    let pair_color_w = crate::envvar::or("MARTIN_PAIR_COLOR", 0.5_f32);
+    let mut prev_shaped: Option<Vec<Gaussian3d>> = None;
     for (idx, raw) in raws.into_iter().enumerate() {
         // ROBUSTNESS: a part that produced 0 gaussians (an unsupported/broken asset) must NOT reach
         // the morph shader — an empty cloud is a wgpu validation error that crashes the whole render.
@@ -202,6 +212,15 @@ pub(crate) fn build_sequence(
         // if the PREVIOUS part DEPARTS (washes/disperses away), there's no shape to flow from →
         // a Morph/Swarm part must assemble fresh from a ball instead.
         let prev_departs = idx > 0 && seq.parts[idx - 1].out.is_some();
+        // pair=match: when this Morph part flows DIRECTLY from the previous shape (no departure, no
+        // source cloud), reorder it so each splat slides to the nearest same-colour splat of the prev
+        // part — minimal travel, coherent morph. Only the Morph/Swarm-flow case has a prev shape to
+        // pair against; sourced transitions (ball/wash/etc.) assemble from their own cloud regardless.
+        if pair_match && matches!(tr, Transition::Morph | Transition::Swarm) && !prev_departs {
+            if let Some(prev) = &prev_shaped {
+                shaped = crate::morph::match_reorder(prev, shaped, pair_color_w);
+            }
+        }
         let src: Option<Vec<Gaussian3d>> = match tr {
             // Morph/Swarm flow from the PREVIOUS part's shape (no source) — unless the previous part
             // departed (washed away), in which case there's nothing to flow from → assemble fresh.
@@ -215,6 +234,11 @@ pub(crate) fn build_sequence(
         let out = seq.parts[idx].out.map(|d| d.out_cloud(&shaped, r));
         sources.push(src.map(|s| assets.add(PlanarGaussian3d::from(s))));
         out_clouds.push(out.map(|o| assets.add(PlanarGaussian3d::from(o))));
+        // keep this part's shape so the NEXT part can pair-match against it (only needed for pair=match;
+        // the clone is gated to avoid copying a big cloud on every render otherwise).
+        if pair_match {
+            prev_shaped = Some(shaped.clone());
+        }
         shapes.push(assets.add(PlanarGaussian3d::from(shaped)));
     }
     let intro0 = sources[0]

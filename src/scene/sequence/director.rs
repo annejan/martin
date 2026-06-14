@@ -27,6 +27,9 @@ pub(crate) fn shot_director(
     // (amp_scale, speed) for the persistent deform — read from env once. MARTIN_DEFORM_AMP scales the
     // wobble strength (e.g. 0.3 = gentle on a whole scene), MARTIN_DEFORM_SPEED its rate.
     mut deform_tune: Local<Option<(f32, f32)>>,
+    // MARTIN_PAIR=match → splats are pre-paired to nearest same-colour neighbours for a STRAIGHT
+    // morph; the beat-driven ball-pulse (below) would fight that, so it's suppressed. Read once.
+    mut pair_match: Local<Option<bool>>,
     mut q: Query<(
         &mut GaussianInterpolate<Gaussian3d>,
         &mut CloudSettings,
@@ -158,11 +161,15 @@ pub(crate) fn shot_director(
     // use `bulge` (it's a mid-morph ball-pulse, zero at time==1), so the kick thump rides on the
     // cloud's scale; the snare flares the bloom; kick+snare swell any active deform so a ^wave /
     // ^ripple part pumps with the track. During a morph we add a little bulge punch too.
+    let pair_match = *pair_match.get_or_insert_with(|| {
+        std::env::var("MARTIN_PAIR").is_ok_and(|v| v.eq_ignore_ascii_case("match"))
+    });
     let k = beat.intensity;
     if k > 0.0 {
         tf.scale = Vec3::splat(1.0 + beat.kick * 0.05 * k);
         cs.global_opacity += (beat.snare * 0.45 + beat.hat * 0.12) * k;
-        if morphing {
+        // beat ball-pulse punch during a morph — but NOT under pair=match, which wants a straight slide.
+        if morphing && !pair_match {
             cs.bulge += beat.kick * 0.3 * k;
         }
         if cs.deform_mode != 0 {

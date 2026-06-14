@@ -119,6 +119,99 @@ pub fn resample_morton(mut v: Vec<Gaussian3d>, n: usize) -> Vec<Gaussian3d> {
     (0..n).map(|i| v[((i * m) / n).min(m - 1)]).collect()
 }
 
+/// Reorder `target` (same length as `prev`) so `out[k]` is a **nearby, similar-colour** splat for
+/// `prev[k]` — a greedy bijective nearest match over a voxel grid, cost = position² + `color_w`·colour².
+/// The morph `prev → out` then slides every splat a SHORT local distance to a same-colour neighbour
+/// (grass→grass, tower→tower) instead of lerping by rank across the whole scene — so two *dissimilar*
+/// scenes (city↔city) morph coherently without the centre-collapse "ball" that rank pairing produces.
+pub fn match_reorder(prev: &[Gaussian3d], target: Vec<Gaussian3d>, color_w: f32) -> Vec<Gaussian3d> {
+    let n = prev.len();
+    if n == 0 || target.len() != n {
+        return target; // only meaningful for equal-count clouds (both resampled to N)
+    }
+    let pos = |g: &Gaussian3d| g.position_visibility.position;
+    let col = |g: &Gaussian3d| {
+        let c = g.spherical_harmonic.coefficients;
+        [c[0], c[1], c[2]]
+    };
+    // grid bounds over the target positions
+    let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
+    for g in &target {
+        let p = pos(g);
+        for k in 0..3 {
+            lo[k] = lo[k].min(p[k]);
+            hi[k] = hi[k].max(p[k]);
+        }
+    }
+    let res: i32 = (n as f64).cbrt().round().clamp(16.0, 128.0) as i32;
+    let span = [
+        (hi[0] - lo[0]).max(1e-6),
+        (hi[1] - lo[1]).max(1e-6),
+        (hi[2] - lo[2]).max(1e-6),
+    ];
+    let cell_of = |p: [f32; 3]| -> [i32; 3] {
+        [0, 1, 2].map(|k| (((p[k] - lo[k]) / span[k]) * res as f32) as i32).map(|c| c.clamp(0, res - 1))
+    };
+    let idx = |c: [i32; 3]| (c[0] * res * res + c[1] * res + c[2]) as usize;
+    // bucket every target index into its cell
+    let mut grid: Vec<Vec<u32>> = vec![Vec::new(); (res * res * res) as usize];
+    for (i, g) in target.iter().enumerate() {
+        grid[idx(cell_of(pos(g)))].push(i as u32);
+    }
+    let cost = |pp: [f32; 3], pc: [f32; 3], t: &Gaussian3d| -> f32 {
+        let tp = pos(t);
+        let tc = col(t);
+        let dp: f32 = (0..3).map(|k| (pp[k] - tp[k]).powi(2)).sum();
+        let dc: f32 = (0..3).map(|k| (pc[k] - tc[k]).powi(2)).sum();
+        dp + color_w * dc
+    };
+    let mut perm = vec![0u32; n];
+    for k in 0..n {
+        let (pp, pc) = (pos(&prev[k]), col(&prev[k]));
+        let base = cell_of(pp);
+        // expand search rings until a candidate cell with an unused target is found, then pick the
+        // lowest-cost target in that ring (+ the centre). Falls back to a global scan if the grid empties.
+        let mut best: Option<(f32, usize, u32)> = None; // (cost, grid-cell, target-index)
+        let mut r = 0;
+        while r <= res {
+            for dx in -r..=r {
+                for dy in -r..=r {
+                    for dz in -r..=r {
+                        // only the shell at radius r (interior already searched)
+                        if r > 0 && dx.abs() < r && dy.abs() < r && dz.abs() < r {
+                            continue;
+                        }
+                        let c = [base[0] + dx, base[1] + dy, base[2] + dz];
+                        if c.iter().any(|&v| v < 0 || v >= res) {
+                            continue;
+                        }
+                        let gi = idx([c[0], c[1], c[2]]);
+                        for &ti in &grid[gi] {
+                            let co = cost(pp, pc, &target[ti as usize]);
+                            if best.is_none_or(|(bc, ..)| co < bc) {
+                                best = Some((co, gi, ti));
+                            }
+                        }
+                    }
+                }
+            }
+            // found something in this ring → take it (a closer ring always wins on distance)
+            if best.is_some() {
+                break;
+            }
+            r += 1;
+        }
+        let (_, gi, ti) = best.expect("grid holds all targets; some unused remains while k<n");
+        perm[k] = ti;
+        // consume the target (swap-remove from its cell) so the match is a bijection
+        let cell = &mut grid[gi];
+        if let Some(p) = cell.iter().position(|&x| x == ti) {
+            cell.swap_remove(p);
+        }
+    }
+    perm.into_iter().map(|i| target[i as usize]).collect()
+}
+
 /// Scatter each gaussian of `shape` onto a fuzzy sphere shell of radius `shell_r` (paired
 /// 1:1, so it flies from the ball to its slot as the morph runs). The intro: part 0 morphs
 /// from this ball into `shape`. No shader bulge needed — the ball IS the lhs.
@@ -652,6 +745,22 @@ mod tests {
         let src: Vec<Gaussian3d> = (0..50).map(|i| g(i as f32, 0.0, 0.0)).collect();
         assert_eq!(resample_morton(src.clone(), 200).len(), 200); // up-sample
         assert_eq!(resample_morton(src, 10).len(), 10); // down-sample
+    }
+
+    #[test]
+    fn match_reorder_recovers_a_shuffle_with_zero_travel() {
+        // target is prev with the SAME positions in a different order → the nearest match must pair
+        // each prev[k] to its exact twin (zero travel), proving it's a bijection that minimises moves.
+        let prev: Vec<Gaussian3d> = (0..64)
+            .map(|i| g((i % 4) as f32, ((i / 4) % 4) as f32, (i / 16) as f32))
+            .collect();
+        let mut target = prev.clone();
+        target.reverse(); // any permutation
+        let out = match_reorder(&prev, target, 0.0);
+        assert_eq!(out.len(), prev.len());
+        for (a, b) in prev.iter().zip(&out) {
+            assert_eq!(a.position_visibility.position, b.position_visibility.position);
+        }
     }
 
     #[test]

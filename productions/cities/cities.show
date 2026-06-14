@@ -12,6 +12,8 @@
 
 [settings]
 kind = demo
+pair = match                  # nearest same-colour pairing (not index-rank): grass→grass, tower→tower,
+                              # short colour-matched moves → coherent ghostly morph, NO centre "ball"
 budget = 1200000              # 3x splats for a crisp render (tight files hold up to ~2M; budget=0 = max)
 ply = austin_run/exports/austin_tight.ply
 score = productions/intro/score.txt
@@ -22,13 +24,13 @@ flash = 0.5
 # Straight morph (bulge = 0, the 3rd @ number): each city flows DIRECTLY into the next, Morton-paired,
 # no disperse-to-ball. Starfield behind throughout.
 scene austin   @@intro     backdrop:stars
-  splat:austin_tight.ply    @9,3.5,0      ~fade         # AUSTIN assembles in (camera circles)
+  splat:austin_tight.ply    @9,3.5,0      ~morph# AUSTIN assembles in (camera circles)
 scene newyork  @@drop       backdrop:stars
-  splat:nyc_tight.ply       @11,2.5,0     ~fade         # AUSTIN → NEW YORK, straight morph
+  splat:nyc_tight.ply       @11,2.5,0     ~morph# AUSTIN → NEW YORK, straight morph
 scene chicago  @@breakdown  backdrop:stars
-  splat:chicago_tight.ply   @6,2,0        ~fade         # NEW YORK → CHICAGO
+  splat:chicago_tight.ply   @6,2,0        ~morph# NEW YORK → CHICAGO
 scene seattle  @@climax     backdrop:stars
-  splat:seattle_tight.ply   @11,2.5,0     ~fade         # CHICAGO → SEATTLE
+  splat:seattle_tight.ply   @11,2.5,0     ~morph# CHICAGO → SEATTLE
 scene credits  @@outro      backdrop:stars
   text:deFEEST · CITIES     @5,3          ~pen-write ^wave
   text:Imagery ©Google      @4,2.5        ~fade ^wave  exit:evaporate
