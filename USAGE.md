@@ -111,6 +111,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_LOADER` / `MARTIN_LOGO` | off | `=1` shows a **loading screen** (black + progress bar; `MARTIN_LOGO=<png OR svg in the asset root>` adds the logo — an `.svg` is rasterized, so it can be the same artwork the opening mesh was extruded from) until the show is built, then **cross-fades** into the opening logo behind it. Set automatically in a bundled build. (Window-only — not captured in recordings.) |
 | `MARTIN_SHOT` | — | Capture a single headless screenshot to this path, then exit ~2 s later. |
 | `MARTIN_SHOT_AT` | `6.0` | When (seconds) to take the `MARTIN_SHOT`. |
+| `MARTIN_SERVE` | — | `=1` (or `=<port>`, default 7878) starts the **live control bridge** — see below. |
 | `MARTIN_FULLSCREEN` | off | `=1` starts borderless-fullscreen; toggle live with **F11 / F**. (Ignored while recording — that needs the fixed window.) |
 | `MARTIN_LOOP` | off | `=1` keeps a live window up after the show ends (for tuning). By default a live run **exits when the show is done** (Space restarts). |
 | `MARTIN_NORMALIZE` | on | Each part is centred on its **centroid** and uniformly scaled (positions *and* gaussian sizes) so the bulk of its content (90th-percentile radius) ≈ 2 units. Using a percentile, not the bounding box, **ignores stray "floater" splats** that would otherwise shrink the scene to a distant dot — so a 200-unit COLMAP scene and a 1-unit TRELLIS object share one "normal" scale. `=0` keeps raw scales. |
@@ -122,6 +123,37 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_ROT` | — | `rx,ry,rz` euler **degrees** applied to the cloud — e.g. stand a COLMAP scene upright for a "normal" POV. Default = the portrait flip (gives scenes their abstract sideways look). Also orients a `glb:` dissolve (mesh + its splats together). |
 
 ---
+
+## Live control bridge
+
+`MARTIN_SERVE=1` (or `=<port>`, default **7878**) boots the show **windowed** but renders the splats
+into an **offscreen image** (shown in the window via a 2D blit), so screenshots are window-independent
+(no black-on-unfocused, works over SSH). It then serves a **newline-delimited JSON** protocol — one
+object per line, one reply per line — so you can drive the camera + clock and grab frames **without
+reloading the show** (huge when the capture is hundreds of MB). It's the engine half of "full MCP".
+
+```bash
+MARTIN_SERVE=1 MARTIN_SHOW=productions/austin/austin.show cargo +nightly run --release
+```
+
+| Command | Effect |
+|---|---|
+| `{"cmd":"camera","dist":0.6,"yaw":1.3,"pitch":0.18,"pos":[0,0.1,0]}` | nudge the orbit camera (any field optional) |
+| `{"cmd":"seek","t":25.0}` · `{"cmd":"pause"}` · `{"cmd":"play"}` · `{"cmd":"step","dt":0.1}` | move / freeze the show clock |
+| `{"cmd":"screenshot","path":"/tmp/m.png"}` | write the current frame (lands a moment after the reply — wait briefly) |
+| `{"cmd":"dump_camera"}` | a paste-ready `[camera]` line for the current pose + time — **author the track by flying** |
+| `{"cmd":"state"}` | current `t`, `paused`, camera |
+
+While serving, the authored `[camera]` track stands down (the bridge owns the camera) and the live
+auto-exit is disabled (it runs until you stop it). Example driver (one connection per command):
+
+```python
+import socket, json
+def cmd(d):
+    s = socket.create_connection(('127.0.0.1', 7878)); s.sendall((json.dumps(d)+'\n').encode())
+    r = s.makefile().readline(); s.close(); return r
+cmd({"cmd":"seek","t":25}); cmd({"cmd":"camera","dist":0.6}); cmd({"cmd":"screenshot","path":"/tmp/m.png"})
+```
 
 ## Live keyboard controls
 

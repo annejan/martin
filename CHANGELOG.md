@@ -32,6 +32,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   parsing as aliases. Plus a production **kind**: `kind = intro|demo`. An `intro` is self-contained +
   asset-budgeted (bundles into the single binary); `MARTIN_VALIDATE` reports its asset budget and
   warns on heavy / missing / capture-only assets. A `demo` is full-fat (local captures allowed).
+- **Live control bridge** (`MARTIN_SERVE=1`, default port 7878): boot the show windowed, render
+  offscreen (window-independent screenshots), and drive the camera + clock live over a line-JSON TCP
+  protocol (`camera`/`seek`/`pause`/`play`/`step`/`screenshot`/`dump_camera`/`state`) — author + inspect
+  **without reloading** the (possibly huge) show. `dump_camera` emits a paste-ready `[camera]` line, so
+  you author the track by flying. The engine half of "full MCP".
 - **`[scenes]` authoring** — write a show as the Showbook **arc** of named **Scenes** instead of a flat
   reel: each `scene` line opens a beat and sets its look (`@@anchor` / `backdrop:` / `^deform`), which
   the Shots under it inherit (a Shot's own modifier wins). Flattens to the exact `[reel]` the engine

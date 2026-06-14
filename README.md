@@ -120,6 +120,7 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 | `MARTIN_WAYPOINTS=path.json` | Where the **M-key** camera waypoints are logged / read (default `waypoints.json`) — fly + mark to author a camera path. |
 | `MARTIN_FLY=2` | Fly the camera through the marked waypoints. Recording: the path fills each part (longer hold = slower flyby), flowing through the morph. Live: `<secs>` = pace. |
 | `MARTIN_FPS=1` | Log frame time / FPS. |
+| `MARTIN_SERVE=1` | **Live control bridge** (default port 7878): boot the show windowed, render offscreen, and drive the camera + clock live over a line-JSON TCP protocol (`camera`/`seek`/`pause`/`play`/`step`/`screenshot`/`dump_camera`/`state`) — author + inspect without reloading. See [USAGE](USAGE.md#live-control-bridge). |
 | `MARTIN_RECORD=/dir` | Dump one PNG per frame (used by `record.sh`). |
 | `MARTIN_PREVIEW_FPS=8` | Render the timeline at N fps instead of 60 — far fewer frames for a fast preview (rendering frames is the slow part). Timing + audio sync stay correct; `record.sh` muxes at the same fps. |
 | `MARTIN_RASTER=position` | Debug-shading view for the whole show (`color`/`depth`/`normal`/`position`/`classification`/`flow`/`velocity`) — the fork's RasterizeMode. Per-part `raster:<mode>` token overrides it. `position` colours by XYZ (rainbow). |

@@ -77,9 +77,14 @@ fn advance_seq_clock(
     state: Option<Res<SeqState>>,
     comp: Option<Res<Composition>>,
     gate: Option<Res<crate::music::AudioGate>>,
+    paused: Option<Res<crate::serve::Paused>>,
     mut clock: ResMut<SeqClock>,
 ) {
     if rec.dir.is_some() {
+        return;
+    }
+    // the live control bridge can freeze the clock to inspect a moment (seek sets it directly).
+    if paused.map(|p| p.0).unwrap_or(false) {
         return;
     }
     // hold for the live synth render (when audio is wanted): picture + music must leave together

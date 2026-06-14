@@ -40,6 +40,7 @@ mod morph;
 mod music;
 mod scene;
 mod score;
+mod serve;
 mod show;
 mod splat_image;
 mod text;
@@ -255,6 +256,7 @@ fn main() {
             crate::scene::shader_part::ShaderPartPlugin,
             crate::glb::GlbScenePlugin,
             crate::fourd::FourDTestPlugin,
+            crate::serve::ServePlugin,
         ))
         .run();
 }

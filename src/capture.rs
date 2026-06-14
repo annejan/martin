@@ -218,8 +218,12 @@ fn live_end(
     clock: Res<SeqClock>,
     mut exit: MessageWriter<AppExit>,
 ) {
-    if rec.dir.is_some() || shot.path.is_some() || std::env::var("MARTIN_LOOP").is_ok() {
-        return; // the recorder/screenshot exit on their own; MARTIN_LOOP = stay up
+    if rec.dir.is_some()
+        || shot.path.is_some()
+        || std::env::var("MARTIN_LOOP").is_ok()
+        || crate::serve::is_serving()
+    {
+        return; // recorder/screenshot exit on their own; MARTIN_LOOP / the serve bridge stay up
     }
     let (Some(seq), Some(state)) = (seq, state) else {
         return;

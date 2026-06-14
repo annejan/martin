@@ -172,6 +172,10 @@ fn flypath(
     clock: Res<SeqClock>,
     mut q: Query<&mut OrbitCam>,
 ) {
+    // the live control bridge drives the camera by hand — the authored track stands down.
+    if crate::serve::is_serving() {
+        return;
+    }
     let Some(secs) = marks.fly else { return };
     let n = marks.list.len();
     if n < 2 {
