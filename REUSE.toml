@@ -121,6 +121,7 @@ path = [
     "pipeline/fetch-demo-assets.sh",
     ".gitignore",
     ".gitattributes",
+    ".mcp.json",
     ".cargo/config.toml",
     ".github/dependabot.yml",
     ".github/workflows/build.yml",

@@ -4017,6 +4017,7 @@ name = "martin"
 version = "0.3.1"
 dependencies = [
  "ab_glyph",
+ "base64 0.22.1",
  "bevy",
  "bevy_gaussian_splatting",
  "fundsp",

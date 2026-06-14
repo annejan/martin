@@ -35,6 +35,7 @@ mod envvar;
 mod fourd;
 mod glb;
 mod loader;
+mod mcp;
 mod mesh;
 mod morph;
 mod music;
@@ -56,6 +57,12 @@ use crate::scene::sequence::{Sequence, sequence_from_env};
 use crate::scene::{AssetRoot, ScenePlugin, parent_dir};
 
 fn main() {
+    // MARTIN_MCP / --mcp: run the stdio MCP server (proxy to a MARTIN_SERVE bridge) and exit — no
+    // Bevy, so stdout stays clean JSON-RPC. Must be the very first thing main does.
+    if mcp::maybe_run() {
+        return;
+    }
+
     // Bundled single-binary build: self-extract the embedded assets + seed the baked-in show into
     // the env BEFORE anything reads it (a no-op without `--features bundle`).
     #[cfg(feature = "bundle")]

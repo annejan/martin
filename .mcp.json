@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "martin": {
+      "command": "./target/release/martin",
+      "args": ["--mcp"],
+      "env": {}
+    }
+  }
+}

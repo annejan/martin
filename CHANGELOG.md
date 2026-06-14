@@ -37,6 +37,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   protocol (`camera`/`seek`/`pause`/`play`/`step`/`screenshot`/`dump_camera`/`state`) — author + inspect
   **without reloading** the (possibly huge) show. `dump_camera` emits a paste-ready `[camera]` line, so
   you author the track by flying. The engine half of "full MCP".
+- **MCP server** (`martin --mcp` / `MARTIN_MCP=1`): a stdio JSON-RPC MCP server (no Bevy, clean stdout)
+  that proxies to the bridge, exposing camera/seek/pause/play/step/dump_camera/state as native MCP
+  tools — and `screenshot` returns the PNG **inline** as image content. Registered in `.mcp.json` so an
+  MCP client drives the live engine directly. Completes "full MCP".
 - **`[scenes]` authoring** — write a show as the Showbook **arc** of named **Scenes** instead of a flat
   reel: each `scene` line opens a beat and sets its look (`@@anchor` / `backdrop:` / `^deform`), which
   the Shots under it inherit (a Shot's own modifier wins). Flattens to the exact `[reel]` the engine
