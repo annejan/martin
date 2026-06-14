@@ -76,9 +76,13 @@ fn advance_seq_clock(
     rec: Res<RecordState>,
     state: Option<Res<SeqState>>,
     comp: Option<Res<Composition>>,
+    seq: Option<Res<crate::scene::sequence::Sequence>>,
     gate: Option<Res<crate::music::AudioGate>>,
     paused: Option<Res<crate::serve::Paused>>,
     mut clock: ResMut<SeqClock>,
+    // MARTIN_LOOP=1 wraps the clock at show-end → the reel plays forever (a live kiosk loop). Read
+    // once; `None` = not looping, `Some(len)` = wrap modulo len (only when a reel/Score gives a length).
+    mut loop_len: Local<Option<Option<f32>>>,
 ) {
     if rec.dir.is_some() {
         return;
@@ -96,6 +100,23 @@ fn advance_seq_clock(
     let built = state.map(|s| s.built).unwrap_or(false) || comp.map(|c| c.built).unwrap_or(false);
     if built {
         clock.t += time.delta_secs();
+        // resolve the loop length once the reel exists: the cue-timeline end (last shot + hold).
+        let len = *loop_len.get_or_insert_with(|| {
+            (std::env::var("MARTIN_LOOP").is_ok())
+                .then(|| {
+                    seq.as_ref().map(|s| {
+                        let starts = crate::scene::sequence::shot_starts(&s.parts);
+                        crate::scene::sequence::show_end(&s.parts, &starts)
+                    })
+                })
+                .flatten()
+                .filter(|&l| l > 0.0)
+        });
+        if let Some(len) = len {
+            if clock.t >= len {
+                clock.t -= len; // seamless modulo wrap → the reel restarts (shot 0 from its origin)
+            }
+        }
     }
 }
 
