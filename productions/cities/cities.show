@@ -1,0 +1,38 @@
+# martin — CITIES: a smooth morph tour between aerial city splats. The deFEEST signature (ball-pulse
+# ~morph) applied to skylines — one city disperses to a fuzzy sphere and REASSEMBLES as the next.
+# Google Aerial View → COLMAP → Brush, floaters trimmed with crop-splat.py. kind=demo, LOCAL captures
+# only (Google Maps Content — not shippable, see pipeline/AERIAL-CITIES.md). ©Google credit in outro.
+#
+#   MARTIN_SHOW=productions/cities/cities.show ./record.sh cities.mp4
+#
+# Currently 2 of 4 cities have splats (austin, nyc). When chicago_tight.ply + seattle_tight.ply land
+# (run the splat pipeline on chicago.mp4 / seattle.mp4, then crop-splat.py), swap them into the [reel]
+# for the full four-city tour. The morph between cities IS the transition — smooth by construction.
+
+[settings]
+kind = demo
+budget = 420000
+ply = austin_run/exports/austin_tight.ply    # asset root holds austin; nyc uses an absolute name below
+score = productions/intro/score.txt
+beat = 0.2
+flash = 0.45
+
+[reel]
+splat:austin_tight.ply        @@intro    @7,3   ~swarm                        # AUSTIN rises from the dark
+text:AUSTIN                    @@build    @3,1.6 ~outline  ^wave  raster:position
+splat:nyc_tight.ply               @@drop @9,2,1.4 ~morph              # AUSTIN ⇄ NYC — the smooth morph
+text:NEW YORK                  @@breakdown @3,1.6 ~outline ^wave raster:position backdrop:stars
+splat:austin_tight.ply        @@climax   @9,2,1.4 ~morph                      # NYC ⇄ AUSTIN (the tour loops)
+text:deFEEST · CITIES          @@outro    @5,3   ~pen-write ^wave             backdrop:stars
+text:Imagery ©Google           @4,2.5 ~fade ^wave  exit:evaporate            backdrop:stars
+
+[camera]
+t=@@intro      pos=0,0.1,0   dist=1.3  yaw=1.5   pitch=0.40
+t=@@build      pos=0,0.1,0   dist=1.0  yaw=1.45  pitch=0.30
+t=@@drop       pos=0,0.12,0  dist=0.7  yaw=1.30  pitch=0.20
+t=30.0         pos=-0.3,0.1,0 dist=0.65 yaw=1.62 pitch=0.18
+t=@@breakdown  pos=0,0.1,0   dist=1.2  yaw=1.45  pitch=0.36
+t=@@climax     pos=0.2,0.1,0 dist=0.75 yaw=1.55  pitch=0.22
+t=70.0         pos=-0.25,0.1,0 dist=0.7 yaw=1.2  pitch=0.20
+t=@@outro      pos=0,0.1,0   dist=1.5  yaw=1.45  pitch=0.30
+t=88.5         pos=0,0.1,0   dist=2.2  yaw=1.45  pitch=0.18
