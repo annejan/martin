@@ -124,7 +124,11 @@ pub fn resample_morton(mut v: Vec<Gaussian3d>, n: usize) -> Vec<Gaussian3d> {
 /// The morph `prev → out` then slides every splat a SHORT local distance to a same-colour neighbour
 /// (grass→grass, tower→tower) instead of lerping by rank across the whole scene — so two *dissimilar*
 /// scenes (city↔city) morph coherently without the centre-collapse "ball" that rank pairing produces.
-pub fn match_reorder(prev: &[Gaussian3d], target: Vec<Gaussian3d>, color_w: f32) -> Vec<Gaussian3d> {
+pub fn match_reorder(
+    prev: &[Gaussian3d],
+    target: Vec<Gaussian3d>,
+    color_w: f32,
+) -> Vec<Gaussian3d> {
     let n = prev.len();
     if n == 0 || target.len() != n {
         return target; // only meaningful for equal-count clouds (both resampled to N)
@@ -150,7 +154,9 @@ pub fn match_reorder(prev: &[Gaussian3d], target: Vec<Gaussian3d>, color_w: f32)
         (hi[2] - lo[2]).max(1e-6),
     ];
     let cell_of = |p: [f32; 3]| -> [i32; 3] {
-        [0, 1, 2].map(|k| (((p[k] - lo[k]) / span[k]) * res as f32) as i32).map(|c| c.clamp(0, res - 1))
+        [0, 1, 2]
+            .map(|k| (((p[k] - lo[k]) / span[k]) * res as f32) as i32)
+            .map(|c| c.clamp(0, res - 1))
     };
     let idx = |c: [i32; 3]| (c[0] * res * res + c[1] * res + c[2]) as usize;
     // bucket every target index into its cell
@@ -759,7 +765,10 @@ mod tests {
         let out = match_reorder(&prev, target, 0.0);
         assert_eq!(out.len(), prev.len());
         for (a, b) in prev.iter().zip(&out) {
-            assert_eq!(a.position_visibility.position, b.position_visibility.position);
+            assert_eq!(
+                a.position_visibility.position,
+                b.position_visibility.position
+            );
         }
     }
 

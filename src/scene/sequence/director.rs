@@ -17,7 +17,7 @@ const DEPART_LEN: f32 = 1.5; // `out:` departure time (s) — carved from the en
 /// Drive the show from `SeqClock.t`: find the active shot, retarget the interpolate entity's
 /// lhs/rhs (only on change), and set the blend factor + ball bulge. Shot 0 morphs in from the
 /// intro ball; every later shot morphs in from the previous shot's shape.
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub(crate) fn shot_director(
     seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
