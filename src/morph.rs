@@ -171,15 +171,22 @@ pub fn match_reorder(
         let dc: f32 = (0..3).map(|k| (pc[k] - tc[k]).powi(2)).sum();
         dp + color_w * dc
     };
+    // Bijection bookkeeping: `used` marks consumed targets; `fallback` is a monotonic cursor over
+    // 0..n for the rare splat whose local cells are all empty (the grid depletes near the end). The
+    // cursor only moves forward, so all fallbacks together cost O(n) — without it, a late splat would
+    // expand rings across the WHOLE grid (O(res³) each) and the match blows up to minutes at 1M+ splats.
+    const R_MAX: i32 = 3; // rings to search before giving up to the fallback pool (~7³ candidates)
+    const R_EXTRA: i32 = 1; // keep scanning this many rings past the first hit (cube shells ≠ spheres)
+    let mut used = vec![false; n];
+    let mut fallback = 0usize;
     let mut perm = vec![0u32; n];
     for k in 0..n {
         let (pp, pc) = (pos(&prev[k]), col(&prev[k]));
         let base = cell_of(pp);
-        // expand search rings until a candidate cell with an unused target is found, then pick the
-        // lowest-cost target in that ring (+ the centre). Falls back to a global scan if the grid empties.
-        let mut best: Option<(f32, usize, u32)> = None; // (cost, grid-cell, target-index)
+        let mut best: Option<(f32, u32)> = None; // (cost, target-index)
+        let mut hit_ring: Option<i32> = None;
         let mut r = 0;
-        while r <= res {
+        while r <= R_MAX {
             for dx in -r..=r {
                 for dy in -r..=r {
                     for dz in -r..=r {
@@ -192,28 +199,44 @@ pub fn match_reorder(
                             continue;
                         }
                         let gi = idx([c[0], c[1], c[2]]);
-                        for &ti in &grid[gi] {
-                            let co = cost(pp, pc, &target[ti as usize]);
-                            if best.is_none_or(|(bc, ..)| co < bc) {
-                                best = Some((co, gi, ti));
+                        // scan the cell, swap-removing already-consumed entries as we pass them (keeps
+                        // cells small amortized, so a depleting grid doesn't re-scan dead indices).
+                        let mut j = 0;
+                        while j < grid[gi].len() {
+                            let ti = grid[gi][j];
+                            if used[ti as usize] {
+                                grid[gi].swap_remove(j);
+                                continue;
                             }
+                            let co = cost(pp, pc, &target[ti as usize]);
+                            if best.is_none_or(|(bc, _)| co < bc) {
+                                best = Some((co, ti));
+                            }
+                            j += 1;
                         }
                     }
                 }
             }
-            // found something in this ring → take it (a closer ring always wins on distance)
-            if best.is_some() {
-                break;
+            if let Some(hr) = hit_ring {
+                if r >= hr + R_EXTRA {
+                    break;
+                }
+            } else if best.is_some() {
+                hit_ring = Some(r);
             }
             r += 1;
         }
-        let (_, gi, ti) = best.expect("grid holds all targets; some unused remains while k<n");
+        let ti = match best {
+            Some((_, ti)) => ti,
+            None => {
+                while fallback < n && used[fallback] {
+                    fallback += 1;
+                }
+                fallback as u32
+            }
+        };
+        used[ti as usize] = true;
         perm[k] = ti;
-        // consume the target (swap-remove from its cell) so the match is a bijection
-        let cell = &mut grid[gi];
-        if let Some(p) = cell.iter().position(|&x| x == ti) {
-            cell.swap_remove(p);
-        }
     }
     perm.into_iter().map(|i| target[i as usize]).collect()
 }
