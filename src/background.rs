@@ -17,7 +17,7 @@ const BG_SHADER: Handle<Shader> = uuid_handle!("b9d1c0a2-7e54-4f3a-9c21-0a1b2c3d
 
 use crate::scene::SeqClock;
 use crate::scene::beat::Beat;
-use crate::scene::sequence::{SeqState, Sequence, active_part};
+use crate::scene::sequence::{SeqState, Sequence, active_shot};
 
 /// The 16:9 record/window aspect — fed to the effect uniform and used to size the fullscreen quad.
 pub(crate) const ASPECT: f32 = 16.0 / 9.0;
@@ -166,7 +166,7 @@ fn update_bg(
     if let (Some(seq), Some(state)) = (seq, state)
         && state.built
     {
-        let active = active_part(&state.starts, clock.t);
+        let active = active_shot(&state.starts(), clock.t);
         if let Some(m) = seq.parts[..=active.min(seq.parts.len().saturating_sub(1))]
             .iter()
             .rev()

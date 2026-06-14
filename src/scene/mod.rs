@@ -131,13 +131,7 @@ fn load_splats(
     commands.insert_resource(SeqState {
         load_names: names,
         loads,
-        shapes: Vec::new(),
-        sources: Vec::new(),
-        out_clouds: Vec::new(),
-        transitions: Vec::new(),
-        deforms: Vec::new(),
-        rasters: Vec::new(),
-        starts: Vec::new(),
+        shots: Vec::new(),
         built: false,
         entity: None,
     });
@@ -161,7 +155,7 @@ impl Plugin for ScenePlugin {
                 Update,
                 (
                     sequence::build_sequence,
-                    sequence::part_director,
+                    sequence::shot_director,
                     sequence::seq_no_cull,
                     gl_dissolve::sample_gl_mesh,
                     gl_dissolve::animate_seq_model,

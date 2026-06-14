@@ -3,8 +3,8 @@
 //! without building the renderer. A fast "is my show right, and what does it look like on paper?"
 //! check; pairs with the parse diagnostics (unknown transitions/heads warn on stderr).
 
-use crate::scene::compose::Composed;
-use crate::scene::sequence::{Sequence, part_starts, show_end};
+use crate::scene::compose::Prop;
+use crate::scene::sequence::{Sequence, shot_starts, show_end};
 use crate::score::Score;
 use crate::waypoints::{Waypoints, is_track};
 
@@ -39,7 +39,7 @@ const INTRO_HEAVY_ASSET: u64 = 8 * 1024 * 1024;
 /// the `intro` budget check.
 pub fn report(
     seq: &Sequence,
-    compose: &[Composed],
+    compose: &[Prop],
     cam: &Waypoints,
     score: &Score,
     asset_root: Option<&str>,
@@ -62,13 +62,13 @@ pub fn report(
     );
 
     if !seq.parts.is_empty() {
-        let starts = part_starts(&seq.parts);
+        let starts = shot_starts(&seq.parts);
         let end = show_end(&seq.parts, &starts);
         println!(
             "\nsequence: {} parts, ~{:.0}s total, {} gaussians/part",
             seq.parts.len(),
             end,
-            seq.count
+            seq.budget
         );
         for (i, (part, &t)) in seq.parts.iter().zip(&starts).enumerate() {
             let tr = part
@@ -121,7 +121,7 @@ pub fn report(
 /// on the three ways an intro breaks that promise: a **missing** file, a **heavy** one (bloats the
 /// bundle), or a **local capture** (not self-contained). Procedural shapes (synthesized by build.rs)
 /// count toward the budget but never warn as "missing" — they're regenerated.
-fn intro_budget(seq: &Sequence, compose: &[Composed], root: &str) {
+fn intro_budget(seq: &Sequence, compose: &[Prop], root: &str) {
     use std::collections::BTreeSet;
     let root = std::path::Path::new(root);
     let mut names: BTreeSet<&str> = BTreeSet::new();

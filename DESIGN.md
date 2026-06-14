@@ -1196,21 +1196,20 @@ earns RON's deps and (in 9) explicitly relaxes constraints #2/#3.
 
 Two modules cross the 1000-line smell. The review's plans, kept here so the work is deliberate:
 
-**`scene/sequence.rs` (1005 lines) — *behaviour-preserving, test-guarded; do anytime.***
-The module fuses parse-time, build-time and per-frame-time logic. Plan:
-1. **Keystone — `BuiltShot`.** `SeqState` holds **seven index-parallel `Vec`s** (`transitions`,
-   `deforms`, `rasters`, `starts`, `sources`, `out_clouds`, `shapes`) all derived 1:1 from a `Part` +
-   a global default. Collapse to one `Vec<BuiltShot>` (the resolved form — this is where `Part→Shot`
-   actually clarifies structure: `Part` = raw/parse-time, `BuiltShot` = resolved/run-time). Kills the
-   index-parallelism risk + the splat-into-seven-vectors code; `part_director` reads one `&shots[idx]`.
-2. **De-god `build_sequence`** (~325 lines, iterates the parts 6×): extract pure stages
-   `resolve_modes` / `build_raw_parts` / `frame_of` / `build_clouds` (the framing + cloud math become
-   unit-testable for the first time). Move the 80-line camera-seeding block to `camera.rs`.
-3. **Split** into `sequence/{model,parse,build,director}.rs`, `mod.rs` re-exporting the surface.
-4. *(Done)* `Departure::out_cloud` moved to `effects.rs` beside `source_cloud`; `MARTIN_ROT` reuses
-   `parse_euler_deg`. *(Todo)* route the remaining hand-rolled `env::var().parse()` reads through
-   `envvar::or` (they silently swallow typos); drop the redundant `MARTIN_MORPH_COUNT` re-read
-   (`seq.count` already owns it).
+**`scene/sequence.rs` — *behaviour-preserving, test-guarded.* ✅ MOSTLY LANDED.**
+1. ✅ **Keystone — `BuiltShot`.** `SeqState`'s seven index-parallel `Vec`s collapsed into one
+   `Vec<BuiltShot>` (resolved form); `shot_director` reads one `&state.shots[idx]`. Index-parallelism
+   risk gone.
+2. *(Todo)* **De-god `build_sequence`**: extract pure stages `resolve_modes` / `build_raw_parts` /
+   `frame_of` / `build_clouds` (the framing + cloud math become unit-testable). Move the camera-seeding
+   block to `camera.rs`. (The file SPLIT into `sequence/{model,parse,build,director}.rs` ✅ landed.)
+3. ✅ **Renames (Stage 2):** `Part→Shot`, `Composed→Prop`, `Waypoint→Key`, `Sequence.count→budget`,
+   `sources→origins`, `part_starts→shot_starts`, `active_part→active_shot`, `part_director→shot_director`.
+4. ✅ `Departure::out_cloud` in `effects.rs`; `MARTIN_ROT` reuses `parse_euler_deg`; the env reads route
+   through `envvar::or`.
+
+Remaining domain-vocab work (DOMAIN.md §9): Stage 3 enums (`AnchorKind`, `CameraMove`) + Stage 4
+on-demand (per-`Shot` density, scene-scoped looks, the `SyncTrack`/Automation north-star).
 
 **`audio/render.rs` (1166 lines) — *determinism-risky; needs a WAV A/B gate; do deliberately, not in a
 sweep.*** The file is large because the **arrangement is transcribed twice**: the batch passes

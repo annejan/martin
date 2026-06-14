@@ -24,7 +24,7 @@ const COMPOSE_MORPH: f32 = 1.6; // how long a `~transition` compose object takes
 
 /// One object placed on the composition stage: a source + where it sits + how it moves.
 #[derive(Clone)]
-pub(crate) struct Composed {
+pub(crate) struct Prop {
     content: PartContent,
     pos: Vec3,
     scale: f32,
@@ -40,7 +40,7 @@ pub(crate) struct Composed {
     deform: Option<Deform>, // `^name`: a persistent wobble while it's up
 }
 
-impl Composed {
+impl Prop {
     /// The object's source content — so the splat loader can collect its `splat:` filenames.
     pub(crate) fn content(&self) -> &PartContent {
         &self.content
@@ -109,7 +109,7 @@ impl Composition {
 /// `MARTIN_COMPOSE=<file>`: a stage of objects, all on screen together.
 #[derive(Resource)]
 pub(crate) struct Composition {
-    pub objects: Vec<Composed>,
+    pub objects: Vec<Prop>,
     pub built: bool,
 }
 
@@ -133,7 +133,7 @@ pub(crate) struct ComposeAnim {
 /// Parse `MARTIN_COMPOSE` (a file path or inline string). Each line: a `<source>` head (text/splat/
 /// mesh/image) then placement tokens — `@x,y,z` position, `*scale`, `rot a,b,c`, `spin a,b,c`
 /// (deg/s), `sway a,b,c` (deg), `bob amp`, `drift dx,dy,dz`, `in/out <anchor>` (section/bar/beat/s).
-pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Composed> {
+pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
     let raw = std::fs::read_to_string(spec).unwrap_or_else(|_| spec.to_string());
     let kw = |t: &str| matches!(t, "rot" | "spin" | "sway" | "bob" | "drift" | "in" | "out");
     let mut out = Vec::new();
@@ -215,7 +215,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Composed> {
                 i += 2;
             }
         }
-        out.push(Composed {
+        out.push(Prop {
             content,
             pos,
             scale,
@@ -498,7 +498,7 @@ pub(crate) fn compose_camera(
 mod tests {
     use super::*;
 
-    fn objs(spec: &str) -> Vec<Composed> {
+    fn objs(spec: &str) -> Vec<Prop> {
         parse_compose(spec, &score::Score::builtin())
     }
 

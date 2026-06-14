@@ -128,7 +128,7 @@ fn record_driver(
     // start+morph+hold) and the compose stage's object timeline (they can run together).
     let seq_dur = match (&seq, &state) {
         (Some(seq), Some(state)) if seq_built && !seq.parts.is_empty() => {
-            show_end(&seq.parts, &state.starts) + 1.0
+            show_end(&seq.parts, &state.starts()) + 1.0
         }
         _ => 0.0,
     };
@@ -228,7 +228,7 @@ fn live_end(
     let (Some(seq), Some(state)) = (seq, state) else {
         return;
     };
-    if state.built && clock.t > show_end(&seq.parts, &state.starts) + 2.5 {
+    if state.built && clock.t > show_end(&seq.parts, &state.starts()) + 2.5 {
         exit.write(AppExit::Success);
     }
 }
@@ -259,7 +259,7 @@ fn fps_log(
         let fps = f.frames as f32 / f.accum.max(1e-6);
         let ms = 1000.0 * f.accum / f.frames.max(1) as f32;
         // gaussians rendered per part (the morph budget; 0 = each part's native count).
-        let splats = seq.map(|s| s.count).unwrap_or(0);
+        let splats = seq.map(|s| s.budget).unwrap_or(0);
         info!(
             "metrics: {fps:.1} fps ({ms:.1} ms/frame) · {splats} splats/part · t={:.2}",
             clock.t

@@ -11,7 +11,7 @@ use bevy_gaussian_splatting::PlanarGaussian3d;
 
 use crate::morph::resample_morton;
 use crate::scene::NORMALIZE_EXTENT;
-use crate::scene::sequence::{Part, SeqState, Sequence};
+use crate::scene::sequence::{SeqState, Sequence, Shot};
 
 const MODEL_FADE: f32 = 0.6; // splats→mesh materialize time (s), after the part's splat-assemble
 const DISSOLVE_LEN: f32 = 1.2; // mesh→splats dissolve time (s) — its OWN step at the end of the hold
@@ -193,11 +193,11 @@ pub(crate) fn sample_gl_mesh(
 }
 
 /// The `glb:` mesh's opacity over its part's life — the choreography backbone. The splat-opacity is
-/// the exact complement (`1 - this`, see part_director), so mesh and splats crossfade cleanly:
+/// the exact complement (`1 - this`, see shot_director), so mesh and splats crossfade cleanly:
 /// 0 while the part assembles AS SPLATS → MATERIALIZE 0→1 over MODEL_FADE → 1 crisp hold → its OWN
 /// DISSOLVE 1→0 over the last DISSOLVE_LEN of the hold (finishing BEFORE the next part's morph, so
 /// the splats are fully back before they morph on — the dissolve is a distinct step, not overlapped).
-pub(crate) fn gl_mesh_alpha(starts: &[f32], parts: &[Part], p: usize, t: f32) -> f32 {
+pub(crate) fn gl_mesh_alpha(starts: &[f32], parts: &[Shot], p: usize, t: f32) -> f32 {
     // PART 0 is the OPENING: the mesh is crisp from the very start (no splat-assemble), so it picks
     // up exactly where the loader's logo left off — the show flows OUT of the logo (svg→mesh→splats)
     // rather than ball-assembling. Later parts assemble as splats first, then materialize.
@@ -242,7 +242,7 @@ pub(crate) fn animate_seq_model(
     if !state.built {
         return;
     }
-    let vis = gl_mesh_alpha(&state.starts, &seq.parts, m.part, clock.t);
+    let vis = gl_mesh_alpha(&state.starts(), &seq.parts, m.part, clock.t);
     for h in &handles {
         if let Some(mat) = mats.get_mut(&h.0) {
             mat.base_color.set_alpha(vis);
@@ -262,8 +262,8 @@ mod tests {
     use super::*;
     use crate::scene::content::PartContent;
 
-    fn part(hold: f32, morph: f32) -> Part {
-        Part {
+    fn part(hold: f32, morph: f32) -> Shot {
+        Shot {
             content: PartContent::Text("x".into()),
             hold,
             morph,

@@ -12,7 +12,7 @@ use bevy::prelude::*;
 /// a music-timed **camera track** — played straight off the show clock (`pose_at_time`) instead of
 /// the part-window heuristic. `M` stamps the live clock, so an authored path is a track by default.
 #[derive(Clone, Copy)]
-pub struct Waypoint {
+pub struct Key {
     pub target: Vec3,
     pub dist: f32,
     pub yaw: f32,
@@ -24,7 +24,7 @@ pub struct Waypoint {
 /// rewrites the whole file, so it stays valid JSON without an append-and-fix-up dance.
 #[derive(Resource)]
 pub struct Waypoints {
-    pub list: Vec<Waypoint>,
+    pub list: Vec<Key>,
     pub path: String,
     /// `MARTIN_FLY=<secs>`: replay the path instead of free-orbiting; `secs` is the **time per
     /// waypoint leg** (time between markers). `Some(secs)` = enabled.
@@ -39,11 +39,11 @@ impl Waypoints {
 
     /// Use an inline track (from a `.show` file's `[camera]` section) instead of loading the file;
     /// the file path / fly settings still come from the env (M-saves still target the file).
-    pub fn from_inline(list: Vec<Waypoint>) -> Self {
+    pub fn from_inline(list: Vec<Key>) -> Self {
         Self::build(Some(list))
     }
 
-    fn build(inline: Option<Vec<Waypoint>>) -> Self {
+    fn build(inline: Option<Vec<Key>>) -> Self {
         let path = std::env::var("MARTIN_WAYPOINTS").unwrap_or_else(|_| "waypoints.json".into());
         Self {
             // inline wins; else seed from the file so M *continues* a path and MARTIN_FLY replays it.
@@ -58,7 +58,7 @@ impl Waypoints {
 
 /// Write the markers to the martin-native waypoints JSON: an array of
 /// `{ "target": [x, y, z], "dist", "yaw", "pitch" }`, re-loadable for path playback later.
-pub fn save(list: &[Waypoint], path: &str) -> std::io::Result<()> {
+pub fn save(list: &[Key], path: &str) -> std::io::Result<()> {
     let arr: Vec<serde_json::Value> = list
         .iter()
         .map(|w| {
@@ -83,7 +83,7 @@ pub fn save(list: &[Waypoint], path: &str) -> std::io::Result<()> {
 /// line is order-free `key=value` tokens: `t` (show-time — a number of seconds, OR `@@anchor` to
 /// lock it to a music section/bar/beat, just like a seq part; omit → an untimed marker), `pos` (the
 /// look-at `x,y,z`), `dist`, `yaw`, `pitch` (radians). Needs the score for the `@@` anchors.
-pub fn parse_camera(lines: &[String], score: &crate::score::Score) -> Vec<Waypoint> {
+pub fn parse_camera(lines: &[String], score: &crate::score::Score) -> Vec<Key> {
     lines
         .iter()
         .filter_map(|line| {
@@ -91,7 +91,7 @@ pub fn parse_camera(lines: &[String], score: &crate::score::Score) -> Vec<Waypoi
             if s.is_empty() {
                 return None;
             }
-            let mut w = Waypoint {
+            let mut w = Key {
                 target: Vec3::ZERO,
                 dist: 5.0,
                 yaw: crate::camera::FRONT_YAW,
@@ -132,7 +132,7 @@ fn parse_vec3(s: &str) -> Option<Vec3> {
 }
 
 /// Read a waypoints file written by `save` (same JSON shape). Missing / unparseable → empty.
-pub fn load(path: &str) -> Vec<Waypoint> {
+pub fn load(path: &str) -> Vec<Key> {
     let Ok(text) = std::fs::read_to_string(path) else {
         return Vec::new();
     };
@@ -144,7 +144,7 @@ pub fn load(path: &str) -> Vec<Waypoint> {
             arr.iter()
                 .filter_map(|w| {
                     let t = w.get("target")?.as_array()?;
-                    Some(Waypoint {
+                    Some(Key {
                         target: Vec3::new(
                             t.first()?.as_f64()? as f32,
                             t.get(1)?.as_f64()? as f32,
@@ -164,7 +164,7 @@ pub fn load(path: &str) -> Vec<Waypoint> {
 /// Interpolate the path at normalized progress `p` ∈ [0,1]: choose the leg, ease across it with
 /// smoothstep (the camera settles as it passes each marker), lerp target/dist/pitch and take the
 /// shortest angular path for yaw. `None` only if the path is empty.
-pub fn pose_at(list: &[Waypoint], p: f32) -> Option<Waypoint> {
+pub fn pose_at(list: &[Key], p: f32) -> Option<Key> {
     match list.len() {
         0 => return None,
         1 => return list.first().copied(),
@@ -176,7 +176,7 @@ pub fn pose_at(list: &[Waypoint], p: f32) -> Option<Waypoint> {
     let u = x - i as f32;
     let e = u * u * (3.0 - 2.0 * u); // smoothstep ease across the leg
     let (a, b) = (list[i], list[i + 1]);
-    Some(Waypoint {
+    Some(Key {
         target: a.target.lerp(b.target, e),
         dist: a.dist + (b.dist - a.dist) * e,
         yaw: a.yaw + shortest_angle(b.yaw - a.yaw) * e,
@@ -188,18 +188,18 @@ pub fn pose_at(list: &[Waypoint], p: f32) -> Option<Waypoint> {
 /// A path is a **camera track** when every waypoint carries a time anchor (and there are ≥2): the
 /// flypath then plays it straight off the show clock via `pose_at_time` instead of the part-window
 /// heuristic. A path freshly authored with `M` (which stamps the clock) is therefore a track.
-pub fn is_track(list: &[Waypoint]) -> bool {
+pub fn is_track(list: &[Key]) -> bool {
     list.len() >= 2 && list.iter().all(|w| w.t.is_some())
 }
 
 /// Sample a *timed* track at absolute show-time `t` (seconds): find the bracketing pair by their
 /// anchors, smoothstep between them, clamp at the ends (hold the first pose before the track starts,
 /// the last after it ends). Assumes `is_track(list)` — anchors are taken as monotonically authored.
-pub fn pose_at_time(list: &[Waypoint], t: f32) -> Option<Waypoint> {
+pub fn pose_at_time(list: &[Key], t: f32) -> Option<Key> {
     if list.len() < 2 {
         return list.first().copied();
     }
-    let ta = |w: &Waypoint| w.t.unwrap_or(0.0);
+    let ta = |w: &Key| w.t.unwrap_or(0.0);
     if t <= ta(&list[0]) {
         return list.first().copied();
     }
@@ -211,7 +211,7 @@ pub fn pose_at_time(list: &[Waypoint], t: f32) -> Option<Waypoint> {
     let span = (ta(&b) - ta(&a)).max(1e-4);
     let u = ((t - ta(&a)) / span).clamp(0.0, 1.0);
     let e = u * u * (3.0 - 2.0 * u); // smoothstep — settle through each marker
-    Some(Waypoint {
+    Some(Key {
         target: a.target.lerp(b.target, e),
         dist: a.dist + (b.dist - a.dist) * e,
         yaw: a.yaw + shortest_angle(b.yaw - a.yaw) * e,
@@ -230,8 +230,8 @@ fn shortest_angle(d: f32) -> f32 {
 mod tests {
     use super::*;
 
-    fn wp(t: Option<f32>, dist: f32, yaw: f32) -> Waypoint {
-        Waypoint {
+    fn wp(t: Option<f32>, dist: f32, yaw: f32) -> Key {
+        Key {
             target: Vec3::ZERO,
             dist,
             yaw,
@@ -284,7 +284,7 @@ mod tests {
         let path = std::env::temp_dir().join("martin_wp_roundtrip_test.json");
         let p = path.to_str().unwrap();
         let list = vec![
-            Waypoint {
+            Key {
                 target: Vec3::new(1.0, 2.0, 3.0),
                 dist: 5.0,
                 yaw: 1.4,

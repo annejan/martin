@@ -10,7 +10,7 @@ use bevy_gaussian_splatting::GaussianCamera;
 
 use crate::capture::RecordState;
 use crate::scene::SeqClock;
-use crate::scene::sequence::{SeqState, Sequence, active_part, show_end};
+use crate::scene::sequence::{SeqState, Sequence, active_shot, show_end};
 use crate::waypoints;
 
 pub(crate) const FRONT_YAW: f32 = 1.4; // camera faces the subject head-on (single-image splats have no back)
@@ -123,7 +123,7 @@ fn controls(
     // camera path you can replay / author the demo's camera moves from later.
     if keys.just_pressed(KeyCode::KeyM) {
         if let Ok(cam) = q.single() {
-            marks.list.push(waypoints::Waypoint {
+            marks.list.push(waypoints::Key {
                 target: cam.target,
                 dist: cam.dist,
                 yaw: cam.yaw,
@@ -207,12 +207,12 @@ fn flypath(
         // the window keeps the camera always moving — it reaches the turn-marker exactly as the
         // morph begins, then reverses through it: no dead hold before the transition, no jump.
         // (So a part's flyby lasts its hold; live still paces by `secs` per leg.)
-        let starts = &state.starts;
-        let idx = active_part(starts, clock.t);
+        let starts = state.starts();
+        let idx = active_shot(&starts, clock.t);
         let part_end = starts
             .get(idx + 1)
             .copied()
-            .unwrap_or_else(|| show_end(&seq.parts, starts));
+            .unwrap_or_else(|| show_end(&seq.parts, &starts));
         let local = ((clock.t - starts[idx]) / (part_end - starts[idx]).max(0.1)).clamp(0.0, 1.0);
         if idx.is_multiple_of(2) {
             local

@@ -149,7 +149,7 @@ fn main() {
         (
             Sequence {
                 parts: Vec::new(),
-                count: 0,
+                budget: 0,
             },
             std::env::var("MARTIN_GLB").ok().and_then(parent_dir),
         )
@@ -160,7 +160,7 @@ fn main() {
         (
             Sequence {
                 parts: Vec::new(),
-                count: 0,
+                budget: 0,
             },
             std::env::var("MARTIN_PLY").ok().and_then(parent_dir),
         )

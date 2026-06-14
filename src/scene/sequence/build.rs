@@ -11,7 +11,7 @@ use bevy_gaussian_splatting::{
     CloudSettings, Gaussian3d, PlanarGaussian3d, PlanarGaussian3dHandle, RasterizeMode,
 };
 
-use super::model::{SeqState, Sequence, part_starts};
+use super::model::{BuiltShot, SeqState, Sequence, shot_starts};
 use super::parse::{global_raster, parse_euler_deg};
 use crate::camera::{DEFAULT_PITCH, FRONT_YAW, OrbitCam};
 use crate::morph::{ball_of, resample_morton};
@@ -83,8 +83,8 @@ pub(crate) fn build_sequence(
         })
         .collect();
 
-    // Absolute start time (s) of each part — the cue timeline (anchors, else laid end-to-end).
-    let starts = part_starts(&seq.parts);
+    // Absolute start time (s) of each shot — the cue timeline (anchors, else laid end-to-end).
+    let starts = shot_starts(&seq.parts);
 
     // read every part's gaussians once, so count==0 can mean "size N to the largest part"
     // (every part is then resampled to that single N — required by the shared morph output).
@@ -109,8 +109,8 @@ pub(crate) fn build_sequence(
     // `cluster:N` → replicate a part into N scattered, randomly-rotated copies (a "serving", e.g. a
     // pile of bitterballen) BEFORE normalize, so the whole pile frames as one. Downsample per copy
     // to keep the total near the morph budget.
-    // a part's cluster needs a concrete per-copy budget; when `count==0` (auto-size to the largest
-    // part) fall back to 200k here rather than 0 — so this default is intentionally NOT `seq.count`.
+    // a shot's cluster needs a concrete per-copy budget; when `budget==0` (auto-size to the largest
+    // shot) fall back to 200k here rather than 0 — so this default is intentionally NOT `seq.budget`.
     let cluster_total = crate::envvar::or("MARTIN_MORPH_COUNT", 200_000usize);
     for (raw, part) in raws.iter_mut().zip(&seq.parts) {
         if let Some(copies) = part.cluster {
@@ -144,8 +144,8 @@ pub(crate) fn build_sequence(
             }
         }
     }
-    let n = if seq.count > 0 {
-        seq.count
+    let n = if seq.budget > 0 {
+        seq.budget
     } else {
         raws.iter().map(Vec::len).max().unwrap_or(0).max(1)
     };
@@ -237,7 +237,7 @@ pub(crate) fn build_sequence(
             },
             CloudSettings {
                 sort_mode: SortMode::Radix,
-                time: 0.0, // start as the ball; part_director morphs it in
+                time: 0.0, // start as the ball; shot_director morphs it in
                 time_start: 0.0,
                 time_stop: 1.0,
                 bulge: 0.0,
@@ -312,19 +312,39 @@ pub(crate) fn build_sequence(
         }
     }
 
-    state.shapes = shapes;
-    state.sources = sources;
-    state.out_clouds = out_clouds;
-    state.transitions = transitions;
-    state.deforms = deforms;
-    state.rasters = rasters;
-    state.starts = starts;
+    // Collapse the index-parallel build outputs into one `BuiltShot` per shot — the only per-shot
+    // data the director reads. Each `Vec` is consumed in lock-step (all are `seq.parts.len()` long).
+    let mut shots = Vec::with_capacity(seq.parts.len());
+    let mut shapes = shapes.into_iter();
+    let mut sources = sources.into_iter();
+    let mut out_clouds = out_clouds.into_iter();
+    for ((((shot, transition), deform), raster), start) in seq
+        .parts
+        .iter()
+        .zip(transitions)
+        .zip(deforms)
+        .zip(rasters)
+        .zip(starts)
+    {
+        shots.push(BuiltShot {
+            shape: shapes.next().expect("one shape per shot"),
+            origin: sources.next().expect("one source per shot"),
+            out_cloud: out_clouds.next().expect("one out-cloud per shot"),
+            transition,
+            deform,
+            raster,
+            start,
+            morph: shot.morph,
+            bulge: shot.bulge,
+            out: shot.out,
+            is_gl_mesh: matches!(shot.content, PartContent::GlMesh(_)),
+        });
+    }
+    let built_n = shots.len();
+    state.shots = shots;
     state.entity = Some(entity);
     state.built = true;
-    info!(
-        "sequence built: {} parts × {n} gaussians",
-        state.shapes.len()
-    );
+    info!("sequence built: {built_n} shots × {n} gaussians");
 }
 
 /// Add `NoFrustumCulling` to the sequence entity once its Aabb exists, so morph/ball

@@ -115,13 +115,13 @@ fn update_shader_parts(
     if !state.built {
         return;
     }
+    let starts = state.starts();
     for (sp, h, mut vis) in &mut q {
-        let end = state
-            .starts
+        let end = starts
             .get(sp.part + 1)
             .copied()
-            .unwrap_or_else(|| show_end(&seq.parts, &state.starts));
-        let alpha = interlude_alpha(&state.starts, end, sp.part, clock.t);
+            .unwrap_or_else(|| show_end(&seq.parts, &starts));
+        let alpha = interlude_alpha(&starts, end, sp.part, clock.t);
         *vis = if alpha > 0.001 {
             Visibility::Visible
         } else {

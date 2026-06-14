@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use bevy_gaussian_splatting::RasterizeMode;
 
-use super::model::{Part, Sequence};
+use super::model::{Sequence, Shot};
 use crate::scene::content::{PartContent, parse_source, side_by_side};
 use crate::scene::effects::{Deform, Departure, Transition};
 use crate::scene::{file_name_of, parent_dir};
@@ -69,7 +69,7 @@ pub(crate) fn load_camera_positions(path: &str) -> Vec<Vec3> {
 /// Parse `MARTIN_SEQ`: a file path OR an inline string. Parts are `;`/newline-separated.
 /// Each part: `text:STRING` or `splat:a.ply` (or `a.ply+b.ply` for side-by-side), optional
 /// trailing `@hold,morph,bulge`. `#` comments and blank lines are skipped.
-pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
+pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
     let raw = std::fs::read_to_string(spec).unwrap_or_else(|_| spec.to_string());
     let mut parts = Vec::new();
     // strip each line's `#` comment to end-of-line FIRST (so a `;` inside a comment can't split it
@@ -171,7 +171,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Part> {
             );
             continue;
         };
-        parts.push(Part {
+        parts.push(Shot {
             content,
             hold,
             morph,
@@ -207,12 +207,12 @@ pub(crate) fn parse_euler_deg(s: &str) -> Option<Quat> {
 pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<String>) {
     // The default demo is now `assets/demo.show` (set as MARTIN_SHOW in `main` when nothing is
     // requested), so by the time we get here MARTIN_SEQ is set from its `[seq]` section.
-    let count_default = if std::env::var("MARTIN_SEQ").is_ok() {
+    let budget_default = if std::env::var("MARTIN_SEQ").is_ok() {
         200_000
     } else {
         0
     };
-    let count = crate::envvar::or("MARTIN_MORPH_COUNT", count_default);
+    let budget = crate::envvar::or("MARTIN_MORPH_COUNT", budget_default);
 
     if let Ok(spec) = std::env::var("MARTIN_SEQ") {
         // asset root = the .ply folder (so `splat:` filenames resolve); MARTIN_PLY sets it.
@@ -220,14 +220,14 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
         return (
             Sequence {
                 parts: parse_seq(&spec, score),
-                count,
+                budget,
             },
             root,
         );
     }
 
     if let Ok(text) = std::env::var("MARTIN_TEXT") {
-        let part = Part {
+        let part = Shot {
             content: PartContent::Text(text),
             hold: 2.0,
             morph: 3.0,
@@ -244,7 +244,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
         return (
             Sequence {
                 parts: vec![part],
-                count,
+                budget,
             },
             None,
         );
@@ -262,7 +262,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
         names.push(file_name_of(&p2));
     }
     let bulge = crate::envvar::or("MARTIN_BULGE", 0.9);
-    let mut parts = vec![Part {
+    let mut parts = vec![Shot {
         content: PartContent::Splats(side_by_side(names.iter().map(String::as_str))),
         hold: 2.0,
         morph: 3.0,
@@ -277,7 +277,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
         raster: None,
     }];
     if let Ok(reform) = std::env::var("MARTIN_REFORM") {
-        parts.push(Part {
+        parts.push(Shot {
             content: PartContent::Splats(vec![(file_name_of(&reform), Vec3::ZERO)]),
             hold: 2.0,
             morph: 3.5,
@@ -292,15 +292,15 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
             raster: None,
         });
     }
-    (Sequence { parts, count }, root)
+    (Sequence { parts, budget }, root)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scene::sequence::{part_starts, show_end};
+    use crate::scene::sequence::{shot_starts, show_end};
 
-    fn parts(spec: &str) -> Vec<Part> {
+    fn parts(spec: &str) -> Vec<Shot> {
         parse_seq(spec, &score::Score::builtin())
     }
 
@@ -358,9 +358,9 @@ mod tests {
     }
 
     #[test]
-    fn part_starts_lay_end_to_end_then_honour_anchors() {
+    fn shot_starts_lay_end_to_end_then_honour_anchors() {
         let p = parts("text:A @2,1; text:B @3,1; text:C @1,1");
-        let s = part_starts(&p);
+        let s = shot_starts(&p);
         assert_eq!(s[0], 0.0);
         assert_eq!(s[1], 3.0); // 0 + morph 1 + hold 2
         assert_eq!(s[2], 7.0); // 3 + 1 + 3
@@ -368,12 +368,12 @@ mod tests {
     }
 
     #[test]
-    fn active_part_picks_the_latest_started() {
+    fn active_shot_picks_the_latest_started() {
         let starts = [0.0, 3.0, 7.0];
-        assert_eq!(crate::scene::sequence::active_part(&starts, 0.0), 0);
-        assert_eq!(crate::scene::sequence::active_part(&starts, 2.9), 0);
-        assert_eq!(crate::scene::sequence::active_part(&starts, 3.0), 1);
-        assert_eq!(crate::scene::sequence::active_part(&starts, 100.0), 2);
+        assert_eq!(crate::scene::sequence::active_shot(&starts, 0.0), 0);
+        assert_eq!(crate::scene::sequence::active_shot(&starts, 2.9), 0);
+        assert_eq!(crate::scene::sequence::active_shot(&starts, 3.0), 1);
+        assert_eq!(crate::scene::sequence::active_shot(&starts, 100.0), 2);
     }
 
     #[test]
