@@ -9,6 +9,10 @@
 
 # ── Pipeline run outputs ──────────────────────────────────────────────
 /splat_run/
+# any workspace dir splat.sh writes in repo root (austin_run, …) + its scratch log
+# (gitignore has no inline comments — keep the patterns on their own lines)
+/*_run/
+*_run.log
 **/exports/
 **/undistorted/
 **/sparse/

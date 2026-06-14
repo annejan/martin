@@ -57,22 +57,27 @@ else
   [ -n "$VIDEO_ID" ] || { echo "    no videoId in response:"; echo "$RESP" | jq .; exit 2; }
 fi
 
-# --- 2. poll lookupVideo until ACTIVE --------------------------------------
-echo "==> Polling lookupVideo (max ${MAX_WAIT}s; new renders can take hours)"
+# --- 2. poll lookupVideoMetadata (FREE) until ACTIVE -----------------------
+# NB: poll the *Metadata* endpoint in the wait loop — it's free. lookupVideo
+# is billed on every ACTIVE hit (~$16/1k), so we call it exactly once below.
+echo "==> Polling lookupVideoMetadata (free; max ${MAX_WAIT}s; new renders can take hours)"
 WAITED=0; DELAY=5
 while :; do
-  L="$(curl -sS "$API/videos:lookupVideo?videoId=${VIDEO_ID}" -H "X-Goog-Api-Key: $KEY")"
-  STATE="$(echo "$L" | jq -r '.state // "UNKNOWN"')"
+  M="$(curl -sS "$API/videos:lookupVideoMetadata?videoId=${VIDEO_ID}" -H "X-Goog-Api-Key: $KEY")"
+  STATE="$(echo "$M" | jq -r '.state // "UNKNOWN"')"
   printf '    [%5ds] state=%s\n' "$WAITED" "$STATE"
   case "$STATE" in
     ACTIVE)  break ;;
-    FAILED)  echo "    render FAILED:"; echo "$L" | jq .; exit 3 ;;
+    FAILED)  echo "    render FAILED:"; echo "$M" | jq .; exit 3 ;;
     PROCESSING|UNKNOWN) : ;;
-    *) echo "    unexpected state; full response:"; echo "$L" | jq . ;;
+    *) echo "    unexpected state; full response:"; echo "$M" | jq . ;;
   esac
   [ "$WAITED" -lt "$MAX_WAIT" ] || { echo "    gave up after ${MAX_WAIT}s. Re-run later with:"; echo "    POLL_ONLY=1 GOOGLE_MAPS_API_KEY=\$KEY $0 $VIDEO_ID $OUT"; exit 4; }
   sleep "$DELAY"; WAITED=$((WAITED+DELAY)); DELAY=$(( DELAY<60 ? DELAY*2 : 60 ))
 done
+
+# ACTIVE -> one billed lookupVideo call to get the signed download URIs
+L="$(curl -sS "$API/videos:lookupVideo?videoId=${VIDEO_ID}" -H "X-Goog-Api-Key: $KEY")"
 
 # --- 3. pick the highest-res MP4 and download ------------------------------
 echo "==> ACTIVE. Available media formats:"
