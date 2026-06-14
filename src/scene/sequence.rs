@@ -270,10 +270,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
     } else {
         0
     };
-    let count = std::env::var("MARTIN_MORPH_COUNT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(count_default);
+    let count = crate::envvar::or("MARTIN_MORPH_COUNT", count_default);
 
     if let Ok(spec) = std::env::var("MARTIN_SEQ") {
         // asset root = the .ply folder (so `splat:` filenames resolve); MARTIN_PLY sets it.
@@ -322,10 +319,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
     if let Ok(p2) = std::env::var("MARTIN_PLY2") {
         names.push(file_name_of(&p2));
     }
-    let bulge = std::env::var("MARTIN_BULGE")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0.9);
+    let bulge = crate::envvar::or("MARTIN_BULGE", 0.9);
     let mut parts = vec![Part {
         content: PartContent::Splats(side_by_side(names.iter().map(String::as_str))),
         hold: 2.0,
@@ -428,14 +422,8 @@ pub(crate) fn build_sequence(
     // (every part is then resampled to that single N — required by the shared morph output).
     // pen-write strokes are thin: MARTIN_PW_SPLAT (gaussian size) / MARTIN_PW_STEP (sample
     // spacing) tune stroke weight — a fat splat blooms the strokes into filled blobs.
-    let pw_step = std::env::var("MARTIN_PW_STEP")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0.5_f32);
-    let pw_splat = std::env::var("MARTIN_PW_SPLAT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0.006_f32);
+    let pw_step = crate::envvar::or("MARTIN_PW_STEP", 0.5_f32);
+    let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
     let mut raws: Vec<Vec<Gaussian3d>> = seq
         .parts
         .iter()
@@ -453,10 +441,9 @@ pub(crate) fn build_sequence(
     // `cluster:N` → replicate a part into N scattered, randomly-rotated copies (a "serving", e.g. a
     // pile of bitterballen) BEFORE normalize, so the whole pile frames as one. Downsample per copy
     // to keep the total near the morph budget.
-    let cluster_total = std::env::var("MARTIN_MORPH_COUNT")
-        .ok()
-        .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(200_000);
+    // a part's cluster needs a concrete per-copy budget; when `count==0` (auto-size to the largest
+    // part) fall back to 200k here rather than 0 — so this default is intentionally NOT `seq.count`.
+    let cluster_total = crate::envvar::or("MARTIN_MORPH_COUNT", 200_000usize);
     for (raw, part) in raws.iter_mut().zip(&seq.parts) {
         if let Some(copies) = part.cluster {
             let per = (cluster_total / copies.max(1)).max(2_000);
