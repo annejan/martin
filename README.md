@@ -28,8 +28,10 @@ current nightly).
 - **[`ART-DIRECTION.md`](ART-DIRECTION.md)** — how to **shoot and prep good splats** for the
   demo (capture recipe, lighting, the two splat "flavours", cleanup).
 - **[`productions/`](productions/README.md)** — one folder per demo (showbook, show, bundle,
-  captures); the engine stays theme-agnostic. Current: **camping** (in design — see its
-  [SHOWBOOK](productions/camping/SHOWBOOK.md)). Shared building blocks: [`parts/`](parts/README.md).
+  captures); the engine stays theme-agnostic. Current: **intro** (the bundled showcase), **camping**
+  (in design — see its [SHOWBOOK](productions/camping/SHOWBOOK.md)), and the aerial-city demos
+  **austin** / **nyc** / **cities** (local Google-imagery captures, not shippable — see
+  [`pipeline/AERIAL-CITIES.md`](pipeline/AERIAL-CITIES.md)). Shared building blocks: [`parts/`](parts/README.md).
 
 ## Make your own splats
 
@@ -99,7 +101,7 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 
 | Env var | Effect |
 |---|---|
-| `MARTIN_SHOW=show.show` | **Unified scene file** — one file with settings + a `[seq]` + a `[compose]` stage + a music-timed `[camera]` track (keyframes can anchor to a music section, `t=@@drop`). Expands into the env vars below (which still override it). The recommended way to author a whole show; see `assets/example.show`. |
+| `MARTIN_SHOW=show.show` | **Unified scene file** — one file with settings + a `[reel]` (`[seq]`) + a `[compose]` stage + a music-timed `[camera]` track (keyframes can anchor to a music section, `t=@@drop`). A `kind = intro\|demo` setting declares the production kind, and a `[scenes]` block can author the show as an **arc of named scenes** that flattens to `[reel]` (see [`DOMAIN.md`](DOMAIN.md)). Expands into the env vars below (which still override it). The recommended way to author a whole show; see `assets/example.show`. |
 | `MARTIN_VALIDATE=1` | **Dry-run** — parse the show, print the resolved timeline (part cue times, effects, compose, camera) and exit, no render. A fast authoring check. |
 | `MARTIN_PLY=/abs/x.ply` | Load a splat (sets the asset folder for the others). |
 | `MARTIN_PLY2=y.ply` | A second splat beside the first (the two morph together). |
@@ -121,7 +123,7 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 | `MARTIN_WAYPOINTS=path.json` | Where the **M-key** camera waypoints are logged / read (default `waypoints.json`) — fly + mark to author a camera path. |
 | `MARTIN_FLY=2` | Fly the camera through the marked waypoints. Recording: the path fills each part (longer hold = slower flyby), flowing through the morph. Live: `<secs>` = pace. |
 | `MARTIN_FPS=1` | Log frame time / FPS. |
-| `MARTIN_SERVE=1` | **Live control bridge** (default port 7878): boot the show windowed, render offscreen, and drive the camera + clock live over a line-JSON TCP protocol (`camera`/`seek`/`pause`/`play`/`step`/`screenshot`/`dump_camera`/`state`) — author + inspect without reloading. See [USAGE](USAGE.md#live-control-bridge). |
+| `MARTIN_SERVE=1` | **Live control bridge** (default port 7878): boot the show windowed, render offscreen, and drive the camera + clock live over a line-JSON TCP protocol (`camera`/`seek`/`pause`/`play`/`step`/`screenshot`/`dump_camera`/`state`) — author + inspect without reloading. A stdio **MCP server** (`martin --mcp`) proxies these as native tools for an MCP client (e.g. Claude Code). See [USAGE](USAGE.md#live-control-bridge). |
 | `MARTIN_RECORD=/dir` | Dump one PNG per frame (used by `record.sh`). |
 | `MARTIN_PREVIEW_FPS=8` | Render the timeline at N fps instead of 60 — far fewer frames for a fast preview (rendering frames is the slow part). Timing + audio sync stay correct; `record.sh` muxes at the same fps. |
 | `MARTIN_RASTER=position` | Debug-shading view for the whole show (`color`/`depth`/`normal`/`position`/`classification`/`flow`/`velocity`) — the fork's RasterizeMode. Per-part `raster:<mode>` token overrides it. `position` colours by XYZ (rainbow). |

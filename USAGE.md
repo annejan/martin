@@ -11,7 +11,8 @@ cargo +nightly run --release        # nightly toolchain is pinned (rust-toolchai
 
 It's **one sequence engine**: every run is a list of *parts* (splats, text, meshes, shader
 interludes) that each assemble out of a source cloud and morph into the next. With no env vars
-it plays the bundled flagship demo ([`assets/demo.show`](assets/demo.show)).
+it plays the **intro production** ([`productions/intro/intro.show`](productions/intro/intro.show))
+— the same show CI bundles; the older effect-catalogue demo is [`assets/demo.show`](assets/demo.show).
 
 ---
 
@@ -25,7 +26,7 @@ Everything is one timeline. `MARTIN_SEQ` writes it explicitly; the other env var
 | `MARTIN_SEQ` | exactly the parts you write (the full timeline) |
 | `MARTIN_TEXT` | one part: that title, assembled from a ball |
 | `MARTIN_PLY` (+ `_PLY2`) (+ `_REFORM`) | the splat(s) as part 1; the reform target (if any) as part 2 |
-| *(nothing)* | the bundled flagship demo (`assets/demo.show`) |
+| *(nothing)* | the **intro production** (`productions/intro/intro.show`); `assets/demo.show` is the alt effect-catalogue |
 
 Examples:
 
