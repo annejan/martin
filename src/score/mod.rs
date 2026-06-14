@@ -243,31 +243,74 @@ impl Score {
     }
 
     // --- visual anchoring ---------------------------------------------------------------------
-    /// Resolve a `@@anchor` token to an absolute time (s): a section name, `bar<N>`/`bar:N`,
-    /// `beat<N>`/`beat:N`, `start`, or raw seconds. Lets a part lock to the music.
-    pub fn anchor_seconds(&self, s: &str) -> Option<f32> {
-        let s = s.trim().to_ascii_lowercase();
-        if s == "start" {
-            return Some(0.0);
+    /// Resolve an [`AnchorKind`] to an absolute **cue** time in seconds (the value behind the
+    /// spelling). An unknown section name → `None`.
+    pub fn cue(&self, kind: &AnchorKind) -> Option<f32> {
+        match kind {
+            AnchorKind::Start => Some(0.0),
+            AnchorKind::Section(name) => self
+                .sections
+                .iter()
+                .position(|x| x.name == *name)
+                .map(|i| self.section_start_secs(i)),
+            AnchorKind::Bar(b) => Some(b * self.bar()),
+            AnchorKind::Beat(b) => Some(b * self.beat()),
+            AnchorKind::Seconds(s) => Some(*s),
         }
-        if let Some(i) = self.sections.iter().position(|x| x.name == s) {
-            return Some(self.section_start_secs(i));
+    }
+
+    /// Resolve a `@@anchor` token straight to seconds — parse its [`AnchorKind`], then [`cue`] it
+    /// (`@@drop`, `bar:16`, `beat8`, `start`, or raw seconds). Lets a shot lock to the music.
+    ///
+    /// [`cue`]: Score::cue
+    pub fn anchor_seconds(&self, s: &str) -> Option<f32> {
+        self.cue(&AnchorKind::parse(s)?)
+    }
+}
+
+/// The parsed form of a `@@anchor` token — the **symbolic musical position** (the *spelling*). A
+/// [`Score`] resolves it to a **cue** (absolute seconds, the *value*) via [`Score::cue`]. Formalises
+/// what used to be ad-hoc string-sniffing inside `anchor_seconds` (DOMAIN.md §6).
+#[derive(Debug, Clone, PartialEq)]
+pub enum AnchorKind {
+    /// `start` — time 0.
+    Start,
+    /// A named section (`drop`, `breakdown`, …) — resolves to that section's start. The name isn't
+    /// validated here (no Score in hand); an unknown one resolves to `None`.
+    Section(String),
+    /// `bar<N>` / `bar:N` — N bars from the start.
+    Bar(f32),
+    /// `beat<N>` / `beat:N` — N beats from the start.
+    Beat(f32),
+    /// A raw number of seconds.
+    Seconds(f32),
+}
+
+impl AnchorKind {
+    /// Classify an anchor token. Order: `start` → `bar…`/`beat…` → a bare number → otherwise a
+    /// section name. (Section names like `intro`/`drop` never collide with the numeric/prefix forms.)
+    pub fn parse(s: &str) -> Option<Self> {
+        let s = s.trim().to_ascii_lowercase();
+        if s.is_empty() {
+            return None;
+        }
+        if s == "start" {
+            return Some(Self::Start);
         }
         if let Some(n) = s.strip_prefix("bar") {
-            return n
-                .trim_start_matches(':')
-                .parse::<f32>()
-                .ok()
-                .map(|b| b * self.bar());
+            if let Ok(b) = n.trim_start_matches(':').parse::<f32>() {
+                return Some(Self::Bar(b));
+            }
         }
         if let Some(n) = s.strip_prefix("beat") {
-            return n
-                .trim_start_matches(':')
-                .parse::<f32>()
-                .ok()
-                .map(|b| b * self.beat());
+            if let Ok(b) = n.trim_start_matches(':').parse::<f32>() {
+                return Some(Self::Beat(b));
+            }
         }
-        s.parse::<f32>().ok()
+        if let Ok(secs) = s.parse::<f32>() {
+            return Some(Self::Seconds(secs));
+        }
+        Some(Self::Section(s))
     }
 }
 
@@ -313,6 +356,20 @@ mod tests {
         // a plain number is seconds; whitespace + case are tolerated.
         assert_eq!(s.anchor_seconds("  2.5 "), Some(2.5));
         assert_eq!(s.anchor_seconds("nope"), None);
+    }
+
+    #[test]
+    fn anchor_kind_parses_the_spelling() {
+        use AnchorKind::*;
+        assert_eq!(AnchorKind::parse("start"), Some(Start));
+        assert_eq!(AnchorKind::parse("bar:2"), Some(Bar(2.0)));
+        assert_eq!(AnchorKind::parse("beat4"), Some(Beat(4.0)));
+        assert_eq!(AnchorKind::parse(" 2.5 "), Some(Seconds(2.5)));
+        assert_eq!(AnchorKind::parse("DROP"), Some(Section("drop".into()))); // case-folded name
+        assert_eq!(AnchorKind::parse(""), None);
+        // an unknown section is still a well-formed AnchorKind — it just resolves to None.
+        let s = Score::builtin();
+        assert_eq!(s.cue(&Section("nope".into())), None);
     }
 
     #[test]

@@ -105,10 +105,21 @@ pub fn report(
             "path"
         };
         println!("\ncamera:   {} waypoints ({kind})", cam.list.len());
-        for w in &cam.list {
+        for (i, w) in cam.list.iter().enumerate() {
             let t = w.t.map(|t| format!("t={t:6.1}s  ")).unwrap_or_default();
+            // annotate each Key with the CameraMove of the segment that arrives at it (from the
+            // previous Key) — so the dry-run reads back what the keyframes actually do.
+            let mv = i
+                .checked_sub(1)
+                .map(|p| {
+                    format!(
+                        "  [{}]",
+                        crate::waypoints::CameraMove::infer(&cam.list[p], w).label()
+                    )
+                })
+                .unwrap_or_default();
             println!(
-                "  {t}dist {:.2}  yaw {:.2}  pitch {:.2}  target ({:.1},{:.1},{:.1})",
+                "  {t}dist {:.2}  yaw {:.2}  pitch {:.2}  target ({:.1},{:.1},{:.1}){mv}",
                 w.dist, w.yaw, w.pitch, w.target.x, w.target.y, w.target.z,
             );
         }

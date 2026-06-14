@@ -179,10 +179,11 @@ Prop share the same coordinate space, camera, and bloom. The Reel sits at the or
 
 ### Camera (`[camera]`) — the keyframed track
 A **Camera** track is a list of **Keys** (was Waypoints): `t= pos= dist= yaw= pitch=`, interpolated,
-with `t` either seconds or an `@@anchor`. Today the *kind* of move (orbit, push-in, sink, flythrough)
-lives only as SHOWBOOK prose; this doc promotes it to a first-class **`CameraMove`** enum
-(`Orbit | PushIn | PullBack | Sink | Flythrough | Arc | Hold`) — film camera-move verbs expressed in
-martin's orbital space.
+with `t` either seconds or an `@@anchor`. The *kind* of move is now a first-class **`CameraMove`** enum
+(`Hold | Orbit | PushIn | PullBack | Sink | Arc | Flythrough`) — film camera-move verbs in martin's
+orbital space — **inferred** per segment from the pose deltas (`CameraMove::infer`) and shown in the
+`MARTIN_VALIDATE` dry-run. An explicit authoring token (`move=`) and per-move easing are the deferred
+next step (§9, Stage 4).
 
 ## 6. The sync bridge — anchor & cue
 
@@ -191,8 +192,9 @@ position to a time. This doc gives the two halves distinct names and a type:
 
 - **anchor** = the *spelling* — the symbolic musical position you write (`@@drop`, `@@bar:14`).
 - **cue** = the *value* — the resolved seconds on the show clock.
-- **`AnchorKind`** (proposed enum) formalises the parser's current string-sniffing:
-  `Start | Section(name) | Bar(n) | Beat(n) | Seconds(f)`.
+- **`AnchorKind`** (`Start | Section(name) | Bar(n) | Beat(n) | Seconds(f)`) now formalises the parse:
+  `AnchorKind::parse(s)` builds the spelling, `Score::cue(&kind)` resolves it; `anchor_seconds` is the
+  thin compose of the two. The old string-sniffing is gone.
 
 **Rocket lineage & the north-star.** GNU Rocket addresses *values over rows*; martin addresses only
 *time*. martin's `[camera]` track is already a multi-channel keyframe track (`pos/dist/yaw/pitch`) — it
@@ -270,10 +272,13 @@ Aliasing is idiomatic in martin's parsers, so every DSL rename is additive and b
   migrated; old spellings still parse. Plus two beyond the original Stage 1: **`kind = intro|demo`**
   (the production-kind / asset-budget check, the L1 layer) and **`[scenes]`** (the L2 arc-authoring
   layer that flattens to `[reel]`). Still pending in this stage: nothing.
-- **Stage 2 — internal struct/field renames (no DSL impact).** `Part→Shot`, `count→budget`,
-  `sources→origins`, `Composed→Prop`, `Waypoint→Key`. Compiler-checked, mechanical.
-- **Stage 3 — small new enums.** `AnchorKind` (refactor `anchor_seconds` to build/match it),
-  `CameraMove` (may surface a new optional camera token).
+- **Stage 2 — internal struct/field renames (no DSL impact). ✅ LANDED.** `Part→Shot`, `count→budget`,
+  `Composed→Prop`, `Waypoint→Key`, the source cloud → `Shot.origin`. Compiler-checked, mechanical.
+- **Stage 3 — small new enums. ✅ LANDED.** `AnchorKind` (`Start|Section|Bar|Beat|Seconds`) — the
+  anchor *spelling*; `anchor_seconds` now = `cue(AnchorKind::parse(s))`, the **cue** being the resolved
+  seconds (§6). `CameraMove` (`Hold|Orbit|PushIn|PullBack|Sink|Arc|Flythrough`) — inferred per camera
+  segment from the pose deltas and surfaced in the `MARTIN_VALIDATE` dump (§5); an explicit `move=`
+  token / per-move easing is the deferred next step (Stage 4), so the enum isn't a parked label.
 - **Stage 4 — new concepts, on demand (highest blast-radius, last).** Per-Shot `density`;
   scene-scoped looks (per-Shot `backdrop`/`flash`/`deform`); the **SyncTrack / Automation**
   generalisation (the Rocket step). Sequenced by which Showbook engine-vraag first needs them.

@@ -20,6 +20,73 @@ pub struct Key {
     pub t: Option<f32>,
 }
 
+/// A film **camera-move verb** in martin's orbital space — the *kind* of motion a `[camera]` segment
+/// (the transition between two Keys) makes, inferred from the pose deltas. Promotes the old prose
+/// "camera regime" to a first-class type (DOMAIN.md §5). Today it's **descriptive** — surfaced in the
+/// `MARTIN_VALIDATE` dry-run so an author can read back what their keyframes actually do; a future
+/// explicit `move=` token or per-move easing can build on the same enum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CameraMove {
+    /// Negligible change — the camera essentially holds.
+    Hold,
+    /// Yaw sweeps around the subject, distance roughly constant.
+    Orbit,
+    /// Distance shrinks — moving toward the subject.
+    PushIn,
+    /// Distance grows — backing off.
+    PullBack,
+    /// The look-target descends.
+    Sink,
+    /// Yaw sweep *and* a distance change at once (a banking arc).
+    Arc,
+    /// The look-target translates laterally — flying across/through the scene.
+    Flythrough,
+}
+
+impl CameraMove {
+    /// Classify the segment `a → b` by its dominant pose change. Checked most-specific first
+    /// (lateral travel → combined arc → pure orbit → dolly → sink → hold).
+    pub fn infer(a: &Key, b: &Key) -> Self {
+        const YAW: f32 = 0.15; // rad — a noticeable sweep
+        const DIST: f32 = 0.15; // world units — a noticeable dolly
+        const LAT: f32 = 0.25; // world units — lateral target travel
+        const SINK: f32 = 0.30; // world units — target descent
+        let ddist = b.dist - a.dist;
+        let dyaw = (b.yaw - a.yaw).abs();
+        let dt = b.target - a.target;
+        let lateral = (dt.x * dt.x + dt.z * dt.z).sqrt();
+        let sink = a.target.y - b.target.y; // +ve = descending
+        if lateral >= LAT {
+            Self::Flythrough
+        } else if dyaw >= YAW && ddist.abs() >= DIST {
+            Self::Arc
+        } else if dyaw >= YAW {
+            Self::Orbit
+        } else if ddist <= -DIST {
+            Self::PushIn
+        } else if ddist >= DIST {
+            Self::PullBack
+        } else if sink >= SINK {
+            Self::Sink
+        } else {
+            Self::Hold
+        }
+    }
+
+    /// Lower-case label for logs / the validate dump.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Hold => "hold",
+            Self::Orbit => "orbit",
+            Self::PushIn => "push-in",
+            Self::PullBack => "pull-back",
+            Self::Sink => "sink",
+            Self::Arc => "arc",
+            Self::Flythrough => "flythrough",
+        }
+    }
+}
+
 /// The markers logged this session + the file they're written to. Each `M` press appends one and
 /// rewrites the whole file, so it stays valid JSON without an append-and-fix-up dance.
 #[derive(Resource)]
@@ -238,6 +305,32 @@ mod tests {
             pitch: 0.0,
             t,
         }
+    }
+
+    #[test]
+    fn camera_move_classifies_segments() {
+        use CameraMove::*;
+        let k = |target: Vec3, dist: f32, yaw: f32| Key {
+            target,
+            dist,
+            yaw,
+            pitch: 0.0,
+            t: Some(0.0),
+        };
+        let base = k(Vec3::ZERO, 2.0, 1.4);
+        assert_eq!(CameraMove::infer(&base, &k(Vec3::ZERO, 2.0, 1.41)), Hold);
+        assert_eq!(CameraMove::infer(&base, &k(Vec3::ZERO, 1.5, 1.4)), PushIn);
+        assert_eq!(CameraMove::infer(&base, &k(Vec3::ZERO, 2.8, 1.4)), PullBack);
+        assert_eq!(CameraMove::infer(&base, &k(Vec3::ZERO, 2.0, 1.7)), Orbit);
+        assert_eq!(CameraMove::infer(&base, &k(Vec3::ZERO, 1.4, 1.7)), Arc);
+        assert_eq!(
+            CameraMove::infer(&base, &k(Vec3::new(0.6, 0.0, 0.0), 2.0, 1.4)),
+            Flythrough
+        );
+        assert_eq!(
+            CameraMove::infer(&k(Vec3::new(0.0, 0.5, 0.0), 2.0, 1.4), &base),
+            Sink
+        );
     }
 
     #[test]
