@@ -78,7 +78,10 @@ pub fn report(
                 .map(|x| format!(" ~{x:?}"))
                 .unwrap_or_default();
             let de = part.deform.map(|x| format!(" ^{x:?}")).unwrap_or_default();
-            let out = part.out.map(|x| format!(" out:{x:?}")).unwrap_or_default();
+            let out = part
+                .exit
+                .map(|x| format!(" exit:{x:?}"))
+                .unwrap_or_default();
             let cl = part
                 .flock
                 .map(|n| format!(" flock:{n}"))

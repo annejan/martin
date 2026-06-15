@@ -22,8 +22,8 @@ pub(crate) struct Shot {
     pub transition: Option<Transition>, // None = default (Ball for shot 0, else Morph)
     pub anchor: Option<f32>, // absolute start (s) on the music clock; None = relative
     pub deform: Option<Deform>, // persistent deform while held (None = none / MARTIN_DEFORM)
-    pub out: Option<Departure>, // how the shot LEAVES (`out:name`); None = cross-morph to the next
-    pub rot: Option<Quat>, // per-shot orientation (`rot:rx,ry,rz` deg), baked into the shape
+    pub exit: Option<Departure>, // how the shot LEAVES (`exit:name`, was `out:`); None = cross-morph to next
+    pub rot: Option<Quat>,       // per-shot orientation (`rot:rx,ry,rz` deg), baked into the shape
     pub flock: Option<usize>, // `flock:N` (was `cluster:`) → N scattered, randomly-rotated copies
     pub backdrop: Option<u32>, // `backdrop:<name>` (was `bg:`) → background mode from this shot on (BG_OFF hides)
     pub raster: Option<RasterizeMode>, // `raster:<mode>` → debug shading for this shot (None = MARTIN_RASTER)
@@ -46,7 +46,7 @@ impl Shot {
             transition: None,
             anchor: None,
             deform: None,
-            out: None,
+            exit: None,
             rot: None,
             flock: None,
             backdrop: None,
@@ -75,7 +75,7 @@ pub(crate) struct FlashStrength(pub f32);
 pub(crate) struct BuiltShot {
     pub shape: Handle<PlanarGaussian3d>,
     pub origin: Option<Handle<PlanarGaussian3d>>, // lhs source cloud (None = morph from prev shape)
-    pub out_cloud: Option<Handle<PlanarGaussian3d>>, // `out:` departure cloud (None = none)
+    pub exit_cloud: Option<Handle<PlanarGaussian3d>>, // `exit:` departure cloud (None = none)
     pub transition: Transition,
     pub deform: Option<Deform>,
     pub deform_amp: Option<f32>, // per-shot deform strength scale (`^name:amp`); None = 1.0
@@ -87,7 +87,7 @@ pub(crate) struct BuiltShot {
     // source `Shot` — the cue timeline reads it there via `show_end`; the director never needs it.)
     pub morph: f32,
     pub bulge: f32,
-    pub out: Option<Departure>,
+    pub exit: Option<Departure>,
     pub is_gl_mesh: bool, // was `matches!(shot.content, PartContent::GlMesh(_))`
 }
 

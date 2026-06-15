@@ -89,7 +89,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         let mut transition = None;
         let mut anchor = None;
         let mut deform = None;
-        let mut out = None;
+        let mut exit = None;
         let mut rot = None;
         let mut flock = None;
         let mut backdrop = None;
@@ -113,7 +113,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                     }
                 } else if let Some(d) = tok.strip_prefix("exit:").or(tok.strip_prefix("out:")) {
                     match Departure::parse(d) {
-                        Some(dep) => out = Some(dep),
+                        Some(dep) => exit = Some(dep),
                         None => eprintln!("seq: unknown exit 'exit:{d}' — ignored"),
                     }
                 } else if let Some(r) = tok.strip_prefix("rot:") {
@@ -195,7 +195,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
             transition,
             anchor,
             deform,
-            out,
+            exit,
             rot,
             flock,
             backdrop,
@@ -331,7 +331,7 @@ mod tests {
         assert_eq!(p[0].morph, 2.0);
         assert_eq!(p[0].transition, Some(Transition::Fade));
         assert_eq!(p[0].deform, Some(Deform::Wave));
-        assert_eq!(p[0].out, Some(Departure::Sink));
+        assert_eq!(p[0].exit, Some(Departure::Sink));
         assert_eq!(p[0].flock, Some(3));
         assert!(p[0].rot.is_some());
     }

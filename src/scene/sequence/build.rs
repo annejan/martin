@@ -199,7 +199,7 @@ pub(crate) fn build_sequence(
         let r = content_radius;
         // if the PREVIOUS part DEPARTS (washes/disperses away), there's no shape to flow from →
         // a Morph/Swarm part must assemble fresh from a ball instead.
-        let prev_departs = idx > 0 && seq.parts[idx - 1].out.is_some();
+        let prev_departs = idx > 0 && seq.parts[idx - 1].exit.is_some();
         // pair=match: when this Morph part flows DIRECTLY from the previous shape (no departure, no
         // source cloud), reorder it so each splat slides to the nearest same-colour splat of the prev
         // part — minimal travel, coherent morph. Only the Morph/Swarm-flow case has a prev shape to
@@ -223,10 +223,10 @@ pub(crate) fn build_sequence(
             Transition::Morph | Transition::Swarm => None,
             other => source_cloud(other, &shaped, r),
         };
-        // `out:` departure target cloud (faded + displaced) — the part morphs to this as it leaves.
-        let out = seq.parts[idx].out.map(|d| d.out_cloud(&shaped, r));
+        // `exit:` departure target cloud (faded + displaced) — the part morphs to this as it leaves.
+        let exit = seq.parts[idx].exit.map(|d| d.out_cloud(&shaped, r));
         let origin = src.map(|s| assets.add(PlanarGaussian3d::from(s)));
-        let out_cloud = out.map(|o| assets.add(PlanarGaussian3d::from(o)));
+        let exit_cloud = exit.map(|o| assets.add(PlanarGaussian3d::from(o)));
         // keep this part's shape so the NEXT part can pair-match against it (only needed for pair=match;
         // the clone is gated to avoid copying a big cloud on every render otherwise).
         if pair_match {
@@ -236,7 +236,7 @@ pub(crate) fn build_sequence(
         shots.push(BuiltShot {
             shape: assets.add(PlanarGaussian3d::from(shaped)),
             origin,
-            out_cloud,
+            exit_cloud,
             transition: tr,
             deform: deforms[idx],
             deform_amp: shot.deform_amp,
@@ -246,7 +246,7 @@ pub(crate) fn build_sequence(
             start: starts[idx],
             morph: shot.morph,
             bulge: shot.bulge,
-            out: shot.out,
+            exit: shot.exit,
             is_gl_mesh: matches!(shot.content, PartContent::GlMesh(_)),
         });
     }

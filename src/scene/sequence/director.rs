@@ -60,7 +60,7 @@ pub(crate) fn shot_director(
     // Phase: ARRIVING (origin → shape), holding (shape), or DEPARTING (shape → its faded out-cloud
     // — a distinct step carved from the end of the hold, before the next shot arrives; see `out:`).
     let next = idx + 1;
-    let depart_at = if next < shots.len() && s.out.is_some() {
+    let depart_at = if next < shots.len() && s.exit.is_some() {
         (shots[next].start - DEPART_LEN).max(s.start + s.morph)
     } else {
         f32::MAX
@@ -68,8 +68,8 @@ pub(crate) fn shot_director(
     let departing = t >= depart_at;
     let (want_lhs, want_rhs, factor, arriving) = if departing {
         let f = ((t - depart_at) / DEPART_LEN).clamp(0.0, 1.0);
-        let out = s.out_cloud.as_ref().unwrap_or(&s.shape);
-        (&s.shape, out, f, false)
+        let exit = s.exit_cloud.as_ref().unwrap_or(&s.shape);
+        (&s.shape, exit, f, false)
     } else {
         let dt = t - s.start;
         let f = (dt / s.morph.max(1e-3)).clamp(0.0, 1.0);
