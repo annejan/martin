@@ -32,16 +32,20 @@ splat:seattle_tight.ply   @@climax     @32,7,0 ~morph  beat:1.6  backdrop:stars 
 # de-synced sway speeds (13 / 17 deg-per-s — coprime-ish) so the combined motion drifts over the loop.
 [stage]
 text:deFEEST          @0,0.18,0   *0.4   ~pen-write              in breakdown  out outro   # wordmark writes in over the skyline
-mesh:bitterbal.glb    @0.22,0.08,0.12 *0.11  sway 0,17,0  ~morph  tint:fry  in drop  out outro  # a singular DEEP-FRIED bitterbal, hovering (tint:rainbow for candy)
+mesh:bitterbal.glb    @0.22,0.08,0.12 *0.11  spin 18,40,7  ~morph  tint:fry  in drop  out outro  # a singular DEEP-FRIED bitterbal, tumbling on its own axis (tint:rainbow for candy)
 text:Imagery ©Google  @0,-0.3,0   *0.42  ~fade                   in outro                  # the credit, static, to the loop seam
 
-# camera: LOW + SHALLOW — down in the skyline, looking nearly horizontally between the buildings (small
-# pitch = a low oblique, NOT top-down). Calm frontal yaw so the pen-write wordmark sits steady.
+# camera: CINEMATIC (20th-Century-Fox energy) — high wide establishing on the logo, DIVE into the
+# skyline, lateral banks left/right ALONG + THROUGH the buildings, a low dramatic pass, then a big
+# pull-back-and-up. Frontal-ish yaw (1.35–1.58) so the world-placed deFEEST text stays readable while
+# everything sweeps. The end pose matches the intro so the loop seam is invisible.
 [camera]
-t=@@intro      pos=0,0.05,0   dist=1.75  yaw=1.45  pitch=0.20   # logo, pulled back so the whole oval reads
-t=15.0         pos=0,0.04,0   dist=1.1   yaw=1.44  pitch=0.16   # dive toward the skyline as it morphs in
-t=@@drop       pos=0,0.02,0   dist=0.7   yaw=1.40  pitch=0.10   # AUSTIN/NYC, down between the buildings
-t=@@breakdown  pos=0,0.02,0   dist=0.75  yaw=1.52  pitch=0.12   # CHICAGO, drift low (wordmark writes in)
-t=@@climax     pos=0,0.02,0   dist=0.7   yaw=1.40  pitch=0.10   # SEATTLE, low pass
-t=@@outro      pos=0,0.05,0   dist=0.95  yaw=1.45  pitch=0.16   # ease back, still low, for the credit
-t=88.5         pos=0,0.05,0   dist=1.1   yaw=1.45  pitch=0.14   # toward the loop seam
+t=@@intro      pos=0,0.4,0     dist=2.2   yaw=1.45  pitch=0.36   # logo: high + wide, establishing
+t=15.0         pos=0,0.12,0    dist=1.05  yaw=1.50  pitch=0.18   # DIVE down toward the skyline as it morphs in
+t=@@drop       pos=-0.22,0.02,0 dist=0.74  yaw=1.36  pitch=0.10   # bank LEFT, low into NYC
+t=32.0         pos=0.1,0.0,0   dist=0.66  yaw=1.46  pitch=0.07   # low pass THROUGH the towers
+t=@@breakdown  pos=0.26,0.04,0 dist=0.8   yaw=1.58  pitch=0.13   # sweep RIGHT across Chicago (wordmark writes in)
+t=@@climax     pos=0,0.0,0     dist=0.64  yaw=1.40  pitch=0.07   # SEATTLE: low dramatic pass
+t=68.0         pos=0,0.16,0    dist=1.05  yaw=1.45  pitch=0.22   # rise out of the skyline for the wordmark
+t=@@outro      pos=0,0.32,0    dist=1.7   yaw=1.45  pitch=0.32   # big pull-back + up for the credit
+t=88.5         pos=0,0.4,0     dist=2.2   yaw=1.45  pitch=0.36   # back to the establishing pose → seamless loop
