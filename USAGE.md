@@ -662,9 +662,11 @@ mesh:bornhack2026-hardware.dae @0,-1.6,.3  *.7   spin 20,40,0   in climax
 | `spin a,b,c` | auto-rotation, **degrees/sec** |
 | `bob amp` | vertical bob amplitude |
 | `drift dx,dy,dz` | translation velocity, units/sec |
+| `sway a,b,c` | oscillating rotation amplitude (deg) — swings front-on, so a hollow-back splat never shows its empty side |
 | `in <anchor>` / `out <anchor>` | fade in / out at an `@@`-style time (section / `bar:N` / `beat:N` / seconds) |
-| `~transition` | each object **assembles in** via its own arrival (`~ball`/`~rain`/`~funnel`/`~shatter`/…) instead of a plain fade — the same vocabulary as the morph timeline |
-| `^deform` | a persistent **wobble** while it's up (`^wave`/`^wind`/…) |
+| `~transition` | each object **assembles in** via its own arrival (`~ball`/`~rain`/`~funnel`/`~shatter`/…) instead of a plain fade — the same vocabulary as the morph timeline. **`text:~pen-write` handwrites the letters in** (single-stroke font, traced stroke-by-stroke — same as the reel). |
+| `^deform[:amp]` | a persistent **wobble** while it's up (`^wave`/`^wind`/…); the optional `:amp` scales its strength (`^turbulence:0.3`) |
+| `tint:<mode>` | recolour the sampled splats with a CPU colour routine: **`fry`** (deep-fried bitterbal — beige crevices → brown crust peaks, noise-driven), **`rainbow`** (clean left→right spectrum), **`brand`** (deFEEST blue→gold gradient). |
 
 So objects **fade in on the music** (the stage builds with the track), spin/bob/drift in place, and
 the camera slowly **auto-orbits** the whole arrangement (grab it any time with the arrow keys).
