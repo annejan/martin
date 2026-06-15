@@ -32,7 +32,7 @@ splat:seattle_tight.ply   @@climax     @32,7,0 ~morph  beat:1.6  backdrop:stars 
 # de-synced sway speeds (13 / 17 deg-per-s — coprime-ish) so the combined motion drifts over the loop.
 [stage]
 text:deFEEST          @0,0.18,0   *0.4   ~pen-write              in breakdown  out outro   # wordmark writes in over the skyline
-mesh:bitterbal.glb    @0.5,0.05,0.2 *0.13  sway 0,17,0  ~morph  tint:fry  in drop  out outro  # a singular DEEP-FRIED bitterbal (tint:rainbow for candy)
+mesh:bitterbal.glb    @0.22,0.08,0.12 *0.11  sway 0,17,0  ~morph  tint:fry  in drop  out outro  # a singular DEEP-FRIED bitterbal, hovering (tint:rainbow for candy)
 text:Imagery ©Google  @0,-0.3,0   *0.42  ~fade                   in outro                  # the credit, static, to the loop seam
 
 # camera: LOW + SHALLOW — down in the skyline, looking nearly horizontally between the buildings (small
