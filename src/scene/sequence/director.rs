@@ -1,5 +1,5 @@
 //! Per-frame logic: drive the show from `SeqClock.t` — find the active shot, retarget the single
-//! interpolate entity's lhs/rhs, and set the blend factor, ball bulge, raster/transition/deform
+//! interpolate entity's lhs/rhs, and set the blend factor, ball bulge, raster/entrance/deform
 //! uniforms, cut-flash, beat reactions, and `glb:` dissolve.
 
 use bevy::prelude::*;
@@ -7,7 +7,7 @@ use bevy_gaussian_splatting::morph::interpolate::GaussianInterpolate;
 use bevy_gaussian_splatting::{CloudSettings, Gaussian3d, PlanarGaussian3dHandle};
 
 use super::model::{FlashStrength, SeqState, Sequence, active_shot};
-use crate::scene::effects::Transition;
+use crate::scene::effects::Entrance;
 use crate::scene::gl_dissolve::gl_mesh_alpha;
 
 const FLASH_LEN: f32 = 0.18; // cut-flash decay time (s), MARTIN_FLASH strength
@@ -94,16 +94,16 @@ pub(crate) fn shot_director(
     if cs.rasterize_mode != want_raster {
         cs.rasterize_mode = want_raster;
     }
-    // the ball-pulse shader effect belongs to the plain Morph transition (prev → next through a
+    // the ball-pulse shader effect belongs to the plain Morph entrance (prev → next through a
     // ball); source-based transitions carry their own motion, so they don't pulse.
-    cs.bulge = if arriving && s.transition == Transition::Morph {
+    cs.bulge = if arriving && s.entrance == Entrance::Morph {
         s.bulge
     } else {
         0.0
     };
     // ~swarm: flock the particles along curled paths during the morph (the @_,_,N timing value is
     // the swarm strength); mutually exclusive with the ball-pulse above.
-    cs.swarm = if arriving && s.transition == Transition::Swarm {
+    cs.swarm = if arriving && s.entrance == Entrance::Swarm {
         s.bulge
     } else {
         0.0
@@ -111,13 +111,13 @@ pub(crate) fn shot_director(
     // per-particle shader transitions (typewriter/sparkle/…): drive the fork's uniforms only
     // while morphing in; otherwise mode 0 = off (held shape renders plain, fully sort-safe).
     let (mode, soft, axis) = arriving
-        .then(|| s.transition.shader_uniforms())
+        .then(|| s.entrance.shader_uniforms())
         .flatten()
         .unwrap_or((0, 0.0, 0));
     cs.transition_mode = mode;
     cs.transition_softness = soft;
     cs.transition_axis = axis;
-    // Persistent deform (wave/cloth/ripple/twist): unlike the transition this runs the *whole*
+    // Persistent deform (wave/cloth/ripple/twist): unlike the entrance this runs the *whole*
     // time the shot is up (not just while morphing), animated by the show clock. Mode 0 = off.
     let (amp_scale, speed) = *deform_tune.get_or_insert_with(|| {
         let f = |k: &str, d: f32| {

@@ -15,12 +15,12 @@ use crate::camera::{DEFAULT_PITCH, FRONT_YAW, OrbitCam};
 use crate::capture::RecordState;
 use crate::morph::resample_morton;
 use crate::scene::content::{PartContent, parse_source, sample_content};
-use crate::scene::effects::{Deform, Transition, source_cloud};
+use crate::scene::effects::{Deform, Entrance, source_cloud};
 use crate::scene::sequence::{SeqState, Sequence};
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, SeqClock, cloud_base_rotation};
 use crate::score;
 
-const COMPOSE_MORPH: f32 = 3.6; // how long a `~transition` compose object takes to assemble in (s) —
+const COMPOSE_MORPH: f32 = 3.6; // how long a `~entrance` compose object takes to assemble in (s) —
 // long enough that a pen-write breathes as the letters are drawn in stroke by stroke
 
 /// One object placed on the composition stage: a source + where it sits + how it moves.
@@ -37,7 +37,7 @@ pub(crate) struct Prop {
     appear: f32, // fade-in start (s on the show clock)
     out: f32,   // fade-out start (s); f32::MAX = stays to the end
     fade: f32,  // fade in/out duration (s)
-    transition: Option<Transition>, // `~name`: assemble in from a source cloud (vs a plain fade)
+    entrance: Option<Entrance>, // `~name`: assemble in from a source cloud (vs a plain fade)
     deform: Option<Deform>, // `^name`: a persistent wobble while it's up
     deform_amp: Option<f32>, // `^name:amp`: scales the deform strength (None = 1.0)
     tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow|brand`: recolour the sampled splats
@@ -59,7 +59,7 @@ impl Prop {
             self.pos.z,
             self.scale
         );
-        if let Some(t) = self.transition {
+        if let Some(t) = self.entrance {
             s += &format!(" ~{t:?}");
         }
         if let Some(d) = self.deform {
@@ -72,7 +72,7 @@ impl Prop {
     }
 
     /// The motion state carried on the spawned entity (shared by splat clouds + mesh props).
-    /// `interpolate` = this object is a `GaussianInterpolate` (a `~transition`), so its `cs.time`
+    /// `interpolate` = this object is a `GaussianInterpolate` (a `~entrance`), so its `cs.time`
     /// is driven (the assemble) instead of an opacity fade-in. `field` is the scene-wide default
     /// deform (`MARTIN_DEFORM`) — a per-object `^deform` wins over it.
     fn anim(&self, base_rot: Quat, interpolate: bool, field: Option<Deform>) -> ComposeAnim {
@@ -92,7 +92,7 @@ impl Prop {
                 let (mode, amp, freq) = d.uniforms();
                 (mode, amp * self.deform_amp.unwrap_or(1.0), freq)
             }),
-            reveal: self.transition.and_then(|t| t.shader_uniforms()),
+            reveal: self.entrance.and_then(|t| t.shader_uniforms()),
         }
     }
 }
@@ -133,10 +133,10 @@ pub(crate) struct ComposeAnim {
     appear: f32,
     out: f32,
     fade: f32,
-    interpolate: bool, // a `~transition` object → drive cs.time (assemble), not opacity
+    interpolate: bool, // a `~entrance` object → drive cs.time (assemble), not opacity
     deform: Option<(u32, f32, f32)>, // `^name` deform uniforms (mode, amp, freq)
-    reveal: Option<(u32, f32, u32)>, // per-particle transition shader (mode, softness, axis) — e.g.
-                       // pen-write traces the letters in as it assembles (only while assembling, then off)
+    reveal: Option<(u32, f32, u32)>, // the entrance's per-particle reveal shader (mode/softness/axis) —
+                                     // pen-write traces the letters in as it assembles (only while assembling, then off)
 }
 
 /// Parse `MARTIN_COMPOSE` (a file path or inline string). Each line: a `<source>` head (text/splat/
@@ -158,20 +158,20 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         if s.is_empty() {
             continue;
         }
-        // pull the `~transition` + `^deform` + `tint:` tokens (position-independent), keep the rest.
-        let mut transition = None;
+        // pull the `~entrance` + `^deform` + `tint:` tokens (position-independent), keep the rest.
+        let mut entrance = None;
         let mut deform = None;
         let mut deform_amp = None;
         let mut tint = None;
         let toks: Vec<&str> = s
             .split_whitespace()
             .filter(|t| {
-                // the shared `~transition` / `^deform[:amp]` / `tint:` modifiers (see effects.rs); a
+                // the shared `~entrance` / `^deform[:amp]` / `tint:` modifiers (see effects.rs); a
                 // recognised sigil is always consumed (warn on a bad value, don't leak it).
                 if let Some(res) = crate::scene::effects::parse_fx_modifier(t) {
                     use crate::scene::effects::FxMod;
                     match res {
-                        Ok(FxMod::Transition(x)) => transition = Some(x),
+                        Ok(FxMod::Entrance(x)) => entrance = Some(x),
                         Ok(FxMod::Deform(d, a)) => {
                             deform = Some(d);
                             deform_amp = a;
@@ -238,7 +238,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             appear,
             out: out_t,
             fade,
-            transition,
+            entrance,
             deform,
             deform_amp,
             tint,
@@ -317,14 +317,14 @@ pub(crate) fn build_composition(
         }
         // `~outline`/`~pen-write` text builds the special stroke gaussians (shared with the reel via
         // `sample_content`) so the per-particle reveal traces real handwriting; else `part_gaussians`.
-        let mut raw = sample_content(&obj.content, obj.transition, &state, &assets, &root.0);
+        let mut raw = sample_content(&obj.content, obj.entrance, &state, &assets, &root.0);
         if raw.is_empty() {
             continue;
         }
         crate::morph::normalize_to(&mut raw, NORMALIZE_EXTENT); // centre + ~2 units across
         let mut shaped = resample_morton(raw, count);
         // `tint:` recolours the sampled cloud (e.g. a deep-fried bitterbal) before it's frozen into
-        // the shape + its transition source — so both the held look and the assemble-in are tinted.
+        // the shape + its entrance source — so both the held look and the assemble-in are tinted.
         if let Some(tint) = obj.tint {
             crate::scene::colorize::apply(&mut shaped, tint);
         }
@@ -340,7 +340,7 @@ pub(crate) fn build_composition(
             time_start: 0.0,
             time_stop: 1.0,
             bulge: 0.0,
-            global_opacity: 0.0, // animate_composition fades it in (or holds it for a transition)
+            global_opacity: 0.0, // animate_composition fades it in (or holds it for a entrance)
             ..default()
         };
         let tf = Transform {
@@ -348,11 +348,11 @@ pub(crate) fn build_composition(
             rotation: rot,
             scale: Vec3::splat(obj.scale),
         };
-        // A `~transition` object ASSEMBLES from a source cloud → a GaussianInterpolate (its cs.time
+        // A `~entrance` object ASSEMBLES from a source cloud → a GaussianInterpolate (its cs.time
         // is driven by animate_composition). Without one it's a PLAIN static cloud (a fade-in) — no
         // per-frame GPU blend. Plain `PlanarGaussian3dHandle` renders directly; `calculate_bounds`
         // gives both kinds an Aabb (NO NoFrustumCulling — that would skip the Aabb → black screen).
-        if let Some(tr) = obj.transition {
+        if let Some(tr) = obj.entrance {
             let source =
                 source_cloud(tr, &shaped, NORMALIZE_EXTENT * 0.5).unwrap_or_else(|| shaped.clone());
             commands.spawn((
@@ -472,7 +472,7 @@ pub(crate) fn animate_composition(
         // kick thumps the scale (bulge is a no-op on a static cloud, so scale carries it too).
         tf.scale = Vec3::splat(a.base_scale * scale_vis * (1.0 + beat.kick * 0.06 * k));
         if let Some(mut cs) = cs {
-            // a `~transition` object assembles via the morph (cs.time) — its IN-fade is the morph, so
+            // a `~entrance` object assembles via the morph (cs.time) — its IN-fade is the morph, so
             // only the OUT fade touches opacity. BUT it must stay HIDDEN until its `in` cue, else its
             // source cloud (cs.time=0) renders from t=0 (a bitterbal floating through the intro).
             let started = a.appear < 0.0 || t >= a.appear;

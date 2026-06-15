@@ -256,7 +256,7 @@ fn pen_gaussians(
 }
 
 /// Outline draw-on: trace the FILLED bundled font's glyph outlines in pen order — a glowing
-/// neon outline that writes itself on. (Pairs with `Transition::Outline` / `~outline`.)
+/// neon outline that writes itself on. (Pairs with `Entrance::Outline` / `~outline`.)
 pub fn build_text_outline_gaussians(
     s: &str,
     rgb: [f32; 3],

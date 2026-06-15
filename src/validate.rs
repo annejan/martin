@@ -74,7 +74,7 @@ pub fn report(
         );
         for (i, (part, &t)) in seq.parts.iter().zip(&starts).enumerate() {
             let tr = part
-                .transition
+                .entrance
                 .map(|x| format!(" ~{x:?}"))
                 .unwrap_or_default();
             let de = part.deform.map(|x| format!(" ^{x:?}")).unwrap_or_default();

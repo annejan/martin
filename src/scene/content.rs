@@ -234,18 +234,18 @@ pub(crate) fn part_gaussians(
 /// by the reel (`build_sequence`) and the stage (`compose`) so the text-effect handling can't drift.
 pub(crate) fn sample_content(
     content: &PartContent,
-    transition: Option<crate::scene::effects::Transition>,
+    entrance: Option<crate::scene::effects::Entrance>,
     state: &SeqState,
     assets: &Assets<PlanarGaussian3d>,
     root: &std::path::Path,
 ) -> Vec<Gaussian3d> {
-    use crate::scene::effects::Transition;
+    use crate::scene::effects::Entrance;
     use crate::text::{build_text_outline_gaussians, build_text_penwrite_gaussians};
-    match (content, transition) {
-        (PartContent::Text(s), Some(Transition::Outline)) => {
+    match (content, entrance) {
+        (PartContent::Text(s), Some(Entrance::Outline)) => {
             build_text_outline_gaussians(s, TEXT_RGB, 3.0, 0.7, 0.012)
         }
-        (PartContent::Text(s), Some(Transition::PenWrite)) => {
+        (PartContent::Text(s), Some(Entrance::PenWrite)) => {
             let pw_step = crate::envvar::or("MARTIN_PW_STEP", 0.5_f32);
             let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
             build_text_penwrite_gaussians(s, TEXT_RGB, 3.0, pw_step, pw_splat)

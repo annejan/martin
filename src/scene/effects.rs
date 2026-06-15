@@ -1,4 +1,4 @@
-//! The per-part effect vocabulary: how a part *arrives* (`Transition` + the source cloud it flies
+//! The per-part effect vocabulary: how a part *arrives* (`Entrance` + the source cloud it flies
 //! in from), how it *persists* while held (`Deform`), and how it *leaves* (`Departure`). Pure data +
 //! parsing — no ECS — shared by the morph timeline (`sequence`) and the composition stage (`compose`).
 
@@ -19,7 +19,7 @@ pub(crate) const BALL_SHELL: f32 = 0.9; // intro ball-shell radius, in units of 
 /// uniform): the source is an identity copy and the shader staggers opacity/position per
 /// particle (see `SHADER-BLUEPRINT.md`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub(crate) enum Transition {
+pub(crate) enum Entrance {
     Morph,    // prev shape → this shape (with bulge ball-pulse); the original behaviour
     Swarm,    // like Morph but particles flock/swarm along curled paths between the two scenes
     Ball,     // assemble out of a fuzzy ball shell (default for part 0)
@@ -49,57 +49,53 @@ pub(crate) enum Transition {
 /// The source cloud a STANDALONE assemble flies in from (compose objects, and seq part 0). Morph/
 /// Swarm have no "previous shape" here, so they assemble from a ball; per-particle shader
 /// transitions get an identity copy (the shader staggers it). `r` ≈ the content radius.
-pub(crate) fn source_cloud(
-    tr: Transition,
-    shaped: &[Gaussian3d],
-    r: f32,
-) -> Option<Vec<Gaussian3d>> {
+pub(crate) fn source_cloud(tr: Entrance, shaped: &[Gaussian3d], r: f32) -> Option<Vec<Gaussian3d>> {
     Some(match tr {
-        Transition::Ball | Transition::Morph | Transition::Swarm => ball_of(shaped, r * BALL_SHELL),
-        Transition::Fade => fade_of(shaped),
-        Transition::Explode => explode_of(shaped, r * 1.6),
-        Transition::Implode => implode_of(shaped),
-        Transition::Drop => drop_of(shaped, r * 2.5),
-        Transition::Rain => rain_of(shaped, r * 3.0),
-        Transition::Funnel => funnel_of(shaped, r * 3.0),
-        Transition::Shatter => shatter_of(shaped, r * 1.4),
-        Transition::Condense => condense_of(shaped, r * 2.2),
-        Transition::Swirl => swirl_of(shaped, 2.4, 1.5),
-        Transition::Extrude => flatten_of(shaped),
-        Transition::Helix => helix_of(shaped, r * 3.0, 4.0),
-        Transition::Fold => fold_of(shaped),
-        Transition::Zoom => zoom_of(shaped, 7.0),
+        Entrance::Ball | Entrance::Morph | Entrance::Swarm => ball_of(shaped, r * BALL_SHELL),
+        Entrance::Fade => fade_of(shaped),
+        Entrance::Explode => explode_of(shaped, r * 1.6),
+        Entrance::Implode => implode_of(shaped),
+        Entrance::Drop => drop_of(shaped, r * 2.5),
+        Entrance::Rain => rain_of(shaped, r * 3.0),
+        Entrance::Funnel => funnel_of(shaped, r * 3.0),
+        Entrance::Shatter => shatter_of(shaped, r * 1.4),
+        Entrance::Condense => condense_of(shaped, r * 2.2),
+        Entrance::Swirl => swirl_of(shaped, 2.4, 1.5),
+        Entrance::Extrude => flatten_of(shaped),
+        Entrance::Helix => helix_of(shaped, r * 3.0, 4.0),
+        Entrance::Fold => fold_of(shaped),
+        Entrance::Zoom => zoom_of(shaped, 7.0),
         _ if tr.shader_uniforms().is_some() => shaped.to_vec(),
         _ => return None,
     })
 }
 
-impl Transition {
-    pub(crate) fn parse(s: &str) -> Option<Transition> {
+impl Entrance {
+    pub(crate) fn parse(s: &str) -> Option<Entrance> {
         Some(match s.trim().to_ascii_lowercase().as_str() {
-            "morph" => Transition::Morph,
-            "swarm" => Transition::Swarm,
-            "ball" => Transition::Ball,
-            "fade" => Transition::Fade,
-            "explode" => Transition::Explode,
-            "implode" => Transition::Implode,
-            "drop" => Transition::Drop,
-            "rain" => Transition::Rain,
-            "funnel" | "pour" => Transition::Funnel,
-            "shatter" | "shards" => Transition::Shatter,
-            "condense" | "fog" | "haze" => Transition::Condense,
-            "swirl" => Transition::Swirl,
-            "extrude" | "rise" | "pop" => Transition::Extrude,
-            "helix" | "dna" | "spiral" => Transition::Helix,
-            "fold" | "unfold" => Transition::Fold,
-            "zoom" | "telescope" | "warp-in" => Transition::Zoom,
-            "typewriter" | "type" => Transition::Typewriter,
-            "wipe" => Transition::Wipe,
-            "sparkle" => Transition::Sparkle,
-            "slither" => Transition::Slither,
-            "vortex" => Transition::Vortex,
-            "outline" => Transition::Outline,
-            "pen" | "penwrite" | "pen-write" | "write" => Transition::PenWrite,
+            "morph" => Entrance::Morph,
+            "swarm" => Entrance::Swarm,
+            "ball" => Entrance::Ball,
+            "fade" => Entrance::Fade,
+            "explode" => Entrance::Explode,
+            "implode" => Entrance::Implode,
+            "drop" => Entrance::Drop,
+            "rain" => Entrance::Rain,
+            "funnel" | "pour" => Entrance::Funnel,
+            "shatter" | "shards" => Entrance::Shatter,
+            "condense" | "fog" | "haze" => Entrance::Condense,
+            "swirl" => Entrance::Swirl,
+            "extrude" | "rise" | "pop" => Entrance::Extrude,
+            "helix" | "dna" | "spiral" => Entrance::Helix,
+            "fold" | "unfold" => Entrance::Fold,
+            "zoom" | "telescope" | "warp-in" => Entrance::Zoom,
+            "typewriter" | "type" => Entrance::Typewriter,
+            "wipe" => Entrance::Wipe,
+            "sparkle" => Entrance::Sparkle,
+            "slither" => Entrance::Slither,
+            "vortex" => Entrance::Vortex,
+            "outline" => Entrance::Outline,
+            "pen" | "penwrite" | "pen-write" | "write" => Entrance::PenWrite,
             _ => return None,
         })
     }
@@ -109,19 +105,19 @@ impl Transition {
     /// uniform triple, or `None` for the data-only / Morph transitions.
     pub(crate) fn shader_uniforms(self) -> Option<(u32, f32, u32)> {
         match self {
-            Transition::Typewriter => Some((1, 0.10, 0)),
-            Transition::Slither => Some((2, 0.30, 0)),
-            Transition::Sparkle => Some((3, 0.40, 0)),
-            Transition::Vortex => Some((5, 0.35, 1)),
-            Transition::Wipe => Some((6, 0.02, 0)),
-            Transition::Outline => Some((7, 0.06, 0)), // filled font → traces outlines
-            Transition::PenWrite => Some((7, 0.05, 0)), // single-stroke font → handwriting
+            Entrance::Typewriter => Some((1, 0.10, 0)),
+            Entrance::Slither => Some((2, 0.30, 0)),
+            Entrance::Sparkle => Some((3, 0.40, 0)),
+            Entrance::Vortex => Some((5, 0.35, 1)),
+            Entrance::Wipe => Some((6, 0.02, 0)),
+            Entrance::Outline => Some((7, 0.06, 0)), // filled font → traces outlines
+            Entrance::PenWrite => Some((7, 0.05, 0)), // single-stroke font → handwriting
             _ => None,
         }
     }
 }
 
-/// A *persistent* vertex deform (`^name` token / `MARTIN_DEFORM`). Unlike a `Transition` (which
+/// A *persistent* vertex deform (`^name` token / `MARTIN_DEFORM`). Unlike a `Entrance` (which
 /// plays once on arrival), this keeps running while the part is **held** — so a `wall:` of text
 /// can ripple, billow or curl the whole time it's on screen. Drives the fork shader's deform
 /// uniforms (see SHADER-BLUEPRINT.md); default-off, so an unset part renders plain.
@@ -187,7 +183,7 @@ pub(crate) enum Departure {
 /// a one-place edit instead of two.
 #[derive(Debug, PartialEq)]
 pub(crate) enum FxMod {
-    Transition(Transition),
+    Entrance(Entrance),
     Deform(Deform, Option<f32>), // (deform, optional `:amp` strength)
     Tint(crate::scene::colorize::Tint),
 }
@@ -198,8 +194,8 @@ pub(crate) enum FxMod {
 pub(crate) fn parse_fx_modifier(tok: &str) -> Option<Result<FxMod, String>> {
     if let Some(t) = tok.strip_prefix('~') {
         return Some(
-            Transition::parse(t)
-                .map(FxMod::Transition)
+            Entrance::parse(t)
+                .map(FxMod::Entrance)
                 .ok_or_else(|| format!("unknown transition '~{t}'")),
         );
     }
@@ -256,7 +252,7 @@ mod tests {
         // recognized + parsed
         assert_eq!(
             parse_fx_modifier("~morph"),
-            Some(Ok(FxMod::Transition(Transition::Morph)))
+            Some(Ok(FxMod::Entrance(Entrance::Morph)))
         );
         assert_eq!(
             parse_fx_modifier("^wave"),
@@ -286,17 +282,14 @@ mod tests {
 
     #[test]
     fn transition_parse_names_aliases_and_case() {
-        assert_eq!(Transition::parse("fade"), Some(Transition::Fade));
-        assert_eq!(
-            Transition::parse("  PEN-WRITE "),
-            Some(Transition::PenWrite)
-        );
-        assert_eq!(Transition::parse("pour"), Some(Transition::Funnel)); // alias
-        assert_eq!(Transition::parse("pop"), Some(Transition::Extrude)); // alias
-        assert_eq!(Transition::parse("dna"), Some(Transition::Helix)); // alias
-        assert_eq!(Transition::parse("unfold"), Some(Transition::Fold)); // alias
-        assert_eq!(Transition::parse("telescope"), Some(Transition::Zoom)); // alias
-        assert_eq!(Transition::parse("nope"), None);
+        assert_eq!(Entrance::parse("fade"), Some(Entrance::Fade));
+        assert_eq!(Entrance::parse("  PEN-WRITE "), Some(Entrance::PenWrite));
+        assert_eq!(Entrance::parse("pour"), Some(Entrance::Funnel)); // alias
+        assert_eq!(Entrance::parse("pop"), Some(Entrance::Extrude)); // alias
+        assert_eq!(Entrance::parse("dna"), Some(Entrance::Helix)); // alias
+        assert_eq!(Entrance::parse("unfold"), Some(Entrance::Fold)); // alias
+        assert_eq!(Entrance::parse("telescope"), Some(Entrance::Zoom)); // alias
+        assert_eq!(Entrance::parse("nope"), None);
     }
 
     #[test]
@@ -315,10 +308,10 @@ mod tests {
 
     #[test]
     fn shader_transitions_carry_uniforms_data_ones_dont() {
-        assert!(Transition::Typewriter.shader_uniforms().is_some());
-        assert!(Transition::PenWrite.shader_uniforms().is_some());
-        assert!(Transition::Fade.shader_uniforms().is_none());
-        assert!(Transition::Extrude.shader_uniforms().is_none());
+        assert!(Entrance::Typewriter.shader_uniforms().is_some());
+        assert!(Entrance::PenWrite.shader_uniforms().is_some());
+        assert!(Entrance::Fade.shader_uniforms().is_none());
+        assert!(Entrance::Extrude.shader_uniforms().is_none());
     }
 
     #[test]

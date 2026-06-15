@@ -16,7 +16,7 @@ use super::parse::{global_raster, parse_euler_deg};
 use crate::camera::{DEFAULT_PITCH, FRONT_YAW, OrbitCam};
 use crate::morph::{ball_of, resample_morton};
 use crate::scene::content::{PartContent, sample_content};
-use crate::scene::effects::{BALL_SHELL, Deform, Transition, source_cloud};
+use crate::scene::effects::{BALL_SHELL, Deform, Entrance, source_cloud};
 use crate::scene::gl_dissolve::spawn_gl_dissolve;
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, cloud_base_rotation};
 
@@ -41,14 +41,14 @@ pub(crate) fn build_sequence(
         return; // wait for every referenced splat
     }
 
-    // resolve each part's transition first (explicit ~name > MARTIN_TRANSITION > Ball for part
+    // resolve each part's entrance first (explicit ~name > MARTIN_TRANSITION > Ball for part
     // 0 / Morph after) — needed before building gaussians so a PenWrite text part is built as a
     // stroked outline (pen order baked into visibility) instead of filled coverage.
     let global_tr = std::env::var("MARTIN_TRANSITION")
         .ok()
-        .and_then(|s| Transition::parse(&s));
+        .and_then(|s| Entrance::parse(&s));
     // persistent per-part deform: explicit `^name` > MARTIN_DEFORM > none. Runs while the part is
-    // held (a waving wall of text etc.), independent of the arrival transition above.
+    // held (a waving wall of text etc.), independent of the arrival entrance above.
     let global_deform = std::env::var("MARTIN_DEFORM")
         .ok()
         .and_then(|s| Deform::parse(&s));
@@ -63,19 +63,19 @@ pub(crate) fn build_sequence(
         .iter()
         .map(|p| p.raster.unwrap_or(global_raster))
         .collect();
-    let transitions: Vec<Transition> = seq
+    let transitions: Vec<Entrance> = seq
         .parts
         .iter()
         .enumerate()
         .map(|(idx, part)| {
-            let tr = part.transition.or(global_tr).unwrap_or(if idx == 0 {
-                Transition::Ball
+            let tr = part.entrance.or(global_tr).unwrap_or(if idx == 0 {
+                Entrance::Ball
             } else {
-                Transition::Morph
+                Entrance::Morph
             });
             // part 0 has nothing to morph from — fall back to a ball assemble.
-            if idx == 0 && matches!(tr, Transition::Morph | Transition::Swarm) {
-                Transition::Ball
+            if idx == 0 && matches!(tr, Entrance::Morph | Entrance::Swarm) {
+                Entrance::Ball
             } else {
                 tr
             }
@@ -149,7 +149,7 @@ pub(crate) fn build_sequence(
     // Framing radius of the *content*: when normalized, every part is ~NORMALIZE_EXTENT across
     // centred on its centroid, so frame from that — robust to the floaters that still inflate
     // the raw union AABB and would otherwise shrink the scene to a distant dot. Raw mode (no
-    // normalize) frames the union box instead. This radius also sizes each transition source.
+    // normalize) frames the union box instead. This radius also sizes each entrance source.
     let (frame_center, content_radius, frame_factor) = if normalize {
         (Vec3::ZERO, NORMALIZE_EXTENT * 0.5, 2.5)
     } else {
@@ -158,11 +158,11 @@ pub(crate) fn build_sequence(
     };
 
     // Each part is resampled to the shared count N, then gets the *source* cloud it morphs in
-    // FROM, chosen by its transition (`~name` per part > MARTIN_TRANSITION default > Ball for
+    // FROM, chosen by its entrance (`~name` per part > MARTIN_TRANSITION default > Ball for
     // part 0 / Morph after). `Morph` has no source — it flows from the previous part's shape
     // (with the ball-pulse bulge); the others build a source from the part's own shape.
     // Build each part's `BuiltShot` directly (the only per-shot data the director reads) — shape +
-    // morph-in origin + out-cloud + the resolved transition/deform/raster/cue, in one pass.
+    // morph-in origin + out-cloud + the resolved entrance/deform/raster/cue, in one pass.
     let mut shots: Vec<BuiltShot> = Vec::with_capacity(seq.parts.len());
     // MARTIN_PAIR=match (or `pair=match` in [settings]): instead of index-rank Morton pairing — which
     // pinches DISSIMILAR scenes through a centre "ball" — reorder each Morph part so splat k pairs with
@@ -204,7 +204,7 @@ pub(crate) fn build_sequence(
         // source cloud), reorder it so each splat slides to the nearest same-colour splat of the prev
         // part — minimal travel, coherent morph. Only the Morph/Swarm-flow case has a prev shape to
         // pair against; sourced transitions (ball/wash/etc.) assemble from their own cloud regardless.
-        if pair_match && matches!(tr, Transition::Morph | Transition::Swarm) && !prev_departs {
+        if pair_match && matches!(tr, Entrance::Morph | Entrance::Swarm) && !prev_departs {
             if let Some(prev) = &prev_shaped {
                 shaped = crate::morph::match_reorder(prev, shaped, pair_color_w);
             }
@@ -217,10 +217,10 @@ pub(crate) fn build_sequence(
         let src: Option<Vec<Gaussian3d>> = match tr {
             // Morph/Swarm flow from the PREVIOUS part's shape (no source) — unless the previous part
             // departed (washed away), in which case there's nothing to flow from → assemble fresh.
-            Transition::Morph | Transition::Swarm if prev_departs => {
+            Entrance::Morph | Entrance::Swarm if prev_departs => {
                 Some(ball_of(&shaped, r * BALL_SHELL))
             }
-            Transition::Morph | Transition::Swarm => None,
+            Entrance::Morph | Entrance::Swarm => None,
             other => source_cloud(other, &shaped, r),
         };
         // `exit:` departure target cloud (faded + displaced) — the part morphs to this as it leaves.
@@ -237,7 +237,7 @@ pub(crate) fn build_sequence(
             shape: assets.add(PlanarGaussian3d::from(shaped)),
             origin,
             exit_cloud,
-            transition: tr,
+            entrance: tr,
             deform: deforms[idx],
             deform_amp: shot.deform_amp,
             flash: shot.flash,

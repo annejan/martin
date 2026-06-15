@@ -84,9 +84,9 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         if s.is_empty() {
             continue;
         }
-        // Pull the `~name` transition AND the `@@anchor` token (both single whitespace-delimited
+        // Pull the `~name` entrance AND the `@@anchor` token (both single whitespace-delimited
         // tokens, position-independent); keep the rest of the line for the head + `@timing`.
-        let mut transition = None;
+        let mut entrance = None;
         let mut anchor = None;
         let mut deform = None;
         let mut exit = None;
@@ -145,10 +145,10 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                         Err(_) => eprintln!("seq: bad 'beat:{b}' (need a number) — ignored"),
                     }
                 } else if let Some(res) = crate::scene::effects::parse_fx_modifier(tok) {
-                    // the shared `~transition` / `^deform[:amp]` / `tint:` modifiers (see effects.rs).
+                    // the shared `~entrance` / `^deform[:amp]` / `tint:` modifiers (see effects.rs).
                     use crate::scene::effects::FxMod;
                     match res {
-                        Ok(FxMod::Transition(tr)) => transition = Some(tr),
+                        Ok(FxMod::Entrance(tr)) => entrance = Some(tr),
                         Ok(FxMod::Deform(d, a)) => {
                             deform = Some(d);
                             deform_amp = a;
@@ -192,7 +192,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
             hold,
             morph,
             bulge,
-            transition,
+            entrance,
             anchor,
             deform,
             exit,
@@ -299,7 +299,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scene::effects::{Deform, Transition};
+    use crate::scene::effects::{Deform, Entrance};
     use crate::scene::sequence::{shot_starts, show_end};
 
     fn parts(spec: &str) -> Vec<Shot> {
@@ -311,7 +311,7 @@ mod tests {
         let s = Shot::base(PartContent::Text("hi".into()));
         assert!(matches!(s.content, PartContent::Text(ref t) if t == "hi"));
         assert_eq!((s.hold, s.morph), (1.5, 3.0));
-        assert!(s.transition.is_none() && s.deform.is_none() && s.tint.is_none());
+        assert!(s.entrance.is_none() && s.deform.is_none() && s.tint.is_none());
         assert!(s.flash.is_none() && s.beat.is_none() && s.anchor.is_none());
         // the override pattern keeps base's None fields while setting the spelled ones.
         let s = Shot {
@@ -329,7 +329,7 @@ mod tests {
         assert!(matches!(&p[0].content, PartContent::Text(s) if s == "HELLO"));
         assert_eq!(p[0].hold, 4.0);
         assert_eq!(p[0].morph, 2.0);
-        assert_eq!(p[0].transition, Some(Transition::Fade));
+        assert_eq!(p[0].entrance, Some(Entrance::Fade));
         assert_eq!(p[0].deform, Some(Deform::Wave));
         assert_eq!(p[0].exit, Some(Departure::Sink));
         assert_eq!(p[0].flock, Some(3));
@@ -358,11 +358,11 @@ mod tests {
 
     #[test]
     fn unknown_modifier_is_consumed_not_leaked_into_the_head() {
-        // a typo'd transition must NOT end up as part of the text.
+        // a typo'd entrance must NOT end up as part of the text.
         let p = parts("text:HELLO ~explod");
         assert_eq!(p.len(), 1);
         assert!(matches!(&p[0].content, PartContent::Text(s) if s == "HELLO"));
-        assert_eq!(p[0].transition, None);
+        assert_eq!(p[0].entrance, None);
     }
 
     #[test]
@@ -372,7 +372,7 @@ mod tests {
         assert_eq!(p.len(), 2);
         assert!(matches!(&p[0].content, PartContent::Text(s) if s == "A"));
         assert!(matches!(&p[1].content, PartContent::Text(s) if s == "B"));
-        assert_eq!(p[0].transition, None); // the ~fade was inside the comment
+        assert_eq!(p[0].entrance, None); // the ~fade was inside the comment
     }
 
     #[test]

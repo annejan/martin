@@ -1,7 +1,7 @@
 //! Data types of the morph-timeline + the pure cue-timeline functions.
 //!
 //! A show is a list of `Shot`s that each assemble in from a source cloud (ball/fade/explode/… or a
-//! per-particle shader transition) and then hold, morphing into the next. `SeqState` holds the
+//! per-particle shader entrance) and then hold, morphing into the next. `SeqState` holds the
 //! loaded handles + the per-shot built shapes (one `BuiltShot` per shot). The cue-timeline fns
 //! (`active_shot`/`shot_starts`/`show_end`) derive absolute shot start/end times — shared by the
 //! builder, the director, the camera, and the `MARTIN_VALIDATE` dry-run.
@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use bevy_gaussian_splatting::{PlanarGaussian3d, RasterizeMode};
 
 use crate::scene::content::PartContent;
-use crate::scene::effects::{Deform, Departure, Transition};
+use crate::scene::effects::{Deform, Departure, Entrance};
 
 /// One shot morphs in from the previous (or, for shot 0, from a ball), then holds.
 #[derive(Clone)]
@@ -18,10 +18,10 @@ pub(crate) struct Shot {
     pub content: PartContent,
     pub hold: f32,                                  // seconds held after arriving
     pub morph: f32,                                 // seconds to morph in
-    pub bulge: f32, // ball-pulse explosiveness (Morph transition only)
-    pub transition: Option<Transition>, // None = default (Ball for shot 0, else Morph)
-    pub anchor: Option<f32>, // absolute start (s) on the music clock; None = relative
-    pub deform: Option<Deform>, // persistent deform while held (None = none / MARTIN_DEFORM)
+    pub bulge: f32,                 // ball-pulse explosiveness (Morph entrance only)
+    pub entrance: Option<Entrance>, // None = default (Ball for shot 0, else Morph)
+    pub anchor: Option<f32>,        // absolute start (s) on the music clock; None = relative
+    pub deform: Option<Deform>,     // persistent deform while held (None = none / MARTIN_DEFORM)
     pub exit: Option<Departure>, // how the shot LEAVES (`exit:name`, was `out:`); None = cross-morph to next
     pub rot: Option<Quat>,       // per-shot orientation (`rot:rx,ry,rz` deg), baked into the shape
     pub flock: Option<usize>, // `flock:N` (was `cluster:`) → N scattered, randomly-rotated copies
@@ -34,7 +34,7 @@ pub(crate) struct Shot {
 }
 
 impl Shot {
-    /// A shot with `content` and every effect/modifier at its default (no transition/deform/tint/…).
+    /// A shot with `content` and every effect/modifier at its default (no entrance/deform/tint/…).
     /// Callers spell only the fields they set and fill the rest with `..Shot::base(content)`, so a new
     /// `Shot` field doesn't ripple into every construction site (the timing defaults match `parse_seq`).
     pub(crate) fn base(content: PartContent) -> Self {
@@ -43,7 +43,7 @@ impl Shot {
             hold: 1.5,
             morph: 3.0,
             bulge: 0.9,
-            transition: None,
+            entrance: None,
             anchor: None,
             deform: None,
             exit: None,
@@ -76,7 +76,7 @@ pub(crate) struct BuiltShot {
     pub shape: Handle<PlanarGaussian3d>,
     pub origin: Option<Handle<PlanarGaussian3d>>, // lhs source cloud (None = morph from prev shape)
     pub exit_cloud: Option<Handle<PlanarGaussian3d>>, // `exit:` departure cloud (None = none)
-    pub transition: Transition,
+    pub entrance: Entrance,
     pub deform: Option<Deform>,
     pub deform_amp: Option<f32>, // per-shot deform strength scale (`^name:amp`); None = 1.0
     pub flash: Option<f32>, // per-shot cut-bloom strength (`flash:N`); None = global MARTIN_FLASH
@@ -92,7 +92,7 @@ pub(crate) struct BuiltShot {
 }
 
 /// Loaded splat handles + the per-shot built shots (each resampled to the budget, with its
-/// morph-in origin cloud + resolved transition/deform/raster + cue start).
+/// morph-in origin cloud + resolved entrance/deform/raster + cue start).
 #[derive(Resource)]
 pub(crate) struct SeqState {
     pub load_names: Vec<String>,
