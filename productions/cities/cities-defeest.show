@@ -32,7 +32,7 @@ splat:nyc_tight.ply                    @6,7,0  ~morph  beat:1.4  flash:0.5  ^tur
 splat:chicago_tight.ply   @@breakdown  @6,7,0  ~morph  beat:1.0  ^wind:0.25     backdrop:grid       # CHICAGO — the grid + wind
 splat:seattle_tight.ply   @@climax     @16,7,0 ~morph  beat:1.6  flash:0.5  ^ripple:0.15  backdrop:rings   # SEATTLE — water, climax, holds
 mesh:bitterbal.glb        @@outro      @2,6,0  ~morph  tint:fry  beat:1.0       backdrop:stars      # the SKYLINE balls up into a giant DEEP-FRIED BITTERBAL
-glb:defeest.glb                        @3,5    ~morph  beat:0                   backdrop:stars      # bitterbal → the deFEEST logo → wrap to the intro (CAUSAL LOOP)
+mesh:defeest.glb          rot:180,0,0  @3,5    ~morph  beat:0                   backdrop:stars      # bitterbal → the deFEEST logo (splats, rot cancels the base flip-X) → wrap to the intro (CAUSAL LOOP)
 
 # LAYER 2 — wordmark handwrites over the cities; a small bitterbal drifts through earlier (the motif);
 # the credit shows during Seattle. All gone before the bitterbal/logo finale so it reads clean.
