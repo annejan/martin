@@ -16,20 +16,21 @@ use crate::scene::effects::{Deform, Departure, Transition};
 #[derive(Clone)]
 pub(crate) struct Shot {
     pub content: PartContent,
-    pub hold: f32,                      // seconds held after arriving
-    pub morph: f32,                     // seconds to morph in
-    pub bulge: f32,                     // ball-pulse explosiveness (Morph transition only)
+    pub hold: f32,                                  // seconds held after arriving
+    pub morph: f32,                                 // seconds to morph in
+    pub bulge: f32, // ball-pulse explosiveness (Morph transition only)
     pub transition: Option<Transition>, // None = default (Ball for shot 0, else Morph)
-    pub anchor: Option<f32>,            // absolute start (s) on the music clock; None = relative
+    pub anchor: Option<f32>, // absolute start (s) on the music clock; None = relative
     pub deform: Option<Deform>, // persistent deform while held (None = none / MARTIN_DEFORM)
     pub out: Option<Departure>, // how the shot LEAVES (`out:name`); None = cross-morph to the next
-    pub rot: Option<Quat>,      // per-shot orientation (`rot:rx,ry,rz` deg), baked into the shape
+    pub rot: Option<Quat>, // per-shot orientation (`rot:rx,ry,rz` deg), baked into the shape
     pub cluster: Option<usize>, // `cluster:N` → N scattered, randomly-rotated copies (a "serving")
-    pub bg: Option<u32>,        // `bg:<name>` → background mode from this shot on (BG_OFF hides)
+    pub bg: Option<u32>, // `bg:<name>` → background mode from this shot on (BG_OFF hides)
     pub raster: Option<RasterizeMode>, // `raster:<mode>` → debug shading for this shot (None = MARTIN_RASTER)
     pub flash: Option<f32>, // `flash:<strength>` → cut-bloom on THIS shot's entry (None = MARTIN_FLASH)
     pub deform_amp: Option<f32>, // `^name:<amp>` → this shot's deform strength scale (None = 1.0)
     pub beat: Option<f32>, // `beat:<scale>` → this shot's beat-bounce reaction (0 = still; None = 1.0)
+    pub tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow|brand` → recolour this shape
 }
 
 /// The whole show: a list of shots + the gaussian budget every shot is resampled to.

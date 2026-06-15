@@ -279,6 +279,7 @@ mod tests {
             flash: None,
             deform_amp: None,
             beat: None,
+            tint: None,
         }
     }
 

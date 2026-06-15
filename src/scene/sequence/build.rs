@@ -221,6 +221,11 @@ pub(crate) fn build_sequence(
                 shaped = crate::morph::match_reorder(prev, shaped, pair_color_w);
             }
         }
+        // `tint:` recolours this shot's shape (e.g. a deep-fried bitterbal) BEFORE the source/out clouds
+        // and the next part's pair-match read it, so the whole lifecycle is tinted.
+        if let Some(tint) = seq.parts[idx].tint {
+            crate::scene::colorize::apply(&mut shaped, tint);
+        }
         let src: Option<Vec<Gaussian3d>> = match tr {
             // Morph/Swarm flow from the PREVIOUS part's shape (no source) — unless the previous part
             // departed (washed away), in which case there's nothing to flow from → assemble fresh.

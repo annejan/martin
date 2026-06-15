@@ -1,54 +1,59 @@
-# martin — CITIES · deFEEST: the shareable loop (rev. 3, after two art-direction passes). TWO LAYERS:
-#   LAYER 1 [reel]  — deFEEST logo (mesh→blob) → low pair=match tour. Each city gets its OWN sky +
-#                     weather + pulse so the four feel like four places, not one grey texture.
-#   LAYER 2 [stage] — the deFEEST wordmark HANDWRITES in (single-stroke, brand blue→gold) over the
-#                     skyline while a deep-fried bitterbal tumbles through the same beat, then the credit.
+# martin — CITIES · deFEEST: the shareable loop (rev. 4 — the CAUSAL loop). The snack you follow IS the
+# brand: a deep-fried bitterbal drifts through the city tour, then at the end the whole skyline balls up
+# into a giant bitterbal which morphs into the deFEEST logo — which (loop) dissolves back into the city.
+# Forever. TWO LAYERS:
+#   LAYER 1 [reel]  — deFEEST logo → low pair=match city tour → Seattle BALLS into a fried bitterbal →
+#                     the bitterbal morphs into the deFEEST logo → wrap to the intro (seamless seam).
+#   LAYER 2 [stage] — the deFEEST wordmark HANDWRITES in over the skyline + a small drifting bitterbal
+#                     (the motif) + the ©Google credit.
 #
 #   live loop:  MARTIN_LOOP=1 MARTIN_SHOW=productions/cities/cities-defeest.show cargo +nightly run --release
 #   record:     MARTIN_SHOW=productions/cities/cities-defeest.show ./record.sh cities-defeest.mp4
 #
 # LOCAL captures only (Google Maps Content — ©Google credit on screen). defeest.glb / bitterbal.glb /
-# the four *_tight.ply symlink into austin_run/exports/. ~89s, loops (fade in+out bridge the seam).
+# the four *_tight.ply symlink into austin_run/exports/. ~89s, loops (logo→logo seam, through black).
 
 [settings]
 kind = demo
-pair = match                  # nearest same-colour pairing → straight, no-ball skyline morphs
-budget = 1200000              # crisp (override MARTIN_MORPH_COUNT=250000/500000 for fast previews)
+pair = match
+budget = 1200000              # crisp (override MARTIN_MORPH_COUNT=250000/500000 for previews)
 ply = austin_run/exports/austin_tight.ply
 score = productions/intro/score.txt
-flash = 0.25                  # gentle global cut-bloom; per-Shot flash: punches only NYC + Seattle
-bg_dim = 0.4                  # keep the per-city backdrops as backdrops behind the splats
-pw_step = 0.35                # denser pen samples → the handwriting reveal feels drawn, not stamped
-pw_splat = 0.004              # thin pen line — a drawn stroke, not extruded blocks
+flash = 0.25
+bg_dim = 0.4
+pw_step = 0.35
+pw_splat = 0.004
 
-# LAYER 1 — logo mesh→blob, then the tour. Each city: a distinct backdrop (sky), ^weather, and beat
-# pulse. flash only on NYC (drop energy) + Seattle (climax) — asymmetry keeps the dynamics alive.
+# LAYER 1 — logo → city tour (per-city sky/weather/pulse) → Seattle balls into a bitterbal → the logo.
 [reel]
-glb:defeest.glb           @@intro      @5,5    beat:0   backdrop:stars                            # deFEEST mesh ⇄ blobs → morphs into the city (brand colours flow in)
-splat:austin_tight.ply    @@drop       @6,7,0  ~morph  beat:0.8                 backdrop:stars      # AUSTIN — night, calm open (warp blew out behind the low city)
-splat:nyc_tight.ply                    @6,7,0  ~morph  beat:1.4  flash:0.5  ^turbulence:0.2  backdrop:stars  # NEW YORK — night, churn, punch
-splat:chicago_tight.ply   @@breakdown  @6,7,0  ~morph  beat:1.0  ^wind:0.25     backdrop:grid       # CHICAGO — the grid + wind (windy city)
-splat:seattle_tight.ply   @@climax     @32,7,0 ~morph  beat:1.6  flash:0.5  ^ripple:0.15  backdrop:rings   # SEATTLE — water ripple, climax punch, holds
+glb:defeest.glb           @@intro      @5,5    beat:0   backdrop:stars                            # deFEEST mesh ⇄ blobs → city
+splat:austin_tight.ply    @@drop       @6,7,0  ~morph  beat:0.8                 backdrop:stars      # AUSTIN — night, calm
+splat:nyc_tight.ply                    @6,7,0  ~morph  beat:1.4  flash:0.5  ^turbulence:0.2  backdrop:stars  # NEW YORK — churn, punch
+splat:chicago_tight.ply   @@breakdown  @6,7,0  ~morph  beat:1.0  ^wind:0.25     backdrop:grid       # CHICAGO — the grid + wind
+splat:seattle_tight.ply   @@climax     @16,7,0 ~morph  beat:1.6  flash:0.5  ^ripple:0.15  backdrop:rings   # SEATTLE — water, climax, holds
+mesh:bitterbal.glb        @@outro      @2,6,0  ~morph  tint:fry  beat:1.0       backdrop:stars      # the SKYLINE balls up into a giant DEEP-FRIED BITTERBAL
+glb:defeest.glb                        @3,5    ~morph  beat:0                   backdrop:stars      # bitterbal → the deFEEST logo → wrap to the intro (CAUSAL LOOP)
 
-# LAYER 2 — deFEEST handwrites in (single-stroke, brand gradient); the bitterbal tumbles through the
-# SAME beat (snack joins the brand moment), bigger + closer; credit sits on black below the horizon.
+# LAYER 2 — wordmark handwrites over the cities; a small bitterbal drifts through earlier (the motif);
+# the credit shows during Seattle. All gone before the bitterbal/logo finale so it reads clean.
 [stage]
 text:deFEEST          @0,0.26,0    *0.42  ~pen-write  tint:brand                in breakdown  out outro   # wordmark handwrites in, blue→gold
-mesh:bitterbal.glb    @0.30,0.10,0.4  *0.16  spin 18,40,7  ^turbulence:0.3  drift 0.008,0,-0.01  ~morph  tint:fry  in breakdown  out climax  # boiling bitterbal, through the write moment
-text:Imagery ©Google  @0,-0.42,0   *0.55  ~fade  tint:brand                    in outro                  # credit on black, brand gold
+mesh:bitterbal.glb    @0.22,0.08,0.12 *0.08  spin 18,40,7  ^turbulence:0.3  drift 0.012,0,-0.01  ~morph  tint:fry  in drop  out breakdown  # the snack motif, drifting
+text:Imagery ©Google  @0,-0.4,0    *0.5   ~fade  tint:brand                    in climax  out outro       # credit during Seattle, brand gold
 
-# camera: high raked establishing (yaw settles to front) → a REAL dive UNDER the logo plane → low pass
-# through the towers → HOLD head-on while the wordmark handwrites → the DOME hero shot on the climax →
-# pull back toward the logo pose so the loop seam (through black) is gentle.
+# camera: high raked establishing on the logo → dive → city tour (frontal through the write) → the DOME
+# on the climax → PULL BACK to frame the skyline balling into the bitterbal → and the logo forming at
+# the intro pose, so the loop seam (logo → logo, through black) is invisible.
 [camera]
 t=@@intro      pos=0,0.35,0     dist=1.9   yaw=1.32  pitch=0.50   # logo: high + raked, establishing
-t=15.0         pos=0,0.12,0     dist=1.4   yaw=1.40  pitch=0.32   # descend partway, yaw settles to front
-t=@@drop       pos=0,0.12,0     dist=1.2   yaw=1.44  pitch=0.26   # logo→AUSTIN morph readable at mid-height (brand colours flow into the city)
-t=27.0         pos=-0.1,0.05,0  dist=0.9   yaw=1.46  pitch=0.16   # NOW descend low into the formed city
+t=15.0         pos=0,0.12,0     dist=1.4   yaw=1.40  pitch=0.32   # descend, yaw settles to front
+t=@@drop       pos=0,0.12,0     dist=1.2   yaw=1.44  pitch=0.26   # logo→AUSTIN morph at mid-height
+t=27.0         pos=-0.1,0.05,0  dist=0.9   yaw=1.46  pitch=0.16   # descend low into the formed city
 t=32.0         pos=0.10,0.04,0  dist=0.78  yaw=1.48  pitch=0.14   # low pass THROUGH the towers
 t=@@breakdown  pos=0,0.12,0     dist=0.95  yaw=1.50  pitch=0.15   # HOLD head-on — the wordmark handwrites
-t=49.0         pos=0,0.12,0     dist=0.94  yaw=1.50  pitch=0.15   # hold longer so the write breathes
+t=49.0         pos=0,0.12,0     dist=0.94  yaw=1.50  pitch=0.15   # hold so the write breathes
 t=@@climax     pos=0,0.14,0     dist=0.95  yaw=1.43  pitch=0.22   # SEATTLE — the curved-earth DOME hero shot
-t=68.0         pos=0,0.18,0     dist=1.15  yaw=1.45  pitch=0.26   # rise out of the dome
-t=@@outro      pos=0,0.22,0     dist=1.45  yaw=1.45  pitch=0.30   # pull back for the credit
-t=88.5         pos=0,0.33,0     dist=1.85  yaw=1.45  pitch=0.46   # rise toward the logo pose → gentle loop seam
+t=66.0         pos=0,0.18,0     dist=1.2   yaw=1.45  pitch=0.28   # rise out of the dome
+t=@@outro      pos=0,0.22,0     dist=1.55  yaw=1.45  pitch=0.36   # pull back to frame the skyline balling up
+t=82.0         pos=0,0.30,0     dist=1.82  yaw=1.45  pitch=0.46   # the bitterbal becomes the logo…
+t=88.5         pos=0,0.35,0     dist=1.9   yaw=1.45  pitch=0.50   # …at the intro pose → seamless loop
