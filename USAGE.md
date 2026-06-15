@@ -708,6 +708,7 @@ A `.show` has four kinds of section — see [`assets/example.show`](assets/examp
 | `[seq]` | the **hero** morph timeline — verbatim [`.seq`](#sequences) syntax |
 | `[compose]` | the **stage** of placed objects — verbatim [`.compose`](#composition--the-stage-martin_compose) syntax |
 | `[camera]` | a music-timed **[camera track](#live-keyboard-controls)** — order-free `t=<s> pos=x,y,z dist= yaw= pitch=` lines. `t` is seconds **or `@@anchor`** (`t=@@drop` locks the keyframe to a music section, like a seq part) |
+| `[sync]` | a music-timed **look track** (automation) — same `t=<s\|@@anchor>` grammar, but the channels are the global look knobs: `flash`, `bg_dim`, `beat`. Each is smoothstep-interpolated between keyframes (e.g. `t=@@drop flash=0.6 bg_dim=0.3 beat=1.3`), so the bloom swells into the drop, the backdrop dims through the climax, the beat-reactivity ramps to the peak — instead of one static value all show. Per-Shot `flash:`/`beat:` still layer on top; no `[sync]` = the static `MARTIN_*` values. |
 
 It's deliberately pure sugar: the file **expands into the env** (the settings become `MARTIN_*`, the
 `[seq]`/`[compose]` bodies become `MARTIN_SEQ`/`MARTIN_COMPOSE`), so everything above works exactly

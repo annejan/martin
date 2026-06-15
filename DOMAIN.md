@@ -284,9 +284,12 @@ Aliasing is idiomatic in martin's parsers, so every DSL rename is additive and b
     now per-Shot `flash:<strength>` (cut-bloom override of `MARTIN_FLASH`), `^name:<amp>` (deform
     strength scale over `MARTIN_DEFORM_AMP`), and `beat:<scale>` (beat-bounce reaction, `0` = still) —
     so the kick reaction rides only on chosen Shots, not the whole show.
+  - **SyncTrack / Automation ✅ LANDED.** The Rocket step: a `[sync]` look-track keyframes the global
+    knobs (`flash`, `bg_dim`, `beat`) over the score clock, smoothstep-interpolated, same `t=`/`@@anchor`
+    grammar as `[camera]` (`src/sync.rs`; each consumer reads its own knob, no system-ordering). So the
+    bloom swells into the drop, the backdrop dims through the climax, etc. Extensible to more knobs.
   - **Still deferred:** per-Shot `density` (hard — the morph needs a shared splat count, so it means
-    render-time opacity/subsampling, not budget); the **SyncTrack / Automation** generalisation (the
-    Rocket step — keyframe any knob over time). Sequenced by which Showbook engine-vraag first needs them.
+    render-time opacity/subsampling, not budget). Sequenced by which Showbook engine-vraag needs it.
 
 ## 10. Validation — the acceptance test
 
