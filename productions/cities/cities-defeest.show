@@ -18,7 +18,7 @@ kind = demo
 pair = match
 budget = 1200000              # crisp (override MARTIN_MORPH_COUNT=250000/500000 for previews)
 ply = austin_run/exports/austin_tight.ply
-score = productions/intro/score.txt
+score = productions/cities/score.txt   # moody A-minor synthwave night-drive (this production's own track)
 flash = 0.25
 bg_dim = 0.4
 pw_step = 0.35
@@ -28,7 +28,7 @@ pw_splat = 0.004
 [reel]
 glb:defeest.glb           @@intro      @5,5    beat:0   backdrop:stars                            # deFEEST mesh ⇄ blobs → city
 splat:austin_tight.ply    @@drop       @6,7,0  ~morph  beat:0.8                 backdrop:stars      # AUSTIN — night, calm
-splat:nyc_tight.ply                    @6,7,0  ~morph  beat:1.4  flash:0.5  ^turbulence:0.2  backdrop:stars  # NEW YORK — churn, punch
+splat:nyc_tight.ply                    @6,7,0  ~morph  beat:1.4  flash:0.5  ^turbulence:0.2  raster:position  backdrop:stars  # NEW YORK — RAINBOW shader city (the vet drop), churn, punch
 splat:chicago_tight.ply   @@breakdown  @6,7,0  ~morph  beat:1.0  ^wind:0.25     backdrop:grid       # CHICAGO — the grid + wind
 splat:seattle_tight.ply   @@climax     @16,7,0 ~morph  beat:1.6  flash:0.5  ^ripple:0.15  backdrop:rings   # SEATTLE — water, climax, holds
 mesh:bitterbal.glb        @@outro      @2,6,0  ~morph  tint:fry  beat:1.0       backdrop:stars      # the SKYLINE balls up into a giant DEEP-FRIED BITTERBAL
@@ -38,7 +38,7 @@ mesh:defeest.glb          rot:180,0,0  @3,5    ~morph  beat:0                   
 # the credit shows during Seattle. All gone before the bitterbal/logo finale so it reads clean.
 [stage]
 text:deFEEST          @0,0.26,0    *0.42  ~pen-write  tint:brand                in breakdown  out outro   # wordmark handwrites in, blue→gold
-mesh:bitterbal.glb    @0.22,0.08,0.12 *0.08  spin 18,40,7  ^turbulence:0.3  drift 0.012,0,-0.01  ~morph  tint:fry  in drop  out breakdown  # the snack motif, drifting
+mesh:bitterbal.glb    @0.22,0.08,0.12 *0.08  spin 17,43,11  bob 0.03  ^turbulence:0.3  drift 0.013,0,-0.009  ~morph  tint:fry  in drop  out breakdown  # the snack motif — coprime spin/bob → organic, never-repeating tumble
 text:Imagery ©Google  @0,-0.4,0    *0.5   ~fade  tint:brand                    in climax  out outro       # credit during Seattle, brand gold
 
 # camera: high raked establishing on the logo → dive → city tour (frontal through the write) → the DOME

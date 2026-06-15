@@ -1,0 +1,92 @@
+# productions/cities/score.txt — the "cities-defeest" track: a moody, NOCTURNAL melodic-synthwave
+# night drive over morphing city skylines (Austin/NYC/Chicago/Seattle). A minor, 124 BPM, ~89 s
+# (46 bars) so the show's @@anchors land exactly where the intro track's do.
+#
+# KEY:  A minor — progression Am F C G  (i · VI · III · VII), the classic emotional synthwave loop;
+#       it leans on G→Am pull, so the last bar tugs straight back into the top → seamless loop.
+# MOOD: cinematic, after-dark, neon-on-wet-glass. Deep sub bass + sidechain pump = the engine; a
+#       wistful, memorable lead hook that floats high over the city; a sparse, vulnerable breakdown
+#       before a euphoric climax; a soft outro that resolves on Am and hands cleanly back to the top.
+bpm 124
+chords Am F C G
+
+# darker, wider, wetter than the sunny intro: woozbass ON for the night-drive low end, more reverb
+# wash + shimmer for the neon air, restrained donk/house bite, atmosphere up for the skyline haze.
+set lead=0.82 sub=0.5 supersaw=0.18 choir=0.5 donk=0.12 house=0.1 reverb=0.52 sidechain=0.7 widen=1.9 makeup=1.12 ceiling=0.93 woozbass=0.55 shimmer=0.3 reverbauto=1 hats=0.34 snares=0.42 atmosphere=0.42
+
+# ~46 bars: intro 4 · build 6 · drop 12 · breakdown 4 · climax 12 · outro 8
+section intro 4 4
+section build 6 5 fill
+section drop 12 8,3 fill
+section breakdown 4 3 fill
+section climax 12 8,3 fill
+section outro 8 7 fill
+
+# night-drive FX: wide walls + risers for lift, shimmer for neon air; no jets/impacts (it glides).
+build.fx: riser shimmer
+drop.fx: wall house riser shimmer
+breakdown.fx: shimmer
+climax.fx: wall house riser shimmer casio
+outro.fx: wall casio shimmer
+
+# --- drums: driving four-on-floor with a backbeat clap; offbeat hats; sparse skank stabs ---
+intro.kick p0: x... .... .... ....
+intro.hat p0: ..x. ..x. ..x. ..x.
+build.kick p0: x... .... x... ....
+build.hat p0: ..x. ..x. ..x. ..x.
+build.kick fill: x... x... x.x. xxxx
+build.snare fill: ..x. ..x. x.x. xxxx
+build.hat fill: x.xx x.xx x.xx xxxx
+drop.kick p0: x... x... x... x...
+drop.kick p1: x... x... x... x...
+drop.snare p0: .... x... .... x...
+drop.snare p1: .... x... .... x...
+drop.hat p0: ..x. ..x. ..x. ..x.
+drop.hat p1: x.xx x.xx x.xx x.xx
+drop.kick fill: x.x. xxxx x.x. xxxx
+drop.snare fill: ..x. ..x. x.x. xxxx
+drop.hat fill: xxxx xxxx xxxx xxxx
+drop.stab p0: ..x. .... ..x. ....
+drop.stab p1: ..x. .... ..x. ....
+breakdown.kick p0: x... .... .... ....
+breakdown.hat p0: ..x. ..x. ..x. ..x.
+breakdown.snare fill: .... .... ..x. .xxx
+climax.kick p0: x... x... x... x...
+climax.kick p1: x... x... x... x...
+climax.snare p0: .... x... .... x...
+climax.snare p1: .... x... .... x...
+climax.hat p0: x.xx x.xx x.xx x.xx
+climax.hat p1: xxxx xxxx xxxx xxxx
+climax.kick fill: x.x. xxxx x.x. xxxx
+climax.snare fill: xxxx xxxx xxxx xxxx
+climax.hat fill: xxxx xxxx xxxx xxxx
+climax.stab p0: ..x. .... ..x. ....
+climax.stab p1: ..x. .... ..x. ....
+outro.kick p0: x... .... x... ....
+outro.hat p0: ..x. ..x. ..x. ..x.
+outro.snare fill: .... .... ..x. .xxx
+
+# --- lead: the night-drive HOOK — a wistful A-minor line over Am F C G (4-bar phrase, loops). It
+#     climbs to the high C5/E5 over C, then descends through G back to E/A so it pulls into the loop.
+build.lead p0: A4 . C5 .  E5 . . .  C5 . A4 .  . . . .   F4 . A4 .  C5 . . .  A4 . F4 .  . . . .   E4 . G4 .  C5 . E5 .  C5 . G4 .  . . . .   D5 . B4 .  G4 . . .  E4 . G4 .  A4 . . .
+drop.lead p0: A4 . C5 .  E5 . . .  C5 . A4 .  . . . .   F4 . A4 .  C5 . . .  A4 . F4 .  . . . .   E4 . G4 .  C5 . E5 .  C5 . G4 .  . . . .   D5 . B4 .  G4 . . .  E4 . G4 .  A4 . . .
+breakdown.lead p0: A4 . . .  E5 . . .  . . C5 .  . . A4 .   F4 . . .  C5 . . .  . . A4 .  . . . .   E4 . . .  E5 . . .  . . C5 .  . . G4 .   D5 . . .  B4 . . .  G4 . . .  A4 . . .
+climax.lead p0: A4 . C5 .  E5 . . .  C5 . A4 .  . . E5 .   F4 . A4 .  C5 . . .  A4 . F4 .  . . C5 .   E4 . G4 .  C5 . E5 .  C5 . G4 .  . . E5 .   D5 . B4 .  G4 . . .  E4 . G4 .  A4 . . .
+outro.lead p0: A4 . C5 .  E5 . . .  C5 . A4 .  . . . .   F4 . A4 .  C5 . . .  A4 . F4 .  . . . .   E4 . G4 .  C5 . E5 .  C5 . G4 .  . . . .   D5 . B4 .  G4 . . .  E4 . . .  A4 . . .
+
+# --- arp: a glassy 1/16 pluck ostinato tracing the chord tones (1-bar, loops under everything) ---
+drop.arp p0: A4 . E5 .  C5 . E5 .  A4 . E5 .  C5 . E5 .
+climax.arp p0: A4 . E5 .  C5 . E5 .  A4 . E5 .  C5 . E5 .
+
+# --- bass: deep night-drive root pulse, octave bounce on roots A F C G (4-bar phrase) ---
+build.bass p0: A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F1 . . .  F2 . F1 .  . . F2 .  F1 . . .   C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   G1 . . .  G2 . G1 .  . . G2 .  G1 . . .
+drop.bass p0: A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F1 . . .  F2 . F1 .  . . F2 .  F1 . . .   C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   G1 . . .  G2 . G1 .  . . G2 .  G1 . . .
+breakdown.bass p0: A1 . . .  . . . .  . . A1 .  . . . .   F1 . . .  . . . .  . . F1 .  . . . .   C2 . . .  . . . .  . . C2 .  . . . .   G1 . . .  . . . .  . . G1 .  . . . .
+climax.bass p0: A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F1 . . .  F2 . F1 .  . . F2 .  F1 . . .   C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   G1 . . .  G2 . G1 .  . . G2 .  G1 . . .
+outro.bass p0: A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F1 . . .  F2 . F1 .  . . F2 .  F1 . . .   C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   G1 . . .  G2 . G1 .  . . G2 .  G1 . . .
+
+# dynamics: long nocturnal swell — quiet wistful intro, building lift, full drop, an intimate hush in
+# the breakdown, a euphoric climax, then a gentle fade that lands soft so the loop seam disappears.
+gain intro 0.25>0.5 build 0.45>0.95 drop 1.0 breakdown 0.4>0.5 climax 0.8>1.1 outro 0.95>0.0
+sub intro 0.3 build 0.4>0.7 drop 0.85 breakdown 0.35 climax 0.85 outro 0.6>0.2
+mids intro 0.2>0.4 build 0.4>0.8 drop 0.95 breakdown 0.4 climax 1.0 outro 0.7>0.25
