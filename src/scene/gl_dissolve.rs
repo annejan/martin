@@ -264,22 +264,10 @@ mod tests {
 
     fn part(hold: f32, morph: f32) -> Shot {
         Shot {
-            content: PartContent::Text("x".into()),
             hold,
             morph,
             bulge: 0.0,
-            transition: None,
-            anchor: None,
-            deform: None,
-            out: None,
-            rot: None,
-            cluster: None,
-            bg: None,
-            raster: None,
-            flash: None,
-            deform_amp: None,
-            beat: None,
-            tint: None,
+            ..Shot::base(PartContent::Text("x".into()))
         }
     }
 

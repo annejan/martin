@@ -33,6 +33,32 @@ pub(crate) struct Shot {
     pub tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow|brand` → recolour this shape
 }
 
+impl Shot {
+    /// A shot with `content` and every effect/modifier at its default (no transition/deform/tint/…).
+    /// Callers spell only the fields they set and fill the rest with `..Shot::base(content)`, so a new
+    /// `Shot` field doesn't ripple into every construction site (the timing defaults match `parse_seq`).
+    pub(crate) fn base(content: PartContent) -> Self {
+        Self {
+            content,
+            hold: 1.5,
+            morph: 3.0,
+            bulge: 0.9,
+            transition: None,
+            anchor: None,
+            deform: None,
+            out: None,
+            rot: None,
+            cluster: None,
+            bg: None,
+            raster: None,
+            flash: None,
+            deform_amp: None,
+            beat: None,
+            tint: None,
+        }
+    }
+}
+
 /// The whole show: a list of shots + the gaussian budget every shot is resampled to.
 #[derive(Resource)]
 pub(crate) struct Sequence {

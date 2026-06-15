@@ -261,22 +261,10 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
 
     if let Ok(text) = std::env::var("MARTIN_TEXT") {
         let part = Shot {
-            content: PartContent::Text(text),
             hold: 2.0,
             morph: 3.0,
             bulge: 0.0,
-            transition: None,
-            anchor: None,
-            deform: None,
-            out: None,
-            rot: None,
-            cluster: None,
-            bg: None,
-            raster: None,
-            flash: None,
-            deform_amp: None,
-            beat: None,
-            tint: None,
+            ..Shot::base(PartContent::Text(text))
         };
         return (
             Sequence {
@@ -300,41 +288,22 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
     }
     let bulge = crate::envvar::or("MARTIN_BULGE", 0.9);
     let mut parts = vec![Shot {
-        content: PartContent::Splats(side_by_side(names.iter().map(String::as_str))),
         hold: 2.0,
         morph: 3.0,
         bulge: 0.0,
-        transition: None,
-        anchor: None,
-        deform: None,
-        out: None,
-        rot: None,
-        cluster: None,
-        bg: None,
-        raster: None,
-        flash: None,
-        deform_amp: None,
-        beat: None,
-        tint: None,
+        ..Shot::base(PartContent::Splats(side_by_side(
+            names.iter().map(String::as_str),
+        )))
     }];
     if let Ok(reform) = std::env::var("MARTIN_REFORM") {
         parts.push(Shot {
-            content: PartContent::Splats(vec![(file_name_of(&reform), Vec3::ZERO)]),
             hold: 2.0,
             morph: 3.5,
             bulge,
-            transition: None,
-            anchor: None,
-            deform: None,
-            out: None,
-            rot: None,
-            cluster: None,
-            bg: None,
-            raster: None,
-            flash: None,
-            deform_amp: None,
-            beat: None,
-            tint: None,
+            ..Shot::base(PartContent::Splats(vec![(
+                file_name_of(&reform),
+                Vec3::ZERO,
+            )]))
         });
     }
     (Sequence { parts, budget }, root)

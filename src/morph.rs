@@ -96,19 +96,24 @@ fn morton3(p: [f32; 3], lo: [f32; 3], inv: [f32; 3]) -> u32 {
 
 /// Morton-sort a gaussian set over its own bounds and resample to exactly `n`, so consecutive
 /// parts pair k-th↔k-th in spatial order (coherent flow). Up/down-samples as needed.
-pub fn resample_morton(mut v: Vec<Gaussian3d>, n: usize) -> Vec<Gaussian3d> {
-    if v.is_empty() || n == 0 {
-        return Vec::new();
-    }
-    let mut lo = [f32::MAX; 3];
-    let mut hi = [f32::MIN; 3];
-    for g in &v {
+/// Axis-aligned bounds `(min, max)` over a cloud's positions (`[MAX;3], [MIN;3]` when empty).
+fn bounds(gs: &[Gaussian3d]) -> ([f32; 3], [f32; 3]) {
+    let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
+    for g in gs {
         let p = g.position_visibility.position;
         for k in 0..3 {
             lo[k] = lo[k].min(p[k]);
             hi[k] = hi[k].max(p[k]);
         }
     }
+    (lo, hi)
+}
+
+pub fn resample_morton(mut v: Vec<Gaussian3d>, n: usize) -> Vec<Gaussian3d> {
+    if v.is_empty() || n == 0 {
+        return Vec::new();
+    }
+    let (lo, hi) = bounds(&v);
     let inv = [
         1.0 / (hi[0] - lo[0]).max(1e-6),
         1.0 / (hi[1] - lo[1]).max(1e-6),
@@ -139,14 +144,7 @@ pub fn match_reorder(
         [c[0], c[1], c[2]]
     };
     // grid bounds over the target positions
-    let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
-    for g in &target {
-        let p = pos(g);
-        for k in 0..3 {
-            lo[k] = lo[k].min(p[k]);
-            hi[k] = hi[k].max(p[k]);
-        }
-    }
+    let (lo, hi) = bounds(&target);
     let res: i32 = (n as f64).cbrt().round().clamp(16.0, 128.0) as i32;
     let span = [
         (hi[0] - lo[0]).max(1e-6),
@@ -289,14 +287,7 @@ pub fn fade_of(shape: &[Gaussian3d]) -> Vec<Gaussian3d> {
 /// scatter. Great on a `mesh:`/`glb:` logo: svg-flat → mesh → splats in one move.
 pub fn flatten_of(shape: &[Gaussian3d]) -> Vec<Gaussian3d> {
     // the depth axis = the one with the smallest extent (a logo is wide+tall, thin in depth).
-    let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
-    for g in shape {
-        let p = g.position_visibility.position;
-        for k in 0..3 {
-            lo[k] = lo[k].min(p[k]);
-            hi[k] = hi[k].max(p[k]);
-        }
-    }
+    let (lo, hi) = bounds(shape);
     let thin = (0..3)
         .min_by(|&a, &b| (hi[a] - lo[a]).total_cmp(&(hi[b] - lo[b])))
         .unwrap_or(2);
@@ -636,14 +627,7 @@ pub fn extent_of(v: &[Gaussian3d]) -> f32 {
     if v.is_empty() {
         return 0.0;
     }
-    let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
-    for g in v {
-        let p = g.position_visibility.position;
-        for k in 0..3 {
-            lo[k] = lo[k].min(p[k]);
-            hi[k] = hi[k].max(p[k]);
-        }
-    }
+    let (lo, hi) = bounds(v);
     (0..3).map(|k| hi[k] - lo[k]).fold(0.0, f32::max)
 }
 
