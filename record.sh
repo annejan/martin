@@ -27,7 +27,15 @@ if [ -z "${MARTIN_MUTE:-}" ]; then
 fi
 
 echo "==> recording the timeline -> $FR"
-MARTIN_RECORD="$FR" BEVY_ASSET_ROOT="$HERE" "$BIN"
+# A long 1.2M capture wedges the RADV GPU and martin then PANICS on shutdown — but only AFTER every
+# frame is written. So don't let that exit code abort the mux (set -e); the frame-count check below
+# is the real gate. (`|| true` keeps the panic from killing the script.)
+MARTIN_RECORD="$FR" BEVY_ASSET_ROOT="$HERE" "$BIN" || echo "==> (capture process exited nonzero — frames are written; continuing to mux)"
+NF_CHECK=$(find "$FR" -maxdepth 1 -name 'frame_*.png' | wc -l)
+if [ "$NF_CHECK" -lt 2 ]; then
+  echo "==> ERROR: no frames captured ($NF_CHECK) — aborting" >&2
+  exit 1
+fi
 
 # Frame rate: honour MARTIN_PREVIEW_FPS (a fast low-fps preview render) so the mux matches the
 # frames martin actually produced; default 60. Duration + audio sync stay correct at any fps.
