@@ -20,8 +20,8 @@ use crate::scene::sequence::{SeqState, Sequence};
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, SeqClock, cloud_base_rotation};
 use crate::score;
 
-const COMPOSE_MORPH: f32 = 2.6; // how long a `~transition` compose object takes to assemble in (s) —
-// long enough that a pen-write actually reads as the letters being drawn in
+const COMPOSE_MORPH: f32 = 3.6; // how long a `~transition` compose object takes to assemble in (s) —
+// long enough that a pen-write breathes as the letters are drawn in stroke by stroke
 
 /// One object placed on the composition stage: a source + where it sits + how it moves.
 #[derive(Clone)]

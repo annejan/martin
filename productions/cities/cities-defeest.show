@@ -1,7 +1,8 @@
-# martin — CITIES · deFEEST: the shareable loop (rev. after an art-direction pass). TWO LAYERS:
-#   LAYER 1 [reel]  — deFEEST logo (mesh→blob) → low pair=match morph tour Austin→NYC→Chicago→Seattle.
-#   LAYER 2 [stage] — the deFEEST wordmark HANDWRITES in (single-stroke pen-write, brand blue→gold) over
-#                     the skyline, a small tumbling deep-fried bitterbal drifts through, then the credit.
+# martin — CITIES · deFEEST: the shareable loop (rev. 3, after two art-direction passes). TWO LAYERS:
+#   LAYER 1 [reel]  — deFEEST logo (mesh→blob) → low pair=match tour. Each city gets its OWN sky +
+#                     weather + pulse so the four feel like four places, not one grey texture.
+#   LAYER 2 [stage] — the deFEEST wordmark HANDWRITES in (single-stroke, brand blue→gold) over the
+#                     skyline while a deep-fried bitterbal tumbles through the same beat, then the credit.
 #
 #   live loop:  MARTIN_LOOP=1 MARTIN_SHOW=productions/cities/cities-defeest.show cargo +nightly run --release
 #   record:     MARTIN_SHOW=productions/cities/cities-defeest.show ./record.sh cities-defeest.mp4
@@ -15,36 +16,38 @@ pair = match                  # nearest same-colour pairing → straight, no-bal
 budget = 1200000              # crisp (override MARTIN_MORPH_COUNT=250000/500000 for fast previews)
 ply = austin_run/exports/austin_tight.ply
 score = productions/intro/score.txt
-flash = 0.25                  # gentle global cut-bloom (the logo gold was clipping at 0.4)
-pw_splat = 0.004              # thin pen line — reads as a drawn stroke, not extruded blocks
+flash = 0.25                  # gentle global cut-bloom; per-Shot flash: punches only NYC + Seattle
+bg_dim = 0.4                  # keep the per-city backdrops as backdrops behind the splats
+pw_step = 0.35                # denser pen samples → the handwriting reveal feels drawn, not stamped
+pw_splat = 0.004              # thin pen line — a drawn stroke, not extruded blocks
 
-# LAYER 1 — logo mesh→blob, then the slow pair=match city tour. flash on the drop = the logo→city snap.
+# LAYER 1 — logo mesh→blob, then the tour. Each city: a distinct backdrop (sky), ^weather, and beat
+# pulse. flash only on NYC (drop energy) + Seattle (climax) — asymmetry keeps the dynamics alive.
 [reel]
-glb:defeest.glb           @@intro      @5,5    beat:0   backdrop:stars                      # deFEEST mesh ⇄ blobs
-splat:austin_tight.ply    @@drop       @6,7,0  ~morph  beat:0  flash:0.55  backdrop:stars     # logo → AUSTIN (snap)
-splat:nyc_tight.ply                    @6,7,0  ~morph  beat:1.2  backdrop:stars               # AUSTIN → NEW YORK
-splat:chicago_tight.ply   @@breakdown  @6,7,0  ~morph  beat:0  backdrop:stars                 # NEW YORK → CHICAGO
-splat:seattle_tight.ply   @@climax     @32,7,0 ~morph  beat:1.5  flash:0.5  backdrop:stars     # CHICAGO → SEATTLE (holds)
+glb:defeest.glb           @@intro      @5,5    beat:0   backdrop:stars                            # deFEEST mesh ⇄ blobs
+splat:austin_tight.ply    @@drop       @6,7,0  ~morph  beat:0.8                 backdrop:warp       # AUSTIN — heat-haze sky, calm
+splat:nyc_tight.ply                    @6,7,0  ~morph  beat:1.4  flash:0.5  ^turbulence:0.2  backdrop:stars  # NEW YORK — night, churn, punch
+splat:chicago_tight.ply   @@breakdown  @6,7,0  ~morph  beat:1.0  ^wind:0.25     backdrop:grid       # CHICAGO — the grid + wind (windy city)
+splat:seattle_tight.ply   @@climax     @32,7,0 ~morph  beat:1.6  flash:0.5  ^ripple:0.15  backdrop:rings   # SEATTLE — water ripple, climax punch, holds
 
-# LAYER 2 — deFEEST handwrites in OVER the city (single-stroke, brand gradient), a small boiling
-# bitterbal drifts through the corner, then the credit. (text:~pen-write now builds real handwriting.)
+# LAYER 2 — deFEEST handwrites in (single-stroke, brand gradient); the bitterbal tumbles through the
+# SAME beat (snack joins the brand moment), bigger + closer; credit sits on black below the horizon.
 [stage]
-text:deFEEST          @0,0.26,0    *0.42  ~pen-write  tint:brand               in breakdown  out outro   # wordmark handwrites in, blue→gold
-mesh:bitterbal.glb    @0.46,0.24,-0.05 *0.055  spin 18,40,7  ^turbulence:0.3  drift 0.012,0.002,0  ~morph  tint:fry  in drop  out climax  # small boiling bitterbal, drifts through
-text:Imagery ©Google  @0,-0.34,0   *0.46  ~fade                                in outro                  # credit, readable, to the loop seam
+text:deFEEST          @0,0.26,0    *0.42  ~pen-write  tint:brand                in breakdown  out outro   # wordmark handwrites in, blue→gold
+mesh:bitterbal.glb    @0.30,0.10,0.4  *0.16  spin 18,40,7  ^turbulence:0.3  drift 0.008,0,-0.01  ~morph  tint:fry  in breakdown  out climax  # boiling bitterbal, through the write moment
+text:Imagery ©Google  @0,-0.42,0   *0.55  ~fade  tint:brand                    in outro                  # credit on black, brand gold
 
-# camera: CINEMATIC but FRONTAL THROUGH THE WRITE — high raked establishing on the logo (with a yaw
-# drift so it turns into frame) → dive → low pass through the towers → HOLD near head-on (yaw ~1.50)
-# while the wordmark handwrites at the breakdown → seattle → rise + pull back toward the logo pose so
-# the loop seam (through black) is gentle.
+# camera: high raked establishing (yaw settles to front) → a REAL dive UNDER the logo plane → low pass
+# through the towers → HOLD head-on while the wordmark handwrites → the DOME hero shot on the climax →
+# pull back toward the logo pose so the loop seam (through black) is gentle.
 [camera]
 t=@@intro      pos=0,0.35,0     dist=1.9   yaw=1.32  pitch=0.50   # logo: high + raked, establishing
-t=15.0         pos=0,0.10,0     dist=1.0   yaw=1.46  pitch=0.20   # DIVE down + yaw drifts the logo into frame
-t=@@drop       pos=-0.12,0.03,0 dist=0.8   yaw=1.44  pitch=0.12   # low into NYC, near-frontal
+t=15.0         pos=0,0.06,0     dist=0.7   yaw=1.40  pitch=0.05   # REAL dive — under the logo plane, yaw settled front
+t=@@drop       pos=-0.12,0.03,0 dist=0.8   yaw=1.44  pitch=0.12   # low into AUSTIN/NYC, near-frontal
 t=32.0         pos=0.10,0.0,0   dist=0.72  yaw=1.48  pitch=0.09   # low pass THROUGH the towers
 t=@@breakdown  pos=0,0.12,0     dist=0.95  yaw=1.50  pitch=0.15   # HOLD head-on — the wordmark handwrites
-t=47.0         pos=0,0.12,0     dist=0.92  yaw=1.49  pitch=0.15   # still frontal, the write finishes
-t=@@climax     pos=0,0.06,0     dist=0.82  yaw=1.43  pitch=0.12   # SEATTLE, frontal-ish (wordmark stays readable)
-t=68.0         pos=0,0.18,0     dist=1.1   yaw=1.45  pitch=0.24   # rise out of the skyline
-t=@@outro      pos=0,0.22,0     dist=1.45  yaw=1.45  pitch=0.30   # pull back, keep the skyline edge, for the credit
+t=49.0         pos=0,0.12,0     dist=0.94  yaw=1.50  pitch=0.15   # hold longer so the write breathes
+t=@@climax     pos=0,0.14,0     dist=0.95  yaw=1.43  pitch=0.22   # SEATTLE — the curved-earth DOME hero shot
+t=68.0         pos=0,0.18,0     dist=1.15  yaw=1.45  pitch=0.26   # rise out of the dome
+t=@@outro      pos=0,0.22,0     dist=1.45  yaw=1.45  pitch=0.30   # pull back for the credit
 t=88.5         pos=0,0.33,0     dist=1.85  yaw=1.45  pitch=0.46   # rise toward the logo pose → gentle loop seam
