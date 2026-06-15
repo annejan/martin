@@ -39,7 +39,8 @@ pub(crate) struct Prop {
     fade: f32,  // fade in/out duration (s)
     transition: Option<Transition>, // `~name`: assemble in from a source cloud (vs a plain fade)
     deform: Option<Deform>, // `^name`: a persistent wobble while it's up
-    tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow`: recolour the sampled splats
+    deform_amp: Option<f32>, // `^name:amp`: scales the deform strength (None = 1.0)
+    tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow|brand`: recolour the sampled splats
 }
 
 impl Prop {
@@ -87,7 +88,10 @@ impl Prop {
             out: self.out,
             fade: self.fade,
             interpolate,
-            deform: self.deform.or(field).map(|d| d.uniforms()),
+            deform: self.deform.or(field).map(|d| {
+                let (mode, amp, freq) = d.uniforms();
+                (mode, amp * self.deform_amp.unwrap_or(1.0), freq)
+            }),
             reveal: self.transition.and_then(|t| t.shader_uniforms()),
         }
     }
@@ -157,6 +161,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         // pull the `~transition` + `^deform` + `tint:` tokens (position-independent), keep the rest.
         let mut transition = None;
         let mut deform = None;
+        let mut deform_amp = None;
         let mut tint = None;
         let toks: Vec<&str> = s
             .split_whitespace()
@@ -170,8 +175,15 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     return false;
                 }
                 if let Some(d) = t.strip_prefix('^') {
-                    match Deform::parse(d) {
-                        Some(x) => deform = Some(x),
+                    // `^name` or `^name:amp` — the optional amp scales this object's deform strength.
+                    let (name, amp) = d.split_once(':').map_or((d, None), |(n, a)| (n, Some(a)));
+                    match Deform::parse(name) {
+                        Some(x) => {
+                            deform = Some(x);
+                            if let Some(a) = amp {
+                                deform_amp = a.parse().ok();
+                            }
+                        }
                         None => eprintln!("compose: unknown deform '^{d}' — ignored"),
                     }
                     return false;
@@ -242,6 +254,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             fade,
             transition,
             deform,
+            deform_amp,
             tint,
         });
     }
@@ -316,7 +329,23 @@ pub(crate) fn build_composition(
             any_model = true;
             continue;
         }
-        let mut raw = part_gaussians(&obj.content, &state, &assets, &root.0);
+        // `text:~pen-write` builds SINGLE-STROKE handwriting gaussians (thin centerline strokes) so
+        // the mode-7 reveal traces real handwriting — same as the reel. Plain text would just get a
+        // filled-outline trace that doesn't read as writing. Other content goes through part_gaussians.
+        let mut raw = match (&obj.content, obj.transition) {
+            (PartContent::Text(s), Some(Transition::PenWrite)) => {
+                let pw_step = crate::envvar::or("MARTIN_PW_STEP", 0.5_f32);
+                let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
+                crate::text::build_text_penwrite_gaussians(
+                    s,
+                    crate::text::TEXT_RGB,
+                    3.0,
+                    pw_step,
+                    pw_splat,
+                )
+            }
+            _ => part_gaussians(&obj.content, &state, &assets, &root.0),
+        };
         if raw.is_empty() {
             continue;
         }

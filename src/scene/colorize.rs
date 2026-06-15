@@ -18,8 +18,10 @@ fn dc(c: f32) -> f32 {
 pub enum Tint {
     /// Deep-fried bitterbal: beige crevices → brown crust peaks (noise-driven).
     Fry,
-    /// Hue wraps around the cloud by direction; value by height.
+    /// A clean left→right spectrum across the cloud's width.
     Rainbow,
+    /// deFEEST brand gradient: blue → gold, left→right (coherent + on-brand).
+    Brand,
 }
 
 impl Tint {
@@ -27,6 +29,7 @@ impl Tint {
         match s.trim().to_ascii_lowercase().as_str() {
             "fry" | "bitterbal" | "deepfry" | "deep-fry" | "brown" => Some(Self::Fry),
             "rainbow" | "candy" | "psych" | "psychedelic" => Some(Self::Rainbow),
+            "brand" | "defeest" | "bluegold" | "blue-gold" => Some(Self::Brand),
             _ => None,
         }
     }
@@ -66,6 +69,7 @@ pub fn apply(splats: &mut [Gaussian3d], tint: Tint) {
         let rgb = match tint {
             Tint::Fry => fry(l),
             Tint::Rainbow => rainbow(l),
+            Tint::Brand => brand(l),
         };
         let sh = &mut g.spherical_harmonic.coefficients;
         sh[0] = dc(rgb[0]);
@@ -91,11 +95,23 @@ fn fry(l: [f32; 3]) -> [f32; 3] {
     ]
 }
 
-/// Rainbow: hue wraps around the cloud by azimuth, lightly modulated by height; full sat, bright.
+/// Rainbow: a clean left→right spectrum across the cloud's width. (Azimuth-mapped hue looked random
+/// on flat text — this reads as an intentional gradient, on a word or a globule alike.)
 fn rainbow(l: [f32; 3]) -> [f32; 3] {
-    let az = l[2].atan2(l[0]) / std::f32::consts::TAU + 0.5; // 0..1 around
-    let h = (az + l[1] * 0.15).rem_euclid(1.0);
-    hsv2rgb(h, 0.9, 1.0)
+    let h = (l[0] * 0.3 + 0.5).rem_euclid(1.0);
+    hsv2rgb(h, 0.82, 1.0)
+}
+
+/// Brand gradient: deFEEST blue → bright yellow, left→right. Coherent + on-brand for the logo.
+fn brand(l: [f32; 3]) -> [f32; 3] {
+    let blue = [0.22, 0.55, 1.0];
+    let gold = [1.0, 0.82, 0.18];
+    let t = smoothstep(l[0] * 0.35 + 0.5);
+    [
+        blue[0] + (gold[0] - blue[0]) * t,
+        blue[1] + (gold[1] - blue[1]) * t,
+        blue[2] + (gold[2] - blue[2]) * t,
+    ]
 }
 
 fn smoothstep(x: f32) -> f32 {
