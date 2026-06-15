@@ -25,7 +25,7 @@ pw_splat = 0.004              # thin pen line — a drawn stroke, not extruded b
 # pulse. flash only on NYC (drop energy) + Seattle (climax) — asymmetry keeps the dynamics alive.
 [reel]
 glb:defeest.glb           @@intro      @5,5    beat:0   backdrop:stars                            # deFEEST mesh ⇄ blobs
-splat:austin_tight.ply    @@drop       @6,7,0  ~morph  beat:0.8                 backdrop:warp       # AUSTIN — heat-haze sky, calm
+splat:austin_tight.ply    @@drop       @6,7,0  ~morph  beat:0.8                 backdrop:stars      # AUSTIN — night, calm open (warp blew out behind the low city)
 splat:nyc_tight.ply                    @6,7,0  ~morph  beat:1.4  flash:0.5  ^turbulence:0.2  backdrop:stars  # NEW YORK — night, churn, punch
 splat:chicago_tight.ply   @@breakdown  @6,7,0  ~morph  beat:1.0  ^wind:0.25     backdrop:grid       # CHICAGO — the grid + wind (windy city)
 splat:seattle_tight.ply   @@climax     @32,7,0 ~morph  beat:1.6  flash:0.5  ^ripple:0.15  backdrop:rings   # SEATTLE — water ripple, climax punch, holds
