@@ -42,9 +42,10 @@ text:Imagery ©Google  @0,-0.42,0   *0.55  ~fade  tint:brand                    
 # pull back toward the logo pose so the loop seam (through black) is gentle.
 [camera]
 t=@@intro      pos=0,0.35,0     dist=1.9   yaw=1.32  pitch=0.50   # logo: high + raked, establishing
-t=15.0         pos=0,0.06,0     dist=0.7   yaw=1.40  pitch=0.05   # REAL dive — under the logo plane, yaw settled front
-t=@@drop       pos=-0.12,0.03,0 dist=0.8   yaw=1.44  pitch=0.12   # low into AUSTIN/NYC, near-frontal
-t=32.0         pos=0.10,0.0,0   dist=0.72  yaw=1.48  pitch=0.09   # low pass THROUGH the towers
+t=15.0         pos=0,0.12,0     dist=1.4   yaw=1.40  pitch=0.32   # descend partway, yaw settles to front
+t=@@drop       pos=0,0.12,0     dist=1.2   yaw=1.44  pitch=0.26   # logo→AUSTIN morph readable at mid-height (brand colours flow into the city)
+t=27.0         pos=-0.1,0.05,0  dist=0.9   yaw=1.46  pitch=0.16   # NOW descend low into the formed city
+t=32.0         pos=0.10,0.04,0  dist=0.78  yaw=1.48  pitch=0.14   # low pass THROUGH the towers
 t=@@breakdown  pos=0,0.12,0     dist=0.95  yaw=1.50  pitch=0.15   # HOLD head-on — the wordmark handwrites
 t=49.0         pos=0,0.12,0     dist=0.94  yaw=1.50  pitch=0.15   # hold longer so the write breathes
 t=@@climax     pos=0,0.14,0     dist=0.95  yaw=1.43  pitch=0.22   # SEATTLE — the curved-earth DOME hero shot
