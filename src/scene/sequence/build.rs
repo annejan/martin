@@ -161,9 +161,9 @@ pub(crate) fn build_sequence(
     // FROM, chosen by its transition (`~name` per part > MARTIN_TRANSITION default > Ball for
     // part 0 / Morph after). `Morph` has no source — it flows from the previous part's shape
     // (with the ball-pulse bulge); the others build a source from the part's own shape.
-    let mut shapes = Vec::new();
-    let mut sources: Vec<Option<Handle<PlanarGaussian3d>>> = Vec::new();
-    let mut out_clouds: Vec<Option<Handle<PlanarGaussian3d>>> = Vec::new();
+    // Build each part's `BuiltShot` directly (the only per-shot data the director reads) — shape +
+    // morph-in origin + out-cloud + the resolved transition/deform/raster/cue, in one pass.
+    let mut shots: Vec<BuiltShot> = Vec::with_capacity(seq.parts.len());
     // MARTIN_PAIR=match (or `pair=match` in [settings]): instead of index-rank Morton pairing — which
     // pinches DISSIMILAR scenes through a centre "ball" — reorder each Morph part so splat k pairs with
     // a nearby, similar-colour splat in the PREVIOUS part (greedy bijective nearest match, cost =
@@ -225,16 +225,33 @@ pub(crate) fn build_sequence(
         };
         // `out:` departure target cloud (faded + displaced) — the part morphs to this as it leaves.
         let out = seq.parts[idx].out.map(|d| d.out_cloud(&shaped, r));
-        sources.push(src.map(|s| assets.add(PlanarGaussian3d::from(s))));
-        out_clouds.push(out.map(|o| assets.add(PlanarGaussian3d::from(o))));
+        let origin = src.map(|s| assets.add(PlanarGaussian3d::from(s)));
+        let out_cloud = out.map(|o| assets.add(PlanarGaussian3d::from(o)));
         // keep this part's shape so the NEXT part can pair-match against it (only needed for pair=match;
         // the clone is gated to avoid copying a big cloud on every render otherwise).
         if pair_match {
             prev_shaped = Some(shaped.clone());
         }
-        shapes.push(assets.add(PlanarGaussian3d::from(shaped)));
+        let shot = &seq.parts[idx];
+        shots.push(BuiltShot {
+            shape: assets.add(PlanarGaussian3d::from(shaped)),
+            origin,
+            out_cloud,
+            transition: tr,
+            deform: deforms[idx],
+            deform_amp: shot.deform_amp,
+            flash: shot.flash,
+            beat: shot.beat,
+            raster: rasters[idx],
+            start: starts[idx],
+            morph: shot.morph,
+            bulge: shot.bulge,
+            out: shot.out,
+            is_gl_mesh: matches!(shot.content, PartContent::GlMesh(_)),
+        });
     }
-    let intro0 = sources[0]
+    let intro0 = shots[0]
+        .origin
         .clone()
         .expect("part 0 always builds a source cloud");
 
@@ -260,7 +277,7 @@ pub(crate) fn build_sequence(
         .spawn((
             GaussianInterpolate::<Gaussian3d> {
                 lhs: PlanarGaussian3dHandle(intro0.clone()),
-                rhs: PlanarGaussian3dHandle(shapes[0].clone()),
+                rhs: PlanarGaussian3dHandle(shots[0].shape.clone()),
             },
             CloudSettings {
                 sort_mode: SortMode::Radix,
@@ -333,43 +350,12 @@ pub(crate) fn build_sequence(
                 idx,
                 entity_rot,
                 part.rot.unwrap_or(Quat::IDENTITY),
-                shapes[idx].clone(),
+                shots[idx].shape.clone(),
                 n,
             );
         }
     }
 
-    // Collapse the index-parallel build outputs into one `BuiltShot` per shot — the only per-shot
-    // data the director reads. Each `Vec` is consumed in lock-step (all are `seq.parts.len()` long).
-    let mut shots = Vec::with_capacity(seq.parts.len());
-    let mut shapes = shapes.into_iter();
-    let mut sources = sources.into_iter();
-    let mut out_clouds = out_clouds.into_iter();
-    for ((((shot, transition), deform), raster), start) in seq
-        .parts
-        .iter()
-        .zip(transitions)
-        .zip(deforms)
-        .zip(rasters)
-        .zip(starts)
-    {
-        shots.push(BuiltShot {
-            shape: shapes.next().expect("one shape per shot"),
-            origin: sources.next().expect("one source per shot"),
-            out_cloud: out_clouds.next().expect("one out-cloud per shot"),
-            transition,
-            deform,
-            deform_amp: shot.deform_amp,
-            flash: shot.flash,
-            beat: shot.beat,
-            raster,
-            start,
-            morph: shot.morph,
-            bulge: shot.bulge,
-            out: shot.out,
-            is_gl_mesh: matches!(shot.content, PartContent::GlMesh(_)),
-        });
-    }
     let built_n = shots.len();
     state.shots = shots;
     state.entity = Some(entity);
