@@ -41,16 +41,22 @@ impl Default for OrbitCam {
     }
 }
 
-/// Place the camera on a sphere around `target` from `yaw`/`pitch`/`dist`. The kick beat-pumps a
-/// transient lunge inward (without mutating the stored `dist`, so it's a clean per-frame offset —
-/// deterministic from the clock, so it bakes identically into recordings).
+/// Place the camera on a sphere around `target` from `yaw`/`pitch`/`dist`. With `MARTIN_CAM_PUMP=<s>`
+/// the kick beat-pumps a transient lunge inward (clean per-frame offset, not stored `dist`, so it
+/// bakes identically into recordings). **Off by default** — the camera shake is nauseating on a long
+/// loop; opt in (e.g. `0.04`) for a single punchy clip.
 fn orbit_camera(
     beat: Option<Res<crate::scene::beat::Beat>>,
     mut q: Query<(&mut Transform, &OrbitCam)>,
+    mut amt: Local<Option<f32>>,
 ) {
-    let pump = beat
-        .map(|b| 1.0 - b.kick * 0.04 * b.intensity)
-        .unwrap_or(1.0);
+    let amt = *amt.get_or_insert_with(|| crate::envvar::or("MARTIN_CAM_PUMP", 0.0_f32));
+    let pump = if amt == 0.0 {
+        1.0
+    } else {
+        beat.map(|b| 1.0 - b.kick * amt * b.intensity)
+            .unwrap_or(1.0)
+    };
     for (mut tf, cam) in &mut q {
         let (sp, cp) = cam.pitch.sin_cos();
         let (sy, cy) = cam.yaw.sin_cos();
