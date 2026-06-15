@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use bevy_gaussian_splatting::PlanarGaussian3d;
 
 pub mod beat;
+pub mod colorize;
 pub mod compose;
 pub mod content;
 pub mod effects;

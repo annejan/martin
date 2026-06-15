@@ -28,8 +28,8 @@ pub(crate) struct Prop {
     content: PartContent,
     pos: Vec3,
     scale: f32,
-    rot: Vec3,                      // static orientation, euler degrees
-    spin: Vec3,                     // auto-rotation, degrees/sec
+    rot: Vec3,                                  // static orientation, euler degrees
+    spin: Vec3,                                 // auto-rotation, degrees/sec
     sway: Vec3, // oscillating rotation amplitude, degrees (swings front-on; for hollow-back splats)
     bob: f32,   // vertical bob amplitude (units)
     drift: Vec3, // translation velocity (units/sec)
@@ -38,6 +38,7 @@ pub(crate) struct Prop {
     fade: f32,  // fade in/out duration (s)
     transition: Option<Transition>, // `~name`: assemble in from a source cloud (vs a plain fade)
     deform: Option<Deform>, // `^name`: a persistent wobble while it's up
+    tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow`: recolour the sampled splats
 }
 
 impl Prop {
@@ -149,13 +150,14 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         if s.is_empty() {
             continue;
         }
-        // pull the `~transition` + `^deform` tokens (position-independent), keep the rest.
+        // pull the `~transition` + `^deform` + `tint:` tokens (position-independent), keep the rest.
         let mut transition = None;
         let mut deform = None;
+        let mut tint = None;
         let toks: Vec<&str> = s
             .split_whitespace()
             .filter(|t| {
-                // a `~`/`^` token is always consumed; warn (don't leak) if it doesn't parse.
+                // a `~`/`^`/`tint:` token is always consumed; warn (don't leak) if it doesn't parse.
                 if let Some(tr) = t.strip_prefix('~') {
                     match Transition::parse(tr) {
                         Some(x) => transition = Some(x),
@@ -167,6 +169,13 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     match Deform::parse(d) {
                         Some(x) => deform = Some(x),
                         None => eprintln!("compose: unknown deform '^{d}' — ignored"),
+                    }
+                    return false;
+                }
+                if let Some(tn) = t.strip_prefix("tint:") {
+                    match crate::scene::colorize::Tint::parse(tn) {
+                        Some(x) => tint = Some(x),
+                        None => eprintln!("compose: unknown tint 'tint:{tn}' — ignored"),
                     }
                     return false;
                 }
@@ -229,6 +238,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             fade,
             transition,
             deform,
+            tint,
         });
     }
     out
@@ -307,7 +317,12 @@ pub(crate) fn build_composition(
             continue;
         }
         crate::morph::normalize_to(&mut raw, NORMALIZE_EXTENT); // centre + ~2 units across
-        let shaped = resample_morton(raw, count);
+        let mut shaped = resample_morton(raw, count);
+        // `tint:` recolours the sampled cloud (e.g. a deep-fried bitterbal) before it's frozen into
+        // the shape + its transition source — so both the held look and the assemble-in are tinted.
+        if let Some(tint) = obj.tint {
+            crate::scene::colorize::apply(&mut shaped, tint);
+        }
         let rot = Quat::from_euler(
             EulerRot::XYZ,
             obj.rot.x.to_radians(),
