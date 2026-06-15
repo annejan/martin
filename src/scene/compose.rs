@@ -14,7 +14,7 @@ use bevy_gaussian_splatting::{
 use crate::camera::{DEFAULT_PITCH, FRONT_YAW, OrbitCam};
 use crate::capture::RecordState;
 use crate::morph::resample_morton;
-use crate::scene::content::{PartContent, parse_source, part_gaussians};
+use crate::scene::content::{PartContent, parse_source, sample_content};
 use crate::scene::effects::{Deform, Transition, source_cloud};
 use crate::scene::sequence::{SeqState, Sequence};
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, SeqClock, cloud_base_rotation};
@@ -329,23 +329,9 @@ pub(crate) fn build_composition(
             any_model = true;
             continue;
         }
-        // `text:~pen-write` builds SINGLE-STROKE handwriting gaussians (thin centerline strokes) so
-        // the mode-7 reveal traces real handwriting — same as the reel. Plain text would just get a
-        // filled-outline trace that doesn't read as writing. Other content goes through part_gaussians.
-        let mut raw = match (&obj.content, obj.transition) {
-            (PartContent::Text(s), Some(Transition::PenWrite)) => {
-                let pw_step = crate::envvar::or("MARTIN_PW_STEP", 0.5_f32);
-                let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
-                crate::text::build_text_penwrite_gaussians(
-                    s,
-                    crate::text::TEXT_RGB,
-                    3.0,
-                    pw_step,
-                    pw_splat,
-                )
-            }
-            _ => part_gaussians(&obj.content, &state, &assets, &root.0),
-        };
+        // `~outline`/`~pen-write` text builds the special stroke gaussians (shared with the reel via
+        // `sample_content`) so the per-particle reveal traces real handwriting; else `part_gaussians`.
+        let mut raw = sample_content(&obj.content, obj.transition, &state, &assets, &root.0);
         if raw.is_empty() {
             continue;
         }

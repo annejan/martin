@@ -15,11 +15,10 @@ use super::model::{BuiltShot, SeqState, Sequence, shot_starts};
 use super::parse::{global_raster, parse_euler_deg};
 use crate::camera::{DEFAULT_PITCH, FRONT_YAW, OrbitCam};
 use crate::morph::{ball_of, resample_morton};
-use crate::scene::content::{PartContent, part_gaussians};
+use crate::scene::content::{PartContent, sample_content};
 use crate::scene::effects::{BALL_SHELL, Deform, Transition, source_cloud};
 use crate::scene::gl_dissolve::spawn_gl_dissolve;
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, cloud_base_rotation};
-use crate::text::{TEXT_RGB, build_text_outline_gaussians, build_text_penwrite_gaussians};
 
 /// Once every referenced splat has loaded, build each part's shape (resampled to the fixed
 /// count) + the intro ball, spawn the single interpolate entity, and frame the union once.
@@ -86,25 +85,14 @@ pub(crate) fn build_sequence(
     // Absolute start time (s) of each shot — the cue timeline (anchors, else laid end-to-end).
     let starts = shot_starts(&seq.parts);
 
-    // read every part's gaussians once, so count==0 can mean "size N to the largest part"
-    // (every part is then resampled to that single N — required by the shared morph output).
-    // pen-write strokes are thin: MARTIN_PW_SPLAT (gaussian size) / MARTIN_PW_STEP (sample
-    // spacing) tune stroke weight — a fat splat blooms the strokes into filled blobs.
-    let pw_step = crate::envvar::or("MARTIN_PW_STEP", 0.5_f32);
-    let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
+    // read every part's gaussians once, so count==0 can mean "size N to the largest part" (every part
+    // is then resampled to that single N — required by the shared morph output). `sample_content`
+    // applies the `~outline`/`~pen-write` text-effect builders, shared with the compose stage.
     let mut raws: Vec<Vec<Gaussian3d>> = seq
         .parts
         .iter()
         .zip(&transitions)
-        .map(|(part, &tr)| match (&part.content, tr) {
-            (PartContent::Text(s), Transition::Outline) => {
-                build_text_outline_gaussians(s, TEXT_RGB, 3.0, 0.7, 0.012)
-            }
-            (PartContent::Text(s), Transition::PenWrite) => {
-                build_text_penwrite_gaussians(s, TEXT_RGB, 3.0, pw_step, pw_splat)
-            }
-            _ => part_gaussians(&part.content, &state, &assets, &root.0),
-        })
+        .map(|(part, &tr)| sample_content(&part.content, Some(tr), &state, &assets, &root.0))
         .collect();
     // `cluster:N` → replicate a part into N scattered, randomly-rotated copies (a "serving", e.g. a
     // pile of bitterballen) BEFORE normalize, so the whole pile frames as one. Downsample per copy

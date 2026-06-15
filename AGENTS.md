@@ -6,9 +6,11 @@ more layers, more morph budget, richer motion — the wow factor wins.
 
 The hardware shapes where to spend: this box is an **AMD Radeon 860M iGPU + a 16-core Ryzen** (see the
 dev-hardware memory). **The iGPU is the bottleneck; the CPU is abundant.** So:
-- **Don't pre-optimise for memory or CPU time.** Heavy CPU precompute (sampling, nearest-match pairing,
+- **Don't pre-optimise for memory, processes, or CPU time — all three are free here.** Use huge buffers,
+  spawn processes/threads freely, burn cycles. Heavy CPU precompute (sampling, nearest-match pairing,
   baking, multi-pass generation) is *free real estate* — use the 16 cores. Parallelise with rayon/threads
   rather than shrinking the work. A 30s one-time build cost for a gorgeous render is a good trade.
+  **We are currently maxing out ONLY the GPU** — RAM and CPU have headroom to spare; reach for them.
 - **The GPU budget is the real constraint** — splat overdraw, fill rate, sort cost. That's where to be
   thoughtful (e.g. grazing camera angles through dense clouds can wedge RADV; budget vs fps).
 - Caveats about "expensive" or "memory-intensive" CPU work are *not* reasons to hold back here. If an

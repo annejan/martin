@@ -228,6 +228,32 @@ pub(crate) fn part_gaussians(
     }
 }
 
+/// Sample a placement's gaussians, applying the text-effect specials that need a *different* builder:
+/// `~outline` traces filled-letter outlines and `~pen-write` builds single-stroke handwriting (both
+/// drive the per-particle reveal shader). Everything else falls through to [`part_gaussians`]. Shared
+/// by the reel (`build_sequence`) and the stage (`compose`) so the text-effect handling can't drift.
+pub(crate) fn sample_content(
+    content: &PartContent,
+    transition: Option<crate::scene::effects::Transition>,
+    state: &SeqState,
+    assets: &Assets<PlanarGaussian3d>,
+    root: &std::path::Path,
+) -> Vec<Gaussian3d> {
+    use crate::scene::effects::Transition;
+    use crate::text::{build_text_outline_gaussians, build_text_penwrite_gaussians};
+    match (content, transition) {
+        (PartContent::Text(s), Some(Transition::Outline)) => {
+            build_text_outline_gaussians(s, TEXT_RGB, 3.0, 0.7, 0.012)
+        }
+        (PartContent::Text(s), Some(Transition::PenWrite)) => {
+            let pw_step = crate::envvar::or("MARTIN_PW_STEP", 0.5_f32);
+            let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
+            build_text_penwrite_gaussians(s, TEXT_RGB, 3.0, pw_step, pw_splat)
+        }
+        _ => part_gaussians(content, state, assets, root),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
