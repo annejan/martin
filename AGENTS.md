@@ -1,5 +1,22 @@
 # Op de Camping
 
+## Philosophy — this is the DEMOSCENE: spend the CPU, dazzle the eye
+martin is a demoscene engine. **Maximalism is the goal, not restraint.** Default toward MORE effects,
+more layers, more morph budget, richer motion — the wow factor wins.
+
+The hardware shapes where to spend: this box is an **AMD Radeon 860M iGPU + a 16-core Ryzen** (see the
+dev-hardware memory). **The iGPU is the bottleneck; the CPU is abundant.** So:
+- **Don't pre-optimise for memory or CPU time.** Heavy CPU precompute (sampling, nearest-match pairing,
+  baking, multi-pass generation) is *free real estate* — use the 16 cores. Parallelise with rayon/threads
+  rather than shrinking the work. A 30s one-time build cost for a gorgeous render is a good trade.
+- **The GPU budget is the real constraint** — splat overdraw, fill rate, sort cost. That's where to be
+  thoughtful (e.g. grazing camera angles through dense clouds can wedge RADV; budget vs fps).
+- Caveats about "expensive" or "memory-intensive" CPU work are *not* reasons to hold back here. If an
+  effect needs a big precompute, build it. Spend cores like they're going out of style.
+
+Recording is offline (headless, deterministic) — there is *no* real-time limit on the CPU side there at
+all; the only ceiling is the per-frame GPU time. Lean into that.
+
 ## Goal
 Transform the "Op de Camping" (Ome Henk, 1995) demoscene track from a basic placeholder into a full-spectrum audio experience. All melodic lines (lead, arp, bass) must remain unchanged — only drums, dynamics, spatiality, and camera are free to modify.
 

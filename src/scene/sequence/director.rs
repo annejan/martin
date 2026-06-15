@@ -166,7 +166,9 @@ pub(crate) fn shot_director(
     let pair_match = *pair_match.get_or_insert_with(|| {
         std::env::var("MARTIN_PAIR").is_ok_and(|v| v.eq_ignore_ascii_case("match"))
     });
-    let k = beat.intensity;
+    // per-shot `beat:<scale>` dials this shot's reaction (0 = still through the drop, >1 = punchier),
+    // so the bounce can ride only on *some* shots instead of the whole show.
+    let k = beat.intensity * s.beat.unwrap_or(1.0);
     if k > 0.0 {
         tf.scale = Vec3::splat(1.0 + beat.kick * 0.05 * k);
         cs.global_opacity += (beat.snare * 0.45 + beat.hat * 0.12) * k;

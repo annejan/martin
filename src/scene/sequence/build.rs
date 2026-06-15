@@ -368,6 +368,7 @@ pub(crate) fn build_sequence(
             deform,
             deform_amp: shot.deform_amp,
             flash: shot.flash,
+            beat: shot.beat,
             raster,
             start,
             morph: shot.morph,

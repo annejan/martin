@@ -278,6 +278,7 @@ mod tests {
             raster: None,
             flash: None,
             deform_amp: None,
+            beat: None,
         }
     }
 

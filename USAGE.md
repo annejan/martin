@@ -276,8 +276,10 @@ splat:a.ply+b.ply                # several splats, auto-arranged side by side
 
 > **Per-Shot look overrides (scene-scoped looks):** `flash:<strength>` flares the cut-bloom on *this*
 > Shot's entry (overrides the global `MARTIN_FLASH` — punch one drop, not every cut); `^deform:<amp>`
-> scales this Shot's wobble (e.g. `^wave:0.4` gentle, `^twist:2` violent) on top of `MARTIN_DEFORM_AMP`.
-> Together with the existing per-Shot `backdrop:` / `raster:`, a Shot fully controls its own look.
+> scales this Shot's wobble (e.g. `^wave:0.4` gentle, `^twist:2` violent) on top of `MARTIN_DEFORM_AMP`;
+> `beat:<scale>` dials this Shot's beat-bounce (`beat:0` = still through the drop, `beat:1.6` = punchier)
+> so the kick reaction rides only on *some* Shots, not the whole show. Together with the existing
+> per-Shot `backdrop:` / `raster:`, a Shot fully controls its own look.
 
 > **Domain vocabulary** (see [`DOMAIN.md`](DOMAIN.md)): the section is `[reel]` and a line is a **Shot**;
 > the modifiers above are the canonical spellings. Older spellings still parse as aliases:

@@ -96,6 +96,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         let mut raster = None;
         let mut flash = None;
         let mut deform_amp = None;
+        let mut beat = None;
         // Pull each modifier token out of the line by its sigil/prefix. A token carrying a known
         // prefix is ALWAYS consumed (never leaks into the head/text) — if it fails to parse we warn,
         // so a typo (`~explod`, `^wave2`) is a visible error, not a silently-dropped effect.
@@ -136,6 +137,11 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                     match f.parse() {
                         Ok(v) => flash = Some(v),
                         Err(_) => eprintln!("seq: bad 'flash:{f}' (need a number) — ignored"),
+                    }
+                } else if let Some(b) = tok.strip_prefix("beat:") {
+                    match b.parse() {
+                        Ok(v) => beat = Some(v),
+                        Err(_) => eprintln!("seq: bad 'beat:{b}' (need a number) — ignored"),
                     }
                 } else if let Some(d) = tok.strip_prefix('^') {
                     // `^name` or `^name:amp` — the optional amp scales this shot's deform strength.
@@ -203,6 +209,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
             raster,
             flash,
             deform_amp,
+            beat,
         });
     }
     parts
@@ -261,6 +268,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
             raster: None,
             flash: None,
             deform_amp: None,
+            beat: None,
         };
         return (
             Sequence {
@@ -298,6 +306,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
         raster: None,
         flash: None,
         deform_amp: None,
+        beat: None,
     }];
     if let Ok(reform) = std::env::var("MARTIN_REFORM") {
         parts.push(Shot {
@@ -315,6 +324,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
             raster: None,
             flash: None,
             deform_amp: None,
+            beat: None,
         });
     }
     (Sequence { parts, budget }, root)

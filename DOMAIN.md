@@ -281,8 +281,9 @@ Aliasing is idiomatic in martin's parsers, so every DSL rename is additive and b
   token / per-move easing is the deferred next step (Stage 4), so the enum isn't a parked label.
 - **Stage 4 — new concepts, on demand (highest blast-radius, last).**
   - **Scene-scoped looks ✅ LANDED.** A Shot owns its whole look: `backdrop:`/`raster:` (already there) +
-    now per-Shot `flash:<strength>` (cut-bloom override of `MARTIN_FLASH`) and `^name:<amp>` (deform
-    strength scale over `MARTIN_DEFORM_AMP`).
+    now per-Shot `flash:<strength>` (cut-bloom override of `MARTIN_FLASH`), `^name:<amp>` (deform
+    strength scale over `MARTIN_DEFORM_AMP`), and `beat:<scale>` (beat-bounce reaction, `0` = still) —
+    so the kick reaction rides only on chosen Shots, not the whole show.
   - **Still deferred:** per-Shot `density` (hard — the morph needs a shared splat count, so it means
     render-time opacity/subsampling, not budget); the **SyncTrack / Automation** generalisation (the
     Rocket step — keyframe any knob over time). Sequenced by which Showbook engine-vraag first needs them.

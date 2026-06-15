@@ -29,6 +29,7 @@ pub(crate) struct Shot {
     pub raster: Option<RasterizeMode>, // `raster:<mode>` → debug shading for this shot (None = MARTIN_RASTER)
     pub flash: Option<f32>, // `flash:<strength>` → cut-bloom on THIS shot's entry (None = MARTIN_FLASH)
     pub deform_amp: Option<f32>, // `^name:<amp>` → this shot's deform strength scale (None = 1.0)
+    pub beat: Option<f32>, // `beat:<scale>` → this shot's beat-bounce reaction (0 = still; None = 1.0)
 }
 
 /// The whole show: a list of shots + the gaussian budget every shot is resampled to.
@@ -52,6 +53,7 @@ pub(crate) struct BuiltShot {
     pub deform: Option<Deform>,
     pub deform_amp: Option<f32>, // per-shot deform strength scale (`^name:amp`); None = 1.0
     pub flash: Option<f32>, // per-shot cut-bloom strength (`flash:N`); None = global MARTIN_FLASH
+    pub beat: Option<f32>,  // per-shot beat-bounce scale (`beat:N`); None = 1.0, 0 = still
     pub raster: RasterizeMode,
     pub start: f32, // absolute start time (s) of this shot
     // copied from the source Shot so the director needs only BuiltShot. (`hold` lives only on the
