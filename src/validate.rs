@@ -80,8 +80,8 @@ pub fn report(
             let de = part.deform.map(|x| format!(" ^{x:?}")).unwrap_or_default();
             let out = part.out.map(|x| format!(" out:{x:?}")).unwrap_or_default();
             let cl = part
-                .cluster
-                .map(|n| format!(" cluster:{n}"))
+                .flock
+                .map(|n| format!(" flock:{n}"))
                 .unwrap_or_default();
             let anchored = if part.anchor.is_some() { " @@" } else { "" };
             println!(

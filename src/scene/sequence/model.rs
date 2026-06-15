@@ -24,8 +24,8 @@ pub(crate) struct Shot {
     pub deform: Option<Deform>, // persistent deform while held (None = none / MARTIN_DEFORM)
     pub out: Option<Departure>, // how the shot LEAVES (`out:name`); None = cross-morph to the next
     pub rot: Option<Quat>, // per-shot orientation (`rot:rx,ry,rz` deg), baked into the shape
-    pub cluster: Option<usize>, // `cluster:N` → N scattered, randomly-rotated copies (a "serving")
-    pub bg: Option<u32>, // `bg:<name>` → background mode from this shot on (BG_OFF hides)
+    pub flock: Option<usize>, // `flock:N` (was `cluster:`) → N scattered, randomly-rotated copies
+    pub backdrop: Option<u32>, // `backdrop:<name>` (was `bg:`) → background mode from this shot on (BG_OFF hides)
     pub raster: Option<RasterizeMode>, // `raster:<mode>` → debug shading for this shot (None = MARTIN_RASTER)
     pub flash: Option<f32>, // `flash:<strength>` → cut-bloom on THIS shot's entry (None = MARTIN_FLASH)
     pub deform_amp: Option<f32>, // `^name:<amp>` → this shot's deform strength scale (None = 1.0)
@@ -48,8 +48,8 @@ impl Shot {
             deform: None,
             out: None,
             rot: None,
-            cluster: None,
-            bg: None,
+            flock: None,
+            backdrop: None,
             raster: None,
             flash: None,
             deform_amp: None,

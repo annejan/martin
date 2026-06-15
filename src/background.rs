@@ -109,7 +109,7 @@ fn spawn_bg(
     }
     let env_mode = std::env::var("MARTIN_BG").ok().map(|s| mode_index(&s));
     let seq_uses_bg = seq
-        .map(|s| s.parts.iter().any(|p| p.bg.is_some()))
+        .map(|s| s.parts.iter().any(|p| p.backdrop.is_some()))
         .unwrap_or(false);
     if env_mode.is_none() && !seq_uses_bg {
         *done = true; // no background anywhere in this show — nothing to spawn
@@ -179,7 +179,7 @@ fn update_bg(
         if let Some(m) = seq.parts[..=active.min(seq.parts.len().saturating_sub(1))]
             .iter()
             .rev()
-            .find_map(|p| p.bg)
+            .find_map(|p| p.backdrop)
         {
             mode = Some(m);
         }

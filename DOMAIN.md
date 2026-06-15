@@ -273,7 +273,9 @@ Aliasing is idiomatic in martin's parsers, so every DSL rename is additive and b
   (the production-kind / asset-budget check, the L1 layer) and **`[scenes]`** (the L2 arc-authoring
   layer that flattens to `[reel]`). Still pending in this stage: nothing.
 - **Stage 2 — internal struct/field renames (no DSL impact). ✅ LANDED.** `Part→Shot`, `count→budget`,
-  `Composed→Prop`, `Waypoint→Key`, the source cloud → `Shot.origin`. Compiler-checked, mechanical.
+  `Composed→Prop`, `Waypoint→Key`, the source cloud → `Shot.origin`, and the fields that lagged their
+  canonical tokens: `Shot.cluster→Shot.flock` (`flock:`) and `Shot.bg→Shot.backdrop` (`backdrop:`). The
+  DSL tokens still alias the old spellings (`cluster:`/`bg:`). Compiler-checked, mechanical.
 - **Stage 3 — small new enums. ✅ LANDED.** `AnchorKind` (`Start|Section|Bar|Beat|Seconds`) — the
   anchor *spelling*; `anchor_seconds` now = `cue(AnchorKind::parse(s))`, the **cue** being the resolved
   seconds (§6). `CameraMove` (`Hold|Orbit|PushIn|PullBack|Sink|Arc|Flythrough`) — inferred per camera

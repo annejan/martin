@@ -101,7 +101,7 @@ pub(crate) fn build_sequence(
     // shot) fall back to 200k here rather than 0 — so this default is intentionally NOT `seq.budget`.
     let cluster_total = crate::envvar::or("MARTIN_MORPH_COUNT", 200_000usize);
     for (raw, part) in raws.iter_mut().zip(&seq.parts) {
-        if let Some(copies) = part.cluster {
+        if let Some(copies) = part.flock {
             let per = (cluster_total / copies.max(1)).max(2_000);
             let one = resample_morton(std::mem::take(raw), per);
             *raw = crate::morph::cluster_of(&one, copies);
@@ -125,7 +125,7 @@ pub(crate) fn build_sequence(
         // mesh later) — don't normalize the placeholder (its zero extent would blow up the scale).
         // a `cluster:` part is already frame-sized by cluster_of (the whole serving ≈ NORMALIZE_EXTENT),
         // so don't re-normalize it (that would re-fit on the 90th-percentile and shrink the pile).
-        if normalize && !matches!(part.content, PartContent::GlMesh(_)) && part.cluster.is_none() {
+        if normalize && !matches!(part.content, PartContent::GlMesh(_)) && part.flock.is_none() {
             let norm = crate::morph::normalize_to(raw, NORMALIZE_EXTENT);
             if i == 0 {
                 scene_norm = norm;

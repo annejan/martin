@@ -91,8 +91,8 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         let mut deform = None;
         let mut out = None;
         let mut rot = None;
-        let mut cluster = None;
-        let mut bg = None;
+        let mut flock = None;
+        let mut backdrop = None;
         let mut raster = None;
         let mut flash = None;
         let mut deform_amp = None;
@@ -124,11 +124,11 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                 } else if let Some(c) = tok.strip_prefix("flock:").or(tok.strip_prefix("cluster:"))
                 {
                     match c.parse() {
-                        Ok(n) => cluster = Some(n),
+                        Ok(n) => flock = Some(n),
                         Err(_) => eprintln!("seq: bad 'flock:{c}' (need an integer) — ignored"),
                     }
                 } else if let Some(b) = tok.strip_prefix("backdrop:").or(tok.strip_prefix("bg:")) {
-                    bg = Some(crate::background::bg_token(b)); // warns + falls back inside
+                    backdrop = Some(crate::background::bg_token(b)); // warns + falls back inside
                 } else if let Some(r) = tok.strip_prefix("raster:") {
                     match parse_raster(r) {
                         Some(m) => raster = Some(m),
@@ -197,8 +197,8 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
             deform,
             out,
             rot,
-            cluster,
-            bg,
+            flock,
+            backdrop,
             raster,
             flash,
             deform_amp,
@@ -332,7 +332,7 @@ mod tests {
         assert_eq!(p[0].transition, Some(Transition::Fade));
         assert_eq!(p[0].deform, Some(Deform::Wave));
         assert_eq!(p[0].out, Some(Departure::Sink));
-        assert_eq!(p[0].cluster, Some(3));
+        assert_eq!(p[0].flock, Some(3));
         assert!(p[0].rot.is_some());
     }
 
