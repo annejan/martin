@@ -24,6 +24,8 @@ pub(crate) fn shot_director(
     clock: Res<crate::scene::SeqClock>,
     flash: Res<FlashStrength>,
     beat: Res<crate::scene::beat::Beat>,
+    // `[sync]` look-track: when it keyframes `flash`, it overrides the global FlashStrength per frame.
+    sync: Option<Res<crate::sync::SyncTrack>>,
     // (amp_scale, speed) for the persistent deform — read from env once. MARTIN_DEFORM_AMP scales the
     // wobble strength (e.g. 0.3 = gentle on a whole scene), MARTIN_DEFORM_SPEED its rate.
     mut deform_tune: Local<Option<(f32, f32)>>,
@@ -139,14 +141,16 @@ pub(crate) fn shot_director(
     // the HDR bloom flares. Strength is the shot's own `flash:N` if set, else the global MARTIN_FLASH;
     // reuses global_opacity. When nothing flashes anywhere, skip the loop so every frame stays
     // byte-identical (the determinism guarantee).
-    let any_flash = flash.0 > 0.0 || shots.iter().any(|sh| sh.flash.is_some_and(|f| f > 0.0));
+    // global flash strength: the `[sync]` track's keyframed value if it has one, else MARTIN_FLASH.
+    let global_flash = sync.as_ref().and_then(|s| s.flash_at(t)).unwrap_or(flash.0);
+    let any_flash = global_flash > 0.0 || shots.iter().any(|sh| sh.flash.is_some_and(|f| f > 0.0));
     let flash = if !any_flash {
         0.0
     } else {
         shots
             .iter()
             .map(|sh| {
-                let strength = sh.flash.unwrap_or(flash.0);
+                let strength = sh.flash.unwrap_or(global_flash);
                 let d = t - sh.start;
                 if strength > 0.0 && (0.0..FLASH_LEN).contains(&d) {
                     let a = 1.0 - d / FLASH_LEN;

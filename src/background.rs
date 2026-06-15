@@ -153,15 +153,24 @@ fn spawn_bg(
 /// Feed the show clock + beat into the background material each frame, and resolve the ACTIVE
 /// mode: the last `bg:` token at-or-before the active part wins (sticky), else the `MARTIN_BG`
 /// default, else hidden. `bg:off` hides the layer for that stretch.
+#[allow(clippy::too_many_arguments)]
 fn update_bg(
     clock: Res<SeqClock>,
     beat: Res<Beat>,
     default_mode: Option<Res<BgDefault>>,
     seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
+    // `[sync]` look-track: when it keyframes `bg_dim`, it overrides the static MARTIN_BG_DIM per frame.
+    sync: Option<Res<crate::sync::SyncTrack>>,
+    mut dim_static: Local<Option<f32>>,
     mut mats: ResMut<Assets<BgMaterial>>,
     mut q: Query<(&MeshMaterial3d<BgMaterial>, &mut Visibility), With<BgQuad>>,
 ) {
+    let dim_static = *dim_static.get_or_insert_with(|| crate::envvar::or("MARTIN_BG_DIM", 1.0_f32));
+    let level = sync
+        .as_ref()
+        .and_then(|s| s.bg_dim_at(clock.t))
+        .unwrap_or(dim_static);
     let mut mode = default_mode.and_then(|d| d.0);
     if let (Some(seq), Some(state)) = (seq, state)
         && state.built
@@ -188,6 +197,7 @@ fn update_bg(
             }
             m.data.time = clock.t;
             m.data.beat = beat.as_vec4();
+            m.data.level = level; // static MARTIN_BG_DIM, or the `[sync]` keyframed value
         }
     }
 }

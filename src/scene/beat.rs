@@ -63,6 +63,8 @@ fn track_beat(
     track: Option<Res<BeatTrack>>,
     score: Res<ScoreRes>,
     clock: Res<SeqClock>,
+    // `[sync]` look-track: when it keyframes `beat`, it overrides the static MARTIN_BEAT intensity.
+    sync: Option<Res<crate::sync::SyncTrack>>,
     mut beat: ResMut<Beat>,
 ) {
     let Some(track) = track else { return };
@@ -71,7 +73,7 @@ fn track_beat(
     beat.snare = pulse(&track.snare, t, 0.13);
     beat.hat = pulse(&track.hat, t, 0.05);
     beat.level = score.0.gain_at(t);
-    beat.intensity = track.intensity;
+    beat.intensity = sync.and_then(|s| s.beat_at(t)).unwrap_or(track.intensity);
 }
 
 /// Registered by `ScenePlugin`: own the `Beat` resource + refresh it each frame before the directors.

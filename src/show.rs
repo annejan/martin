@@ -16,6 +16,7 @@
 #[derive(Default)]
 pub struct Show {
     pub camera: Vec<String>,
+    pub sync: Vec<String>,
 }
 
 /// Expand `MARTIN_SHOW` into the env and return its `[camera]` track. A no-op (empty `Show`) when
@@ -38,6 +39,7 @@ enum Section {
     Scenes,
     Compose,
     Camera,
+    Sync,
 }
 
 impl From<&str> for Section {
@@ -47,6 +49,7 @@ impl From<&str> for Section {
             "scenes" | "arc" => Section::Scenes,
             "stage" | "compose" => Section::Compose,
             "camera" | "cam" => Section::Camera,
+            "sync" | "automation" | "look" => Section::Sync,
             _ => Section::Settings, // `[settings]`, or anything unknown → top-level knobs
         }
     }
@@ -127,6 +130,7 @@ fn parse_and_apply(text: &str) -> Show {
     let (mut seq, mut compose) = (String::new(), String::new());
     let mut scenes = String::new();
     let mut camera = Vec::new();
+    let mut sync = Vec::new();
     for raw in text.lines() {
         let line = raw.trim();
         if let Some(name) = line.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
@@ -163,6 +167,13 @@ fn parse_and_apply(text: &str) -> Show {
                     camera.push(s.to_string());
                 }
             }
+            // `[sync]` look-track lines (kept raw, comment-stripped); parsed after the score is built.
+            Section::Sync => {
+                let s = line.split('#').next().unwrap_or("").trim();
+                if !s.is_empty() {
+                    sync.push(s.to_string());
+                }
+            }
         }
     }
     // `[scenes]` flattens into the reel. If a show has both, the explicit `[reel]` wins (don't double).
@@ -181,7 +192,7 @@ fn parse_and_apply(text: &str) -> Show {
         // SAFETY: the show is parsed at startup, single-threaded, before the Bevy app spawns threads.
         unsafe { std::env::set_var("MARTIN_FLY", "1") };
     }
-    Show { camera }
+    Show { camera, sync }
 }
 
 /// Canonicalise a settings key: the DOMAIN.md domain spelling → the env var the engine reads. Keeps

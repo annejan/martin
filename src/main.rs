@@ -44,6 +44,7 @@ mod score;
 mod serve;
 mod show;
 mod splat_image;
+mod sync;
 mod text;
 mod validate;
 mod waypoints;
@@ -172,6 +173,9 @@ fn main() {
     } else {
         waypoints::Waypoints::from_inline(waypoints::parse_camera(&show.camera, &score))
     };
+    // The `[sync]` look-track: keyframed global knobs (flash/bg_dim/beat) over the music clock —
+    // parsed now the score exists so its keyframes can anchor to sections (`t=@@drop`).
+    let sync_track = sync::parse_sync(&show.sync, &score);
 
     // MARTIN_VALIDATE=1: a dry run — print the parsed timeline (with the parse diagnostics already
     // on stderr) and exit, no window/render. A fast authoring check.
@@ -180,6 +184,7 @@ fn main() {
             &sequence,
             composition.as_deref().unwrap_or(&[]),
             &waypoints,
+            &sync_track,
             &score,
             asset_root.as_deref(),
         );
@@ -253,6 +258,7 @@ fn main() {
         .insert_resource(AssetRoot(asset_root_path))
         .insert_resource(ScoreRes(Arc::new(score)))
         .insert_resource(waypoints)
+        .insert_resource(sync_track)
         .add_plugins((
             CameraPlugin,
             ScenePlugin,

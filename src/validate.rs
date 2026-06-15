@@ -37,10 +37,12 @@ const INTRO_HEAVY_ASSET: u64 = 8 * 1024 * 1024;
 /// Print the parsed show to stdout. Called from `main` before the app is built when MARTIN_VALIDATE
 /// is set; `main` then returns (no window, no render). `asset_root` resolves the referenced files for
 /// the `intro` budget check.
+#[allow(clippy::too_many_arguments)]
 pub fn report(
     seq: &Sequence,
     compose: &[Prop],
     cam: &Waypoints,
+    sync: &crate::sync::SyncTrack,
     score: &Score,
     asset_root: Option<&str>,
 ) {
@@ -122,6 +124,14 @@ pub fn report(
                 "  {t}dist {:.2}  yaw {:.2}  pitch {:.2}  target ({:.1},{:.1},{:.1}){mv}",
                 w.dist, w.yaw, w.pitch, w.target.x, w.target.y, w.target.z,
             );
+        }
+    }
+
+    if !sync.is_empty() {
+        println!("\nsync:     look-track (music-timed automation)");
+        for (knob, keys) in sync.knobs() {
+            let kf: Vec<String> = keys.iter().map(|(t, v)| format!("{t:.0}s={v}")).collect();
+            println!("  {knob:8} {}", kf.join("  "));
         }
     }
     println!();
