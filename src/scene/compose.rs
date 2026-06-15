@@ -20,7 +20,8 @@ use crate::scene::sequence::{SeqState, Sequence};
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, SeqClock, cloud_base_rotation};
 use crate::score;
 
-const COMPOSE_MORPH: f32 = 1.6; // how long a `~transition` compose object takes to assemble in (s)
+const COMPOSE_MORPH: f32 = 2.6; // how long a `~transition` compose object takes to assemble in (s) —
+// long enough that a pen-write actually reads as the letters being drawn in
 
 /// One object placed on the composition stage: a source + where it sits + how it moves.
 #[derive(Clone)]
@@ -87,6 +88,7 @@ impl Prop {
             fade: self.fade,
             interpolate,
             deform: self.deform.or(field).map(|d| d.uniforms()),
+            reveal: self.transition.and_then(|t| t.shader_uniforms()),
         }
     }
 }
@@ -129,6 +131,8 @@ pub(crate) struct ComposeAnim {
     fade: f32,
     interpolate: bool, // a `~transition` object → drive cs.time (assemble), not opacity
     deform: Option<(u32, f32, f32)>, // `^name` deform uniforms (mode, amp, freq)
+    reveal: Option<(u32, f32, u32)>, // per-particle transition shader (mode, softness, axis) — e.g.
+                       // pen-write traces the letters in as it assembles (only while assembling, then off)
 }
 
 /// Parse `MARTIN_COMPOSE` (a file path or inline string). Each line: a `<source>` head (text/splat/
@@ -467,13 +471,29 @@ pub(crate) fn animate_composition(
         // kick thumps the scale (bulge is a no-op on a static cloud, so scale carries it too).
         tf.scale = Vec3::splat(a.base_scale * scale_vis * (1.0 + beat.kick * 0.06 * k));
         if let Some(mut cs) = cs {
-            // a `~transition` object assembles via the morph (cs.time) — its IN-fade is the morph,
-            // so only apply the OUT fade to opacity; a plain object fades both in and out.
-            let op = if a.interpolate { fout } else { vis };
+            // a `~transition` object assembles via the morph (cs.time) — its IN-fade is the morph, so
+            // only the OUT fade touches opacity. BUT it must stay HIDDEN until its `in` cue, else its
+            // source cloud (cs.time=0) renders from t=0 (a bitterbal floating through the intro).
+            let started = a.appear < 0.0 || t >= a.appear;
+            let op = if a.interpolate {
+                if started { fout } else { 0.0 }
+            } else {
+                vis
+            };
             cs.global_opacity = op * (1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k);
             if a.interpolate {
                 let f = ((t - a.appear.max(0.0)) / COMPOSE_MORPH).clamp(0.0, 1.0);
                 cs.time = f * f * (3.0 - 2.0 * f); // eased assemble
+                // run the per-particle reveal shader WHILE assembling (pen-write traces the letters
+                // in), then switch it off so the held cloud renders plain + sort-safe.
+                let (mode, soft, axis) = if f < 1.0 {
+                    a.reveal.unwrap_or((0, 0.0, 0))
+                } else {
+                    (0, 0.0, 0)
+                };
+                cs.transition_mode = mode;
+                cs.transition_softness = soft;
+                cs.transition_axis = axis;
             }
             if let Some((mode, amp, freq)) = a.deform {
                 cs.deform_mode = mode;

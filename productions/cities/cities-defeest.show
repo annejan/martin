@@ -31,7 +31,7 @@ splat:seattle_tight.ply   @@climax     @32,7,0 ~morph  beat:1.6  backdrop:stars 
 # LAYER 2 — deFEEST writes in OVER the city (pen-write, static), a hovering bitterbal, then the credit.
 # de-synced sway speeds (13 / 17 deg-per-s — coprime-ish) so the combined motion drifts over the loop.
 [stage]
-text:deFEEST          @0,0.18,0   *0.4   ~pen-write              in breakdown  out outro   # wordmark writes in over the skyline
+text:deFEEST          @0,0.18,0   *0.4   ~pen-write  tint:rainbow  in breakdown  out outro   # wordmark draws in over the skyline, rainbow (vette shader-look)
 mesh:bitterbal.glb    @0.22,0.08,0.12 *0.11  spin 18,40,7  ~morph  tint:fry  in drop  out outro  # a singular DEEP-FRIED bitterbal, tumbling on its own axis (tint:rainbow for candy)
 text:Imagery ©Google  @0,-0.3,0   *0.42  ~fade                   in outro                  # the credit, static, to the loop seam
 
