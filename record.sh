@@ -15,18 +15,19 @@ echo "    faster for big .ply clouds)"
 cargo +nightly build --release --manifest-path "$HERE/Cargo.toml"
 BIN="$(find "$HERE/target/release" -maxdepth 1 -type f -executable -name martin | head -n1)"
 
-echo "==> recording the timeline -> $FR"
-MARTIN_RECORD="$FR" BEVY_ASSET_ROOT="$HERE" "$BIN"
-
-# Render the synth to a WAV and mux it in, so the .mp4 has the music (honours MARTIN_SCORE;
-# skipped by MARTIN_MUTE). This invocation returns before the window — no GPU needed.
+# Render the synth to a WAV FIRST, then mux it in (honours MARTIN_SCORE; skipped by MARTIN_MUTE).
+# Audio BEFORE the frame capture: a long 1.2M capture can wedge the RADV GPU, and the synth pass
+# still boots Bevy (inits the renderer) — doing it first means it runs on a fresh, un-wedged GPU.
 AUDIO=()
 if [ -z "${MARTIN_MUTE:-}" ]; then
   WAV="$FR/track.wav"
   echo "==> rendering synth -> $WAV"
-  MARTIN_SYNTH_WAV="$WAV" "$BIN"
+  MARTIN_SYNTH_WAV="$WAV" BEVY_ASSET_ROOT="$HERE" "$BIN"
   AUDIO=(-i "$WAV" -c:a aac -shortest)
 fi
+
+echo "==> recording the timeline -> $FR"
+MARTIN_RECORD="$FR" BEVY_ASSET_ROOT="$HERE" "$BIN"
 
 # Frame rate: honour MARTIN_PREVIEW_FPS (a fast low-fps preview render) so the mux matches the
 # frames martin actually produced; default 60. Duration + audio sync stay correct at any fps.
