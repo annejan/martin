@@ -166,32 +166,18 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let toks: Vec<&str> = s
             .split_whitespace()
             .filter(|t| {
-                // a `~`/`^`/`tint:` token is always consumed; warn (don't leak) if it doesn't parse.
-                if let Some(tr) = t.strip_prefix('~') {
-                    match Transition::parse(tr) {
-                        Some(x) => transition = Some(x),
-                        None => eprintln!("compose: unknown transition '~{tr}' — ignored"),
-                    }
-                    return false;
-                }
-                if let Some(d) = t.strip_prefix('^') {
-                    // `^name` or `^name:amp` — the optional amp scales this object's deform strength.
-                    let (name, amp) = d.split_once(':').map_or((d, None), |(n, a)| (n, Some(a)));
-                    match Deform::parse(name) {
-                        Some(x) => {
-                            deform = Some(x);
-                            if let Some(a) = amp {
-                                deform_amp = a.parse().ok();
-                            }
+                // the shared `~transition` / `^deform[:amp]` / `tint:` modifiers (see effects.rs); a
+                // recognised sigil is always consumed (warn on a bad value, don't leak it).
+                if let Some(res) = crate::scene::effects::parse_fx_modifier(t) {
+                    use crate::scene::effects::FxMod;
+                    match res {
+                        Ok(FxMod::Transition(x)) => transition = Some(x),
+                        Ok(FxMod::Deform(d, a)) => {
+                            deform = Some(d);
+                            deform_amp = a;
                         }
-                        None => eprintln!("compose: unknown deform '^{d}' — ignored"),
-                    }
-                    return false;
-                }
-                if let Some(tn) = t.strip_prefix("tint:") {
-                    match crate::scene::colorize::Tint::parse(tn) {
-                        Some(x) => tint = Some(x),
-                        None => eprintln!("compose: unknown tint 'tint:{tn}' — ignored"),
+                        Ok(FxMod::Tint(x)) => tint = Some(x),
+                        Err(w) => eprintln!("compose: {w} — ignored"),
                     }
                     return false;
                 }

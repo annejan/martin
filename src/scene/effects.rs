@@ -182,6 +182,44 @@ pub(crate) enum Departure {
     Explode, // flung ballistically outward from the centre and fades — a burst (vs Disperse's softer wash)
 }
 
+/// The three effect modifiers shared by the reel (`parse_seq`) and the stage (`parse_compose`):
+/// `~transition`, `^deform[:amp]`, `tint:mode`. One parser so a new tint mode / `^` syntax change is
+/// a one-place edit instead of two.
+pub(crate) enum FxMod {
+    Transition(Transition),
+    Deform(Deform, Option<f32>), // (deform, optional `:amp` strength)
+    Tint(crate::scene::colorize::Tint),
+}
+
+/// Parse one whitespace token as a shared fx modifier. `None` = not one of these sigils (keep the
+/// token); `Some(Ok(m))` = parsed; `Some(Err(what))` = a recognised sigil with a bad value — the
+/// caller warns (with its own `seq:`/`compose:` prefix) and consumes it.
+pub(crate) fn parse_fx_modifier(tok: &str) -> Option<Result<FxMod, String>> {
+    if let Some(t) = tok.strip_prefix('~') {
+        return Some(
+            Transition::parse(t)
+                .map(FxMod::Transition)
+                .ok_or_else(|| format!("unknown transition '~{t}'")),
+        );
+    }
+    if let Some(d) = tok.strip_prefix('^') {
+        // `^name` or `^name:amp` — the optional amp scales the deform strength (bad amp → 1.0).
+        let (name, amp) = d.split_once(':').map_or((d, None), |(n, a)| (n, Some(a)));
+        return Some(match Deform::parse(name) {
+            Some(de) => Ok(FxMod::Deform(de, amp.and_then(|a| a.parse().ok()))),
+            None => Err(format!("unknown deform '^{d}'")),
+        });
+    }
+    if let Some(tn) = tok.strip_prefix("tint:") {
+        return Some(
+            crate::scene::colorize::Tint::parse(tn)
+                .map(FxMod::Tint)
+                .ok_or_else(|| format!("unknown tint 'tint:{tn}'")),
+        );
+    }
+    None
+}
+
 impl Departure {
     pub(crate) fn parse(s: &str) -> Option<Departure> {
         Some(match s.trim().to_ascii_lowercase().as_str() {

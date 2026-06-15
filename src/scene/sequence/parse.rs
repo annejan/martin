@@ -6,7 +6,7 @@ use bevy_gaussian_splatting::RasterizeMode;
 
 use super::model::{Sequence, Shot};
 use crate::scene::content::{PartContent, parse_source, side_by_side};
-use crate::scene::effects::{Deform, Departure, Transition};
+use crate::scene::effects::Departure;
 use crate::scene::{file_name_of, parent_dir};
 use crate::score;
 
@@ -144,30 +144,17 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                         Ok(v) => beat = Some(v),
                         Err(_) => eprintln!("seq: bad 'beat:{b}' (need a number) — ignored"),
                     }
-                } else if let Some(tn) = tok.strip_prefix("tint:") {
-                    match crate::scene::colorize::Tint::parse(tn) {
-                        Some(x) => tint = Some(x),
-                        None => eprintln!("seq: unknown tint 'tint:{tn}' — ignored"),
-                    }
-                } else if let Some(d) = tok.strip_prefix('^') {
-                    // `^name` or `^name:amp` — the optional amp scales this shot's deform strength.
-                    let (name, amp) = d.split_once(':').map_or((d, None), |(n, a)| (n, Some(a)));
-                    match Deform::parse(name) {
-                        Some(de) => {
-                            deform = Some(de);
-                            if let Some(a) = amp {
-                                match a.parse() {
-                                    Ok(v) => deform_amp = Some(v),
-                                    Err(_) => eprintln!("seq: bad deform amp '^{d}' — using 1.0"),
-                                }
-                            }
+                } else if let Some(res) = crate::scene::effects::parse_fx_modifier(tok) {
+                    // the shared `~transition` / `^deform[:amp]` / `tint:` modifiers (see effects.rs).
+                    use crate::scene::effects::FxMod;
+                    match res {
+                        Ok(FxMod::Transition(tr)) => transition = Some(tr),
+                        Ok(FxMod::Deform(d, a)) => {
+                            deform = Some(d);
+                            deform_amp = a;
                         }
-                        None => eprintln!("seq: unknown deform '^{d}' — ignored"),
-                    }
-                } else if let Some(t) = tok.strip_prefix('~') {
-                    match Transition::parse(t) {
-                        Some(tr) => transition = Some(tr),
-                        None => eprintln!("seq: unknown transition '~{t}' — ignored"),
+                        Ok(FxMod::Tint(x)) => tint = Some(x),
+                        Err(w) => eprintln!("seq: {w} — ignored"),
                     }
                 } else {
                     return true; // not a modifier → keep it for the head + @timing
@@ -312,6 +299,7 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scene::effects::{Deform, Transition};
     use crate::scene::sequence::{shot_starts, show_end};
 
     fn parts(spec: &str) -> Vec<Shot> {
