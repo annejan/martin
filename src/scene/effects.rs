@@ -185,6 +185,7 @@ pub(crate) enum Departure {
 /// The three effect modifiers shared by the reel (`parse_seq`) and the stage (`parse_compose`):
 /// `~transition`, `^deform[:amp]`, `tint:mode`. One parser so a new tint mode / `^` syntax change is
 /// a one-place edit instead of two.
+#[derive(Debug, PartialEq)]
 pub(crate) enum FxMod {
     Transition(Transition),
     Deform(Deform, Option<f32>), // (deform, optional `:amp` strength)
@@ -248,6 +249,40 @@ impl Departure {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scene::colorize::Tint;
+
+    #[test]
+    fn parse_fx_modifier_covers_all_three_sigils() {
+        // recognized + parsed
+        assert_eq!(
+            parse_fx_modifier("~morph"),
+            Some(Ok(FxMod::Transition(Transition::Morph)))
+        );
+        assert_eq!(
+            parse_fx_modifier("^wave"),
+            Some(Ok(FxMod::Deform(Deform::Wave, None)))
+        );
+        assert_eq!(
+            parse_fx_modifier("^wave:0.5"),
+            Some(Ok(FxMod::Deform(Deform::Wave, Some(0.5))))
+        );
+        assert_eq!(
+            parse_fx_modifier("^wave:nope"), // bad amp → None (deform still applies)
+            Some(Ok(FxMod::Deform(Deform::Wave, None)))
+        );
+        assert_eq!(
+            parse_fx_modifier("tint:fry"),
+            Some(Ok(FxMod::Tint(Tint::Fry)))
+        );
+        // recognized sigil, bad value → Err (caller warns + consumes)
+        assert!(matches!(parse_fx_modifier("~bogus"), Some(Err(_))));
+        assert!(matches!(parse_fx_modifier("^bogus"), Some(Err(_))));
+        assert!(matches!(parse_fx_modifier("tint:bogus"), Some(Err(_))));
+        // not an fx token → None (the caller keeps it for the head/placement)
+        assert_eq!(parse_fx_modifier("splat:x.ply"), None);
+        assert_eq!(parse_fx_modifier("@5,3,0"), None);
+        assert_eq!(parse_fx_modifier("flock:5"), None);
+    }
 
     #[test]
     fn transition_parse_names_aliases_and_case() {

@@ -133,6 +133,28 @@ mod tests {
     }
 
     #[test]
+    fn eval_picks_the_right_segment_with_many_keyframes() {
+        let k = vec![(0.0, 0.0), (10.0, 1.0), (20.0, 0.0)]; // up then down
+        assert_eq!(eval(&k, 5.0), Some(0.5)); // first segment midpoint
+        assert_eq!(eval(&k, 10.0), Some(1.0)); // exactly on a keyframe
+        assert_eq!(eval(&k, 15.0), Some(0.5)); // second segment midpoint
+        assert_eq!(eval(&k, 25.0), Some(0.0)); // past the end → last
+    }
+
+    #[test]
+    fn knobs_lists_only_the_keyframed_channels() {
+        let score = crate::score::Score::builtin();
+        let tr = parse_sync(
+            &["t=0 flash=0.2".to_string(), "t=5 beat=1.0".to_string()],
+            &score,
+        );
+        let named: Vec<&str> = tr.knobs().iter().map(|(n, _)| *n).collect();
+        assert_eq!(named, vec!["flash", "beat"]); // bg_dim has no keyframes → omitted
+        assert!(!tr.is_empty());
+        assert!(SyncTrack::default().is_empty());
+    }
+
+    #[test]
     fn parse_resolves_time_and_knobs() {
         let score = crate::score::Score::builtin();
         let lines = vec![

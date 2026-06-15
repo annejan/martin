@@ -307,6 +307,22 @@ mod tests {
     }
 
     #[test]
+    fn shot_base_is_all_defaults() {
+        let s = Shot::base(PartContent::Text("hi".into()));
+        assert!(matches!(s.content, PartContent::Text(ref t) if t == "hi"));
+        assert_eq!((s.hold, s.morph), (1.5, 3.0));
+        assert!(s.transition.is_none() && s.deform.is_none() && s.tint.is_none());
+        assert!(s.flash.is_none() && s.beat.is_none() && s.anchor.is_none());
+        // the override pattern keeps base's None fields while setting the spelled ones.
+        let s = Shot {
+            hold: 9.0,
+            ..Shot::base(PartContent::Text("x".into()))
+        };
+        assert_eq!(s.hold, 9.0);
+        assert_eq!(s.morph, 3.0); // still base's default
+    }
+
+    #[test]
     fn parse_seq_reads_heads_timing_and_modifiers() {
         let p = parts("text:HELLO @4,2 ~fade ^wave out:sink rot:0,90,0 cluster:3");
         assert_eq!(p.len(), 1);

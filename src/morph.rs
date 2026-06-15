@@ -754,6 +754,18 @@ mod tests {
     }
 
     #[test]
+    fn bounds_spans_the_extremes() {
+        let v = vec![g(-1.0, 2.0, 0.5), g(3.0, -4.0, 0.5), g(0.0, 0.0, 9.0)];
+        let (lo, hi) = bounds(&v);
+        assert_eq!(lo, [-1.0, -4.0, 0.5]);
+        assert_eq!(hi, [3.0, 2.0, 9.0]);
+        // empty → the sentinel (MAX, MIN), so a divide guards with .max(1e-6) downstream.
+        let (lo, hi) = bounds(&[]);
+        assert_eq!(lo, [f32::MAX; 3]);
+        assert_eq!(hi, [f32::MIN; 3]);
+    }
+
+    #[test]
     fn resample_morton_hits_the_target_count() {
         let src: Vec<Gaussian3d> = (0..50).map(|i| g(i as f32, 0.0, 0.0)).collect();
         assert_eq!(resample_morton(src.clone(), 200).len(), 200); // up-sample
