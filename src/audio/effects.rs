@@ -1,42 +1,11 @@
-//! Sound-design effects + the reverb: the ping-pong delay, the section-transition risers / jet
-//! whooshes / impacts, the hardstyle kick, the snare-roll, the atmosphere bed, and the spread reverb
-//! send. These are hand-written DSP (sample loops), not FunDSP voices — the voices are in `voices`.
+//! Sound-design one-shots: the section-transition risers / jet whooshes / impacts, the hardstyle
+//! kick, and the snare-roll. These are hand-written DSP (sample loops), not FunDSP voices — the
+//! voices are in `voices`. Fired as render events by `render::collect_events`. (The continuous
+//! effects — ping-pong delay, atmosphere bed, spread reverb — live in `stream` as resumable
+//! block-processors, since the streamer is now the sole render engine.)
 
 use super::voices::snare;
 use super::{SAMPLE_RATE, add_stereo, pseudo_noise, render_into};
-
-/// Ping-pong delay: a stereo delay line where each tap alternates L-R-L-R so the delayed
-/// repeats bounce across the stereo field. Used on the arp to give it motion and space.
-pub(super) fn render_pingpong(buf: &mut [f32], delay_s: f32, feedback: f32, wet: f32) {
-    let sr = SAMPLE_RATE as f32;
-    let d = (delay_s * sr) as usize;
-    if d < 2 {
-        return;
-    }
-    let frames = buf.len() / 2;
-    let mut line = vec![0f32; d * 2];
-    let mut w = 0usize;
-    let mut alt = 0u32;
-    for i in 0..frames {
-        let l = buf[2 * i];
-        let r = buf[2 * i + 1];
-        let mono = l + r;
-        let dl = line[2 * w];
-        let dr = line[2 * w + 1];
-        buf[2 * i] += dl * wet;
-        buf[2 * i + 1] += dr * wet;
-        let fb = mono * feedback * 0.5;
-        if alt & 1 == 0 {
-            line[2 * w] = fb * 0.45;
-            line[2 * w + 1] = fb;
-        } else {
-            line[2 * w] = fb;
-            line[2 * w + 1] = fb * 0.45;
-        }
-        alt = alt.wrapping_add(1);
-        w = (w + 1) % d;
-    }
-}
 
 /// Noise + tone sweep into a section boundary. This is intentionally simple and deterministic:
 /// enough to make the arrangement breathe without turning the score DSL into an effects tracker.
@@ -64,38 +33,6 @@ pub(super) fn render_riser(buf: &mut [f32], start_t: f32, dur: f32, amp: f32, pa
             (phase.sin() * 0.35 + bright * 0.65) * env * gate * amp,
             pan,
         );
-    }
-}
-
-/// Atmospheric texture bed under the WHOLE track: a soft band-limited noise floor + sparse vinyl
-/// crackle. Game/chiptune music is dead-silent between notes; produced trip-hop/downtempo records
-/// (Massive Attack / Portishead) always sit on a dusty textured floor — that bed is a big part of
-/// what reads as "a record" instead of "a bright synth preset". Kept low + slightly decorrelated L/R.
-pub(super) fn render_atmosphere(bed: &mut [f32], sr: f32, start_t: f32, amt: f32) {
-    use std::f32::consts::TAU;
-    if amt <= 0.0 {
-        return; // `set atmosphere=0` → no floor (e.g. a clean chiptune or a different genre)
-    }
-    let total = bed.len() / 2;
-    let start = (start_t.max(0.0) * sr) as usize;
-    let fade = (1.5 * sr) as usize; // ease the floor in over ~1.5 s so it doesn't just switch on
-    let (mut lp, mut hp) = (0.0f32, 0.0f32);
-    let a = 1.0 - (-TAU * 2000.0 / sr).exp();
-    let ah = 1.0 - (-TAU * 350.0 / sr).exp();
-    for i in start..total {
-        let g = ((i - start) as f32 / fade as f32).min(1.0);
-        let n = pseudo_noise(i * 2 + 7);
-        lp += a * (n - lp); // low-pass...
-        hp += ah * (lp - hp); // ...minus a high-pass = a soft ~350-2000 Hz band (warm hiss, no fizz)
-        let floor = (lp - hp) * 0.008;
-        let crackle = if pseudo_noise(i * 3 + 1) > 0.9996 {
-            pseudo_noise(i * 7) * 0.03 // sparser, quieter dust clicks
-        } else {
-            0.0
-        };
-        let v = (floor + crackle) * g * amt;
-        bed[2 * i] += v;
-        bed[2 * i + 1] += v * 0.92;
     }
 }
 
@@ -204,73 +141,4 @@ pub(super) fn render_snare_roll(buf: &mut [f32], start: f32, dur: f32, beat: f32
         step = (step * 0.86).max(beat * 0.12); // tighten toward the drop
         t += step;
     }
-}
-
-/// Spread reverb send: a mono sum of the stereo bed through 3 damped feedback combs per channel,
-/// with slightly different delays L vs R → a wide, decorrelated room tail (dry excluded).
-pub(super) fn reverb_send(bed: &[f32], sr: f32) -> Vec<f32> {
-    let frames = bed.len() / 2;
-    let damp = 0.25_f32;
-    // mono sum of the bed, HIGH-PASSED at ~300 Hz before the combs so the tail is air/space, not a
-    // low-mid wash that welds the voices together (the reverb was a big part of the "organ" blanket).
-    let mut mono: Vec<f32> = (0..frames)
-        .map(|i| 0.5 * (bed[2 * i] + bed[2 * i + 1]))
-        .collect();
-    let a = 1.0 - (-std::f32::consts::TAU * 300.0 / sr).exp();
-    let mut hp = 0.0f32;
-    for s in mono.iter_mut() {
-        hp += a * (*s - hp);
-        *s -= hp;
-    }
-    // ~22 ms pre-delay: the gap before the tail that makes the space read as a big, real hall.
-    let pre = (0.022 * sr) as usize;
-    // 6 prime-length feedback combs per tank — the modes interleave into a smooth dense tail instead
-    // of a few resonant metallic rings. Two decorrelated delay sets feed the L and R tanks (width).
-    let comb = |delays: &[usize]| -> Vec<f32> {
-        let mut wet = vec![0f32; frames];
-        for &d in delays {
-            let mut line = vec![0f32; frames];
-            let mut lp = 0f32;
-            for i in 0..frames {
-                let src = if i >= pre { mono[i - pre] } else { 0.0 };
-                let fb_in = if i >= d { line[i - d] } else { 0.0 };
-                lp += damp * (fb_in - lp);
-                line[i] = src + 0.88 * lp;
-                wet[i] += 0.88 * lp;
-            }
-        }
-        for w in wet.iter_mut() {
-            *w *= 0.5; // 6 combs sum hot — tame before diffusion so the wet doesn't pump the limiter
-        }
-        wet
-    };
-    // in-place series all-pass diffuser: smears the comb echoes into a smooth, diffuse tail.
-    let allpass = |x: &mut [f32], d: usize, g: f32| {
-        let mut buf = vec![0f32; x.len()];
-        for i in 0..x.len() {
-            let dl = if i >= d { buf[i - d] } else { 0.0 };
-            let y = -g * x[i] + dl;
-            buf[i] = x[i] + g * y;
-            x[i] = y;
-        }
-    };
-    let mut wl = comb(&[1117, 1188, 1277, 1356, 1422, 1491]);
-    let mut wr = comb(&[1129, 1213, 1291, 1373, 1447, 1499]);
-    for &d in &[0.0051f32, 0.0167, 0.0097] {
-        allpass(&mut wl, (d * sr) as usize, 0.7);
-    }
-    for &d in &[0.0047f32, 0.0153, 0.0089] {
-        allpass(&mut wr, (d * sr) as usize, 0.7);
-    }
-    // darken the wet return (~6.5 kHz one-pole LP) so the tail sits behind the mix like a real room.
-    let ad = 1.0 - (-std::f32::consts::TAU * 6500.0 / sr).exp();
-    let (mut dl, mut dr) = (0.0f32, 0.0f32);
-    let mut out = vec![0f32; bed.len()];
-    for i in 0..frames {
-        dl += ad * (wl[i] - dl);
-        dr += ad * (wr[i] - dr);
-        out[2 * i] = dl;
-        out[2 * i + 1] = dr;
-    }
-    out
 }

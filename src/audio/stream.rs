@@ -1,15 +1,13 @@
-//! The **streaming synth engine**: renders the score in time-ordered segments so live playback can
-//! start ~1 s after launch instead of waiting for the whole track. Each segment renders only the
+//! The **synth engine** (the only one): renders the score in time-ordered segments so live playback
+//! can start ~1 s after launch instead of waiting for the whole track. Each segment renders only the
 //! events due in its window plus the resumable finishers (sub/atmosphere, the two ping-pong delays,
 //! reverb, master), with all effect state carried across boundaries — so segment size provably does
-//! not change the output (`segmenting_is_deterministic`), and the result matches the batch render
-//! within float-summation-order noise (`stream_matches_batch`).
+//! not change the output (`segmenting_is_deterministic`).
 //!
-//! This is a SEPARATE path from `synth_track` (the proven batch render that recordings + the bundle
-//! use). It powers live windowed playback only, so a bug here can never affect a recording. The
-//! scheduling lives in `render::collect_events` (a mirror of the batch pass functions); the two are
-//! guarded against drift by `stream_matches_batch`. Once the stream is trusted by ear, batch can be
-//! switched onto `produce` too and the duplication removed.
+//! Batch recordings (`synth_track`, the bundle) run this same `produce` to completion with a
+//! collecting sink, so a recording is byte-for-byte what live playback streams (`batch_is_the_
+//! collected_stream`) — there is no second DSP implementation to keep in sync. The note scheduling
+//! lives in `render::collect_events`.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -632,9 +630,6 @@ mod tests {
         );
     }
 
-    /// THE streaming guarantee #2: the stream matches the batch render within float-order noise —
-    /// same DSP, only the per-sample summation order differs (segmented + lane order vs the batch's
-    /// parallel passes). A gross port bug (silence, wrong length, distortion) blows past the bound.
     /// The decoder reads pushed segments in order, pads silence on underrun (producer behind), and
     /// ends once the full track is finalized.
     #[test]
@@ -653,29 +648,23 @@ mod tests {
         assert_eq!(d.next(), None); // finalized == total → done
     }
 
+    /// `synth_track` (the batch entry recordings use) is now a thin wrapper that just collects
+    /// `produce` to completion — there is ONE engine. This guards that it stays byte-for-byte the
+    /// streamed signal (so a recording is exactly what live playback renders); if someone reintroduces
+    /// a divergent batch DSP, this fails immediately.
     #[test]
-    fn stream_matches_batch() {
+    fn batch_is_the_collected_stream() {
         let score = tiny_score();
         let stream = render_stream(&score);
         let batch = crate::audio::synth_track(&score);
         let batch = &*batch.samples; // private field — visible to this descendant module
-        assert_eq!(
-            stream.len(),
-            batch.len(),
-            "length must match the batch render"
-        );
-        let n = stream.len();
-        let mut max = 0f32;
-        let mut sum = 0f64;
-        for (a, b) in stream.iter().zip(batch.iter()) {
-            let d = (a - b).abs();
-            max = max.max(d);
-            sum += d as f64;
-        }
-        let mean = (sum / n as f64) as f32;
+        assert_eq!(stream.len(), batch.len(), "length must match");
         assert!(
-            max < 0.06 && mean < 0.004,
-            "stream diverged from batch: max {max}, mean {mean} (expected float-order noise only)"
+            stream
+                .iter()
+                .zip(batch)
+                .all(|(a, b)| a.to_bits() == b.to_bits()),
+            "synth_track must be the byte-identical collected stream"
         );
     }
 }

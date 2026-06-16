@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use fundsp::prelude32::*;
 
-use crate::score::{Inst, Score};
+use crate::score::Score;
 
 mod effects;
 mod render;
@@ -216,57 +216,19 @@ pub(super) fn section_window(score: &Score, name: &str) -> Option<(f32, f32)> {
     Some((start, end))
 }
 
-/// Render the whole score to an interleaved-stereo buffer: voices panned into a "bed" (everything
-/// but the kick), an arp counter-line in the energetic sections, sidechain pump under the kick, a
-/// spread reverb send, the continuous sub, per-section fades × gain, soft clip.
+/// Render the whole score to an interleaved-stereo buffer (the deliverable: recordings via
+/// `MARTIN_SYNTH_WAV` + the bundle's pre-rendered WAV).
 ///
-/// This is a WHOLE-TRACK, in-memory render (a handful of `demo_len`-sized buffers, ~tens of MB
-/// each), not a streaming/block one — the spread reverb runs global feedback combs over the entire
-/// bed and the master wants the whole signal. But it is a **multi-core** render: the four content
-/// passes (drums / voices / harmony / fx) are independent write-only accumulators, so they render
-/// concurrently into their own buffers and are summed afterwards **in the original pass order**,
-/// which keeps the floating-point result bit-for-bit identical to the old sequential accumulation
-/// (`(((drums+voices)+harmony)+fx)` per sample — exactly what the ordered `bed[i] += …` produced).
-/// Only the master pass (sidechain/reverb/limiter, cheap O(n) filters) stays serial. This is the
-/// BATCH path — recordings (`MARTIN_SYNTH_WAV`) + the bundle's pre-rendered WAV use it. LIVE
-/// playback instead STREAMS via `stream::produce` (segmented, starts in ~1 s); the two engines are
-/// the same DSP and match within ~1 LSB (`stream::tests::stream_matches_batch`).
+/// There is **one** DSP engine: `stream::produce`. This batch entry just runs it to completion with
+/// a collecting sink, so the recorded track is sample-for-sample what live playback streams — no
+/// second implementation to keep in sync. (Historically there were two — a multi-core whole-track
+/// render here and the segmented streamer — kept matching "by ear" + a tolerance test; they agreed
+/// to within a single 16-bit LSB, so the streamer is now the sole source of truth.)
 pub fn synth_track(score: &Score) -> Track {
-    let oversample = score.param("oversample", 0.0) > 0.5; // `set oversample=1` — anti-alias
-    OVERSAMPLE.with(|c| c.set(oversample));
-    let sr = SAMPLE_RATE as f32;
-    let total = (score.demo_len() * sr).ceil() as usize;
-    let stereo = total * 2;
-    let mut kickbuf = vec![0f32; stereo]; // sidechain source (never ducked)
-    let mut bed = vec![0f32; stereo]; // drums land here — the first accumulator (0 + drums ≡ drums)
-    let mut bed_voices = vec![0f32; stereo];
-    let mut bed_harmony = vec![0f32; stereo];
-    let mut bed_fx = vec![0f32; stereo];
-
-    let kicks = score.hits(Inst::Kick);
-    // OVERSAMPLE is a thread_local — each worker must set it itself, or an `oversample=1` score
-    // would silently lose its anti-alias path on the threaded passes.
-    std::thread::scope(|s| {
-        s.spawn(|| {
-            OVERSAMPLE.with(|c| c.set(oversample));
-            render::render_voices(&mut bed_voices, score, stereo);
-        });
-        s.spawn(|| {
-            OVERSAMPLE.with(|c| c.set(oversample));
-            render::render_harmony(&mut bed_harmony, score);
-        });
-        s.spawn(|| {
-            OVERSAMPLE.with(|c| c.set(oversample));
-            render::render_fx(&mut bed_fx, score, total);
-        });
-        render::render_drums(&mut kickbuf, &mut bed, score, &kicks);
-    });
-    for i in 0..stereo {
-        bed[i] = ((bed[i] + bed_voices[i]) + bed_harmony[i]) + bed_fx[i];
-    }
-    let buf = render::master(&kickbuf, &mut bed, score, &kicks, total, stereo);
+    let mut samples = Vec::new();
+    stream::produce(score, |chunk| samples.extend_from_slice(chunk));
     Track {
-        samples: Arc::new(buf),
+        samples: Arc::new(samples),
     }
 }
 
