@@ -8,6 +8,9 @@ edits in two places.
 
 ---
 
+> **STATUS (2026-06-16):** #2 ✅ · #3 ✅ · #4 ✅ · #5a ✅ · #5b ✅ · #6 ✅ · #1 ◪ partial
+> (shared `sidechain_duck`/`reverb_env`; the `collect_events`↔batch note-gen unification in progress).
+
 ## 🔴 BLOCKER 1 — `audio/render.rs` (1166 lines): `collect_events` is a full second copy of the batch passes
 
 Dominant structural regression, self-documented as debt (render.rs:760–767,
@@ -42,7 +45,13 @@ because the closures *are* the batch render fragments.
 
 File also crosses the 1000-line smell line; unifying drops it well under.
 
-## 🔴 BLOCKER 2 — `compose.rs` ↔ `sequence/build.rs`: "build a placed cloud" pipeline copy-pasted across modules
+## 🔴 BLOCKER 2 ✅ DONE — `compose.rs` ↔ `sequence/build.rs`: "build a placed cloud" pipeline copy-pasted across modules
+
+> Fixed: `scene::content::sample_content(content, entrance, …)` is the single shared
+> shaper (text/pen-write/`part_gaussians` + normalize/resample); both `compose` and
+> `build` call it. The `*0.5` vs `content_radius` "drift" was confirmed correct per
+> each call's normalization context, not a bug.
+
 
 Both files independently run the identical pipeline:
 
@@ -64,7 +73,12 @@ transition source at `NORMALIZE_EXTENT * 0.5`, build uses `content_radius`.
 &mut assets) -> (shaped, Option<source>)` + a shared spawn helper. Both call
 sites shrink to a loop body; shaping/tinting/spawn rules can't drift.
 
-## 🟠 MAJOR 3 — modifier-token parser duplicated (`parse.rs` ↔ `compose.rs`)
+## 🟠 MAJOR 3 ✅ DONE — modifier-token parser duplicated (`parse.rs` ↔ `compose.rs`)
+
+> Fixed: `effects::parse_fx_modifier(tok) -> Option<Result<FxMod, String>>` (typed
+> `FxMod::{Entrance,Deform,Tint}`) is the shared `~`/`^[:amp]`/`tint:` parser; both
+> `parse_seq` and `parse_compose` fall back to it. Tested.
+
 
 `~transition`, `^name` / `^name:amp`, `tint:` parsed with the same
 `strip_prefix → match → eprintln warn` blocks in **both** `parse_seq`
@@ -74,7 +88,12 @@ sites shrink to a loop body; shaping/tinting/spawn rules can't drift.
 **Fix:** one `parse_modifier(tok) -> Option<Modifier>` (typed enum) consumed by
 both filters. A new tint mode / `^` syntax change becomes a one-place edit.
 
-## 🟠 MAJOR 4 — `parse.rs`: `Shot` constructed 3× with all 16 fields spelled out
+## 🟠 MAJOR 4 ✅ DONE — `parse.rs`: `Shot` constructed 3× with all 16 fields spelled out
+
+> Fixed: `Shot::base(content)` sets every default (hold 1.5, morph 3.0, bulge 0.9,
+> rest `None`); the legacy literals are now `..Shot::base(content)` overrides. New
+> fields stop rippling. Tested (`shot_base_is_all_defaults`).
+
 
 `Shot { content, hold, morph, bulge, transition: None, anchor: None, … }` appears
 verbatim three times (parse_seq L203, MARTIN_TEXT L263, MARTIN_PLY L302/L321),
@@ -84,7 +103,14 @@ each a 16-line mostly-`None` literal. Struct has grown to 16 fields
 **Fix:** `impl Default for Shot` (or `Shot::new(content)`), set only the
 non-defaults. New fields stop rippling.
 
-## 🟡 MINOR 5 — `morph.rs` (865 lines): cohesive, but two extractions + a split are due
+## 🟡 MINOR 5 ✅ DONE (5a+5b; split deferred) — `morph.rs`: cohesive, but two extractions + a split are due
+
+> Fixed 5a: `fn bounds(&[Gaussian3d]) -> ([f32;3],[f32;3])` replaces the 4 bbox loops.
+> Fixed 5b: `reposition(shape, |k,p|->pos)` + `depart(…)` (= reposition + fade) own the
+> shared `*_of` skeleton; 14 builders shrank to just their `place()` math, byte-identical
+> (ball/helix/condense keep hand loops — they also write visibility/scale). The file split
+> (`morph/{arrival,departure,sample}.rs`) is deferred to next growth, as the review allowed.
+
 
 Healthiest big file — pure, well-tested transform library, not spaghetti. Two
 reductions:
@@ -100,7 +126,11 @@ reductions:
 Then split along the three existing concerns: `morph/{arrival, departure,
 sample}.rs`. Do it at next growth; not a blocker today.
 
-## 🟡 MINOR 6 — `build.rs:356–384`: fragile parallel-Vec collapse
+## 🟡 MINOR 6 ✅ DONE — `build.rs:356–384`: fragile parallel-Vec collapse
+
+> Fixed: `BuiltShot`s are now pushed directly in the per-part loop (one pass); the
+> `shapes`/`sources`/`out_clouds` side-Vecs + the `.next().expect()` zip-drain are gone.
+
 
 `BuiltShot` assembly drains three iterators with `.next().expect(...)` while
 zipping a 5-deep tuple `((((shot,transition),deform),raster),start)`. The
