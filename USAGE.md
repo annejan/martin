@@ -890,8 +890,8 @@ build.kick  p1:   x... ..x. .... x...
 build.snare p1:   .... x... .... x...
 build.kick  fill: x... .... .... x...
 
-# <section>.lead  p<N>|fill:  16 note slots — the MELODY (note names like A4 / C#5 / Eb3; . = rest)
-drop.lead   p0:   A5 . E5 .  . C5 . .  D5 . E5 .  . A5 . .
+# <section>.lead  p<N>|fill:  16 note slots — the MELODY (A4 / C#5 / Eb3; . = rest; -/_ = TIE/hold)
+drop.lead   p0:   A5 - - .  . C5 . .  D5 . E5 -  - A5 . .   # A5 held 3 slots, E5 held 2 (the - ties)
 drop.lead   p1:   E5 . . A5  . G5 . E5  . . D5 .  C5 . . .
 
 # <section>.arp  p<N>|fill:  same note grammar — a SECOND melodic line (a sparkly counter-melody)
@@ -905,9 +905,11 @@ mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
 
 - **`chords`** is one root per bar (cycling), e.g. `Am F C G`; a trailing `m` = minor. It moves the
   **bass** (root) and **stab** (triad). **`lead`** is the melody and **`arp`** is a second melodic
-  line — both note-lanes: 16 whitespace-separated note tokens per slot (`A4`, `C#5`, `Eb3`, or
-  `.`/`-` for a rest), written per phase like the drums.
-- **16 steps per bar** (16th notes); patterns you don't write are silent.
+  line — both note-lanes: 16 whitespace-separated note tokens per slot (`A4`, `C#5`, `Eb3`, `.` rest,
+  or **`-`/`_` to TIE** — hold the previous note one more slot, so `C4 - - .` is a held dotted note),
+  written per phase like the drums.
+- **16 steps per bar** (16th notes); patterns you don't write are silent. A tie with no preceding note
+  is just a rest; an untied note keeps its fixed length (so adding ties never changes existing tracks).
 - A section's `<bars>` is its total length; `<phase-bars>` is how the kit pattern changes *within*
   it (plus a trailing fill bar when `fill`). Section **names** are what `@@anchor` matches — so a
   custom score with custom section names re-anchors the show to them.

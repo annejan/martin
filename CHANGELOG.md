@@ -125,6 +125,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 - Multi-core batch synth render (~2× faster, deterministic) for recordings + the bundle WAV.
 - Tracker DSL: sections/phases, per-section chords, multi-bar melody/arp/bass note-lanes, drum
   patterns, dynamics ramps, and free-form mix/fx `set` knobs.
+- **Note ties** (`-`/`_` in a note lane): hold the previous note one more slot (`C4 - - .` = a held
+  dotted note) — `note_line` returns `(t, freq, hold)` and the synth extends the note by `hold`. Lets
+  the melody sustain instead of every note firing at the fixed slot length. Untied notes are unchanged
+  (`hold == 0`), so existing tracks render byte-identically (`-`/`_` were unused rest-synonyms before).
 - Per-section overrides: `<section>.set key=value` (knobs) and `<section>.fx: …` (which layers /
   transition accents fire — so a genre picks its own accents without abusing section names).
 - Synth voices incl. a hardstyle kick, Reese/woozy bass, singing 5-saw lead, supersaw+choir wall,

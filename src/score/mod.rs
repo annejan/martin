@@ -179,29 +179,42 @@ impl Score {
 
     /// Every note of a note-lane as (time, freq) across the whole track — the synth builds a voice
     /// at each onset.
-    fn note_line(&self, pick: fn(&Section) -> &NoteLane) -> Vec<(f32, f32)> {
+    /// Walk a note lane across the whole timeline → `(onset_secs, freq, hold_secs)` per note. A `-`/`_`
+    /// **tie** slot (parsed as `NaN`) extends the previous note: `hold_secs` is the summed length of the
+    /// tie slots after the onset, so the synth can hold the note instead of the fixed slot length. A
+    /// note with no ties has `hold == 0.0` → byte-identical to before (every existing score uses `.`).
+    fn note_line(&self, pick: fn(&Section) -> &NoteLane) -> Vec<(f32, f32, f32)> {
         let sl = self.slot_len();
         let slots = self.total_bars as i64 * SLOTS_PER_BAR;
-        (0..slots)
-            .filter_map(|s| {
-                let t = s as f32 * sl;
-                self.note_grid(t, pick)[(s % SLOTS_PER_BAR) as usize].map(|f| (t, f))
-            })
-            .collect()
+        let val = |s: i64| self.note_grid(s as f32 * sl, pick)[(s % SLOTS_PER_BAR) as usize];
+        let mut out = Vec::new();
+        for s in 0..slots {
+            // emit on a real onset only; a tie (NaN) is consumed by the note before it, a rest skipped.
+            if let Some(f) = val(s)
+                && !f.is_nan()
+            {
+                let mut hold = 0i64;
+                while s + 1 + hold < slots && val(s + 1 + hold).is_some_and(|v| v.is_nan()) {
+                    hold += 1;
+                }
+                out.push((s as f32 * sl, f, hold as f32 * sl));
+            }
+        }
+        out
     }
 
-    /// The `lead` (foreground melody) onsets.
-    pub fn lead_notes(&self) -> Vec<(f32, f32)> {
+    /// The `lead` (foreground melody) onsets — `(t, freq, hold)`; `hold` extends a tied note.
+    pub fn lead_notes(&self) -> Vec<(f32, f32, f32)> {
         self.note_line(|s| &s.lead)
     }
 
-    /// The `arp` (second melodic line) onsets.
-    pub fn arp_notes(&self) -> Vec<(f32, f32)> {
+    /// The `arp` (second melodic line) onsets — `(t, freq, hold)`.
+    pub fn arp_notes(&self) -> Vec<(f32, f32, f32)> {
         self.note_line(|s| &s.arp)
     }
 
-    /// The `bass` (articulated bassline) onsets — empty unless the score writes a `bass` lane.
-    pub fn bass_notes(&self) -> Vec<(f32, f32)> {
+    /// The `bass` (articulated bassline) onsets — `(t, freq, hold)`; empty unless a `bass` lane exists.
+    pub fn bass_notes(&self) -> Vec<(f32, f32, f32)> {
         self.note_line(|s| &s.bass)
     }
 
@@ -517,10 +530,43 @@ mod tests {
                 '?'
             }
         };
-        let seq: String = notes.iter().map(|&(_, f)| pitch(f)).collect();
+        let seq: String = notes.iter().map(|&(_, f, _)| pitch(f)).collect();
         assert_eq!(seq, "CECE", "the phrase advances per bar and loops");
         // and the bar times line up with the grid.
         assert!((notes[1].0 - s.bar()).abs() < 1e-3);
+    }
+
+    #[test]
+    fn tie_token_extends_note_hold() {
+        // C4 held over 2 tie slots then a rest → ONE onset whose hold spans the two ties.
+        let s =
+            Score::from_str("bpm 120\nsection a 1\na.lead p0: C4 - - .  . . . .  . . . .  . . . .")
+                .unwrap();
+        let notes = s.lead_notes();
+        assert_eq!(
+            notes.len(),
+            1,
+            "the two ties extend the C4, they don't add onsets"
+        );
+        let (t, f, hold) = notes[0];
+        assert_eq!(t, 0.0);
+        assert!((f - note_freq("C4").unwrap()).abs() < 1.0, "C4, got {f}");
+        assert!(
+            (hold - 2.0 * s.slot_len()).abs() < 1e-6,
+            "2 tie slots held: {hold}"
+        );
+        // no ties → hold 0 (the render duration is then unchanged → byte-identical audio).
+        let s0 =
+            Score::from_str("bpm 120\nsection a 1\na.lead p0: C4 . . .  . . . .  . . . .  . . . .")
+                .unwrap();
+        assert_eq!(s0.lead_notes()[0].2, 0.0);
+        // the shipped builtin score uses no ties → every note hold==0 (existing audio unchanged).
+        assert!(
+            Score::builtin()
+                .lead_notes()
+                .iter()
+                .all(|&(_, _, h)| h == 0.0)
+        );
     }
 
     #[test]

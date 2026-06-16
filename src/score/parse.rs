@@ -143,7 +143,9 @@ impl Score {
                     // built-in name-based defaults for that section). An empty list = no FX at all.
                     sections[si].fx = Some(pat.split_whitespace().map(|s| s.to_string()).collect());
                 } else if inst == "lead" || inst == "arp" || inst == "bass" {
-                    // pitched note lane: a phrase of 1+ bars (16 note tokens each, `A4`/`C#5`/`.`).
+                    // pitched note lane: a phrase of 1+ bars, 16 tokens each — `A4`/`C#5` note, `.`
+                    // rest, `-`/`_` TIE (hold the previous note one more slot: `C4 - - .` = a dotted-
+                    // eighth-ish held C). A note with no ties is unchanged (the fixed slot length).
                     let grid = parse_notes(pat).ok_or_else(|| {
                         format!("line {ln}: {inst} needs 16 notes/rests (or a multiple of 16)")
                     })?;
@@ -334,6 +336,9 @@ fn parse_chord(s: &str) -> Option<Chord> {
 /// Parse whitespace-separated note tokens (`A4`/`C#5`/… or `.`/`-`/`_` = rest) into a melodic
 /// phrase: one or more bars of 16 slots each (so a 32/48/… token line is a 2/3/…-bar phrase). The
 /// token count must be a positive multiple of 16.
+/// Parse pitched note lanes (`lead`/`arp`/`bass`): whitespace tokens, 16 per bar. `A4`/`C#5` = a note,
+/// `.` = rest, `-`/`_` = a **tie** (held as `NaN`, merged into the preceding note's duration by
+/// `Score::note_line`). Returns one `[Option<f32>; 16]` per bar (`None` rest, `Some(NaN)` tie).
 fn parse_notes(s: &str) -> Option<Vec<[Option<f32>; 16]>> {
     let toks: Vec<&str> = s.split_whitespace().collect();
     if toks.is_empty() || !toks.len().is_multiple_of(16) {
@@ -344,7 +349,8 @@ fn parse_notes(s: &str) -> Option<Vec<[Option<f32>; 16]>> {
         let mut bar = [None; 16];
         for (i, t) in chunk.iter().enumerate() {
             bar[i] = match *t {
-                "." | "-" | "_" => None,
+                "." => None,                 // rest
+                "-" | "_" => Some(f32::NAN), // TIE: hold the previous note through this slot
                 n => Some(note_freq(n)?),
             };
         }

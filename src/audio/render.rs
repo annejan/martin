@@ -204,54 +204,57 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         }
     }
     let climax = section_window(score, "climax");
-    for (t, f) in score.lead_notes() {
+    for (t, f, hold) in score.lead_notes() {
         let v = vel(t, beat, 0x1A);
         let gt = groove(t, beat, 0x3A, 0.005, 0.005);
         let lamp = score.param_at(t, "lead", 0.82) * v;
+        let dur = 0.6 + hold; // a `-`/`_` tie holds the note past its slot; hold==0 = unchanged
         let in_climax = climax
             .map(|(s0, s1)| (s0..s1).contains(&t))
             .unwrap_or(false);
         ev(&mut lanes[L_LEAD], gt, move |bd, _| {
-            render_into(bd, gt, 0.6, lamp, 0.0, lead(f, v));
-            render_into(bd, gt, 0.6, 0.20 * v, 0.0, lead(f * 2.0, v));
+            render_into(bd, gt, dur, lamp, 0.0, lead(f, v));
+            render_into(bd, gt, dur, 0.20 * v, 0.0, lead(f * 2.0, v));
             if in_climax {
-                render_into(bd, gt, 0.6, 0.18 * v, 0.0, lead(f * 2.0, v));
+                render_into(bd, gt, dur, 0.18 * v, 0.0, lead(f * 2.0, v));
             }
         });
     }
 
     // ---- ECHO lane (lead echo source; ping-pong + dry-subtract happens in produce) ----
-    for (t, f) in score.lead_notes() {
+    for (t, f, hold) in score.lead_notes() {
         let v = vel(t, beat, 0x1A);
         let gt = groove(t, beat, 0x3A, 0.005, 0.005);
         let amp = 0.30 * v;
         let lv = (v * 0.7).max(0.25);
+        let dur = 0.5 + hold;
         ev(&mut lanes[L_ECHO], gt, move |bd, _| {
-            render_into(bd, gt, 0.5, amp, 0.0, lead(f, lv))
+            render_into(bd, gt, dur, amp, 0.0, lead(f, lv))
         });
     }
 
     // ---- ARP lane (ping-pong happens in produce) ----
-    for (i, (t, f)) in score.arp_notes().into_iter().enumerate() {
+    for (i, (t, f, hold)) in score.arp_notes().into_iter().enumerate() {
         let pan = if i % 2 == 0 { 0.7 } else { -0.7 };
         let v = vel(t, beat, 0x2B);
         let gt = groove(t, beat, 0x9C, 0.006, 0.0);
+        let dur = 0.2 + hold;
         ev(&mut lanes[L_ARP], gt, move |bd, _| {
-            render_into(bd, gt, 0.2, 0.20 * v, pan, arp(f, v))
+            render_into(bd, gt, dur, 0.20 * v, pan, arp(f, v))
         });
     }
 
     // ---- BASS lane: the articulated `<section>.bass` note-lane ----
     let wooz = score.param("woozbass", 0.0) > 0.5;
-    for (t, f) in score.bass_notes() {
+    for (t, f, hold) in score.bass_notes() {
         let v = vel(t, beat, 0xB5);
         let amp = (0.20 + 0.18 * score.levels(t).sub_bass) * v;
         let gt = groove(t, beat, 0xB5, 0.003, 0.0);
         ev(&mut lanes[L_BASS], gt, move |bd, _| {
             let (dur, voice): (f32, Box<dyn fundsp::prelude32::AudioUnit>) = if wooz {
-                (0.6, woozbass(f))
+                (0.6 + hold, woozbass(f))
             } else {
-                (0.42, bass(f, v))
+                (0.42 + hold, bass(f, v))
             };
             render_into(bd, gt, dur, amp, 0.0, voice)
         });
