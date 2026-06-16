@@ -43,7 +43,7 @@ pub(crate) const L_FX: usize = 9; // risers / jets / impacts / snare rolls → b
 
 // --------------------------------------------------------------- resumable effect finishers ----
 
-/// Ping-pong delay (port of the old whole-buffer `render_pingpong`; state carried across ranges).
+/// Ping-pong delay — a stereo delay whose taps alternate L-R-L-R; state carried across ranges.
 struct PingPong {
     line: Vec<f32>,
     w: usize,
@@ -113,7 +113,7 @@ struct Tank {
     aps: [AllPass; 3],
 }
 
-/// Spread reverb (port of `reverb_send`): hp'd mono → 22 ms pre-delay → per-tank 6 feedback combs +
+/// Spread reverb: hp'd mono → 22 ms pre-delay → per-tank 6 feedback combs +
 /// 3 series all-passes → darkened wet L/R. All state carried; processes ranges into `wet`.
 struct Reverb {
     hp: f32,
@@ -201,7 +201,7 @@ impl Reverb {
     }
 }
 
-/// Continuous sub-bass oscillator + the atmosphere noise/crackle bed (ported from `render_fx`).
+/// Continuous sub-bass oscillator + the atmosphere noise/crackle bed (runs the whole track).
 struct SubAtmo {
     phase: f32,
     sub_hz: f32,
