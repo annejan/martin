@@ -32,6 +32,7 @@ pub(crate) struct Shot {
     pub beat: Option<f32>, // `beat:<scale>` → this shot's beat-bounce reaction (0 = still; None = 1.0)
     pub tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow|brand` → recolour this shape
     pub ease: Ease, // `ease:<name>` → shape the morph curve (default Smoothstep = unchanged)
+    pub freeze: Option<f32>, // `freeze:N` → quantize the deform animation to N steps/bar (stop-motion)
 }
 
 impl Shot {
@@ -57,6 +58,7 @@ impl Shot {
             beat: None,
             tint: None,
             ease: Ease::Smoothstep,
+            freeze: None,
         }
     }
 }
@@ -85,6 +87,7 @@ pub(crate) struct BuiltShot {
     pub beat: Option<f32>,  // per-shot beat-bounce scale (`beat:N`); None = 1.0, 0 = still
     pub raster: RasterizeMode,
     pub ease: Ease, // morph-curve shaping (`ease:`); applied to the blend factor in the director
+    pub freeze: Option<f32>, // `freeze:N` deform quantization grid (steps/bar); None = smooth
     pub start: f32, // absolute start time (s) of this shot
     // copied from the source Shot so the director needs only BuiltShot. (`hold` lives only on the
     // source `Shot` — the cue timeline reads it there via `show_end`; the director never needs it.)

@@ -99,6 +99,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         let mut beat = None;
         let mut tint = None;
         let mut ease = crate::scene::effects::Ease::Smoothstep;
+        let mut freeze = None;
         // Pull each modifier token out of the line by its sigil/prefix. A token carrying a known
         // prefix is ALWAYS consumed (never leaks into the head/text) — if it fails to parse we warn,
         // so a typo (`~explod`, `^wave2`) is a visible error, not a silently-dropped effect.
@@ -144,6 +145,11 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                     match b.parse() {
                         Ok(v) => beat = Some(v),
                         Err(_) => eprintln!("seq: bad 'beat:{b}' (need a number) — ignored"),
+                    }
+                } else if let Some(f) = tok.strip_prefix("freeze:") {
+                    match f.parse() {
+                        Ok(v) => freeze = Some(v),
+                        Err(_) => eprintln!("seq: bad 'freeze:{f}' (need a number) — ignored"),
                     }
                 } else if let Some(res) = crate::scene::effects::parse_fx_modifier(tok) {
                     // the shared `~entrance` / `^deform[:amp]` / `tint:` modifiers (see effects.rs).
@@ -207,6 +213,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
             beat,
             tint,
             ease,
+            freeze,
         });
     }
     parts
@@ -337,6 +344,19 @@ mod tests {
         assert_eq!(p[0].exit, Some(Departure::Sink));
         assert_eq!(p[0].flock, Some(3));
         assert!(p[0].rot.is_some());
+    }
+
+    #[test]
+    fn parse_seq_reads_freeze_and_cut() {
+        let p = parts("text:HI ~cut freeze:8");
+        assert_eq!(p.len(), 1);
+        assert!(matches!(&p[0].content, PartContent::Text(s) if s == "HI"));
+        assert_eq!(p[0].entrance, Some(Entrance::Cut));
+        assert_eq!(p[0].freeze, Some(8.0));
+        // a bad freeze value is consumed (not leaked into the head) and leaves freeze unset.
+        let q = parts("text:HI freeze:bad");
+        assert!(matches!(&q[0].content, PartContent::Text(s) if s == "HI"));
+        assert_eq!(q[0].freeze, None);
     }
 
     #[test]

@@ -21,6 +21,7 @@ ply = austin_run/exports/austin_tight.ply
 score = productions/cities/score.txt   # moody A-minor synthwave night-drive (this production's own track)
 flash = 0.25
 bg_dim = 0.4
+post = chroma                 # the kill-shot screen-tear: RGB-split on the kick (beat-gated, deterministic)
 pw_step = 0.35
 pw_splat = 0.004
 
@@ -28,7 +29,7 @@ pw_splat = 0.004
 [reel]
 glb:defeest.glb           @@intro      @5,5    beat:0   backdrop:stars                            # deFEEST mesh ⇄ blobs → city
 splat:austin_tight.ply    @@drop       @6,7,0  ~morph  beat:0.8                 backdrop:stars      # AUSTIN — night, calm
-splat:nyc_tight.ply                    @6,7,0  ~morph  beat:1.4  flash:0.5  ^turbulence:0.2  raster:position  backdrop:stars  # NEW YORK — RAINBOW shader city (the vet drop), churn, punch
+splat:nyc_tight.ply                    @6,7,0  ~shockwave  ease:snap  beat:1.4  flash:0.5  ^turbulence:0.2  raster:position  backdrop:stars  # NEW YORK — RAINBOW shader city (THE kill-shot drop): blasts in as a radial shockwave, snaps on the kick
 splat:chicago_tight.ply   @@breakdown  @6,7,0  ~morph  beat:1.0  ^wind:0.25     backdrop:grid       # CHICAGO — the grid + wind
 splat:seattle_tight.ply   @@climax     @16,7,0 ~morph  beat:1.6  flash:0.5  ^ripple:0.15  backdrop:rings   # SEATTLE — water, climax, holds
 mesh:bitterbal.glb        @@outro      @2,6,0  ~morph  tint:fry  beat:1.0       backdrop:stars      # the SKYLINE balls up into a giant DEEP-FRIED BITTERBAL

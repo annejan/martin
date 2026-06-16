@@ -73,8 +73,11 @@ pub(crate) fn build_sequence(
             } else {
                 Entrance::Morph
             });
-            // part 0 has nothing to morph from — fall back to a ball assemble.
-            if idx == 0 && matches!(tr, Entrance::Morph | Entrance::Swarm) {
+            // part 0 has nothing to morph from — fall back to a ball assemble (Cut needs a prior shape too).
+            if idx == 0 && matches!(tr, Entrance::Morph | Entrance::Swarm | Entrance::Cut) {
+                if tr == Entrance::Cut {
+                    warn!("seq: shot 0 can't ~cut (nothing to cut from) — assembling from a ball");
+                }
                 Entrance::Ball
             } else {
                 tr
@@ -221,6 +224,9 @@ pub(crate) fn build_sequence(
                 Some(ball_of(&shaped, r * BALL_SHELL))
             }
             Entrance::Morph | Entrance::Swarm => None,
+            // Cut shows the shape instantly (director pins the factor to 1.0) — flows from the prev
+            // shape like Morph, no source cloud to build.
+            Entrance::Cut => None,
             other => source_cloud(other, &shaped, r),
         };
         // `exit:` departure target cloud (faded + displaced) — the part morphs to this as it leaves.
@@ -240,10 +246,12 @@ pub(crate) fn build_sequence(
             entrance: tr,
             deform: deforms[idx],
             deform_amp: shot.deform_amp,
-            flash: shot.flash,
+            // a hard cut with no explicit flash gets an automatic white-flash pop on its frame.
+            flash: shot.flash.or((tr == Entrance::Cut).then_some(0.8)),
             beat: shot.beat,
             raster: rasters[idx],
             ease: shot.ease,
+            freeze: shot.freeze,
             start: starts[idx],
             morph: shot.morph,
             bulge: shot.bulge,

@@ -24,6 +24,8 @@ pub(crate) fn shot_director(
     clock: Res<crate::scene::SeqClock>,
     flash: Res<FlashStrength>,
     beat: Res<crate::scene::beat::Beat>,
+    // the score's bar length drives `freeze:N` grid quantization (a pure fn of the clock + tempo).
+    score: Res<crate::music::ScoreRes>,
     // `[sync]` look-track: when it keyframes `flash`, it overrides the global FlashStrength per frame.
     sync: Option<Res<crate::sync::SyncTrack>>,
     // (amp_scale, speed) for the persistent deform — read from env once. MARTIN_DEFORM_AMP scales the
@@ -70,6 +72,14 @@ pub(crate) fn shot_director(
         let f = ((t - depart_at) / DEPART_LEN).clamp(0.0, 1.0);
         let exit = s.exit_cloud.as_ref().unwrap_or(&s.shape);
         (&s.shape, exit, f, false)
+    } else if s.entrance == Entrance::Cut {
+        // hard cut: the shot is simply PRESENT from its start — factor jumps to 1.0 in one frame
+        // (the first frame where t >= start, already grid-aligned since clock.t = i*dt), no blend-in.
+        let lhs = match &s.origin {
+            Some(h) => h,
+            None => &shots[idx - 1].shape,
+        };
+        (lhs, &s.shape, if t >= s.start { 1.0 } else { 0.0 }, false)
     } else {
         let dt = t - s.start;
         let f = (dt / s.morph.max(1e-3)).clamp(0.0, 1.0);
@@ -137,7 +147,12 @@ pub(crate) fn shot_director(
     // per-shot `^name:amp` scales this shot's wobble on top of the global MARTIN_DEFORM_AMP.
     cs.deform_amp = damp * amp_scale * s.deform_amp.unwrap_or(1.0);
     cs.deform_freq = dfreq;
-    cs.deform_time = t * speed;
+    // `freeze:N` quantizes the deform playhead to N steps per bar → the wobble JUMPS on the grid
+    // (stop-motion) instead of running smooth. Pure fn of clock.t + the score's bar → record-safe.
+    cs.deform_time = match s.freeze {
+        Some(steps) => crate::scene::effects::quantize_to_grid(t, score.0.bar(), steps) * speed,
+        None => t * speed,
+    };
     // Flash on each cut (term-demo's Director trick): a brief over-bright pulse at a shot's start →
     // the HDR bloom flares. Strength is the shot's own `flash:N` if set, else the global MARTIN_FLASH;
     // reuses global_opacity. When nothing flashes anywhere, skip the loop so every frame stays

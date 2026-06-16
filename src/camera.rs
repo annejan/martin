@@ -256,11 +256,20 @@ fn fullscreen_toggle(keys: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut Wi
 /// Spawn the HDR + bloom camera with its `OrbitCam` (framed later by `build_sequence` /
 /// `build_composition`).
 fn spawn_camera(mut commands: Commands) {
+    // Tonemap: default TonyMcMapface (film-grade — bright splats roll off instead of clipping to flat
+    // white). `MARTIN_TONEMAP=none` restores the old Tonemapping::None for byte-identical legacy renders.
+    let tonemap = match std::env::var("MARTIN_TONEMAP")
+        .map(|s| s.to_ascii_lowercase())
+        .as_deref()
+    {
+        Ok("none") | Ok("off") => Tonemapping::None,
+        _ => Tonemapping::TonyMcMapface,
+    };
     let mut cam = commands.spawn((
         GaussianCamera { warmup: true },
         Camera3d::default(),
         Hdr, // HDR target so bright splats bloom
-        Tonemapping::None,
+        tonemap,
         Bloom::NATURAL,
         Transform::default(),
         OrbitCam::default(),
@@ -271,13 +280,46 @@ fn spawn_camera(mut commands: Commands) {
     }
 }
 
+/// Apply the `[sync] exposure` knob (or `MARTIN_EXPOSURE`) to the camera bloom — a music-timed
+/// brightness ramp. **Gated**: only touches bloom when an exposure source is present, so the default
+/// look (`Bloom::NATURAL`) is byte-identical otherwise. The base intensity is captured once, so the
+/// knob *scales* it (exposure 1.0 = unchanged). Deterministic: driven by `clock.t` / the score.
+fn update_exposure(
+    sync: Option<Res<crate::sync::SyncTrack>>,
+    clock: Res<SeqClock>,
+    mut base: Local<Option<f32>>,
+    mut q: Query<&mut Bloom>,
+) {
+    let exposure = sync
+        .as_ref()
+        .and_then(|s| s.exposure_at(clock.t))
+        .or_else(|| {
+            std::env::var("MARTIN_EXPOSURE")
+                .ok()
+                .and_then(|s| s.parse::<f32>().ok())
+        });
+    let Some(exposure) = exposure else { return }; // no exposure source → leave NATURAL untouched
+    for mut bloom in &mut q {
+        let b = *base.get_or_insert(bloom.intensity); // capture NATURAL's intensity once
+        bloom.intensity = (b * exposure).clamp(0.0, 1.0);
+    }
+}
+
 /// The orbit camera, its live controls, the waypoint flypath, and fullscreen toggle.
 pub(crate) struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         // The `Waypoints` resource is inserted by `main` (it may carry a `.show` inline camera track).
-        app.add_systems(Startup, spawn_camera)
-            .add_systems(Update, (orbit_camera, controls, flypath, fullscreen_toggle));
+        app.add_systems(Startup, spawn_camera).add_systems(
+            Update,
+            (
+                orbit_camera,
+                controls,
+                flypath,
+                fullscreen_toggle,
+                update_exposure,
+            ),
+        );
     }
 }

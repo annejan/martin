@@ -256,6 +256,16 @@ impl Score {
             AnchorKind::Bar(b) => Some(b * self.bar()),
             AnchorKind::Beat(b) => Some(b * self.beat()),
             AnchorKind::Seconds(s) => Some(*s),
+            AnchorKind::Offset(base, sign, amount, unit) => {
+                let off = sign
+                    * amount
+                    * match unit {
+                        OffsetUnit::Bar => self.bar(),
+                        OffsetUnit::Beat => self.beat(),
+                        OffsetUnit::Seconds => 1.0,
+                    };
+                self.cue(base).map(|b| b + off)
+            }
         }
     }
 
@@ -284,13 +294,52 @@ pub enum AnchorKind {
     Beat(f32),
     /// A raw number of seconds.
     Seconds(f32),
+    /// A base anchor with an arithmetic suffix: `@@drop+2bar`, `@@beat:64-1beat`, `@@start+3s`. Stores
+    /// the base, the sign (`+1`/`-1`), the amount, and the unit — a lead-in/lead-out relative to a cue.
+    Offset(Box<AnchorKind>, f32, f32, OffsetUnit),
+}
+
+/// The unit of an offset suffix (`+2bar`, `-1beat`, `+3s`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum OffsetUnit {
+    Bar,
+    Beat,
+    Seconds,
 }
 
 impl AnchorKind {
     /// Classify an anchor token. Order: `start` → `bar…`/`beat…` → a bare number → otherwise a
     /// section name. (Section names like `intro`/`drop` never collide with the numeric/prefix forms.)
+    /// An optional arithmetic suffix `[+-]<amount>(bar|beat|b|s)` makes it relative — `drop+2bar`,
+    /// `drop-1beat`, `bar:16-3s` — resolved against the base in [`Score::cue`].
     pub fn parse(s: &str) -> Option<Self> {
         let s = s.trim().to_ascii_lowercase();
+        if s.is_empty() {
+            return None;
+        }
+        // Split off an arithmetic suffix at the first `+`/`-` whose prefix is itself a valid base
+        // (so a section literally named `foo-bar` stays one name, not `foo` minus `bar`).
+        for (i, c) in s.char_indices() {
+            if (c == '+' || c == '-') && i > 0 {
+                let base = &s[..i];
+                if Self::parse_base(base).is_some()
+                    && let Some((amount, unit)) = Self::parse_offset(&s[i + 1..])
+                {
+                    let sign = if c == '+' { 1.0 } else { -1.0 };
+                    return Some(Self::Offset(
+                        Box::new(Self::parse_base(base)?),
+                        sign,
+                        amount,
+                        unit,
+                    ));
+                }
+            }
+        }
+        Self::parse_base(&s)
+    }
+
+    /// Parse just the base anchor (no suffix): `start` / `bar:N` / `beat:N` / a number / a section.
+    fn parse_base(s: &str) -> Option<Self> {
         if s.is_empty() {
             return None;
         }
@@ -310,7 +359,22 @@ impl AnchorKind {
         if let Ok(secs) = s.parse::<f32>() {
             return Some(Self::Seconds(secs));
         }
-        Some(Self::Section(s))
+        Some(Self::Section(s.to_string()))
+    }
+
+    /// Parse an offset amount+unit: `2bar` / `1beat` / `0.5b` / `3s`. (`b` = bar, bare number = beats.)
+    fn parse_offset(s: &str) -> Option<(f32, OffsetUnit)> {
+        let s = s.trim();
+        if let Some(n) = s.strip_suffix("bar").or_else(|| s.strip_suffix('b')) {
+            return n.parse::<f32>().ok().map(|a| (a, OffsetUnit::Bar));
+        }
+        if let Some(n) = s.strip_suffix("beat") {
+            return n.parse::<f32>().ok().map(|a| (a, OffsetUnit::Beat));
+        }
+        if let Some(n) = s.strip_suffix('s') {
+            return n.parse::<f32>().ok().map(|a| (a, OffsetUnit::Seconds));
+        }
+        s.parse::<f32>().ok().map(|a| (a, OffsetUnit::Beat)) // bare number → beats
     }
 }
 
@@ -356,6 +420,28 @@ mod tests {
         // a plain number is seconds; whitespace + case are tolerated.
         assert_eq!(s.anchor_seconds("  2.5 "), Some(2.5));
         assert_eq!(s.anchor_seconds("nope"), None);
+    }
+
+    #[test]
+    fn anchor_seconds_resolves_expression_offsets() {
+        let s = Score::builtin();
+        let bar = s.bar();
+        let beat = s.beat();
+        // section + bar/beat/second offsets (both signs), relative to a known cue.
+        let drop = s
+            .anchor_seconds("drop")
+            .expect("builtin has a drop section");
+        assert_eq!(s.anchor_seconds("drop+2bar"), Some(drop + 2.0 * bar));
+        assert_eq!(s.anchor_seconds("drop-1beat"), Some(drop - beat));
+        assert_eq!(s.anchor_seconds("drop+3s"), Some(drop + 3.0));
+        assert_eq!(s.anchor_seconds("drop-1b"), Some(drop - bar)); // `b` = bar alias
+        // offsets on bar/beat/second bases.
+        assert_eq!(s.anchor_seconds("bar:4+2bar"), Some(6.0 * bar));
+        assert_eq!(s.anchor_seconds("beat8-2"), Some(6.0 * beat)); // bare number = beats
+        assert_eq!(s.anchor_seconds("start+1bar"), Some(bar));
+        assert_eq!(s.anchor_seconds("10+5s"), Some(15.0));
+        // a malformed suffix is NOT a valid offset → the whole token falls back to a section name.
+        assert_eq!(s.anchor_seconds("drop+wat"), None);
     }
 
     #[test]

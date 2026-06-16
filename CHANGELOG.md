@@ -31,6 +31,21 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   ViewNode after tonemapping, so it covers the window, the live serve view, and headless recordings
   uniformly; deterministic (shear scales with the clock-driven kick), default-off, splat geometry
   untouched. The "screen reacts to the track" layer (`src/post.rs` + `assets/post.wgsl`).
+- **`~cut` hard-cut entrance**: a shot replaces the previous in ONE frame at its start (no morph-in)
+  with an automatic white-flash pop — an MTV-style editing cut on the beat (pair with `@@drop`).
+- **`freeze:N` per-shot deform quantization**: snaps a shot's deform animation to N steps per bar so
+  the wobble JUMPS on the beat (stop-motion stutter) instead of running smooth. Deterministic.
+- **Anisotropic mesh splats** (`MARTIN_MESH_ANISO`): stretches `mesh:` samples into ellipsoids along
+  the surface grain (the triangle's longest edge), area-preserving, so the cloud follows the mesh's
+  contours instead of looking like uniform dots. `1.0` = round (byte-identical default).
+- **Tonemap** (`MARTIN_TONEMAP`): default flipped `Tonemapping::None` → **TonyMcMapface** (film-grade —
+  bright splats roll off instead of clipping to flat white). **The default look changed**; set
+  `MARTIN_TONEMAP=none` for byte-identical legacy renders. Plus an `exposure` channel on `[sync]`
+  (and `MARTIN_EXPOSURE`) — a music-timed bloom-intensity ramp, gated so the default is untouched.
+- **Expression anchors**: `@@drop+2bar`, `@@drop-1beat`, `@@bar:16-3s` — any `@@anchor` ± a
+  bar/beat/second offset, resolved in one place (`Score::anchor_seconds`) so reel parts, the camera
+  track, `[sync]`, and compose `in`/`out` all inherit it. Lead-ins/lead-outs relative to a cue.
+- cities-defeest: the NYC drop recast as the kill-shot — `~shockwave ease:snap` + `post = chroma`.
 - Self-contained single-binary bundle (`--features bundle`): show assets are lz4-embedded and
   self-extract at startup.
 - `KHR_gaussian_splatting` glTF loading (`MARTIN_GLB=<file.glb>`): render a standard-container splat

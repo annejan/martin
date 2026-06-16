@@ -34,7 +34,10 @@ const RELEASE: f32 = 0.12;
 
 /// Average interleaved-stereo `f32` (the shape `stream::produce` emits) down to mono for analysis.
 pub fn mix_mono(stereo: &[f32]) -> Vec<f32> {
-    stereo.chunks_exact(2).map(|s| 0.5 * (s[0] + s[1])).collect()
+    stereo
+        .chunks_exact(2)
+        .map(|s| 0.5 * (s[0] + s[1]))
+        .collect()
 }
 
 /// Analyse a mono signal into per-frame band energies, one row per render frame (`frames` rows).
@@ -57,7 +60,10 @@ pub fn analyze(mono: &[f32], sample_rate: u32, fps: f32, frames: usize) -> Vec<[
     let bin_of = |hz: f32| ((hz * WIN as f32 / sr).round() as usize).clamp(1, WIN / 2);
     let mut band_bins = [(0usize, 0usize); BANDS];
     for b in 0..BANDS {
-        band_bins[b] = (bin_of(EDGES_HZ[b]), bin_of(EDGES_HZ[b + 1]).max(bin_of(EDGES_HZ[b]) + 1));
+        band_bins[b] = (
+            bin_of(EDGES_HZ[b]),
+            bin_of(EDGES_HZ[b + 1]).max(bin_of(EDGES_HZ[b]) + 1),
+        );
     }
 
     // Pass 1: raw per-frame band energy from a window centred on each frame's sample.
@@ -176,7 +182,9 @@ mod tests {
 
     fn sine(freq: f32, secs: f32, sr: u32) -> Vec<f32> {
         let n = (secs * sr as f32) as usize;
-        (0..n).map(|i| (2.0 * PI * freq * i as f32 / sr as f32).sin()).collect()
+        (0..n)
+            .map(|i| (2.0 * PI * freq * i as f32 / sr as f32).sin())
+            .collect()
     }
 
     #[test]
@@ -202,7 +210,9 @@ mod tests {
     fn fft_pure_bin_concentrates_energy() {
         // A cosine at exactly bin 2 of an 8-point FFT puts all energy in bins 2 and 6 (its mirror).
         let n = 8;
-        let mut re: Vec<f32> = (0..n).map(|i| (2.0 * PI * 2.0 * i as f32 / n as f32).cos()).collect();
+        let mut re: Vec<f32> = (0..n)
+            .map(|i| (2.0 * PI * 2.0 * i as f32 / n as f32).cos())
+            .collect();
         let mut im = vec![0.0f32; n];
         fft(&mut re, &mut im);
         let mag = |k: usize| (re[k] * re[k] + im[k] * im[k]).sqrt();
@@ -219,7 +229,11 @@ mod tests {
         let table = analyze(&mono, SR, 60.0, 30);
         let mid = table[15];
         assert!(mid[0] > 0.5, "sub band should be hot: {:?}", mid);
-        assert!(mid[0] > mid[BANDS - 1] + 0.3, "low should dominate air: {:?}", mid);
+        assert!(
+            mid[0] > mid[BANDS - 1] + 0.3,
+            "low should dominate air: {:?}",
+            mid
+        );
     }
 
     #[test]
@@ -228,7 +242,11 @@ mod tests {
         let table = analyze(&mono, SR, 60.0, 30);
         let mid = table[15];
         assert!(mid[BANDS - 1] > 0.5, "air band should be hot: {:?}", mid);
-        assert!(mid[BANDS - 1] > mid[0] + 0.3, "air should dominate sub: {:?}", mid);
+        assert!(
+            mid[BANDS - 1] > mid[0] + 0.3,
+            "air should dominate sub: {:?}",
+            mid
+        );
     }
 
     #[test]
@@ -236,7 +254,10 @@ mod tests {
         let mono = sine(440.0, 0.5, SR);
         let a = analyze(&mono, SR, 60.0, 20);
         let b = analyze(&mono, SR, 60.0, 20);
-        assert_eq!(a, b, "same input must give bit-identical output (record-safe)");
+        assert_eq!(
+            a, b,
+            "same input must give bit-identical output (record-safe)"
+        );
     }
 
     #[test]

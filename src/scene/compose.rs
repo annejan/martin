@@ -138,8 +138,8 @@ pub(crate) struct ComposeAnim {
     interpolate: bool, // a `~entrance` object → drive cs.time (assemble), not opacity
     deform: Option<(u32, f32, f32)>, // `^name` deform uniforms (mode, amp, freq)
     reveal: Option<(u32, f32, u32)>, // the entrance's per-particle reveal shader (mode/softness/axis) —
-                                     // pen-write traces the letters in as it assembles (only while assembling, then off)
-    ease: Ease,                      // shapes the assemble curve (`ease:`)
+    // pen-write traces the letters in as it assembles (only while assembling, then off)
+    ease: Ease, // shapes the assemble curve (`ease:`)
 }
 
 /// Parse `MARTIN_COMPOSE` (a file path or inline string). Each line: a `<source>` head (text/splat/

@@ -255,7 +255,11 @@ pub fn pose_at(list: &[Key], p: f32) -> Option<Key> {
     let e = u * u * (3.0 - 2.0 * u); // smoothstep ease across the leg
     let (a, b) = (list[i], list[i + 1]);
     if b.cut {
-        return Some(Key { t: None, cut: false, ..a }); // hard cut: hold a, snap to b at the leg end
+        return Some(Key {
+            t: None,
+            cut: false,
+            ..a
+        }); // hard cut: hold a, snap to b at the leg end
     }
     Some(Key {
         target: a.target.lerp(b.target, e),
@@ -293,7 +297,11 @@ pub fn pose_at_time(list: &[Key], t: f32) -> Option<Key> {
     if b.cut {
         // hard cut: hold the start pose for the whole leg, then jump to b exactly at its time
         // (the next leg, bracket (b,c), resumes smoothstep). A redaction-style cut, not a glide.
-        return Some(Key { t: Some(t), cut: false, ..a });
+        return Some(Key {
+            t: Some(t),
+            cut: false,
+            ..a
+        });
     }
     let span = (ta(&b) - ta(&a)).max(1e-4);
     let u = ((t - ta(&a)) / span).clamp(0.0, 1.0);
@@ -428,7 +436,10 @@ mod tests {
         let track = [
             wp(Some(0.0), 6.0, 0.0),
             wp(Some(2.0), 4.0, 0.0),
-            Key { cut: true, ..wp(Some(4.0), 1.0, 0.0) },
+            Key {
+                cut: true,
+                ..wp(Some(4.0), 1.0, 0.0)
+            },
         ];
         // mid of the cut leg (t=3): still holding pose 1's dist (4.0), NOT interpolating toward 1.0.
         assert!((pose_at_time(&track, 3.0).unwrap().dist - 4.0).abs() < 1e-4);
@@ -449,7 +460,7 @@ mod tests {
         let lines = vec![
             "t=@@intro dist=6 yaw=1.4 pitch=0.1".to_string(),
             "t=2.5 dist=4 pos=1,2,3 cut".to_string(), // bare `cut` token → hard cut
-            "t=@@bogus dist=5".to_string(), // unknown anchor → untimed
+            "t=@@bogus dist=5".to_string(),           // unknown anchor → untimed
         ];
         let cam = parse_camera(&lines, &score);
         assert_eq!(cam.len(), 3);

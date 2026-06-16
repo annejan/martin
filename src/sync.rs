@@ -24,6 +24,7 @@ pub struct SyncTrack {
     flash: Vec<(f32, f32)>,
     bg_dim: Vec<(f32, f32)>,
     beat: Vec<(f32, f32)>,
+    exposure: Vec<(f32, f32)>,
 }
 
 impl SyncTrack {
@@ -36,8 +37,14 @@ impl SyncTrack {
     pub fn beat_at(&self, t: f32) -> Option<f32> {
         eval(&self.beat, t)
     }
+    pub fn exposure_at(&self, t: f32) -> Option<f32> {
+        eval(&self.exposure, t)
+    }
     pub fn is_empty(&self) -> bool {
-        self.flash.is_empty() && self.bg_dim.is_empty() && self.beat.is_empty()
+        self.flash.is_empty()
+            && self.bg_dim.is_empty()
+            && self.beat.is_empty()
+            && self.exposure.is_empty()
     }
 
     /// `(knob, keyframes)` for each knob that has any — for the `MARTIN_VALIDATE` dump.
@@ -46,6 +53,7 @@ impl SyncTrack {
             ("flash", &self.flash),
             ("bg_dim", &self.bg_dim),
             ("beat", &self.beat),
+            ("exposure", &self.exposure),
         ]
         .into_iter()
         .filter(|(_, k)| !k.is_empty())
@@ -107,13 +115,21 @@ pub fn parse_sync(lines: &[String], score: &crate::score::Score) -> SyncTrack {
                 "flash" => track.flash.push((time, val)),
                 "bg_dim" | "dim" => track.bg_dim.push((time, val)),
                 "beat" => track.beat.push((time, val)),
+                "exposure" | "exp" => track.exposure.push((time, val)),
                 other => {
-                    eprintln!("sync: unknown knob '{other}' — skipped (have: flash/bg_dim/beat)")
+                    eprintln!(
+                        "sync: unknown knob '{other}' — skipped (have: flash/bg_dim/beat/exposure)"
+                    )
                 }
             }
         }
     }
-    for v in [&mut track.flash, &mut track.bg_dim, &mut track.beat] {
+    for v in [
+        &mut track.flash,
+        &mut track.bg_dim,
+        &mut track.beat,
+        &mut track.exposure,
+    ] {
         v.sort_by(|a, b| a.0.total_cmp(&b.0));
     }
     track

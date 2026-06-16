@@ -15,6 +15,7 @@ use bevy::core_pipeline::FullscreenShader;
 use bevy::core_pipeline::core_3d::graph::{Core3d, Node3d};
 use bevy::ecs::query::QueryItem;
 use bevy::prelude::*;
+use bevy::render::RenderApp;
 use bevy::render::extract_component::{
     ComponentUniforms, DynamicUniformIndex, ExtractComponent, ExtractComponentPlugin,
     UniformComponentPlugin,
@@ -32,7 +33,6 @@ use bevy::render::render_resource::{
 };
 use bevy::render::renderer::{RenderContext, RenderDevice};
 use bevy::render::view::ViewTarget;
-use bevy::render::RenderApp;
 
 const POST_SHADER: Handle<Shader> = uuid_handle!("d1f2e3c4-5a6b-7c8d-9e0f-1a2b3c4d5e6f");
 
@@ -49,9 +49,9 @@ pub(crate) struct PostSettings {
 /// Parse `MARTIN_POST` (`chroma` / `chroma:1.5`) into the camera's settings, or `None` if unset/off.
 pub(crate) fn settings_from_env() -> Option<PostSettings> {
     let v = std::env::var("MARTIN_POST").ok()?;
-    let (name, strength) = v
-        .split_once(':')
-        .map_or((v.as_str(), 1.0), |(n, s)| (n, s.trim().parse().unwrap_or(1.0)));
+    let (name, strength) = v.split_once(':').map_or((v.as_str(), 1.0), |(n, s)| {
+        (n, s.trim().parse().unwrap_or(1.0))
+    });
     let mode = match name.trim().to_ascii_lowercase().as_str() {
         "chroma" | "rgb" | "rgb-split" | "rgbsplit" | "split" => 1u32,
         "off" | "" => return None,
@@ -60,7 +60,12 @@ pub(crate) fn settings_from_env() -> Option<PostSettings> {
             return None;
         }
     };
-    Some(PostSettings { mode, intensity: strength, kick: 0.0, _pad: 0.0 })
+    Some(PostSettings {
+        mode,
+        intensity: strength,
+        kick: 0.0,
+        _pad: 0.0,
+    })
 }
 
 /// Refresh each camera's `kick` from the beat (clock-driven) so the shear lands on the drum. Scaled by
@@ -108,7 +113,11 @@ impl ViewNode for PostNode {
         let bind_group = render_context.render_device().create_bind_group(
             "post_bind_group",
             &layout,
-            &BindGroupEntries::sequential((post.source, &pipeline.sampler, settings_binding.clone())),
+            &BindGroupEntries::sequential((
+                post.source,
+                &pipeline.sampler,
+                settings_binding.clone(),
+            )),
         );
 
         let mut pass = render_context
@@ -161,27 +170,32 @@ impl FromWorld for PostPipeline {
             .resource::<RenderDevice>()
             .create_sampler(&SamplerDescriptor::default());
         let vertex = world.resource::<FullscreenShader>().to_vertex_state();
-        let id = world
-            .resource_mut::<PipelineCache>()
-            .queue_render_pipeline(RenderPipelineDescriptor {
-                label: Some("post_pipeline".into()),
-                layout: vec![layout.clone()],
-                vertex,
-                fragment: Some(FragmentState {
-                    shader: POST_SHADER,
-                    shader_defs: vec![],
-                    entry_point: Some("fragment".into()),
-                    // The camera is HDR (camera.rs), so the post-tonemapping target is Rgba16Float —
-                    // mirror the tonemapping pipeline's target format exactly.
-                    targets: vec![Some(ColorTargetState {
-                        format: TextureFormat::Rgba16Float,
-                        blend: None,
-                        write_mask: ColorWrites::ALL,
-                    })],
-                }),
-                ..default()
-            });
-        Self { layout, sampler, id }
+        let id =
+            world
+                .resource_mut::<PipelineCache>()
+                .queue_render_pipeline(RenderPipelineDescriptor {
+                    label: Some("post_pipeline".into()),
+                    layout: vec![layout.clone()],
+                    vertex,
+                    fragment: Some(FragmentState {
+                        shader: POST_SHADER,
+                        shader_defs: vec![],
+                        entry_point: Some("fragment".into()),
+                        // The camera is HDR (camera.rs), so the post-tonemapping target is Rgba16Float —
+                        // mirror the tonemapping pipeline's target format exactly.
+                        targets: vec![Some(ColorTargetState {
+                            format: TextureFormat::Rgba16Float,
+                            blend: None,
+                            write_mask: ColorWrites::ALL,
+                        })],
+                    }),
+                    ..default()
+                });
+        Self {
+            layout,
+            sampler,
+            id,
+        }
     }
 }
 

@@ -92,6 +92,8 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_FFT` | `1.0` | **Spectral reactivity** strength (`0` = off). An FFT of the rendered track is baked into 8 log frequency bands (sub→air); the **background** (`MARTIN_BG`) and **`shader:` interludes** then react to the actual *spectrum* — the bass swells the whole field, the mids wash colour over it, the air sparkles — not just the drum triggers (`MARTIN_BEAT`). Deterministic (baked once from the score, indexed by show-time), so it bakes identically into recordings. Only affects shows with a backdrop/interlude; splat-only morph shows are untouched. See [Spectral reactivity](#spectral-reactivity). |
 | `MARTIN_CAM_PUMP` | `0` (off) | Kick-driven **camera lunge** (a transient pull-in on each kick). **Off by default** — the shake is nauseating over a long loop. Opt in with a small value (`0.04` ≈ the old default) for a single punchy clip. |
 | `MARTIN_POST` | off | **Beat-gated post-processing** over the whole rendered frame: `chroma` (or `chroma:<strength>`) does an RGB channel-split whose magnitude rides the kick — the image shears red/cyan on every drum hit (the "screen reacts to the track" layer). Runs in the camera's render graph after tonemapping, so it covers the window, the live `MARTIN_SERVE` view, and headless recordings alike. Deterministic (the shear scales with the clock-driven `kick`), so it bakes identically into a render. Default-off; splat geometry is untouched. See [Post-processing](#post-processing). |
+| `MARTIN_TONEMAP` | `tonymcmapface` | Camera **tonemap**. Default `TonyMcMapface` (film-grade — bright splats roll off instead of clipping to flat white). `MARTIN_TONEMAP=none` restores the old `Tonemapping::None` for byte-identical legacy renders. **Note: the default changed**, so a show looks slightly richer than before unless you set `none`. |
+| `MARTIN_EXPOSURE` | `1.0` | Static **exposure** (bloom-intensity multiplier). `1.0` = unchanged; `<1` dims the glow, `>1` lifts it. A `[sync] exposure=` keyframe overrides it per frame (music-timed). Only takes effect when set (or keyframed) — otherwise the bloom is left at its tuned default. |
 | `MARTIN_BG` | — | **Fullscreen background shader** behind the splats (the demoscene classic): `plasma` / `tunnel` / `stars` / `warp` / `rings` / `grid` / `kaleido` / `bolt` (or a number). A custom-material quad parented to the camera, opaque at the far plane so the splats blend over it; fed time + beat (kick brightens). The WGSL is `assets/bg.wgsl` — a `mode` uniform switches effects; edit it / add your own (Shadertoy-ish: work in `p` + `bg.time`). |
 | `MARTIN_BG_DIM` | `1.0` | Scales the background brightness so foreground content (a logo, glowing text) reads over it — e.g. `0.4` for a punchy effect dialled back to a backdrop. |
 | `MARTIN_FLASH` | `0` | Over-bright **bloom flash on each part cut** (0 = off; `~0.6` = punchy). Synced to the music when parts are `@@`-anchored to beats/bars. |
@@ -125,6 +127,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_MESH_SPLAT` | `0.006` | Gaussian splat **in-plane disk size** for a `mesh:` part, as a **fraction of the mesh's largest dimension** (scale-invariant). Each sample is a flat disk aligned to the surface normal. |
 | `MARTIN_MESH_THIN` | `0.2` | Mesh disk thickness as a fraction of `MARTIN_MESH_SPLAT` (how flat the surface splats are). |
 | `MARTIN_MESH_RGB` | texture / vertex / `0.8,0.85,0.95` | Flat `r,g,b` fallback for a `mesh:` part. Colour priority: the material's **diffuse texture** (sampled at the UV; PNG/JPEG) > vertex colours > material diffuse > this. |
+| `MARTIN_MESH_ANISO` | `1.0` (round) | **Anisotropic mesh splats**: `>1` stretches each `mesh:` sample into an **ellipsoid** along the surface grain (the triangle's longest edge), area-preserving (`r·aniso` × `r/aniso`), so the cloud follows the mesh's contours instead of looking like uniform dots. `2`–`4` ≈ a clear streak; `1.0` = round disks (byte-identical to before). Clamped to `0.1`–`10`. |
 | `MARTIN_ROT` | — | `rx,ry,rz` euler **degrees** applied to the cloud — e.g. stand a COLMAP scene upright for a "normal" POV. Default = the portrait flip (gives scenes their abstract sideways look). Also orients a `glb:` dissolve (mesh + its splats together). |
 | `MARTIN_REEL_POS` | `0,0,0` | `x,y,z` translation of the whole **reel** (the morph timeline) off the world origin. The reel normally sits at the origin; this places the morphing subject **relative to `[stage]` props** (which carry their own `@x,y,z`) — e.g. `0,0.6,0` floats a knot⇄galaxy morph above a placed cityscape. Settings key: `reel_pos = x,y,z`. |
 
@@ -273,15 +276,18 @@ shader:warp                      # a fullscreen WGSL effect as an INTERLUDE: the
                                  #   in/out across the part — a demoscene effect between scenes
 splat:name.ply                   # a splat (filename in the asset folder)
 splat:a.ply+b.ply                # several splats, auto-arranged side by side
-…any of the above… @hold,morph,bulge   ~entrance   ^deform[:amp]   exit:departure   rot:rx,ry,rz   flock:N   @@anchor   backdrop:name   raster:mode   flash:strength   ease:curve
+…any of the above… @hold,morph,bulge   ~entrance   ^deform[:amp]   exit:departure   rot:rx,ry,rz   flock:N   @@anchor   backdrop:name   raster:mode   flash:strength   ease:curve   freeze:N
 ```
 
 > **Per-Shot look overrides (scene-scoped looks):** `flash:<strength>` flares the cut-bloom on *this*
 > Shot's entry (overrides the global `MARTIN_FLASH` — punch one drop, not every cut); `^deform:<amp>`
 > scales this Shot's wobble (e.g. `^wave:0.4` gentle, `^twist:2` violent) on top of `MARTIN_DEFORM_AMP`;
 > `beat:<scale>` dials this Shot's beat-bounce (`beat:0` = still through the drop, `beat:1.6` = punchier)
-> so the kick reaction rides only on *some* Shots, not the whole show. Together with the existing
-> per-Shot `backdrop:` / `raster:`, a Shot fully controls its own look.
+> so the kick reaction rides only on *some* Shots, not the whole show. `ease:<curve>` shapes the morph
+> curve (`snap`/`hold-snap`/`anticipate`/`stutter`/`smooth`; see [Morph easing](#sequences)); `freeze:N`
+> **quantizes this Shot's deform** to N steps per bar so the wobble JUMPS on the beat (stop-motion
+> stutter) instead of running smooth. Together with the existing per-Shot `backdrop:` / `raster:`, a
+> Shot fully controls its own look.
 
 > **Domain vocabulary** (see [`DOMAIN.md`](DOMAIN.md)): the section is `[reel]` and a line is a **Shot**;
 > the modifiers above are the canonical spellings. Older spellings still parse as aliases:
@@ -378,6 +384,7 @@ of them). It can sit anywhere on the line, but reads best last:
 | `~helix` (`~dna`, `~spiral`) | reels in off a tall spinning column — a DNA / barber-pole assemble |
 | `~fold` (`~unfold`) | unfolds sideways out of a vertical seam, like opening a folded sheet |
 | `~zoom` (`~telescope`, `~warp-in`) | rushes in from far — a telescope / hyperspace zoom into place |
+| `~cut` (`~hard-cut`) | **hard cut**: the shot appears in ONE frame at its start (no morph-in) with an automatic white-flash pop — an MTV-style editing cut on the beat. Pair with `@@drop` to land it on the kick. (Shot 0 can't `~cut` — nothing to cut from — so it falls back to a ball.) |
 
 **Per-particle** (the fork shader staggers each splat — great for text):
 
@@ -652,8 +659,11 @@ the track no matter how you retime the parts before it:
 | `@@bar32` (or `@@bar:32`) | **bar 32** (`32 × BAR`) |
 | `@@beat:64` | **beat 64** (`64 × BEAT`) |
 | `@@12.5` | **12.5 seconds** (raw) |
+| `@@drop+2bar` / `@@drop-1beat` / `@@bar:16-3s` | any anchor **± an offset** — a lead-in/lead-out relative to a cue. Suffix is `[+-]<n>(bar\|b\|beat\|s)`; a bare number is beats. |
 
-The part still uses its `@morph` to arrive and holds until the next part starts. Anchors should
+The offset suffix works on **every** `@@anchor` (reel parts, the `[camera]` track, `[sync]`, and
+compose `in`/`out`) — it's resolved in one place — so e.g. a camera move can begin `@@drop-1bar` to
+arrive *on* the drop. The part still uses its `@morph` to arrive and holds until the next part starts. Anchors should
 increase down the show. Example — the title holds until the drop, then the dog hits *on* it:
 
 ```
@@ -778,7 +788,7 @@ A `.show` has four kinds of section — see [`assets/example.show`](assets/examp
 | `[seq]` | the **hero** morph timeline — verbatim [`.seq`](#sequences) syntax |
 | `[compose]` | the **stage** of placed objects — verbatim [`.compose`](#composition--the-stage-martin_compose) syntax |
 | `[camera]` | a music-timed **[camera track](#live-keyboard-controls)** — order-free `t=<s> pos=x,y,z dist= yaw= pitch=` lines. `t` is seconds **or `@@anchor`** (`t=@@drop` locks the keyframe to a music section, like a seq part). A bare **`cut`** token on a keyframe makes the camera **snap** to it (hold the previous pose, then jump) instead of gliding — an MTV-style hard cut on the beat: `t=@@drop pos=0,0,0 dist=0.6 cut` |
-| `[sync]` | a music-timed **look track** (automation) — same `t=<s\|@@anchor>` grammar, but the channels are the global look knobs: `flash`, `bg_dim`, `beat`. Each is smoothstep-interpolated between keyframes (e.g. `t=@@drop flash=0.6 bg_dim=0.3 beat=1.3`), so the bloom swells into the drop, the backdrop dims through the climax, the beat-reactivity ramps to the peak — instead of one static value all show. Per-Shot `flash:`/`beat:` still layer on top; no `[sync]` = the static `MARTIN_*` values. |
+| `[sync]` | a music-timed **look track** (automation) — same `t=<s\|@@anchor>` grammar, but the channels are the global look knobs: `flash`, `bg_dim`, `beat`, `exposure`. Each is smoothstep-interpolated between keyframes (e.g. `t=@@drop flash=0.6 bg_dim=0.3 beat=1.3 exposure=1.4`), so the bloom swells into the drop, the backdrop dims through the climax, the beat-reactivity ramps to the peak, the exposure lifts on the hit — instead of one static value all show. Per-Shot `flash:`/`beat:` still layer on top; no `[sync]` = the static `MARTIN_*` values. |
 
 It's deliberately pure sugar: the file **expands into the env** (the settings become `MARTIN_*`, the
 `[seq]`/`[compose]` bodies become `MARTIN_SEQ`/`MARTIN_COMPOSE`), so everything above works exactly

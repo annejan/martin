@@ -45,6 +45,7 @@ pub(crate) enum Entrance {
     Outline, // text traced in outline/pen order — a glowing neon draw-on (filled font); text only
     PenWrite, // text written in pen order on a single-stroke font — true handwriting; text only
     Shockwave, // materialise as an expanding ring sweeping outward from the centre (a kick "blast")
+    Cut,     // hard cut: the shot is simply PRESENT from its start — one-frame swap, no blend-in
 }
 
 /// The source cloud a STANDALONE assemble flies in from (compose objects, and seq part 0). Morph/
@@ -98,6 +99,7 @@ impl Entrance {
             "outline" => Entrance::Outline,
             "pen" | "penwrite" | "pen-write" | "write" => Entrance::PenWrite,
             "shockwave" | "blast" | "shock" => Entrance::Shockwave,
+            "cut" | "hard-cut" | "hardcut" => Entrance::Cut,
             _ => return None,
         })
     }
@@ -170,6 +172,18 @@ impl Ease {
             }
         }
     }
+}
+
+/// Quantize a clock time `t` (s) to a grid of `steps_per_bar` steps per musical bar (`bar` seconds) —
+/// the `freeze:N` stutter: a held shot's animation JUMPS step-to-step on the beat instead of running
+/// smooth (stop-motion contrast). Returns the step boundary at or before `t`. Pure fn of `t` + the
+/// score's bar length → deterministic in record mode. Invalid grid (≤0) → `t` unchanged.
+pub(crate) fn quantize_to_grid(t: f32, bar: f32, steps_per_bar: f32) -> f32 {
+    if steps_per_bar <= 0.0 || bar <= 0.0 {
+        return t;
+    }
+    let step = bar / steps_per_bar;
+    (t / step).floor() * step
 }
 
 /// A *persistent* vertex deform (`^name` token / `MARTIN_DEFORM`). Unlike a `Entrance` (which
@@ -358,6 +372,8 @@ mod tests {
         assert_eq!(Entrance::parse("unfold"), Some(Entrance::Fold)); // alias
         assert_eq!(Entrance::parse("telescope"), Some(Entrance::Zoom)); // alias
         assert_eq!(Entrance::parse("blast"), Some(Entrance::Shockwave)); // alias
+        assert_eq!(Entrance::parse("cut"), Some(Entrance::Cut));
+        assert_eq!(Entrance::parse("hard-cut"), Some(Entrance::Cut)); // alias
         assert_eq!(Entrance::parse("nope"), None);
     }
 
@@ -389,6 +405,18 @@ mod tests {
     }
 
     #[test]
+    fn quantize_to_grid_snaps_to_steps() {
+        // bar=2.0s, 4 steps/bar → 0.5s steps. Times floor to the step boundary.
+        assert_eq!(quantize_to_grid(0.0, 2.0, 4.0), 0.0);
+        assert_eq!(quantize_to_grid(0.3, 2.0, 4.0), 0.0);
+        assert_eq!(quantize_to_grid(0.7, 2.0, 4.0), 0.5);
+        assert!((quantize_to_grid(1.9, 2.0, 4.0) - 1.5).abs() < 1e-6);
+        // invalid grid (≤0) → unchanged.
+        assert_eq!(quantize_to_grid(1.234, 2.0, 0.0), 1.234);
+        assert_eq!(quantize_to_grid(1.234, 0.0, 4.0), 1.234);
+    }
+
+    #[test]
     fn deform_and_departure_parse() {
         assert_eq!(Deform::parse("flag"), Some(Deform::Wave)); // alias
         assert_eq!(Deform::parse("churn"), Some(Deform::Turbulence));
@@ -409,6 +437,7 @@ mod tests {
         assert_eq!(Entrance::Shockwave.shader_uniforms(), Some((8, 0.18, 0))); // radial blast, mode 8
         assert!(Entrance::Fade.shader_uniforms().is_none());
         assert!(Entrance::Extrude.shader_uniforms().is_none());
+        assert!(Entrance::Cut.shader_uniforms().is_none()); // hard cut: no per-particle animation
     }
 
     #[test]

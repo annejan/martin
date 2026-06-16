@@ -90,7 +90,35 @@ fn tangent_basis(n: [f32; 3]) -> ([f32; 3], [f32; 3]) {
     (t, b)
 }
 
-/// Append one flat-disk gaussian at `pos`, lying in the surface plane (local +Z = `n_axis`).
+/// Longest of a triangle's three edges, projected into the plane perpendicular to `n` and normalized
+/// — the surface "grain" direction. `[1,0,0]` if degenerate. Used to orient anisotropic splats.
+fn longest_edge_in_plane(tri: &[[f32; 3]; 3], n: [f32; 3]) -> [f32; 3] {
+    let proj = |e: [f32; 3]| {
+        let d = e[0] * n[0] + e[1] * n[1] + e[2] * n[2];
+        [e[0] - d * n[0], e[1] - d * n[1], e[2] - d * n[2]]
+    };
+    let mut best = [1.0, 0.0, 0.0];
+    let mut best_len = 0.0;
+    for e in [
+        sub(tri[1], tri[0]),
+        sub(tri[2], tri[0]),
+        sub(tri[2], tri[1]),
+    ] {
+        let p = proj(e);
+        let len = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt();
+        if len > best_len {
+            best_len = len;
+            best = p;
+        }
+    }
+    norm_or(best, [1.0, 0.0, 0.0])
+}
+
+/// Append one surface-aligned gaussian at `pos` (local +Z = `n_axis`). `aniso == 1.0` is a round flat
+/// disk (in-plane rotation is irrelevant → byte-identical to the original); `aniso != 1.0` stretches
+/// it into an **ellipsoid** along `edge_dir` (the surface grain): in-plane scales become
+/// `r_plane*aniso` × `r_plane/aniso` (area-preserving), so the cloud follows the mesh's contours.
+#[allow(clippy::too_many_arguments)] // geometry + disk knobs + anisotropy basis
 fn push_disk(
     out: &mut Vec<Gaussian3d>,
     pos: [f32; 3],
@@ -99,13 +127,27 @@ fn push_disk(
     r_plane: f32,
     r_thin: f32,
     alpha: f32,
+    aniso: f32,
+    edge_dir: [f32; 3],
 ) {
-    let (t, b) = tangent_basis(n_axis);
+    let (sx, sy, t, b) = if (aniso - 1.0).abs() < 1e-6 {
+        let (t, b) = tangent_basis(n_axis); // round disk — unchanged (byte-identical default)
+        (r_plane, r_plane, t, b)
+    } else {
+        let t = edge_dir;
+        let b = norm_or(cross(n_axis, t), tangent_basis(n_axis).1); // perp to grain + normal
+        (
+            (r_plane * aniso).max(1e-6),
+            (r_plane / aniso).max(1e-6),
+            t,
+            b,
+        )
+    };
     out.push(Gaussian3d {
         position_visibility: [pos[0], pos[1], pos[2], 1.0].into(),
         spherical_harmonic: sh,
         rotation: quat_from_basis(t, b, n_axis).into(),
-        scale_opacity: [r_plane, r_plane, r_thin, alpha].into(),
+        scale_opacity: [sx, sy, r_thin, alpha].into(),
     });
 }
 
@@ -145,9 +187,13 @@ where
     // samples instead of random ones, which kills the clumpy/grainy look. The accumulators stay in
     // [0,1) so precision holds even at hundreds of thousands of points (a raw `frac(a·i)` would not).
     let (mut r2u, mut r2v) = (0.5f32, 0.5f32);
+    // MARTIN_MESH_ANISO: 1.0 = round disks (default, byte-identical); >1 stretches splats along the
+    // surface grain (the triangle's longest edge) into ellipsoids → the cloud follows the mesh's form.
+    let aniso = crate::envvar::or("MARTIN_MESH_ANISO", 1.0_f32).clamp(0.1, 10.0);
     for (ti, tri) in tris.iter().enumerate() {
+        let ytri = [yd(tri[0]), yd(tri[1]), yd(tri[2])];
         let face_n = norm_or(
-            cross(sub(yd(tri[1]), yd(tri[0])), sub(yd(tri[2]), yd(tri[0]))),
+            cross(sub(ytri[1], ytri[0]), sub(ytri[2], ytri[0])),
             [0.0, 0.0, 1.0],
         );
         let n = ((target_count as f32 * weights[ti] / total).round() as usize).max(1);
@@ -175,7 +221,19 @@ where
                 Some(nn) => norm_or(yd(lerp3(nn)), face_n),
                 None => face_n,
             };
-            push_disk(&mut out, yd(p), n_axis, sh, r_plane, r_thin, alpha);
+            // surface grain (longest edge in-plane) — only matters when aniso != 1.0.
+            let edge_dir = longest_edge_in_plane(&ytri, n_axis);
+            push_disk(
+                &mut out,
+                yd(p),
+                n_axis,
+                sh,
+                r_plane,
+                r_thin,
+                alpha,
+                aniso,
+                edge_dir,
+            );
         }
     }
     out
@@ -527,6 +585,41 @@ pub fn build_mesh_gaussians(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn push_disk_round_default_vs_anisotropic() {
+        let sh = SphericalHarmonicCoefficients::default();
+        let n = [0.0, 0.0, 1.0];
+        let edge = [1.0, 0.0, 0.0];
+        // aniso == 1.0 → round disk: in-plane scales equal (byte-identical to the original).
+        let mut round = Vec::new();
+        push_disk(&mut round, [0.0; 3], n, sh, 0.5, 0.05, 1.0, 1.0, edge);
+        let s = round[0].scale_opacity.scale;
+        assert!((s[0] - s[1]).abs() < 1e-7, "round disk: x==y, got {s:?}");
+        assert!((s[0] - 0.5).abs() < 1e-7);
+        // aniso == 2.0 → ellipsoid: stretched along the grain, area-preserving (x*y == r_plane²).
+        let mut ell = Vec::new();
+        push_disk(&mut ell, [0.0; 3], n, sh, 0.5, 0.05, 1.0, 2.0, edge);
+        let e = ell[0].scale_opacity.scale;
+        assert!(e[0] > e[1], "ellipsoid: x>y, got {e:?}");
+        assert!((e[0] * e[1] - 0.25).abs() < 1e-6, "area preserved (0.5²)");
+    }
+
+    #[test]
+    fn longest_edge_is_unit_and_in_plane() {
+        // a right triangle in the z=0 plane; longest edge is the hypotenuse (3-4-5).
+        let tri = [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [0.0, 3.0, 0.0]];
+        let d = longest_edge_in_plane(&tri, [0.0, 0.0, 1.0]);
+        assert!(
+            (d[0] * d[0] + d[1] * d[1] + d[2] * d[2] - 1.0).abs() < 1e-5,
+            "unit"
+        );
+        assert!(d[2].abs() < 1e-6, "lies in the plane (z≈0)");
+        // degenerate (zero-area) triangle → safe fallback, never NaN.
+        let deg = [[1.0, 1.0, 1.0]; 3];
+        let f = longest_edge_in_plane(&deg, [0.0, 0.0, 1.0]);
+        assert!(f.iter().all(|c| c.is_finite()));
+    }
 
     // Verifies COLLADA `.dae` parsing + surface sampling + disk orientation without a GPU. Skips
     // when the (gitignored) asset isn't present, so CI without it still passes.
