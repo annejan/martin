@@ -20,6 +20,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   beat instead of always drifting in — `smooth` (default, unchanged), `snap`, `hold-snap`, `anticipate`,
   `stutter`. Pure scalar, deterministic; the single source of the morph curve now (the reel director and
   the compose stage both route their factor through `Ease::apply`, retiring the duplicated smoothstep).
+- **`~shockwave` entrance**: the shape materialises as an expanding ring sweeping outward from the
+  centre (a directional blast-front) instead of a uniform converge — pairs with `@@drop`+`ease:snap` so
+  the kick blasts it into being. Fork transition mode 8 (radial reveal; append-only + default-off).
+- **Hard camera cuts** (`cut` on a `[camera]` keyframe): the camera SNAPS to the pose at its time
+  (holds the previous pose, then jumps) instead of gliding — an MTV-style editing cut on the beat.
+  Honored in both timed-track and part-window samplers; round-trips through the waypoints JSON.
 - Self-contained single-binary bundle (`--features bundle`): show assets are lz4-embedded and
   self-extract at startup.
 - `KHR_gaussian_splatting` glTF loading (`MARTIN_GLB=<file.glb>`): render a standard-container splat

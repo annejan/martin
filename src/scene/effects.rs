@@ -44,6 +44,7 @@ pub(crate) enum Entrance {
     Vortex,     // continuous unwind-rotation about the vertical axis
     Outline, // text traced in outline/pen order — a glowing neon draw-on (filled font); text only
     PenWrite, // text written in pen order on a single-stroke font — true handwriting; text only
+    Shockwave, // materialise as an expanding ring sweeping outward from the centre (a kick "blast")
 }
 
 /// The source cloud a STANDALONE assemble flies in from (compose objects, and seq part 0). Morph/
@@ -96,6 +97,7 @@ impl Entrance {
             "vortex" => Entrance::Vortex,
             "outline" => Entrance::Outline,
             "pen" | "penwrite" | "pen-write" | "write" => Entrance::PenWrite,
+            "shockwave" | "blast" | "shock" => Entrance::Shockwave,
             _ => return None,
         })
     }
@@ -112,6 +114,7 @@ impl Entrance {
             Entrance::Wipe => Some((6, 0.02, 0)),
             Entrance::Outline => Some((7, 0.06, 0)), // filled font → traces outlines
             Entrance::PenWrite => Some((7, 0.05, 0)), // single-stroke font → handwriting
+            Entrance::Shockwave => Some((8, 0.18, 0)), // radial blast-front reveal from the centre
             _ => None,
         }
     }
@@ -354,6 +357,7 @@ mod tests {
         assert_eq!(Entrance::parse("dna"), Some(Entrance::Helix)); // alias
         assert_eq!(Entrance::parse("unfold"), Some(Entrance::Fold)); // alias
         assert_eq!(Entrance::parse("telescope"), Some(Entrance::Zoom)); // alias
+        assert_eq!(Entrance::parse("blast"), Some(Entrance::Shockwave)); // alias
         assert_eq!(Entrance::parse("nope"), None);
     }
 
@@ -402,6 +406,7 @@ mod tests {
     fn shader_transitions_carry_uniforms_data_ones_dont() {
         assert!(Entrance::Typewriter.shader_uniforms().is_some());
         assert!(Entrance::PenWrite.shader_uniforms().is_some());
+        assert_eq!(Entrance::Shockwave.shader_uniforms(), Some((8, 0.18, 0))); // radial blast, mode 8
         assert!(Entrance::Fade.shader_uniforms().is_none());
         assert!(Entrance::Extrude.shader_uniforms().is_none());
     }

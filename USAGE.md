@@ -84,7 +84,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_SEQ` | — | A timeline of parts (see [Sequences](#sequences)). Highest precedence. |
 | `MARTIN_SHOW` | — | A **unified scene file** (`.show`) — settings + `[seq]` + `[compose]` + a `[camera]` track in one file. Expands into the other `MARTIN_*` vars (which still override it). See [The unified scene file](#the-unified-scene-file-martin_show). |
 | `MARTIN_VALIDATE` | — | `=1` **dry-run**: parse the show, print the resolved timeline (part cue times, effects, compose, camera track) and exit — no render. See [Validate a show](#validate-a-show-without-rendering-martin_validate). |
-| `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`rain`/`funnel`/`shatter`/`condense`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
+| `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`rain`/`funnel`/`shatter`/`condense`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`shockwave`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
 | `MARTIN_DEFORM` | — | Scene-wide **persistent deform** field over every part *and* compose object: `wave`/`cloth`/`ripple`/`twist`/`wind`/`turbulence`/`pulse`/`jitter`/`spiral` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
 | `MARTIN_DEFORM_AMP` | `1.0` | Scales the deform amplitude — **`0.2`–`0.3` ≈ a gentle wobble on a big scene**, `1` = default, higher = wild. |
 | `MARTIN_DEFORM_SPEED` | `2.0` | Deform animation rate — `0.6`–`1` = slow/dreamy, higher = faster. |
@@ -389,6 +389,7 @@ of them). It can sit anywhere on the line, but reads best last:
 | `~vortex` | spins/unwinds into place (continuous, shader-driven) |
 | `~outline` | **text only** — traces the *filled* font's letter outlines in pen order (a glowing neon draw-on) |
 | `~pen-write` (`~pen`) | **text only** — real handwriting: traces a *single-stroke* font's centerline in pen order |
+| `~shockwave` (`~blast`) | materialises as an **expanding ring** sweeping outward from the centre — a directional blast-front instead of a uniform converge. Pair with `@@drop`+`ease:snap` so the kick blasts the shape into being. Best on full/procedural shapes (a hollow-back capture can show its empty side as the ring passes). |
 
 `MARTIN_TRANSITION=<name>` sets a default for **every** part (handy for trying one out); an
 explicit per-part `~name` wins over it.
@@ -754,7 +755,7 @@ A `.show` has four kinds of section — see [`assets/example.show`](assets/examp
 | *(top, before any header)* `key = value` | **settings** — each becomes `MARTIN_<KEY>` (`morph_count = 180000` → `MARTIN_MORPH_COUNT`, `deform = wind`, `bg = plasma`, …) |
 | `[seq]` | the **hero** morph timeline — verbatim [`.seq`](#sequences) syntax |
 | `[compose]` | the **stage** of placed objects — verbatim [`.compose`](#composition--the-stage-martin_compose) syntax |
-| `[camera]` | a music-timed **[camera track](#live-keyboard-controls)** — order-free `t=<s> pos=x,y,z dist= yaw= pitch=` lines. `t` is seconds **or `@@anchor`** (`t=@@drop` locks the keyframe to a music section, like a seq part) |
+| `[camera]` | a music-timed **[camera track](#live-keyboard-controls)** — order-free `t=<s> pos=x,y,z dist= yaw= pitch=` lines. `t` is seconds **or `@@anchor`** (`t=@@drop` locks the keyframe to a music section, like a seq part). A bare **`cut`** token on a keyframe makes the camera **snap** to it (hold the previous pose, then jump) instead of gliding — an MTV-style hard cut on the beat: `t=@@drop pos=0,0,0 dist=0.6 cut` |
 | `[sync]` | a music-timed **look track** (automation) — same `t=<s\|@@anchor>` grammar, but the channels are the global look knobs: `flash`, `bg_dim`, `beat`. Each is smoothstep-interpolated between keyframes (e.g. `t=@@drop flash=0.6 bg_dim=0.3 beat=1.3`), so the bloom swells into the drop, the backdrop dims through the climax, the beat-reactivity ramps to the peak — instead of one static value all show. Per-Shot `flash:`/`beat:` still layer on top; no `[sync]` = the static `MARTIN_*` values. |
 
 It's deliberately pure sugar: the file **expands into the env** (the settings become `MARTIN_*`, the

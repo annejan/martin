@@ -135,6 +135,7 @@ fn controls(
                 yaw: cam.yaw,
                 pitch: cam.pitch,
                 t: Some(clock.t), // stamp the show-time → an authored path is a music-timed track
+                cut: false,       // a glide by default; add `cut` by hand in the [camera] track
             });
             match waypoints::save(&marks.list, &marks.path) {
                 Ok(()) => info!(

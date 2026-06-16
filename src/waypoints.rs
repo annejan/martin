@@ -18,6 +18,10 @@ pub struct Key {
     pub yaw: f32,
     pub pitch: f32,
     pub t: Option<f32>,
+    /// Hard cut: when set, the camera **snaps** to this keyframe's pose at its time instead of gliding
+    /// into it — the previous pose holds for the whole leg, then jumps here. An MTV-style editing cut
+    /// (wide → slam-closeup on the drop) vs the default smoothstep drift. Only meaningful on a track.
+    pub cut: bool,
 }
 
 /// A film **camera-move verb** in martin's orbital space — the *kind* of motion a `[camera]` segment
@@ -138,6 +142,9 @@ pub fn save(list: &[Key], path: &str) -> std::io::Result<()> {
             if let Some(t) = w.t {
                 o["t"] = serde_json::json!(t); // only timed waypoints carry the anchor
             }
+            if w.cut {
+                o["cut"] = serde_json::json!(true); // only hard-cut keys carry the flag
+            }
             o
         })
         .collect();
@@ -164,7 +171,10 @@ pub fn parse_camera(lines: &[String], score: &crate::score::Score) -> Vec<Key> {
                 yaw: crate::camera::FRONT_YAW,
                 pitch: crate::camera::DEFAULT_PITCH,
                 t: None,
+                cut: false,
             };
+            // a bare `cut` token (no `=`) → snap to this keyframe instead of gliding into it.
+            w.cut = s.split_whitespace().any(|tok| tok == "cut");
             for (k, v) in s.split_whitespace().filter_map(|t| t.split_once('=')) {
                 match k {
                     "t" | "time" => {
@@ -221,6 +231,7 @@ pub fn load(path: &str) -> Vec<Key> {
                         yaw: w.get("yaw")?.as_f64()? as f32,
                         pitch: w.get("pitch")?.as_f64()? as f32,
                         t: w.get("t").and_then(|t| t.as_f64()).map(|t| t as f32),
+                        cut: w.get("cut").and_then(|c| c.as_bool()).unwrap_or(false),
                     })
                 })
                 .collect()
@@ -243,12 +254,16 @@ pub fn pose_at(list: &[Key], p: f32) -> Option<Key> {
     let u = x - i as f32;
     let e = u * u * (3.0 - 2.0 * u); // smoothstep ease across the leg
     let (a, b) = (list[i], list[i + 1]);
+    if b.cut {
+        return Some(Key { t: None, cut: false, ..a }); // hard cut: hold a, snap to b at the leg end
+    }
     Some(Key {
         target: a.target.lerp(b.target, e),
         dist: a.dist + (b.dist - a.dist) * e,
         yaw: a.yaw + shortest_angle(b.yaw - a.yaw) * e,
         pitch: a.pitch + (b.pitch - a.pitch) * e,
         t: None,
+        cut: false,
     })
 }
 
@@ -275,6 +290,11 @@ pub fn pose_at_time(list: &[Key], t: f32) -> Option<Key> {
     }
     let i = list.windows(2).position(|p| t < ta(&p[1])).unwrap_or(0);
     let (a, b) = (list[i], list[i + 1]);
+    if b.cut {
+        // hard cut: hold the start pose for the whole leg, then jump to b exactly at its time
+        // (the next leg, bracket (b,c), resumes smoothstep). A redaction-style cut, not a glide.
+        return Some(Key { t: Some(t), cut: false, ..a });
+    }
     let span = (ta(&b) - ta(&a)).max(1e-4);
     let u = ((t - ta(&a)) / span).clamp(0.0, 1.0);
     let e = u * u * (3.0 - 2.0 * u); // smoothstep — settle through each marker
@@ -284,6 +304,7 @@ pub fn pose_at_time(list: &[Key], t: f32) -> Option<Key> {
         yaw: a.yaw + shortest_angle(b.yaw - a.yaw) * e,
         pitch: a.pitch + (b.pitch - a.pitch) * e,
         t: Some(t),
+        cut: false,
     })
 }
 
@@ -304,6 +325,7 @@ mod tests {
             yaw,
             pitch: 0.0,
             t,
+            cut: false,
         }
     }
 
@@ -316,6 +338,7 @@ mod tests {
             yaw,
             pitch: 0.0,
             t: Some(0.0),
+            cut: false,
         };
         let base = k(Vec3::ZERO, 2.0, 1.4);
         assert_eq!(CameraMove::infer(&base, &k(Vec3::ZERO, 2.0, 1.41)), Hold);
@@ -383,6 +406,7 @@ mod tests {
                 yaw: 1.4,
                 pitch: 0.1,
                 t: Some(2.5),
+                cut: true,
             },
             wp(None, 4.0, 0.6), // an untimed marker (no `t` key)
         ];
@@ -391,9 +415,27 @@ mod tests {
         assert_eq!(back.len(), 2);
         assert_eq!(back[0].target, Vec3::new(1.0, 2.0, 3.0));
         assert_eq!(back[0].t, Some(2.5));
+        assert!(back[0].cut); // hard-cut flag survives the round-trip
+        assert!(!back[1].cut); // default false when absent from the JSON
         assert_eq!(back[1].t, None); // untimed survived as untimed
         assert!((back[1].dist - 4.0).abs() < 1e-6);
         let _ = std::fs::remove_file(p);
+    }
+
+    #[test]
+    fn hard_cut_holds_then_snaps() {
+        // leg 0→1 glides; leg 1→2 is a cut, so the camera HOLDS pose 1 across it, then snaps to 2.
+        let track = [
+            wp(Some(0.0), 6.0, 0.0),
+            wp(Some(2.0), 4.0, 0.0),
+            Key { cut: true, ..wp(Some(4.0), 1.0, 0.0) },
+        ];
+        // mid of the cut leg (t=3): still holding pose 1's dist (4.0), NOT interpolating toward 1.0.
+        assert!((pose_at_time(&track, 3.0).unwrap().dist - 4.0).abs() < 1e-4);
+        // at/after the cut key's time: snap to pose 2 (dist 1.0).
+        assert!((pose_at_time(&track, 4.0).unwrap().dist - 1.0).abs() < 1e-4);
+        // a normal (non-cut) leg still interpolates: t=1 on leg 0→1 is halfway (smoothstep(0.5)=0.5).
+        assert!((pose_at_time(&track, 1.0).unwrap().dist - 5.0).abs() < 1e-4);
     }
 
     #[test]
@@ -406,14 +448,16 @@ mod tests {
         let score = crate::score::Score::builtin();
         let lines = vec![
             "t=@@intro dist=6 yaw=1.4 pitch=0.1".to_string(),
-            "t=2.5 dist=4 pos=1,2,3".to_string(),
+            "t=2.5 dist=4 pos=1,2,3 cut".to_string(), // bare `cut` token → hard cut
             "t=@@bogus dist=5".to_string(), // unknown anchor → untimed
         ];
         let cam = parse_camera(&lines, &score);
         assert_eq!(cam.len(), 3);
         assert_eq!(cam[0].t, Some(0.0)); // intro starts at bar 0
+        assert!(!cam[0].cut); // no cut token → glide
         assert_eq!(cam[1].t, Some(2.5));
         assert_eq!(cam[1].target, Vec3::new(1.0, 2.0, 3.0));
+        assert!(cam[1].cut); // bare `cut` token parsed
         assert_eq!(cam[2].t, None); // bogus anchor left untimed
     }
 }
