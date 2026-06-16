@@ -1,0 +1,40 @@
+# martin — "VETTER": a grand tour of the engine's newer tricks in one ~loop. In-repo assets + the
+# built-in score, so it runs anywhere:
+#   MARTIN_SHOW=assets/examples/vetter.show cargo +nightly run --release
+#   MARTIN_SHOW=assets/examples/vetter.show ./record.sh vetter.mp4
+#
+# Exercises: fractal/clouds/bolt backgrounds · FFT spectral reactivity · MARTIN_SIDECHAIN pump ·
+# MARTIN_TINT_MUSIC harmonic tint · MARTIN_PARTICLES embers · ~shockwave + ease:snap drop · tint:fry ·
+# field:7 stage scatter · MARTIN_POST=chroma · per-frame [sync] (flash/bg_dim/beat/exposure/fov/tint).
+
+[settings]
+post     = chroma
+fft      = 1.0
+sidechain = 0.4
+tint_music = 1
+particles = embers
+particle_count = 260
+bg_dim   = 0.7
+
+[reel]
+text:deFEEST            @@intro      @4,3    ~fade        backdrop:clouds   # drifting fbm haze open
+text:VETTER             @@build      @3,2    ~typewriter  backdrop:fractal  # Kaliset filaments, types in
+mesh:defeest.glb        @@drop       @6,0.6,0 ~shockwave ease:snap flash:0.9 beat:1.6 backdrop:off  # THE BLAST on black
+mesh:bitterbal.glb      @@breakdown  @6,3,0  ~morph  tint:fry  beat:1.0  ^turbulence:0.2  backdrop:bolt  # deep-fried, churning
+text:CINDER             @@climax     @5,3    ~ball   beat:1.4  backdrop:fractal  # the music credit, peak
+image:defeest-logo.png  @@outro      @6,3    ~ball   beat:0    backdrop:stars    # settle to the mark
+
+[stage]
+mesh:bitterbal.glb  @0,-0.65,0  *0.10  field:7  spin 0,40,0  ^turbulence:0.3  tint:fry  in breakdown  out climax  # a PLATE of bitterballen (field:N scatter)
+
+[camera]
+t=@@intro      dist=2.2  yaw=1.40  pitch=0.10
+t=@@drop       dist=0.8  yaw=1.40  pitch=0.05  cut            # slam to close-up on the drop
+t=@@climax     dist=1.8  yaw=1.90  pitch=0.18
+t=@@outro      dist=2.0  yaw=1.45  pitch=0.12
+
+[sync]
+t=@@intro      flash=0.1   bg_dim=0.6  beat=0.5  exposure=1.0
+t=@@drop       flash=0.7   bg_dim=0.5  beat=1.6  exposure=1.3  fov=0.7  tint_music=0.9
+t=@@climax     flash=0.4   bg_dim=0.5  beat=1.2  exposure=1.1  tint_music=-0.6
+t=@@outro      flash=0.15  bg_dim=0.6  beat=0.6  exposure=1.0

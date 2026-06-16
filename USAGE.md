@@ -796,8 +796,10 @@ MARTIN_SHOW=assets/example.show ./record.sh example.mp4
 
 **Galleries** in [`assets/examples/`](assets/examples/) show the palette (text-only, no `.ply` needed):
 `transitions.show` (every `~arrival`), `shaders.show` (every fullscreen effect), `deforms.show`
-(every `^deform`), and `killshot.show` (the **kill-shot**: a breath bar → hard camera `cut` →
-`~shockwave`+`ease:snap` → `MARTIN_POST=chroma` screen-tear, composed into one moment on the drop).
+(every `^deform`), `killshot.show` (the **kill-shot**: a breath bar → hard camera `cut` →
+`~shockwave`+`ease:snap` → `MARTIN_POST=chroma` screen-tear, composed into one moment on the drop), and
+`vetter.show` (a grand tour: fractal/clouds backdrops, embers, sidechain, harmonic tint, a `field:7`
+plate of bitterballen, the shockwave drop — most of the newer tricks in one run).
 Run any with `MARTIN_SHOW=assets/examples/<name>.show …`, or read one on paper with `MARTIN_VALIDATE=1`.
 
 A `.show` has four kinds of section — see [`assets/example.show`](assets/example.show):
