@@ -25,6 +25,7 @@ pub struct SyncTrack {
     bg_dim: Vec<(f32, f32)>,
     beat: Vec<(f32, f32)>,
     exposure: Vec<(f32, f32)>,
+    fov: Vec<(f32, f32)>,
 }
 
 impl SyncTrack {
@@ -40,11 +41,15 @@ impl SyncTrack {
     pub fn exposure_at(&self, t: f32) -> Option<f32> {
         eval(&self.exposure, t)
     }
+    pub fn fov_at(&self, t: f32) -> Option<f32> {
+        eval(&self.fov, t)
+    }
     pub fn is_empty(&self) -> bool {
         self.flash.is_empty()
             && self.bg_dim.is_empty()
             && self.beat.is_empty()
             && self.exposure.is_empty()
+            && self.fov.is_empty()
     }
 
     /// `(knob, keyframes)` for each knob that has any — for the `MARTIN_VALIDATE` dump.
@@ -54,6 +59,7 @@ impl SyncTrack {
             ("bg_dim", &self.bg_dim),
             ("beat", &self.beat),
             ("exposure", &self.exposure),
+            ("fov", &self.fov),
         ]
         .into_iter()
         .filter(|(_, k)| !k.is_empty())
@@ -116,9 +122,10 @@ pub fn parse_sync(lines: &[String], score: &crate::score::Score) -> SyncTrack {
                 "bg_dim" | "dim" => track.bg_dim.push((time, val)),
                 "beat" => track.beat.push((time, val)),
                 "exposure" | "exp" => track.exposure.push((time, val)),
+                "fov" | "zoom" => track.fov.push((time, val)),
                 other => {
                     eprintln!(
-                        "sync: unknown knob '{other}' — skipped (have: flash/bg_dim/beat/exposure)"
+                        "sync: unknown knob '{other}' — skipped (have: flash/bg_dim/beat/exposure/fov)"
                     )
                 }
             }
@@ -129,6 +136,7 @@ pub fn parse_sync(lines: &[String], score: &crate::score::Score) -> SyncTrack {
         &mut track.bg_dim,
         &mut track.beat,
         &mut track.exposure,
+        &mut track.fov,
     ] {
         v.sort_by(|a, b| a.0.total_cmp(&b.0));
     }
@@ -174,8 +182,8 @@ mod tests {
     fn parse_resolves_time_and_knobs() {
         let score = crate::score::Score::builtin();
         let lines = vec![
-            "t=0 flash=0.1 bg_dim=0.5".to_string(),
-            "t=10 flash=0.9 beat=1.5".to_string(),
+            "t=0 flash=0.1 bg_dim=0.5 exposure=1.0 fov=1.0".to_string(),
+            "t=10 flash=0.9 beat=1.5 exposure=1.6 fov=0.6".to_string(),
         ];
         let tr = parse_sync(&lines, &score);
         assert_eq!(tr.flash_at(0.0), Some(0.1));
@@ -183,5 +191,8 @@ mod tests {
         assert_eq!(tr.beat_at(10.0), Some(1.5));
         assert_eq!(tr.bg_dim_at(0.0), Some(0.5));
         assert!(tr.bg_dim_at(100.0).is_some()); // clamps to last bg_dim keyframe
+        assert_eq!(tr.exposure_at(10.0), Some(1.6)); // exposure knob
+        assert_eq!(tr.fov_at(10.0), Some(0.6)); // fov lens-slam knob
+        assert!(tr.fov_at(-1.0) == Some(1.0)); // clamps to the first fov keyframe
     }
 }

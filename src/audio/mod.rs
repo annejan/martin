@@ -128,7 +128,7 @@ pub(super) fn pseudo_noise(i: usize) -> f32 {
 /// the back-beat next, off-beats soften, weak 16ths ghost — with ±15% humanizing jitter. Multiplied
 /// into every voice's render amp (and the filter brightness) so the track breathes like a performance
 /// instead of the flat, every-note-identical GM wall that reads as cheap.
-pub(super) fn vel(t: f32, beat: f32, seed: u32) -> f32 {
+pub(crate) fn vel(t: f32, beat: f32, seed: u32) -> f32 {
     let sl = beat / 4.0;
     let slot = ((t / sl).round() as i64).rem_euclid(16) as usize;
     let metric = match slot {

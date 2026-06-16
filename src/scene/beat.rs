@@ -36,13 +36,17 @@ impl Beat {
     }
 }
 
-/// Decaying envelope: 1.0 at a hit, `exp(-dt/tau)` after — `tau` sets the snap.
-fn pulse(times: &[f32], t: f32, tau: f32) -> f32 {
+/// Decaying envelope: `vel × exp(-dt/tau)` after a hit — `tau` sets the snap, and the hit is weighted
+/// by its **onset strength** (`audio::vel`, the same metric accent the synth uses): a downbeat kick
+/// punches the visuals harder than a ghost-note tick, so the reaction breathes with the groove instead
+/// of every hit landing identically. `beat_dur`/`seed` feed `vel` (seed = a per-lane constant).
+fn pulse(times: &[f32], t: f32, tau: f32, beat_dur: f32, seed: u32) -> f32 {
     let i = times.partition_point(|&x| x <= t);
     if i == 0 {
         return 0.0;
     }
-    (-(t - times[i - 1]) / tau).exp()
+    let hit = times[i - 1];
+    (-(t - hit) / tau).exp() * crate::audio::vel(hit, beat_dur, seed)
 }
 
 fn setup_beat_track(score: Res<ScoreRes>, mut commands: Commands) {
@@ -69,9 +73,10 @@ fn track_beat(
 ) {
     let Some(track) = track else { return };
     let t = clock.t;
-    beat.kick = pulse(&track.kick, t, 0.09);
-    beat.snare = pulse(&track.snare, t, 0.13);
-    beat.hat = pulse(&track.hat, t, 0.05);
+    let bd = score.0.beat(); // beat duration → vel's 16th-slot metric weighting
+    beat.kick = pulse(&track.kick, t, 0.09, bd, 0x55);
+    beat.snare = pulse(&track.snare, t, 0.13, bd, 0x77);
+    beat.hat = pulse(&track.hat, t, 0.05, bd, 0x6e);
     beat.level = score.0.gain_at(t);
     beat.intensity = sync.and_then(|s| s.beat_at(t)).unwrap_or(track.intensity);
 }

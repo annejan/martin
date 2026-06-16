@@ -113,6 +113,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_FLY` | — | `=<secs>` **flies the camera through the loaded waypoints** instead of free-orbiting. **If every waypoint has a `t`** the path is a *camera track* — played off the show clock (same move live and recorded, `secs` ignored). Otherwise — **Recording:** the path fills each part's on-screen time (longer `hold` = slower flyby), alternating direction; **Live:** `<secs>` = time per leg (default `2`) for a ping-pong preview. Needs ≥2 waypoints in `MARTIN_WAYPOINTS`. |
 | `MARTIN_FPS` | off | `=1` logs smoothed FPS / frame-time + timeline clock every ~0.5 s (the **`I`** key toggles it live + logs a snapshot). |
 | `MARTIN_RECORD` | — | Directory to dump one PNG per frame into (the whole timeline; used by `record.sh`). **Recording runs fully headless** — no window, camera → an offscreen image (so it works over SSH / on any compositor, and never captures a black background). Works for `MARTIN_COMPOSE` stages too. |
+| `MARTIN_RES` | `1280x720` | Offscreen **render resolution** `WxH` for recordings (and the `MARTIN_SERVE` view) — e.g. `1920x1080`, `2560x1440` for a crisp master. **Keep it 16:9** (the fullscreen quads + framing assume that aspect; a non-16:9 size warns). |
 | `MARTIN_PREVIEW_FPS` | 60 | `=<n>` renders the timeline at `n` fps instead of 60 — **far fewer frames** for a fast preview (rendering frames is the slow part, not the mux). `=8` → ~1/8 the frames. Frame `dt` + camera sway scale with it, so timing/motion stay correct; `record.sh` muxes at the same fps so duration + audio sync hold. Use for quick looks; drop it (or set 60) for the final render. |
 | `MARTIN_BENCH` | — | `=<frames>` renders that many frames **headless with no PNG output** and logs the render-only fps, then exits — a clean perf probe (disk-I/O-free). |
 | `MARTIN_LOADER` / `MARTIN_LOGO` | off | `=1` shows a **loading screen** (black + progress bar; `MARTIN_LOGO=<png OR svg in the asset root>` adds the logo — an `.svg` is rasterized, so it can be the same artwork the opening mesh was extruded from) until the show is built, then **cross-fades** into the opening logo behind it. Set automatically in a bundled build. (Window-only — not captured in recordings.) |
@@ -598,8 +599,10 @@ it (`0` = off, `2`–`3` = exaggerated):
 | **hat** | a fine bloom **shimmer** |
 | kick+snare | swells any active **`^deform`** so a `^wave`/`^ripple` part *pumps* with the track |
 
-It's the same data path as the synth + `@@anchor`s, so the visuals react to *any* score. Camera
-pump + thump are deterministic (clock-driven), so they bake identically into a recording.
+It's the same data path as the synth + `@@anchor`s, so the visuals react to *any* score. Each hit is
+**weighted by its onset strength** (the same metric accent the synth uses — a downbeat kick punches
+harder than a ghost-note tick), so the reaction breathes with the groove instead of every hit landing
+identically. Camera pump + thump are deterministic (clock-driven), so they bake identically into a recording.
 
 ### Spectral reactivity
 
@@ -788,7 +791,7 @@ A `.show` has four kinds of section — see [`assets/example.show`](assets/examp
 | `[seq]` | the **hero** morph timeline — verbatim [`.seq`](#sequences) syntax |
 | `[compose]` | the **stage** of placed objects — verbatim [`.compose`](#composition--the-stage-martin_compose) syntax |
 | `[camera]` | a music-timed **[camera track](#live-keyboard-controls)** — order-free `t=<s> pos=x,y,z dist= yaw= pitch=` lines. `t` is seconds **or `@@anchor`** (`t=@@drop` locks the keyframe to a music section, like a seq part). A bare **`cut`** token on a keyframe makes the camera **snap** to it (hold the previous pose, then jump) instead of gliding — an MTV-style hard cut on the beat: `t=@@drop pos=0,0,0 dist=0.6 cut` |
-| `[sync]` | a music-timed **look track** (automation) — same `t=<s\|@@anchor>` grammar, but the channels are the global look knobs: `flash`, `bg_dim`, `beat`, `exposure`. Each is smoothstep-interpolated between keyframes (e.g. `t=@@drop flash=0.6 bg_dim=0.3 beat=1.3 exposure=1.4`), so the bloom swells into the drop, the backdrop dims through the climax, the beat-reactivity ramps to the peak, the exposure lifts on the hit — instead of one static value all show. Per-Shot `flash:`/`beat:` still layer on top; no `[sync]` = the static `MARTIN_*` values. |
+| `[sync]` | a music-timed **look track** (automation) — same `t=<s\|@@anchor>` grammar, but the channels are the global look knobs: `flash`, `bg_dim`, `beat`, `exposure`, `fov`. Each is smoothstep-interpolated between keyframes (e.g. `t=@@drop flash=0.6 bg_dim=0.3 beat=1.3 exposure=1.4 fov=0.7`), so the bloom swells into the drop, the backdrop dims through the climax, the beat-reactivity ramps to the peak, the exposure lifts on the hit, and `fov` punches the lens in (`<1` = zoom in; clamped ≤1 so the backdrop quads stay covered) — instead of one static value all show. Per-Shot `flash:`/`beat:` still layer on top; no `[sync]` = the static `MARTIN_*` values. |
 
 It's deliberately pure sugar: the file **expands into the env** (the settings become `MARTIN_*`, the
 `[seq]`/`[compose]` bodies become `MARTIN_SEQ`/`MARTIN_COMPOSE`), so everything above works exactly

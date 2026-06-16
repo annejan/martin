@@ -305,6 +305,26 @@ fn update_exposure(
     }
 }
 
+/// Lens-slam: the `[sync] fov` knob scales the camera FOV (1.0 = the default π/4; `0.6` = punched-in
+/// telephoto). **Clamped to ≤ 1.0** — only ever NARROWER (zoom in) — because the fullscreen background
+/// / interlude quads are sized to the default FOV, and a wider lens would expose their edges. Gated:
+/// the FOV is left at its default without a `fov` keyframe. Deterministic (driven by `clock.t`).
+fn update_fov(
+    sync: Option<Res<crate::sync::SyncTrack>>,
+    clock: Res<SeqClock>,
+    mut q: Query<&mut Projection>,
+) {
+    let Some(scale) = sync.as_ref().and_then(|s| s.fov_at(clock.t)) else {
+        return;
+    };
+    let scale = scale.clamp(0.1, 1.0); // never wider than default → the bg/interlude quads stay covered
+    for mut proj in &mut q {
+        if let Projection::Perspective(p) = proj.as_mut() {
+            p.fov = std::f32::consts::FRAC_PI_4 * scale;
+        }
+    }
+}
+
 /// The orbit camera, its live controls, the waypoint flypath, and fullscreen toggle.
 pub(crate) struct CameraPlugin;
 
@@ -319,6 +339,7 @@ impl Plugin for CameraPlugin {
                 flypath,
                 fullscreen_toggle,
                 update_exposure,
+                update_fov,
             ),
         );
     }

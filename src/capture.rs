@@ -21,14 +21,39 @@ use crate::scene::sequence::{SeqState, Sequence, show_end};
 #[derive(Resource)]
 pub(crate) struct RecordTarget(pub Handle<Image>);
 
-/// Create the offscreen image (window-sized) when recording, before the camera is retargeted to it.
+/// The offscreen render resolution: `MARTIN_RES=WxH` (e.g. `1920x1080`, `2560x1440`), default 720p.
+/// **Keep it 16:9** — the fullscreen background/interlude quads and the camera framing assume that
+/// aspect; a non-16:9 size warns and renders letterboxed/cropped. Shared by record + the serve view.
+pub(crate) fn render_size() -> (u32, u32) {
+    let Ok(spec) = std::env::var("MARTIN_RES") else {
+        return (1280, 720);
+    };
+    let parsed = spec
+        .split_once(['x', 'X', '*'])
+        .and_then(|(w, h)| Some((w.trim().parse().ok()?, h.trim().parse().ok()?)));
+    match parsed {
+        Some((w, h)) if w >= 16 && h >= 16 => {
+            if (w as f32 / h as f32 - 16.0 / 9.0).abs() > 0.02 {
+                eprintln!("MARTIN_RES={spec}: not 16:9 — quads/framing assume 16:9, expect bars");
+            }
+            (w, h)
+        }
+        _ => {
+            eprintln!("MARTIN_RES={spec}: expected WxH (e.g. 1920x1080) — using 1280x720");
+            (1280, 720)
+        }
+    }
+}
+
+/// Create the offscreen image (`MARTIN_RES`-sized) when recording, before the camera is retargeted to it.
 fn setup_record_target(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     if std::env::var_os("MARTIN_RECORD").is_none() {
         return;
     }
+    let (width, height) = render_size();
     let size = Extent3d {
-        width: 1280,
-        height: 720,
+        width,
+        height,
         depth_or_array_layers: 1,
     };
     let mut image = Image::new_fill(

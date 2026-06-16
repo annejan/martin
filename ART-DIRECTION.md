@@ -126,4 +126,15 @@ For a clean **morph** (sources → target), prep every splat the *same way*:
 Mismatched assets blend muddily. Pick one vibe per scene, shoot it well, clean it, and let the
 engine fly. 🪩
 
+## Let it breathe — the empty bar before the drop
+
+The drop only hits as hard as the silence before it. **Author one near-empty "breath" bar right
+before the kill-shot**: `backdrop:off` (pure black), `beat:0` (no bounce), no deform, the camera dead
+still — `[sync]` everything down (`flash=0 bg_dim=0 beat=0`). Then the drop lands into a *gap* instead
+of into more of the same. Maximalism's reflex is to fill every bar; resist it for that one bar — the
+contrast is what sells the `cut` / `~shockwave` / `chroma`. (Verified on the kill-shot: with a loud
+`bolt` backdrop the hero drowned; on black it *glowed*. A loud backdrop drowns the subject in a
+close-up — keep the drop's backdrop dark and let the bloom + screen-tear be the show.) Worked example:
+`assets/examples/killshot.show`.
+
 *— code: annejan · greetings to everyone still rendering on the metal*

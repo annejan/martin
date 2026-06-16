@@ -46,6 +46,15 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   bar/beat/second offset, resolved in one place (`Score::anchor_seconds`) so reel parts, the camera
   track, `[sync]`, and compose `in`/`out` all inherit it. Lead-ins/lead-outs relative to a cue.
 - cities-defeest: the NYC drop recast as the kill-shot — `~shockwave ease:snap` + `post = chroma`.
+- **Onset-weighted beat reactivity**: each kick/snare/hat visual reaction is now scaled by the hit's
+  metric velocity (`audio::vel` — the same accent the synth uses), so a downbeat kick punches harder
+  than a ghost-note tick. The look breathes with the groove instead of every hit landing identically.
+- **`[sync] fov` lens-slam**: a music-timed FOV knob (`fov=0.7` = punch in on the climax), clamped ≤1
+  (only ever narrower) so the fullscreen backdrop/interlude quads stay covered.
+- **`MARTIN_RES=WxH`**: the offscreen render resolution is now an engine knob (was hardcoded 1280×720)
+  — `1920x1080` / `2560x1440` for a crisp compo master. Shared by record + the serve view.
+- ART-DIRECTION: the "let it breathe" rule — author an empty bar before the drop (loud backdrop drowns
+  the hero in a close-up; on black it glows).
 - Self-contained single-binary bundle (`--features bundle`): show assets are lz4-embedded and
   self-extract at startup.
 - `KHR_gaussian_splatting` glTF loading (`MARTIN_GLB=<file.glb>`): render a standard-container splat

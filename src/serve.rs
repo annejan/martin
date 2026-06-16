@@ -131,9 +131,10 @@ fn accept_loop(port: u16, tx: Sender<Req>) {
 
 /// Create the window-sized offscreen render target (once, at startup).
 fn setup_image(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
+    let (width, height) = crate::capture::render_size(); // MARTIN_RES (default 720p), shared with record
     let size = Extent3d {
-        width: 1280,
-        height: 720,
+        width,
+        height,
         depth_or_array_layers: 1,
     };
     let mut image = Image::new_fill(
