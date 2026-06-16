@@ -256,7 +256,7 @@ fn fullscreen_toggle(keys: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut Wi
 /// Spawn the HDR + bloom camera with its `OrbitCam` (framed later by `build_sequence` /
 /// `build_composition`).
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((
+    let mut cam = commands.spawn((
         GaussianCamera { warmup: true },
         Camera3d::default(),
         Hdr, // HDR target so bright splats bloom
@@ -265,6 +265,10 @@ fn spawn_camera(mut commands: Commands) {
         Transform::default(),
         OrbitCam::default(),
     ));
+    // MARTIN_POST=chroma → a beat-gated fullscreen post-FX on this camera (default-off: no component).
+    if let Some(post) = crate::post::settings_from_env() {
+        cam.insert(post);
+    }
 }
 
 /// The orbit camera, its live controls, the waypoint flypath, and fullscreen toggle.

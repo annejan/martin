@@ -26,6 +26,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 - **Hard camera cuts** (`cut` on a `[camera]` keyframe): the camera SNAPS to the pose at its time
   (holds the previous pose, then jumps) instead of gliding — an MTV-style editing cut on the beat.
   Honored in both timed-track and part-window samplers; round-trips through the waypoints JSON.
+- **Beat-gated post-processing** (`MARTIN_POST=chroma`): a fullscreen pass over the final image that
+  RGB channel-splits on the kick — the screen shears red/cyan on every drum hit. A render-graph
+  ViewNode after tonemapping, so it covers the window, the live serve view, and headless recordings
+  uniformly; deterministic (shear scales with the clock-driven kick), default-off, splat geometry
+  untouched. The "screen reacts to the track" layer (`src/post.rs` + `assets/post.wgsl`).
 - Self-contained single-binary bundle (`--features bundle`): show assets are lz4-embedded and
   self-extract at startup.
 - `KHR_gaussian_splatting` glTF loading (`MARTIN_GLB=<file.glb>`): render a standard-container splat

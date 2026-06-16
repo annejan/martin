@@ -39,6 +39,7 @@ mod mcp;
 mod mesh;
 mod morph;
 mod music;
+mod post;
 mod scene;
 mod score;
 mod serve;
@@ -260,6 +261,7 @@ fn main() {
             crate::glb::GlbScenePlugin,
             crate::fourd::FourDTestPlugin,
             crate::serve::ServePlugin,
+            crate::post::PostPlugin,
         ))
         .run();
 }

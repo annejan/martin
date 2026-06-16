@@ -91,6 +91,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_BEAT` | `1.0` | **Beat-reactive visuals** strength (`0` = off). The score's drums drive the look: kick → a scale "thump", snare → a bloom flare, hat → a shimmer, and any active `^deform` swells on the beat. Per-Shot `beat:<scale>` dials it per shot. See [Beat-reactive visuals](#beat-reactive-visuals). |
 | `MARTIN_FFT` | `1.0` | **Spectral reactivity** strength (`0` = off). An FFT of the rendered track is baked into 8 log frequency bands (sub→air); the **background** (`MARTIN_BG`) and **`shader:` interludes** then react to the actual *spectrum* — the bass swells the whole field, the mids wash colour over it, the air sparkles — not just the drum triggers (`MARTIN_BEAT`). Deterministic (baked once from the score, indexed by show-time), so it bakes identically into recordings. Only affects shows with a backdrop/interlude; splat-only morph shows are untouched. See [Spectral reactivity](#spectral-reactivity). |
 | `MARTIN_CAM_PUMP` | `0` (off) | Kick-driven **camera lunge** (a transient pull-in on each kick). **Off by default** — the shake is nauseating over a long loop. Opt in with a small value (`0.04` ≈ the old default) for a single punchy clip. |
+| `MARTIN_POST` | off | **Beat-gated post-processing** over the whole rendered frame: `chroma` (or `chroma:<strength>`) does an RGB channel-split whose magnitude rides the kick — the image shears red/cyan on every drum hit (the "screen reacts to the track" layer). Runs in the camera's render graph after tonemapping, so it covers the window, the live `MARTIN_SERVE` view, and headless recordings alike. Deterministic (the shear scales with the clock-driven `kick`), so it bakes identically into a render. Default-off; splat geometry is untouched. See [Post-processing](#post-processing). |
 | `MARTIN_BG` | — | **Fullscreen background shader** behind the splats (the demoscene classic): `plasma` / `tunnel` / `stars` / `warp` / `rings` / `grid` / `kaleido` / `bolt` (or a number). A custom-material quad parented to the camera, opaque at the far plane so the splats blend over it; fed time + beat (kick brightens). The WGSL is `assets/bg.wgsl` — a `mode` uniform switches effects; edit it / add your own (Shadertoy-ish: work in `p` + `bg.time`). |
 | `MARTIN_BG_DIM` | `1.0` | Scales the background brightness so foreground content (a logo, glowing text) reads over it — e.g. `0.4` for a punchy effect dialled back to a backdrop. |
 | `MARTIN_FLASH` | `0` | Over-bright **bloom flash on each part cut** (0 = off; `~0.6` = punchy). Synced to the music when parts are `@@`-anchored to beats/bars. |
@@ -616,6 +617,26 @@ a splat-only morph show is byte-identical with FFT on or off.
 ```bash
 # a plasma backdrop that breathes with Cinder's spectrum behind the morphing splats
 MARTIN_BG=plasma MARTIN_FFT=1.5 MARTIN_SHOW=productions/cities/cities-defeest.show cargo +nightly run --release
+```
+
+### Post-processing
+
+Where the spectrum/beat reactions above bend *geometry and backdrops*, **`MARTIN_POST`** is a fullscreen
+pass over the **final image**, after tonemapping — the layer that makes the whole screen react:
+
+| `MARTIN_POST=` | effect |
+|---|---|
+| `chroma` (or `chroma:<strength>`) | **RGB channel-split** whose magnitude rides the kick — the frame shears red/cyan on every drum hit, snapping back between hits. `chroma:1.5` punches harder. |
+
+It runs in the camera's render graph between tonemapping and the end of post-processing, so it covers
+the window, the `MARTIN_SERVE` view, and headless recordings uniformly. The shear scales with the
+clock-driven `kick`, so it's deterministic — a recording bakes the exact same fringe frame-for-frame
+(no frame-feedback, which would break that). Default-off; the camera carries no post component without
+the env, so existing shows render byte-identically. Pair it with `~shockwave`+`ease:snap` on the drop:
+
+```bash
+# the kick blasts the shape in (shockwave) AND tears the whole screen red/cyan (chroma)
+MARTIN_POST=chroma MARTIN_FFT=1.2 MARTIN_SHOW=productions/cities/cities-defeest.show cargo +nightly run --release
 ```
 
 ### Cue-anchoring: `@@anchor` (lock a part to the music)
