@@ -92,8 +92,10 @@ pub(crate) fn mode_index(name: &str) -> u32 {
         "grid" => 5,
         "kaleido" | "kaleidoscope" => 6,
         "bolt" | "lightning" => 7,
+        "fractal" | "kali" => 8,
+        "clouds" | "cloud" | "fog" => 9,
         other => other.parse().unwrap_or_else(|_| {
-            warn!("shader effect '{other}' unknown — using plasma (try plasma/tunnel/stars/warp/rings/grid/kaleido/bolt)");
+            warn!("shader effect '{other}' unknown — using plasma (try plasma/tunnel/stars/warp/rings/grid/kaleido/bolt/fractal/clouds)");
             0
         }),
     }
@@ -233,6 +235,10 @@ mod tests {
         assert_eq!(mode_index("rings"), 4);
         assert_eq!(mode_index("kaleidoscope"), 6); // alias
         assert_eq!(mode_index("lightning"), 7); // alias for bolt
+        assert_eq!(mode_index("fractal"), 8);
+        assert_eq!(mode_index("kali"), 8); // alias
+        assert_eq!(mode_index("clouds"), 9);
+        assert_eq!(mode_index("fog"), 9); // alias
         assert_eq!(mode_index("5"), 5); // a number passes through
         assert_eq!(mode_index("wat"), 0); // unknown → plasma
     }

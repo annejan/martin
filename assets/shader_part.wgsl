@@ -19,6 +19,18 @@ fn hash21(p: vec2<f32>) -> f32 {
     return fract(sin(dot(p, vec2<f32>(127.1, 311.7))) * 43758.5453);
 }
 
+// Smooth value noise (bilinear-interpolated hash) — one octave; fbm stacks several.
+fn vnoise(p: vec2<f32>) -> f32 {
+    let i = floor(p);
+    let f = fract(p);
+    let u = f * f * (3.0 - 2.0 * f);
+    let a = hash21(i);
+    let b = hash21(i + vec2<f32>(1.0, 0.0));
+    let c = hash21(i + vec2<f32>(0.0, 1.0));
+    let d = hash21(i + vec2<f32>(1.0, 1.0));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;                                                  // 0..1 across the screen
@@ -68,6 +80,29 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         // BOLT — jagged electric bands flickering across the field
         let v = sin(p.y * 3.0 + t * 5.0 + sin(p.x * 9.0 + t * 2.0) * 2.0);
         col = vec3<f32>(0.6, 0.85, 1.0) * smoothstep(0.9, 1.0, abs(v));
+    } else if (fx.mode == 8u) {
+        // FRACTAL — Kaliset orbit-trap glowing filaments (full-bright interlude variant)
+        var z = p * 1.1;
+        let c = vec2<f32>(0.9 + 0.08 * sin(t * 0.10), 0.7 + 0.08 * cos(t * 0.13));
+        var trap = 1e9;
+        for (var i = 0; i < 13; i = i + 1) {
+            z = abs(z) / max(dot(z, z), 1e-4) - c;
+            trap = min(trap, length(z));
+        }
+        let g = exp(-6.0 * trap);
+        col = (0.5 + 0.5 * cos(vec3<f32>(0.0, 2.1, 4.2) + trap * 8.0 - t * 0.3)) * g * 2.2;
+    } else if (fx.mode == 9u) {
+        // CLOUDS — drifting fbm haze (full-bright interlude variant)
+        var q = p * 1.5 + vec2<f32>(t * 0.05, t * 0.02);
+        var f = 0.0;
+        var amp = 0.5;
+        for (var i = 0; i < 6; i = i + 1) {
+            f += amp * vnoise(q);
+            q = q * 2.02 + vec2<f32>(1.7, 9.2);
+            amp *= 0.5;
+        }
+        let d = smoothstep(0.15, 0.9, f);
+        col = mix(vec3<f32>(0.05, 0.06, 0.1), vec3<f32>(0.7, 0.75, 0.95), d);
     } else {
         // WARP — radial colour swirl (mode 3)
         let r = length(p);

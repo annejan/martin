@@ -94,7 +94,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_POST` | off | **Beat-gated post-processing** over the whole rendered frame: `chroma` (or `chroma:<strength>`) does an RGB channel-split whose magnitude rides the kick — the image shears red/cyan on every drum hit (the "screen reacts to the track" layer). Runs in the camera's render graph after tonemapping, so it covers the window, the live `MARTIN_SERVE` view, and headless recordings alike. Deterministic (the shear scales with the clock-driven `kick`), so it bakes identically into a render. Default-off; splat geometry is untouched. See [Post-processing](#post-processing). |
 | `MARTIN_TONEMAP` | `tonymcmapface` | Camera **tonemap**. Default `TonyMcMapface` (film-grade — bright splats roll off instead of clipping to flat white). `MARTIN_TONEMAP=none` restores the old `Tonemapping::None` for byte-identical legacy renders. **Note: the default changed**, so a show looks slightly richer than before unless you set `none`. |
 | `MARTIN_EXPOSURE` | `1.0` | Static **exposure** (bloom-intensity multiplier). `1.0` = unchanged; `<1` dims the glow, `>1` lifts it. A `[sync] exposure=` keyframe overrides it per frame (music-timed). Only takes effect when set (or keyframed) — otherwise the bloom is left at its tuned default. |
-| `MARTIN_BG` | — | **Fullscreen background shader** behind the splats (the demoscene classic): `plasma` / `tunnel` / `stars` / `warp` / `rings` / `grid` / `kaleido` / `bolt` (or a number). A custom-material quad parented to the camera, opaque at the far plane so the splats blend over it; fed time + beat (kick brightens). The WGSL is `assets/bg.wgsl` — a `mode` uniform switches effects; edit it / add your own (Shadertoy-ish: work in `p` + `bg.time`). |
+| `MARTIN_BG` | — | **Fullscreen background shader** behind the splats (the demoscene classic): `plasma` / `tunnel` / `stars` / `warp` / `rings` / `grid` / `kaleido` / `bolt` / `fractal` (Kaliset orbit-trap filaments) / `clouds` (drifting fbm haze) (or a number). A custom-material quad parented to the camera, opaque at the far plane so the splats blend over it; fed time + beat (kick brightens). The WGSL is `assets/bg.wgsl` — a `mode` uniform switches effects; edit it / add your own (Shadertoy-ish: work in `p` + `bg.time`). |
 | `MARTIN_BG_DIM` | `1.0` | Scales the background brightness so foreground content (a logo, glowing text) reads over it — e.g. `0.4` for a punchy effect dialled back to a backdrop. |
 | `MARTIN_FLASH` | `0` | Over-bright **bloom flash on each part cut** (0 = off; `~0.6` = punchy). Synced to the music when parts are `@@`-anchored to beats/bars. |
 | `MARTIN_SYNTH_WAV` | — | Render the bundled deFEEST synth (Cinder) to a WAV at this path, then exit — for muxing audio onto a recording. See [Music](#music-the-synth). |
@@ -273,7 +273,7 @@ mesh:logo.dae                    # a 3D mesh (.dae/.obj/.stl/.ply), surface-samp
 glb:badge.glb                    # a real glTF mesh: rendered crisp, THEN dissolves into its own
                                  #   sampled splats (coincident by construction) which morph on
 shader:warp                      # a fullscreen WGSL effect as an INTERLUDE: the splats clear and
-                                 #   the effect plays full-frame (warp/plasma/tunnel/stars/rings/grid/kaleido/bolt), fading
+                                 #   the effect plays full-frame (warp/plasma/tunnel/stars/rings/grid/kaleido/bolt/fractal/clouds), fading
                                  #   in/out across the part — a demoscene effect between scenes
 splat:name.ply                   # a splat (filename in the asset folder)
 splat:a.ply+b.ply                # several splats, auto-arranged side by side
@@ -327,7 +327,7 @@ letters in a position-colour rainbow.
 
 **Per-part background** (`bg:<name>`): switches the fullscreen background shader **from that part
 on** (sticky until the next `bg:` token): `plasma` / `tunnel` / `stars` / `warp` / `rings` / `grid` /
-`kaleido` / `bolt`, or **`bg:off`** for pure black. This makes the background a second energy curve
+`kaleido` / `bolt` / `fractal` / `clouds`, or **`bg:off`** for pure black. This makes the background a second energy curve
 across the show — e.g. `bg:off` for the intro, `bg:bolt` on the drop, back to `bg:stars` for the
 outro. `MARTIN_BG` (if set) is the default before the first token; `MARTIN_BG_DIM` stays global.
 
