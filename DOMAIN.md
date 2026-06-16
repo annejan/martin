@@ -274,8 +274,12 @@ Aliasing is idiomatic in martin's parsers, so every DSL rename is additive and b
   layer that flattens to `[reel]`). Still pending in this stage: nothing.
 - **Stage 2 — internal struct/field renames (no DSL impact). ✅ LANDED.** `Part→Shot`, `count→budget`,
   `Composed→Prop`, `Waypoint→Key`, the source cloud → `Shot.origin`, and the fields that lagged their
-  canonical tokens: `Shot.cluster→Shot.flock` (`flock:`) and `Shot.bg→Shot.backdrop` (`backdrop:`). The
-  DSL tokens still alias the old spellings (`cluster:`/`bg:`). Compiler-checked, mechanical.
+  canonical tokens: `Shot.cluster→Shot.flock` (`flock:`), `Shot.bg→Shot.backdrop` (`backdrop:`), and
+  `Shot.out→Shot.exit` (`exit:`). Plus the headline overload-killer: the **`Transition` enum → `Entrance`**
+  (the `~` arrival kind), so "transition" no longer names both the arrival effect *and* the GPU cross-morph
+  blend — that blend is now exclusively "morph". The fork's `CloudSettings.transition_{mode,softness,axis}`
+  reveal-shader uniforms keep their names (a separate per-particle concept, §5.1). The DSL tokens still alias
+  the old spellings (`cluster:`/`bg:`/`out:`). Compiler-checked, mechanical.
 - **Stage 3 — small new enums. ✅ LANDED.** `AnchorKind` (`Start|Section|Bar|Beat|Seconds`) — the
   anchor *spelling*; `anchor_seconds` now = `cue(AnchorKind::parse(s))`, the **cue** being the resolved
   seconds (§6). `CameraMove` (`Hold|Orbit|PushIn|PullBack|Sink|Arc|Flythrough`) — inferred per camera
