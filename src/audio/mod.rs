@@ -261,18 +261,6 @@ pub fn write_wav(track: &Track, path: &str) -> std::io::Result<()> {
     std::fs::write(path, encode_wav(track))
 }
 
-/// Render the score via the STREAMING producer (not the batch `synth_track`) and write a WAV — a
-/// debug/verification path (`MARTIN_STREAM_WAV`) to A/B the two engines on real scores. Same DSP,
-/// so the result should match `write_wav(&synth_track(..))` within float-summation-order noise.
-pub fn render_stream_wav(score: &Score, path: &str) -> std::io::Result<()> {
-    let mut samples = Vec::new();
-    stream::produce(score, |c| samples.extend_from_slice(c));
-    let track = Track {
-        samples: Arc::new(samples),
-    };
-    write_wav(&track, path)
-}
-
 #[cfg(test)]
 mod voice_demo {
     use std::sync::Arc;
