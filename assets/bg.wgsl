@@ -11,6 +11,7 @@ struct BgData {
     beat: vec4<f32>,
     spectrum_lo: vec4<f32>, // FFT bands 0..3: sub, low, low-mid, mid  (MARTIN_FFT-scaled; 0 = off)
     spectrum_hi: vec4<f32>, // FFT bands 4..7: mid-hi, presence, brilliance, air
+    warmth: f32,            // harmonic tint: -1 cool (minor/low) .. +1 warm (major/high); 0 = neutral
 };
 @group(3) @binding(0) var<uniform> bg: BgData;
 
@@ -131,6 +132,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     col += (0.5 + 0.5 * cos(vec3<f32>(0.0, 2.1, 4.2) + bg.time * 0.3)) * mids * 0.05;
     let spk = step(0.992, hash21(floor(uv * vec2<f32>(240.0, 135.0)) + floor(bg.time * 24.0)));
     col += vec3<f32>(0.7, 0.85, 1.0) * spk * air * 0.5;
+
+    // harmonic tint: warm (major/climax) pushes red & drops blue, cool (minor/low) the reverse. 0 = no-op.
+    col += bg.warmth * vec3<f32>(0.06, 0.0, -0.06) * (0.4 + length(col));
 
     col *= bg.dim; // MARTIN_BG_DIM — dial the backdrop down so foreground content reads
     return vec4<f32>(col, 1.0);

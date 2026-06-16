@@ -94,6 +94,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_SIDECHAIN` | `0` (off) | **Visual sidechain**: the kick DUCKS the whole frame (splats + backdrop dim on the hit, swell back between hits) — the classic pumping you hear in the music, made visible. `~0.3`–`0.6` = a clear pump. Scaled by beat intensity (a hushed `[sync] beat=0` section doesn't pump); deterministic. The inverse of the kick-*brighten* flash — pick one feel. |
 | `MARTIN_PARTICLES` | off | **Additive ember layer**: `=embers` scatters glowing warm points that drift up through the scene among the splats (the HDR bloom makes them glow) — a second, independent motion layer for instant "demo energy". `MARTIN_PARTICLE_COUNT` sets the number (default 200). Deterministic (each ember's path is a pure function of its seed + the show clock). RADV-safe (a real `StandardMaterial`, not a custom additive shader — which crashes the splat pipeline). |
 | `MARTIN_PARTICLE_COUNT` | `200` | Number of embers when `MARTIN_PARTICLES` is set (clamped 1–5000). |
+| `MARTIN_TINT_MUSIC` | off | **Harmonic tint**: the backdrop palette leans **cool** in minor / low-energy passages and **warm** on lifts / major (from the score's chord quality + section gain), so colour breathes with the harmony. `=1` enables; a `[sync] tint_music=<-1..1>` keyframe overrides it. Backdrop-only (splats untouched), default-off, deterministic. |
 | `MARTIN_POST` | off | **Beat-gated post-processing** over the whole rendered frame: `chroma` (or `chroma:<strength>`) does an RGB channel-split whose magnitude rides the kick — the image shears red/cyan on every drum hit (the "screen reacts to the track" layer). Runs in the camera's render graph after tonemapping, so it covers the window, the live `MARTIN_SERVE` view, and headless recordings alike. Deterministic (the shear scales with the clock-driven `kick`), so it bakes identically into a render. Default-off; splat geometry is untouched. See [Post-processing](#post-processing). |
 | `MARTIN_TONEMAP` | `tonymcmapface` | Camera **tonemap**. Default `TonyMcMapface` (film-grade — bright splats roll off instead of clipping to flat white). `MARTIN_TONEMAP=none` restores the old `Tonemapping::None` for byte-identical legacy renders. **Note: the default changed**, so a show looks slightly richer than before unless you set `none`. |
 | `MARTIN_EXPOSURE` | `1.0` | Static **exposure** (bloom-intensity multiplier). `1.0` = unchanged; `<1` dims the glow, `>1` lifts it. A `[sync] exposure=` keyframe overrides it per frame (music-timed). Only takes effect when set (or keyframed) — otherwise the bloom is left at its tuned default. |
@@ -317,8 +318,20 @@ scene party   @@drop   backdrop:plasma  ^wave        # the whole scene waves on 
 
 On flatten: the Scene's `@@anchor` stamps its **first** Shot (the rest flow after it); the Scene's
 `backdrop:`/`^deform` apply to every Shot that doesn't set its own. (`[arc]` is an alias of `[scenes]`.
-If a show has *both* `[scenes]` and an explicit `[reel]`, the `[reel]` wins.) A future revision may add
-per-Scene camera moves and density — see [`DOMAIN.md`](DOMAIN.md) §5/§9.
+If a show has *both* `[scenes]` and an explicit `[reel]`, the `[reel]` wins.)
+
+**Per-Scene camera + look.** A scene header can also carry `cam:` and/or `look:` — one whitespace token
+each, `;`-separated inside — which emit a `t=@@anchor` keyframe into the `[camera]` / `[sync]` tracks at
+the scene's anchor, so a scene drives its own camera move and look-automation:
+
+```
+scene drop  @@drop  backdrop:bolt  cam:dist=0.8;yaw=1.5;cut  look:flash=0.7;beat=1.6;tint_music=0.8
+  splat:knot.ply  @5,2  ~shockwave  ease:snap
+```
+
+flattens to `t=@@drop dist=0.8 yaw=1.5 cut` in `[camera]` and `t=@@drop flash=0.7 beat=1.6 tint_music=0.8`
+in `[sync]` (a scene with no `@@anchor` can't time them, so they're skipped with a warning). A whole
+arc — content, camera, and look — can now live in one `[scenes]` block.
 
 **Per-part raster mode** (`raster:<mode>`): the fork's debug-shading views, colour each gaussian by a
 channel instead of its RGB. `color` (default, normal render) · `depth` · `normal` · `position`
@@ -794,7 +807,7 @@ A `.show` has four kinds of section — see [`assets/example.show`](assets/examp
 | `[seq]` | the **hero** morph timeline — verbatim [`.seq`](#sequences) syntax |
 | `[compose]` | the **stage** of placed objects — verbatim [`.compose`](#composition--the-stage-martin_compose) syntax |
 | `[camera]` | a music-timed **[camera track](#live-keyboard-controls)** — order-free `t=<s> pos=x,y,z dist= yaw= pitch=` lines. `t` is seconds **or `@@anchor`** (`t=@@drop` locks the keyframe to a music section, like a seq part). A bare **`cut`** token on a keyframe makes the camera **snap** to it (hold the previous pose, then jump) instead of gliding — an MTV-style hard cut on the beat: `t=@@drop pos=0,0,0 dist=0.6 cut` |
-| `[sync]` | a music-timed **look track** (automation) — same `t=<s\|@@anchor>` grammar, but the channels are the global look knobs: `flash`, `bg_dim`, `beat`, `exposure`, `fov`. Each is smoothstep-interpolated between keyframes (e.g. `t=@@drop flash=0.6 bg_dim=0.3 beat=1.3 exposure=1.4 fov=0.7`), so the bloom swells into the drop, the backdrop dims through the climax, the beat-reactivity ramps to the peak, the exposure lifts on the hit, and `fov` punches the lens in (`<1` = zoom in; clamped ≤1 so the backdrop quads stay covered) — instead of one static value all show. Per-Shot `flash:`/`beat:` still layer on top; no `[sync]` = the static `MARTIN_*` values. |
+| `[sync]` | a music-timed **look track** (automation) — same `t=<s\|@@anchor>` grammar, but the channels are the global look knobs: `flash`, `bg_dim`, `beat`, `exposure`, `fov`, `tint_music`. Each is smoothstep-interpolated between keyframes (e.g. `t=@@drop flash=0.6 bg_dim=0.3 beat=1.3 exposure=1.4 fov=0.7 tint_music=0.8`), so the bloom swells into the drop, the backdrop dims through the climax, the beat-reactivity ramps to the peak, the exposure lifts on the hit, `fov` punches the lens in (`<1` = zoom in; clamped ≤1 so the backdrop quads stay covered), and `tint_music` warms/cools the backdrop palette (`-1`..`+1`) — instead of one static value all show. Per-Shot `flash:`/`beat:` still layer on top; no `[sync]` = the static `MARTIN_*` values. |
 
 It's deliberately pure sugar: the file **expands into the env** (the settings become `MARTIN_*`, the
 `[seq]`/`[compose]` bodies become `MARTIN_SEQ`/`MARTIN_COMPOSE`), so everything above works exactly

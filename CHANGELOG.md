@@ -65,6 +65,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   `StandardMaterial` (`AlphaMode::Add`, emissive, a generated radial-gradient texture for soft round
   glow) on real geometry — RADV-safe, since a custom additive *shader* material crashes the splat
   pipeline. Deterministic: each ember's path is a pure function of its seed + the show clock.
+- **Harmonic tint** (`MARTIN_TINT_MUSIC` / `[sync] tint_music`): the backdrop palette leans cool in
+  minor/low-energy passages and warm on lifts/major (from `Score::chord_at` + `gain_at`) — colour
+  breathes with the harmony. Backdrop-only (a new `warmth` FxUniform field), default-off, deterministic.
+- **Per-Scene camera + look**: a `[scenes]` scene header can carry `cam:` / `look:` (one token each,
+  `;`-separated) that emit a `t=@@anchor` keyframe into the `[camera]` / `[sync]` tracks — a whole arc
+  (content + camera + look) in one `[scenes]` block.
+- **`pipeline/sheet.py`**: a contact-sheet storyboard tool — drives `MARTIN_VALIDATE` for each shot's
+  time, captures a headless `MARTIN_SHOT` thumbnail per shot, and grids them into one PNG.
 - Self-contained single-binary bundle (`--features bundle`): show assets are lz4-embedded and
   self-extract at startup.
 - `KHR_gaussian_splatting` glTF loading (`MARTIN_GLB=<file.glb>`): render a standard-container splat

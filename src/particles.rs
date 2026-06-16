@@ -88,11 +88,12 @@ fn animate_particles(
 /// An ember's position from its seed `s` and clock `t`: rises in +Y (wrapping through the box) with a
 /// per-particle speed, and sways gently in x/z. Pure — no RNG, no wall-clock.
 fn ember_pos(s: [f32; 3], t: f32) -> Vec3 {
+    use std::f32::consts::TAU;
     let span = 2.0 * FIELD;
     let speed = 0.25 + 0.6 * s[0];
     let y = (s[1] * span + t * speed).rem_euclid(span) - FIELD;
-    let x = (s[2] * span - FIELD) + (t * 0.5 + s[0] * 6.2831853).sin() * 0.25;
-    let z = (s[0] * span - FIELD) + (t * 0.4 + s[1] * 6.2831853).cos() * 0.25;
+    let x = (s[2] * span - FIELD) + (t * 0.5 + s[0] * TAU).sin() * 0.25;
+    let z = (s[0] * span - FIELD) + (t * 0.4 + s[1] * TAU).cos() * 0.25;
     Vec3::new(x, y, z)
 }
 

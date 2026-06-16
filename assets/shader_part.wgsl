@@ -12,6 +12,7 @@ struct FxData {
     beat: vec4<f32>,
     spectrum_lo: vec4<f32>, // FFT bands 0..3: sub, low, low-mid, mid  (MARTIN_FFT-scaled; 0 = off)
     spectrum_hi: vec4<f32>, // FFT bands 4..7: mid-hi, presence, brilliance, air
+    warmth: f32,            // harmonic tint (shared FxUniform field; interludes leave it 0)
 };
 @group(3) @binding(0) var<uniform> fx: FxData;
 

@@ -70,8 +70,15 @@ impl From<&str> for Section {
 /// Inheritance, on flatten: the Scene's `@@anchor` is stamped on its **first** Shot only (the rest
 /// flow sequentially after it); the Scene's `backdrop:` / `^deform` are appended to every Shot that
 /// doesn't set its own. Content-agnostic — a Shot is any `splat:`/`mesh:`/`wall:`/`image:`/… line.
-fn flatten_scenes(body: &str) -> String {
+///
+/// A scene may also carry `cam:` / `look:` — one whitespace token each, `;`-separated inside (e.g.
+/// `cam:pos=0,0,0;dist=2.5;yaw=1.4`, `look:flash=0.7;beat=1.5`). On flatten these emit a
+/// `t=@@anchor …` keyframe into the `[camera]` / `[sync]` tracks (verbatim — the score resolves the
+/// anchor later), so a scene can drive its own camera move + look. Returns `(reel, camera, sync)`.
+fn flatten_scenes(body: &str) -> (String, Vec<String>, Vec<String>) {
     let mut reel = String::new();
+    let mut camera = Vec::new();
+    let mut sync = Vec::new();
     // The current scene's inherited defaults: (anchor token, backdrop token, deform token).
     let (mut anchor, mut backdrop, mut deform) = (None, None, None);
     let mut first_shot_pending = false; // the scene's anchor goes on its first shot only
@@ -83,6 +90,7 @@ fn flatten_scenes(body: &str) -> String {
         if let Some(rest) = line.strip_prefix("scene ").or(line.strip_prefix("scene\t")) {
             // open a scene: pull its inherited-look tokens out of the header.
             (anchor, backdrop, deform) = (None, None, None);
+            let (mut cam, mut look) = (None, None);
             for tok in rest.split_whitespace() {
                 if tok.starts_with("@@") {
                     anchor = Some(tok.to_string());
@@ -90,8 +98,29 @@ fn flatten_scenes(body: &str) -> String {
                     backdrop = Some(tok.to_string());
                 } else if tok.starts_with('^') {
                     deform = Some(tok.to_string());
+                } else if let Some(c) = tok.strip_prefix("cam:") {
+                    cam = Some(c.replace(';', " "));
+                } else if let Some(l) = tok.strip_prefix("look:") {
+                    look = Some(l.replace(';', " "));
                 }
                 // the scene name + anything else is just a label — ignored on flatten.
+            }
+            // a scene's cam:/look: become a `t=@@anchor …` keyframe (needs the anchor for its time).
+            match (&anchor, cam, look) {
+                (Some(a), cam, look) => {
+                    if let Some(c) = cam {
+                        camera.push(format!("t={a} {c}"));
+                    }
+                    if let Some(l) = look {
+                        sync.push(format!("t={a} {l}"));
+                    }
+                }
+                (None, cam, look) if cam.is_some() || look.is_some() => {
+                    eprintln!(
+                        "scenes: cam:/look: need the scene to have an @@anchor (for its time) — ignored"
+                    );
+                }
+                _ => {}
             }
             first_shot_pending = true;
             continue;
@@ -122,7 +151,7 @@ fn flatten_scenes(body: &str) -> String {
         reel.push_str(&shot);
         reel.push('\n');
     }
-    reel
+    (reel, camera, sync)
 }
 
 fn parse_and_apply(text: &str) -> Show {
@@ -177,8 +206,12 @@ fn parse_and_apply(text: &str) -> Show {
         }
     }
     // `[scenes]` flattens into the reel. If a show has both, the explicit `[reel]` wins (don't double).
+    // Scene `cam:`/`look:` emit into the camera/sync tracks (after any explicit `[camera]`/`[sync]`).
     if seq.trim().is_empty() && !scenes.trim().is_empty() {
-        seq = flatten_scenes(&scenes);
+        let (reel, cam_lines, sync_lines) = flatten_scenes(&scenes);
+        seq = reel;
+        camera.extend(cam_lines);
+        sync.extend(sync_lines);
     }
     if !seq.trim().is_empty() {
         set_if_absent("seq", seq.trim());
@@ -232,7 +265,7 @@ scene party @@drop backdrop:plasma ^wave
   splat:knot.ply @5,2 ~morph backdrop:bolt   # own backdrop wins
   text:HELLO @4,2 ~outline ^twist            # own deform wins
 ";
-        let reel: Vec<String> = flatten_scenes(body).lines().map(String::from).collect();
+        let reel: Vec<String> = flatten_scenes(body).0.lines().map(String::from).collect();
         assert_eq!(reel.len(), 4);
         // scene anchor stamped on the FIRST shot of each scene only.
         assert!(reel[0].contains("@@intro") && reel[0].contains("backdrop:off"));
@@ -246,5 +279,26 @@ scene party @@drop backdrop:plasma ^wave
         assert!(reel[2].contains("backdrop:bolt") && !reel[2].contains("backdrop:plasma"));
         assert!(reel[3].contains("^twist") && !reel[3].contains("^wave"));
         assert!(reel[3].contains("backdrop:plasma")); // but it DOES inherit the scene backdrop
+    }
+
+    #[test]
+    fn scenes_emit_per_scene_cam_and_look() {
+        let body = "\
+scene opener @@intro cam:pos=0,0,0;dist=2.5;yaw=1.4 look:flash=0.2;beat=0.5
+  glb:defeest.glb @8,3 ~morph
+scene drop @@drop cam:dist=0.8;yaw=1.5;cut look:beat=1.6
+  splat:knot.ply @5,2 ~shockwave
+scene plain @@breakdown backdrop:grid
+  text:HI @4,2
+";
+        let (reel, cam, sync) = flatten_scenes(body);
+        assert_eq!(reel.lines().count(), 3);
+        // cam:/look: → t=@@anchor keyframes, `;` expanded to spaces; only the two scenes that set them.
+        assert_eq!(cam.len(), 2);
+        assert_eq!(cam[0], "t=@@intro pos=0,0,0 dist=2.5 yaw=1.4");
+        assert_eq!(cam[1], "t=@@drop dist=0.8 yaw=1.5 cut");
+        assert_eq!(sync.len(), 2);
+        assert_eq!(sync[0], "t=@@intro flash=0.2 beat=0.5");
+        assert_eq!(sync[1], "t=@@drop beat=1.6");
     }
 }

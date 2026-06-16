@@ -40,6 +40,10 @@ pub(crate) struct FxUniform {
     /// stable across the two WGSL mirrors (`bg.wgsl` / `shader_part.wgsl`).
     pub spectrum_lo: Vec4,
     pub spectrum_hi: Vec4,
+    /// Harmonic tint (`MARTIN_TINT_MUSIC` / `[sync] tint_music`): `-1` cool (minor / low energy) …
+    /// `+1` warm (major / climax), from `Score::chord_at` + `gain_at`. `0` = neutral (default → the
+    /// shader add is a no-op, backdrop byte-identical). Appended at the struct end (std140 mirror rule).
+    pub warmth: f32,
 }
 
 /// The fullscreen quad that fills the default-FOV (π/4) frustum at distance `d`, with a little
@@ -171,8 +175,11 @@ fn update_bg(
     state: Option<Res<SeqState>>,
     // `[sync]` look-track: when it keyframes `bg_dim`, it overrides the static MARTIN_BG_DIM per frame.
     sync: Option<Res<crate::sync::SyncTrack>>,
+    // the score drives the harmonic `warmth` tint (chord major/minor + section energy).
+    score: Option<Res<crate::music::ScoreRes>>,
     mut dim_static: Local<Option<f32>>,
     mut sidechain: Local<Option<f32>>,
+    mut tint_music: Local<Option<bool>>,
     mut mats: ResMut<Assets<BgMaterial>>,
     mut q: Query<(&MeshMaterial3d<BgMaterial>, &mut Visibility), With<BgQuad>>,
 ) {
@@ -186,6 +193,26 @@ fn update_bg(
         .and_then(|s| s.bg_dim_at(clock.t))
         .unwrap_or(dim_static)
         * duck;
+    // Harmonic tint (`warmth`): a `[sync] tint_music` keyframe wins; else, when MARTIN_TINT_MUSIC is
+    // on, derive it from the score (minor/low → cool, major/high → warm); else 0 = neutral (no-op).
+    let tint_on = *tint_music.get_or_insert_with(|| std::env::var("MARTIN_TINT_MUSIC").is_ok());
+    let warmth = sync
+        .as_ref()
+        .and_then(|s| s.tint_music_at(clock.t))
+        .or_else(|| {
+            (tint_on).then(|| {
+                score.as_ref().map_or(0.0, |sc| {
+                    let minor = if sc.0.chord_at(clock.t).minor {
+                        -1.0
+                    } else {
+                        1.0
+                    };
+                    let energy = ((sc.0.gain_at(clock.t) - 0.5) * 2.0).clamp(-1.0, 1.0);
+                    (minor * 0.6 + energy * 0.4).clamp(-1.0, 1.0)
+                })
+            })
+        })
+        .unwrap_or(0.0);
     let mut mode = default_mode.and_then(|d| d.0);
     if let (Some(seq), Some(state)) = (seq, state)
         && state.built
@@ -214,6 +241,7 @@ fn update_bg(
             m.data.beat = beat.as_vec4();
             m.data.spectrum_lo = spectrum.as_vec4_lo();
             m.data.spectrum_hi = spectrum.as_vec4_hi();
+            m.data.warmth = warmth; // harmonic tint (cool minor … warm major); 0 = neutral
             m.data.level = level; // static MARTIN_BG_DIM, or the `[sync]` keyframed value
         }
     }
