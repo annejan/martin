@@ -34,6 +34,8 @@ pub(crate) fn shot_director(
     // MARTIN_PAIR=match → splats are pre-paired to nearest same-colour neighbours for a STRAIGHT
     // morph; the beat-driven ball-pulse (below) would fight that, so it's suppressed. Read once.
     mut pair_match: Local<Option<bool>>,
+    // MARTIN_SIDECHAIN: the kick DUCKS the whole frame (the classic sidechain pump). Read once.
+    mut sidechain: Local<Option<f32>>,
     mut q: Query<(
         &mut GaussianInterpolate<Gaussian3d>,
         &mut CloudSettings,
@@ -199,6 +201,15 @@ pub(crate) fn shot_director(
         if cs.deform_mode != 0 {
             cs.deform_amp *= 1.0 + (beat.kick * 0.6 + beat.snare * 0.3) * k;
         }
+    }
+
+    // Visual sidechain (MARTIN_SIDECHAIN): the kick DUCKS the whole frame — brightness dips on the
+    // hit and swells back between hits, the classic sidechain "pump". Scaled by beat intensity so a
+    // hushed section doesn't pump; default 0 = off (byte-identical). Deterministic (kick = clock.t).
+    let sidechain =
+        *sidechain.get_or_insert_with(|| crate::envvar::or("MARTIN_SIDECHAIN", 0.0_f32));
+    if sidechain > 0.0 {
+        cs.global_opacity *= (1.0 - beat.kick * sidechain * beat.intensity).max(0.0);
     }
 
     // glb: dissolve — the splats are the exact complement of the mesh (1 − its alpha): present

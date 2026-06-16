@@ -55,6 +55,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   — `1920x1080` / `2560x1440` for a crisp compo master. Shared by record + the serve view.
 - ART-DIRECTION: the "let it breathe" rule — author an empty bar before the drop (loud backdrop drowns
   the hero in a close-up; on black it glows).
+- **Raymarched-class backdrops** (`MARTIN_BG=fractal` / `clouds`): a Kaliset orbit-trap (glowing
+  fractal filaments) and a 6-octave fbm haze — pure 2D fragment math (iGPU-cheap, no SDF raymarch),
+  deterministic, on both the backdrop + `shader:` interlude layers.
+- **Visual sidechain** (`MARTIN_SIDECHAIN`): the kick ducks the whole frame (splats + backdrop) and it
+  swells back — the music's pumping made visible. Scaled by beat intensity, default-off, deterministic.
 - Self-contained single-binary bundle (`--features bundle`): show assets are lz4-embedded and
   self-extract at startup.
 - `KHR_gaussian_splatting` glTF loading (`MARTIN_GLB=<file.glb>`): render a standard-container splat

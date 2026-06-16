@@ -172,14 +172,20 @@ fn update_bg(
     // `[sync]` look-track: when it keyframes `bg_dim`, it overrides the static MARTIN_BG_DIM per frame.
     sync: Option<Res<crate::sync::SyncTrack>>,
     mut dim_static: Local<Option<f32>>,
+    mut sidechain: Local<Option<f32>>,
     mut mats: ResMut<Assets<BgMaterial>>,
     mut q: Query<(&MeshMaterial3d<BgMaterial>, &mut Visibility), With<BgQuad>>,
 ) {
     let dim_static = *dim_static.get_or_insert_with(|| crate::envvar::or("MARTIN_BG_DIM", 1.0_f32));
+    // MARTIN_SIDECHAIN: the kick ducks the backdrop too, so the whole frame pumps together. Off = 0.
+    let sidechain =
+        *sidechain.get_or_insert_with(|| crate::envvar::or("MARTIN_SIDECHAIN", 0.0_f32));
+    let duck = (1.0 - beat.kick * sidechain * beat.intensity).max(0.0);
     let level = sync
         .as_ref()
         .and_then(|s| s.bg_dim_at(clock.t))
-        .unwrap_or(dim_static);
+        .unwrap_or(dim_static)
+        * duck;
     let mut mode = default_mode.and_then(|d| d.0);
     if let (Some(seq), Some(state)) = (seq, state)
         && state.built
