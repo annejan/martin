@@ -267,6 +267,32 @@ fn hash01(k: u32, seed: u32) -> f32 {
     ((k.wrapping_mul(seed) >> 8) & 0xffff) as f32 / 65535.0
 }
 
+/// Build a source/target cloud by **moving each splat to a new position** computed from its index
+/// and current position; everything else (colour, scale, rotation, opacity) is carried over. The
+/// shared skeleton behind every index-paired entrance/departure cloud below — `place(k, p)` is the
+/// only thing that varies between e.g. `explode` and `drop`.
+fn reposition(shape: &[Gaussian3d], place: impl Fn(u32, [f32; 3]) -> [f32; 3]) -> Vec<Gaussian3d> {
+    shape
+        .iter()
+        .enumerate()
+        .map(|(idx, g)| {
+            let mut s = *g;
+            s.position_visibility.position = place(idx as u32, g.position_visibility.position);
+            s
+        })
+        .collect()
+}
+
+/// Like [`reposition`] but also fades each splat's opacity to 0 — the skeleton for the DEPARTURE
+/// clouds, which all displace + dissolve as a shot leaves.
+fn depart(shape: &[Gaussian3d], place: impl Fn(u32, [f32; 3]) -> [f32; 3]) -> Vec<Gaussian3d> {
+    let mut v = reposition(shape, place);
+    for g in &mut v {
+        fade(g);
+    }
+    v
+}
+
 /// FADE source: the shape itself, opacity 0 — it simply fades up in place (no motion).
 pub fn fade_of(shape: &[Gaussian3d]) -> Vec<Gaussian3d> {
     shape
@@ -292,16 +318,10 @@ pub fn flatten_of(shape: &[Gaussian3d]) -> Vec<Gaussian3d> {
         .min_by(|&a, &b| (hi[a] - lo[a]).total_cmp(&(hi[b] - lo[b])))
         .unwrap_or(2);
     let mid = (lo[thin] + hi[thin]) * 0.5;
-    shape
-        .iter()
-        .map(|g| {
-            let mut s = *g;
-            let mut p = s.position_visibility.position;
-            p[thin] = mid; // collapse depth → a flat silhouette
-            s.position_visibility.position = p;
-            s
-        })
-        .collect()
+    reposition(shape, |_k, mut p| {
+        p[thin] = mid; // collapse depth → a flat silhouette
+        p
+    })
 }
 
 /// HELIX source: lay every (paired) particle on a tall vertical spiral column, so the morph reels
@@ -329,16 +349,10 @@ pub fn helix_of(shape: &[Gaussian3d], height: f32, turns: f32) -> Vec<Gaussian3d
 /// it sideways out of a line — like opening a folded sheet. Index-paired (keeps each particle's y/z,
 /// only x grows), so it's a clean unfold, not a scatter. Sibling of `flatten_of` on the other axis.
 pub fn fold_of(shape: &[Gaussian3d]) -> Vec<Gaussian3d> {
-    shape
-        .iter()
-        .map(|g| {
-            let mut s = *g;
-            let mut p = s.position_visibility.position;
-            p[0] = 0.0; // collapse width → a vertical seam to unfold from
-            s.position_visibility.position = p;
-            s
-        })
-        .collect()
+    reposition(shape, |_k, mut p| {
+        p[0] = 0.0; // collapse width → a vertical seam to unfold from
+        p
+    })
 }
 
 /// ZOOM source: every (paired) particle scaled `factor`× outward from the centroid, so the morph
@@ -350,118 +364,72 @@ pub fn zoom_of(shape: &[Gaussian3d], factor: f32) -> Vec<Gaussian3d> {
         c += Vec3::from_array(g.position_visibility.position);
     }
     c /= shape.len().max(1) as f32;
-    shape
-        .iter()
-        .map(|g| {
-            let mut s = *g;
-            let p = Vec3::from_array(s.position_visibility.position);
-            s.position_visibility.position = (c + (p - c) * factor).to_array();
-            s
-        })
-        .collect()
+    reposition(shape, |_k, p| {
+        (c + (Vec3::from_array(p) - c) * factor).to_array()
+    })
 }
 
 /// EXPLODE source: each (paired) particle flung outward from the centre, so the morph *gathers*
 /// the burst back into the shape. `spread` ≈ object radius.
 pub fn explode_of(shape: &[Gaussian3d], spread: f32) -> Vec<Gaussian3d> {
-    shape
-        .iter()
-        .enumerate()
-        .map(|(idx, g)| {
-            let k = idx as u32;
-            let p = g.position_visibility.position;
-            let len = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt().max(1e-4);
-            let m = spread * (0.6 + 1.4 * hash01(k, 2_654_435_761)); // outward distance
-            let j = spread * 0.5;
-            let mut s = *g;
-            s.position_visibility.position = [
-                p[0] + p[0] / len * m + (hash01(k, 40_503) - 0.5) * j,
-                p[1] + p[1] / len * m + (hash01(k, 2_246_822_519) - 0.5) * j,
-                p[2] + p[2] / len * m + (hash01(k, 3_266_489_917) - 0.5) * j,
-            ];
-            s
-        })
-        .collect()
+    reposition(shape, |k, p| {
+        let len = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt().max(1e-4);
+        let m = spread * (0.6 + 1.4 * hash01(k, 2_654_435_761)); // outward distance
+        let j = spread * 0.5;
+        [
+            p[0] + p[0] / len * m + (hash01(k, 40_503) - 0.5) * j,
+            p[1] + p[1] / len * m + (hash01(k, 2_246_822_519) - 0.5) * j,
+            p[2] + p[2] / len * m + (hash01(k, 3_266_489_917) - 0.5) * j,
+        ]
+    })
 }
 
 /// IMPLODE source: particles collapsed to a dense speck at the centre, expanding out to place.
 pub fn implode_of(shape: &[Gaussian3d]) -> Vec<Gaussian3d> {
-    shape
-        .iter()
-        .enumerate()
-        .map(|(idx, g)| {
-            let k = idx as u32;
-            let p = g.position_visibility.position;
-            let j = 0.02;
-            let mut s = *g;
-            s.position_visibility.position = [
-                p[0] * 0.03 + (hash01(k, 40_503) - 0.5) * j,
-                p[1] * 0.03 + (hash01(k, 2_246_822_519) - 0.5) * j,
-                p[2] * 0.03 + (hash01(k, 3_266_489_917) - 0.5) * j,
-            ];
-            s
-        })
-        .collect()
+    reposition(shape, |k, p| {
+        let j = 0.02;
+        [
+            p[0] * 0.03 + (hash01(k, 40_503) - 0.5) * j,
+            p[1] * 0.03 + (hash01(k, 2_246_822_519) - 0.5) * j,
+            p[2] * 0.03 + (hash01(k, 3_266_489_917) - 0.5) * j,
+        ]
+    })
 }
 
 /// DROP source: particles lifted by ~`height` (staggered) and falling straight down into place.
 pub fn drop_of(shape: &[Gaussian3d], height: f32) -> Vec<Gaussian3d> {
-    shape
-        .iter()
-        .enumerate()
-        .map(|(idx, g)| {
-            let k = idx as u32;
-            let p = g.position_visibility.position;
-            let mut s = *g;
-            s.position_visibility.position = [
-                p[0],
-                p[1] + height * (0.6 + 0.8 * hash01(k, 2_654_435_761)),
-                p[2],
-            ];
-            s
-        })
-        .collect()
+    reposition(shape, |k, p| {
+        [
+            p[0],
+            p[1] + height * (0.6 + 0.8 * hash01(k, 2_654_435_761)),
+            p[2],
+        ]
+    })
 }
 
 /// RAIN source: particles start high AND scattered sideways (staggered heights), so they fall
 /// diagonally inward into place — a shower raining in, vs `drop`'s straight vertical fall.
 pub fn rain_of(shape: &[Gaussian3d], height: f32) -> Vec<Gaussian3d> {
-    shape
-        .iter()
-        .enumerate()
-        .map(|(idx, g)| {
-            let k = idx as u32;
-            let p = g.position_visibility.position;
-            let spread = height * 0.6;
-            let mut s = *g;
-            s.position_visibility.position = [
-                p[0] + (hash01(k, 40_503) - 0.5) * spread,
-                p[1] + height * (0.2 + 1.4 * hash01(k, 2_654_435_761)), // staggered fall heights
-                p[2] + (hash01(k, 2_246_822_519) - 0.5) * spread,
-            ];
-            s
-        })
-        .collect()
+    reposition(shape, |k, p| {
+        let spread = height * 0.6;
+        [
+            p[0] + (hash01(k, 40_503) - 0.5) * spread,
+            p[1] + height * (0.2 + 1.4 * hash01(k, 2_654_435_761)), // staggered fall heights
+            p[2] + (hash01(k, 2_246_822_519) - 0.5) * spread,
+        ]
+    })
 }
 
 /// FUNNEL source: particles start in a tall narrow column high above the centre, then fan out and
 /// down into the shape — a pour / funnel (vs `drop`'s straight fall or `rain`'s wide scatter).
 pub fn funnel_of(shape: &[Gaussian3d], height: f32) -> Vec<Gaussian3d> {
     use std::f32::consts::TAU;
-    shape
-        .iter()
-        .enumerate()
-        .map(|(idx, g)| {
-            let k = idx as u32;
-            let p = g.position_visibility.position;
-            let lift = height * (0.5 + hash01(k, 2_654_435_761));
-            let ang = hash01(k, 40_503) * TAU;
-            let rad = 0.18 * height * hash01(k, 2_246_822_519); // narrow spout
-            let mut s = *g;
-            s.position_visibility.position = [rad * ang.cos(), p[1] + lift, rad * ang.sin()];
-            s
-        })
-        .collect()
+    reposition(shape, |k, p| {
+        let lift = height * (0.5 + hash01(k, 2_654_435_761));
+        let ang = hash01(k, 40_503) * TAU;
+        let rad = 0.18 * height * hash01(k, 2_246_822_519); // narrow spout
+        [rad * ang.cos(), p[1] + lift, rad * ang.sin()]
+    })
 }
 
 /// CONDENSE source: particles fill a wide diffuse ball, faded to nothing — the shape condenses out
@@ -494,132 +462,86 @@ pub fn shatter_of(shape: &[Gaussian3d], spread: f32) -> Vec<Gaussian3d> {
     use bevy::math::EulerRot;
     let n = shape.len().max(1);
     let chunks = 8u32;
-    shape
-        .iter()
-        .enumerate()
-        .map(|(idx, g)| {
-            let c = (idx as u64 * chunks as u64 / n as u64) as u32 + 1; // which shard
-            let q = Quat::from_euler(
-                EulerRot::XYZ,
-                hash01(c, 2_654_435_761) * TAU,
-                hash01(c, 2_246_822_519) * TAU,
-                hash01(c, 3_266_489_917) * TAU,
-            );
-            let off = Vec3::new(
-                (hash01(c, 668_265_263) - 0.5) * 2.0 * spread,
-                (hash01(c, 374_761_393) - 0.5) * 2.0 * spread,
-                (hash01(c, 1_274_126_177) - 0.5) * 2.0 * spread,
-            );
-            let mut s = *g;
-            s.position_visibility.position =
-                (q * Vec3::from_array(s.position_visibility.position) + off).to_array();
-            s
-        })
-        .collect()
+    reposition(shape, |k, p| {
+        let c = (k as u64 * chunks as u64 / n as u64) as u32 + 1; // which shard
+        let q = Quat::from_euler(
+            EulerRot::XYZ,
+            hash01(c, 2_654_435_761) * TAU,
+            hash01(c, 2_246_822_519) * TAU,
+            hash01(c, 3_266_489_917) * TAU,
+        );
+        let off = Vec3::new(
+            (hash01(c, 668_265_263) - 0.5) * 2.0 * spread,
+            (hash01(c, 374_761_393) - 0.5) * 2.0 * spread,
+            (hash01(c, 1_274_126_177) - 0.5) * 2.0 * spread,
+        );
+        (q * Vec3::from_array(p) + off).to_array()
+    })
 }
 
 // ---- DEPARTURE target clouds: the shape morphs TO one of these as a part LEAVES. All end faded
 // (opacity 0) + displaced, so the object dissolves away rather than cross-morphing to the next. ----
 
-/// Fade a gaussian's opacity to 0 (it's leaving).
-fn faded(mut g: Gaussian3d) -> Gaussian3d {
+/// Fade a gaussian's opacity to 0 in place (it's leaving).
+fn fade(g: &mut Gaussian3d) {
     let sc = g.scale_opacity.scale;
     g.scale_opacity = [sc[0], sc[1], sc[2], 0.0].into();
-    g
 }
 
 /// WASH-AWAY: flows off along +X (downstream spread + a little settle) and fades — washed away.
 pub fn wash_of(shape: &[Gaussian3d], dist: f32) -> Vec<Gaussian3d> {
-    shape
-        .iter()
-        .enumerate()
-        .map(|(idx, g)| {
-            let k = idx as u32;
-            let p = g.position_visibility.position;
-            let mut s = faded(*g);
-            s.position_visibility.position = [
-                p[0] + dist * (0.6 + 1.0 * hash01(k, 2_654_435_761)),
-                p[1] - dist * 0.15 * hash01(k, 40_503),
-                p[2] + (hash01(k, 2_246_822_519) - 0.5) * dist * 0.4,
-            ];
-            s
-        })
-        .collect()
+    depart(shape, |k, p| {
+        [
+            p[0] + dist * (0.6 + 1.0 * hash01(k, 2_654_435_761)),
+            p[1] - dist * 0.15 * hash01(k, 40_503),
+            p[2] + (hash01(k, 2_246_822_519) - 0.5) * dist * 0.4,
+        ]
+    })
 }
 
 /// DISPERSE: scatters outward in every direction and fades — blown to dust.
 pub fn disperse_of(shape: &[Gaussian3d], spread: f32) -> Vec<Gaussian3d> {
-    shape
-        .iter()
-        .enumerate()
-        .map(|(idx, g)| {
-            let k = idx as u32;
-            let p = g.position_visibility.position;
-            let m = spread * (0.4 + 1.6 * hash01(k, 2_654_435_761));
-            let len = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt().max(1e-3);
-            let mut s = faded(*g);
-            s.position_visibility.position = [
-                p[0] + p[0] / len * m + (hash01(k, 40_503) - 0.5) * spread,
-                p[1] + p[1] / len * m + (hash01(k, 2_246_822_519) - 0.5) * spread,
-                p[2] + p[2] / len * m + (hash01(k, 3_266_489_917) - 0.5) * spread,
-            ];
-            s
-        })
-        .collect()
+    depart(shape, |k, p| {
+        let m = spread * (0.4 + 1.6 * hash01(k, 2_654_435_761));
+        let len = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt().max(1e-3);
+        [
+            p[0] + p[0] / len * m + (hash01(k, 40_503) - 0.5) * spread,
+            p[1] + p[1] / len * m + (hash01(k, 2_246_822_519) - 0.5) * spread,
+            p[2] + p[2] / len * m + (hash01(k, 3_266_489_917) - 0.5) * spread,
+        ]
+    })
 }
 
 /// EVAPORATE: drifts upward (staggered) with a little sideways waft, and fades — rises away.
 pub fn evaporate_of(shape: &[Gaussian3d], height: f32) -> Vec<Gaussian3d> {
-    shape
-        .iter()
-        .enumerate()
-        .map(|(idx, g)| {
-            let k = idx as u32;
-            let p = g.position_visibility.position;
-            let mut s = faded(*g);
-            s.position_visibility.position = [
-                p[0] + (hash01(k, 40_503) - 0.5) * height * 0.3,
-                p[1] + height * (0.3 + 1.2 * hash01(k, 2_654_435_761)),
-                p[2] + (hash01(k, 2_246_822_519) - 0.5) * height * 0.3,
-            ];
-            s
-        })
-        .collect()
+    depart(shape, |k, p| {
+        [
+            p[0] + (hash01(k, 40_503) - 0.5) * height * 0.3,
+            p[1] + height * (0.3 + 1.2 * hash01(k, 2_654_435_761)),
+            p[2] + (hash01(k, 2_246_822_519) - 0.5) * height * 0.3,
+        ]
+    })
 }
 
 /// SINK: falls straight down (staggered) and fades — drops out the bottom.
 pub fn sink_of(shape: &[Gaussian3d], depth: f32) -> Vec<Gaussian3d> {
-    shape
-        .iter()
-        .enumerate()
-        .map(|(idx, g)| {
-            let k = idx as u32;
-            let p = g.position_visibility.position;
-            let mut s = faded(*g);
-            s.position_visibility.position = [
-                p[0],
-                p[1] - depth * (0.4 + 1.2 * hash01(k, 2_654_435_761)),
-                p[2],
-            ];
-            s
-        })
-        .collect()
+    depart(shape, |k, p| {
+        [
+            p[0],
+            p[1] - depth * (0.4 + 1.2 * hash01(k, 2_654_435_761)),
+            p[2],
+        ]
+    })
 }
 
 /// SWIRL source: shape rotated about the vertical (Y) axis and pushed out, so it sweeps in.
 /// (Linear position lerp → an approximate spiral; a true arc would need the shader.)
 pub fn swirl_of(shape: &[Gaussian3d], angle: f32, expand: f32) -> Vec<Gaussian3d> {
     let (sa, ca) = angle.sin_cos();
-    shape
-        .iter()
-        .map(|g| {
-            let p = g.position_visibility.position;
-            let (x, z) = (p[0] * expand, p[2] * expand);
-            let mut s = *g;
-            s.position_visibility.position = [x * ca - z * sa, p[1], x * sa + z * ca];
-            s
-        })
-        .collect()
+    reposition(shape, |_k, p| {
+        let (x, z) = (p[0] * expand, p[2] * expand);
+        [x * ca - z * sa, p[1], x * sa + z * ca]
+    })
 }
 
 /// Largest bounding-box dimension of a gaussian set (its "size" in world units).
@@ -838,6 +760,33 @@ mod tests {
     fn cluster_replicates_the_shape() {
         let src: Vec<Gaussian3d> = (0..30).map(|i| g(i as f32 * 0.1, 0.0, 0.0)).collect();
         assert_eq!(cluster_of(&src, 9).len(), 30 * 9);
+    }
+
+    #[test]
+    fn entrances_keep_count_carry_colour_and_full_opacity() {
+        // every `*_of` source is index-paired (same length) and only MOVES splats — colour and
+        // opacity ride along untouched (these arrive solid, then morph into place).
+        let mut src: Vec<Gaussian3d> = (0..50).map(|i| g(i as f32 - 25.0, 1.0, 0.5)).collect();
+        for (i, s) in src.iter_mut().enumerate() {
+            s.spherical_harmonic.coefficients[0] = i as f32; // a per-splat colour marker
+        }
+        for cloud in [
+            explode_of(&src, 3.0),
+            implode_of(&src),
+            drop_of(&src, 4.0),
+            rain_of(&src, 4.0),
+            funnel_of(&src, 4.0),
+            shatter_of(&src, 3.0),
+            zoom_of(&src, 5.0),
+            swirl_of(&src, 1.0, 1.5),
+        ] {
+            assert_eq!(cloud.len(), src.len());
+            for (i, g) in cloud.iter().enumerate() {
+                assert_eq!(g.spherical_harmonic.coefficients[0], i as f32); // colour kept, order kept
+                assert_eq!(g.scale_opacity.opacity, 1.0); // arrives solid
+                assert!(g.position_visibility.position.iter().all(|c| c.is_finite()));
+            }
+        }
     }
 
     #[test]
