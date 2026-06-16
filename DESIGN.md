@@ -27,6 +27,29 @@
 
 ---
 
+## STATUS (2026-06-17): the worksheet, resolved
+
+> This draft predates a large build-out — **~90% of its forks have shipped.** Keep it as the historical
+> design *rationale*; for what the engine actually DOES, see [`USAGE.md`](USAGE.md) + [`CHANGELOG.md`](CHANGELOG.md).
+> Audited against the code, the resolved picture:
+>
+> **Decided / shipped.** The inline DSL (Option A) won — `~entrance` · `^deform[:amp]` · `exit:` · `ease:` ·
+> `freeze:` · `flock:`/`field:` · `tint:` · `raster:` · `flash:`/`beat:` · `rot:` · `@@anchor` with `@@drop+2bar`
+> expression offsets — plus the `.show` unified file (`[reel]`/`[stage]`/`[camera]`/`[sync]`/`[scenes]`).
+> **G1 music-time:** the Cinder synth streams, `@@anchor`s lock to the score, `[sync]` automates the global
+> look (flash/bg_dim/beat/exposure/fov/tint_music), notes can tie (`-`/`_`). **G2 transitions:** 24 `Entrance`
+> variants incl. 8 per-particle SHADER ones — **the §5 fork edit LANDED** (step 7 / OQ#12 = *yes*). **G3
+> composition:** `[compose]`/`[stage]`, `image:`/`svg:`/`mesh:`/`glb:`/`model:`, per-element transforms.
+> **G4 bundle:** `--features bundle`. And a whole tier the draft never imagined: FFT spectral reactivity,
+> `MARTIN_POST=chroma`, TonyMcMapface tonemap, additive particles, visual sidechain, raymarched backdrops.
+>
+> **Still genuinely open** (the only real forks left, all low-stakes): `key=value` timing (step 1 — timing
+> stays positional `@h,m,b`) · RON as a second input path (step 8 / OQ#1 — `.show` covers it for now) · the
+> **track-based multi-entity REEL** (step 9 / OQ#8/#9 — the reel is still ONE `GaussianInterpolate`; `[compose]`
+> already spawns multiple entities, but the reel's `Vec<TrackState>` hybrid is unbuilt) · `AV_OFFSET` (OQ#7) ·
+> `cue/goto` labels (OQ#3) · logo bloom-gain tint (OQ#11). The §9 lists below carry per-item ✅/⬜ markers;
+> the §1–§8 prose is the original, unedited rationale.
+
 ## 0. Decisions to make in the morning (read this first)
 
 The whole point of this doc is to argue these out. The five highest-stakes forks,
@@ -1117,42 +1140,31 @@ shows (→ OQ#13).
 ### 9.1 Open questions first (the genuine forks for the morning)
 
 *(Questions before the roadmap on purpose — several roadmap steps **are** these
-questions. The 5 highest-stakes are also in the §0 box up top.)*
+questions. ✅ = resolved/shipped · ⬜ = still open · ～ = partly. Status as of 2026-06-17.)*
 
-1. **Grammar now:** extend the inline DSL (Option A) only, or jump to RON (Option B)?
-   Lean A-now-RON-later, but if composition (§6) lands soon RON earns its deps earlier.
-   *(gates roadmap step 9)*
-2. **`~transition` syntax:** keep bare `~name`, allow `~name(args)`, or move to a
-   `kind=` kv field / RON `transition:`? (The token *exists*; this is the spelling.)
-3. **`cue/goto`:** parse-and-ignore now, or skip entirely until a looping director
-   exists?
-4. **Cue file format:** bars/beats + tempo-map (§3.2 leaning) or pure seconds (§3.2
-   counter)? **And** 4/4-only for v1, or general meters? *(gates step 7)*
-5. **MusicClock impl:** ship (A) wall-clock-anchored only, or build (B) sample-accurate
-   now (+ a `rodio` dep)? Lean (A) behind the seam. *(gates step 6)*
-6. **Audio muxing:** confirm offline-ffmpeg-in-post (§3.4) vs any live capture (the
-   latter would break determinism).
-7. **`AV_OFFSET`:** default value, and per-show vs global env.
-8. **Composition backend:** hybrid (A in-track, B across-tracks) as default — accepting
-   it **relaxes constraints #2 and #3** (§6.2) — or stay strictly one merged cloud
-   until meshes force B? *(gates step 10)*
-9. **`count_weight` / per-track `N`:** worth the complexity, or accept the shared budget
-   for v1?
-10. **Logo source:** raster PNG → `build_image_gaussians` (leaning; ships now, soft
-    edges) vs a baked `.ply` from a `.dae` (sharper, offline). *And* which of the two
-    duplicate `defeest.dae`/`deFEEST.dae` is canonical? *(gates step 4)*
-11. **Logo bloom gain:** add a sub-1 tint to logos (like `TEXT_RGB`), or let them bloom
-    hot?
-12. **The shader fork (§5 / step 8):** do the one deliberate per-particle-phase edit
-    now (unlocks B1–B5), or stay data-only? *(gates step 8)*
-13. **Bundling unit:** one-binary-per-show (embedded default each) vs one binary + loose
-    `assets/shows/`? *(gates step 0's later evolution)*
-14. **Loader screen:** the deFEEST splash, or a minimal progress indicator?
-15. **Mesh medium:** keep meshes a non-morphing parallel track, or invest in
-    point-sample-to-gaussians so they morph?
-16. **Out-transition timeline slot (§4.4):** does the timeline grow a dedicated
-    "leaving" phase (for spark-out / explode-away), or do we live without true
-    out-transitions? *(new — surfaced by the catalog work)*
+1. ✅ **Grammar now:** RESOLVED — Option A (the inline DSL) won; RON deferred (still open, step 8).
+2. ✅ **`~transition` syntax:** RESOLVED — bare `~name` kept (no args/kv).
+3. ⬜ **`cue/goto`:** OPEN — never added; `@@anchor` (absolute music-time) was used instead, and
+   `MARTIN_LOOP` covers looping, so labelled goto isn't needed yet.
+4. ✅ **Cue file format:** RESOLVED — `@@anchor` resolves section/`bar:N`/`beat:N`/seconds + `±offset`
+   expressions, off the score's BPM (4/4). No separate cue file — anchors live inline.
+5. ✅ **MusicClock impl:** RESOLVED — the synth STREAMS (≈7× realtime) and the show clock starts with it
+   (`AudioGate`); record derives audio from the frame index. (Not the exact (A)/(B) split, but the seam holds.)
+6. ✅ **Audio muxing:** RESOLVED — offline ffmpeg-in-post (`record.sh`), determinism intact.
+7. ⬜ **`AV_OFFSET`:** OPEN — no offset knob (the streamed start-together sync made it unnecessary so far).
+8. ～ **Composition backend:** PARTLY — `[compose]`/`[stage]` spawns **multiple entities** (relaxes #3 for
+   the stage); the **reel** still uses ONE merged cloud. The in-reel track hybrid is the unbuilt part (step 9).
+9. ⬜ **`count_weight` / per-track `N`:** OPEN — shared budget still (`MARTIN_MORPH_COUNT`).
+10. ✅ **Logo source:** RESOLVED — both: `image:`/`svg:` rasterise live, `mesh:`/`glb:` use the baked
+    `defeest.dae`/`.glb` (from `pipeline/svg_extrude_logo.py`). `defeest.*` is canonical.
+11. ⬜ **Logo bloom gain:** OPEN — `tint:` exists but no logo-specific sub-1 gain.
+12. ✅ **The shader fork (§5):** RESOLVED — **YES, done.** Per-particle `transition_mode` 1–8 in the fork
+    (typewriter…shockwave). The one deliberate fork edit landed (+ deform + swarm).
+13. ✅ **Bundling unit:** RESOLVED — `--features bundle` (lz4-embedded show, self-extract).
+14. ✅ **Loader screen:** RESOLVED — `MARTIN_LOADER`/`MARTIN_LOGO` (deFEEST splash + progress).
+15. ✅ **Mesh medium:** RESOLVED — both: `mesh:` surface-samples to gaussians (morphs), `model:` is a native
+    PBR prop, `glb:` dissolves mesh↔its own splats.
+16. ✅ **Out-transition timeline slot:** RESOLVED — `exit:` departures (wash/disperse/evaporate/sink/explode).
 
 ### 9.2 Incremental roadmap (small, individually shippable, low-regret)
 
@@ -1161,36 +1173,26 @@ Each step preserves the `MARTIN_*` shorthands and existing `MARTIN_SEQ` grammar,
 before/after; bytes must match for any "no behaviour change" step). Steps are
 annotated with their gating OQ where one applies.
 
-0. **Embedded default show + resolution order + default asset root** (§2.4) — makes
-   `./martin` self-contained. Highest leverage, syntax-independent. *(→ OQ#13 for the
-   bundling-unit evolution.)*
-1. **`key=value` timing** alongside positional in `parse_seq` (§2.1) — kills the
-   footgun + default drift.
-2. **More DATA-ONLY transitions** — the registry, `~name` parser, and `*_of` functions
-   **already ship** (§0.1, §4.1). New work is only the *gaps*: `wipe_of`,
-   `shatter_of`, dissolve, each as one enum variant + one `morph.rs` fn + one
-   `build_sequence` arm. *(→ OQ#2 for the token spelling.)*
-3. **`build_image_gaussians` + `image:` prefix + `PartContent::Image` + `image` dep**
-   (§6.4) — the deFEEST logo as a first-class part. *(→ OQ#10, OQ#11.)*
-4. **Branded default show** using the logo + credit parts (§7) — the show signs itself.
-5. **Audio playback wired + `MusicClock` seam + audio-master live clock** (§3.1) —
-   replace delta accumulation; record mode untouched. *(→ OQ#5.)*
-6. **`src/cues.rs` + `#cues:` + `@@cue` anchors + `resolve_cues`** (§3.2–3.4) —
-   music-timed parts; offline audio mux in the existing ffmpeg step. *(→ OQ#4, OQ#6.)*
-7. **The §5 shader blueprint** (one gated branch + uniform-in-4-spots, appended after
-   `max`) — unlocks B1–B5; isolated commit for the upstream PR. *(→ OQ#12.)*
-8. **RON as a second input path** (§2.2) — when parts gain per-part camera / full Vec3
-   offsets / music markers. *(→ OQ#1.)*
-9. **`compose:` / element schema / track-based composition** (§6) — multi-element
-   scenes; per-track entities for held logos and meshes. **The HARD structural change
-   (§6.8): generalize the single `state.entity`/`part_director` to `Vec<TrackState>`.**
-   *(→ OQ#8, OQ#9.)*
-10. **Native mesh track** (§6.5) — `Mesh3d` parallel track, transform/alpha transitions.
-    *(→ OQ#15.)*
+0. ✅ **Embedded default show + resolution order + default asset root** — `--features bundle`; the
+   default run plays the intro production.
+1. ⬜ **`key=value` timing** — NOT done. Timing is still positional `@hold,morph,bulge`; the modifier
+   *tokens* are sigil-based (`~`/`^`/`ease:`/…) instead. The only roadmap step still fully open.
+2. ✅ **More DATA-ONLY transitions** — shipped + then some: rain/funnel/shatter/condense/swirl/extrude/
+   helix/fold/zoom (and `~cut`, `~shockwave`), each one `Entrance` variant + one `morph.rs` fn + one arm.
+3. ✅ **`build_image_gaussians` + `image:`** — shipped (plus `svg:`); the `image` dep is in.
+4. ✅ **Branded default show** — the intro production (deFEEST) is the default; cities-defeest signs itself.
+5. ✅ **Audio playback wired + audio-master clock** — the streamed Cinder synth + `AudioGate` start-together.
+6. ✅ **`@@cue` anchors + resolve** — `Score::anchor_seconds` (+ expression offsets); offline ffmpeg mux.
+7. ✅ **The §5 shader blueprint** — LANDED: per-particle `transition_mode` in the fork (the deliberate edit).
+8. ⬜ **RON as a second input path** — OPEN. The `.show` unified file (key=value + sections) covers the
+   need for now; RON earns its deps only if per-element Vec3/camera structure grows.
+9. ～ **`compose:` / element schema / track-based composition** — PARTLY: `[compose]`/`[stage]` ships and
+   spawns multiple entities; the **reel's** `Vec<TrackState>` multi-entity hybrid (the HARD §6.8 change) is
+   still unbuilt — the reel remains one `GaussianInterpolate`.
+10. ✅ **Native mesh track** — `model:` (PBR prop) + `glb:` (dissolve) + `mesh:` (sampled).
 
-Steps 0–4 are app-only and shippable now (and 2–4 are *small* given §0.1); 5–6 add the
-music seam; 7 is the one deliberate fork edit; 8–10 are the structural growth that
-earns RON's deps and (in 9) explicitly relaxes constraints #2/#3.
+So: only **step 1** (key=value timing), **step 8** (RON), and the **reel half of step 9** remain — every
+other step shipped, plus an entire unplanned tier (FFT/post-FX/tonemap/particles/sidechain/raymarch).
 
 ## 8. Refactor debt (thermo-nuclear review)
 
