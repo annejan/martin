@@ -1,0 +1,42 @@
+# martin — THE KILL-SHOT: the four directing primitives composed into ONE moment on the drop.
+#
+#   stilte (breath bar) → SNEDE (hard camera cut) → de KICK blaast de vorm het scherm in
+#   (~shockwave + ease:snap, landing on the kick) → de SCHERMSCHEUR (MARTIN_POST=chroma) + flash.
+#
+# Engine showcase — uses the built-in score (its @@intro/build/drop/climax/outro sections) and only
+# in-repo assets (mesh:/image: → no big .ply needed), so it runs anywhere:
+#
+#   MARTIN_SHOW=assets/examples/killshot.show cargo +nightly run --release
+#   MARTIN_SHOW=assets/examples/killshot.show ./record.sh killshot.mp4
+#
+# The moment is the synthesis of: ease: (morph easing), ~shockwave (radial blast-front, fork mode 8),
+# camera `cut` (hard snap), and MARTIN_POST=chroma (beat-gated RGB-split). All deterministic.
+
+[settings]
+post   = chroma          # the beat-gated RGB-split — the screen shears red/cyan on the kick
+fft    = 1.0             # backdrops breathe with the spectrum
+flash  = 0.0             # per-shot flash: drives the cut-bloom instead
+bg_dim = 0.6
+
+[reel]
+text:deFEEST       @@intro   @4,3            ~fade         backdrop:stars   # calm open, holds
+text:deFEEST       @@build   @3,2   beat:0   backdrop:off                   # THE BREATH — dead air, black, still
+mesh:defeest.glb   @@drop    @6,0.6,0 ~shockwave ease:snap flash:0.9 beat:1.6 backdrop:off  # THE BLAST: ring slams out on the kick, on black so it glows
+mesh:defeest.glb   @@climax  @6,3,0 ~morph beat:1.0       backdrop:rings    # ride it out, breathing
+image:defeest-logo.png @@outro @6,3          ~ball  beat:0  backdrop:stars  # settle to the brand mark
+
+# Camera: hold WIDE through the breath, then SNAP to an extreme close-up exactly on the drop (cut),
+# then ease back. The cut is the editing half of the punch — no glide into the hit.
+[camera]
+t=@@intro   dist=2.2  yaw=1.40  pitch=0.10           # establishing, wide
+t=@@build   dist=2.4  yaw=1.40  pitch=0.10           # hold wide through the dead air
+t=@@drop    dist=0.7  yaw=1.40  pitch=0.05  cut      # SLAM to extreme close-up ON the kick
+t=@@climax  dist=1.6  yaw=1.85  pitch=0.16           # ease back + orbit a touch
+t=@@outro   dist=2.0  yaw=1.45  pitch=0.12           # pull back to the mark
+
+# Look track: everything DOWN through the breath (the gap that makes the drop land), then slam up.
+[sync]
+t=@@build   flash=0.0  bg_dim=0.0  beat=0.0          # breath: dead air
+t=@@drop    flash=0.8  bg_dim=0.6  beat=1.6          # blast: bloom + energy slam in
+t=@@climax  flash=0.3  bg_dim=0.5  beat=1.0
+t=@@outro   flash=0.15 bg_dim=0.5  beat=0.5

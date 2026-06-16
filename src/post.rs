@@ -63,10 +63,12 @@ pub(crate) fn settings_from_env() -> Option<PostSettings> {
     Some(PostSettings { mode, intensity: strength, kick: 0.0, _pad: 0.0 })
 }
 
-/// Refresh each camera's `kick` from the beat (clock-driven) so the shear lands on the drum.
+/// Refresh each camera's `kick` from the beat (clock-driven) so the shear lands on the drum. Scaled by
+/// the beat *intensity* (the `[sync] beat` / `MARTIN_BEAT` energy curve) so a hushed "breath" section
+/// (intensity 0) tears nothing and the drop (high intensity) punches — chroma rides the same curve.
 fn drive_post(beat: Res<crate::scene::beat::Beat>, mut q: Query<&mut PostSettings>) {
     for mut s in &mut q {
-        s.kick = beat.kick;
+        s.kick = beat.kick * beat.intensity;
     }
 }
 
