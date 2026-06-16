@@ -42,6 +42,7 @@ pub(crate) struct Prop {
     deform_amp: Option<f32>, // `^name:amp`: scales the deform strength (None = 1.0)
     tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow|brand`: recolour the sampled splats
     ease: Ease, // `ease:name`: shapes the assemble curve (default Smoothstep = unchanged)
+    field: Option<usize>, // `field:N`: scatter into N seeded copies (a swarm/field of this object)
 }
 
 impl Prop {
@@ -167,9 +168,19 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let mut deform_amp = None;
         let mut tint = None;
         let mut ease = Ease::Smoothstep;
+        let mut field = None;
         let toks: Vec<&str> = s
             .split_whitespace()
             .filter(|t| {
+                // `field:N` — scatter this object into N seeded, randomly-rotated copies (a "swarm"/
+                // field of it), like the reel's `flock:`. Consumed here so it never leaks into the head.
+                if let Some(n) = t.strip_prefix("field:") {
+                    match n.parse() {
+                        Ok(c) => field = Some(c),
+                        Err(_) => eprintln!("compose: bad 'field:{n}' (need an integer) — ignored"),
+                    }
+                    return false;
+                }
                 // the shared `~entrance` / `^deform[:amp]` / `tint:` modifiers (see effects.rs); a
                 // recognised sigil is always consumed (warn on a bad value, don't leak it).
                 if let Some(res) = crate::scene::effects::parse_fx_modifier(t) {
@@ -248,6 +259,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             deform_amp,
             tint,
             ease,
+            field,
         });
     }
     out
@@ -328,7 +340,15 @@ pub(crate) fn build_composition(
             continue;
         }
         crate::morph::normalize_to(&mut raw, NORMALIZE_EXTENT); // centre + ~2 units across
-        let mut shaped = resample_morton(raw, count);
+        // `field:N` scatters the object into N seeded copies (a swarm), sized to frame as one — the
+        // reel's `flock:` for the stage. Downsample per copy to keep the total near the budget.
+        let mut shaped = match obj.field {
+            Some(n) => {
+                let per = (count / n.max(1)).max(2_000);
+                crate::morph::cluster_of(&resample_morton(raw, per), n)
+            }
+            None => resample_morton(raw, count),
+        };
         // `tint:` recolours the sampled cloud (e.g. a deep-fried bitterbal) before it's frozen into
         // the shape + its entrance source — so both the held look and the assemble-in are tinted.
         if let Some(tint) = obj.tint {
@@ -553,6 +573,16 @@ mod tests {
         assert!(s.contains("@(1.5,-0.3,0.0)"), "{s}");
         assert!(s.contains("*0.50"), "{s}");
         assert!(s.contains("~Drop"), "{s}");
+    }
+
+    #[test]
+    fn parse_compose_reads_field_scatter() {
+        let o = objs("mesh:bitterbal.obj @0,0,0 *0.4 field:9 ~ball");
+        assert_eq!(o.len(), 1);
+        assert_eq!(o[0].field, Some(9));
+        assert!(o[0].summary().contains("mesh bitterbal.obj")); // field: consumed, head intact
+        // a bad field value is consumed (warned), not leaked into the head.
+        assert_eq!(objs("text:HI field:bad")[0].field, None);
     }
 
     #[test]

@@ -765,6 +765,7 @@ mesh:bornhack2026-hardware.dae @0,-1.6,.3  *.7   spin 20,40,0   in climax
 | `~transition` | each object **assembles in** via its own arrival (`~ball`/`~rain`/`~funnel`/`~shatter`/…) instead of a plain fade — the same vocabulary as the morph timeline. **`text:~pen-write` handwrites the letters in** (single-stroke font, traced stroke-by-stroke — same as the reel). |
 | `^deform[:amp]` | a persistent **wobble** while it's up (`^wave`/`^wind`/…); the optional `:amp` scales its strength (`^turbulence:0.3`) |
 | `tint:<mode>` | recolour the sampled splats with a CPU colour routine: **`fry`** (deep-fried bitterbal — beige crevices → brown crust peaks, noise-driven), **`rainbow`** (clean left→right spectrum), **`brand`** (deFEEST blue→gold gradient). |
+| `field:N` | scatter this object into **N** seeded, randomly-rotated copies — a swarm/field of it (a plate of bitterballen, a flock of logos, drifting confetti), sized to frame as one. The stage's equivalent of the reel's `flock:`; deterministic. |
 
 So objects **fade in on the music** (the stage builds with the track), spin/bob/drift in place, and
 the camera slowly **auto-orbits** the whole arrangement (grab it any time with the arrow keys).

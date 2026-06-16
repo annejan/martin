@@ -73,6 +73,9 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   (content + camera + look) in one `[scenes]` block.
 - **`pipeline/sheet.py`**: a contact-sheet storyboard tool — drives `MARTIN_VALIDATE` for each shot's
   time, captures a headless `MARTIN_SHOT` thumbnail per shot, and grids them into one PNG.
+- **`field:N`** in `[compose]`: scatter a stage object into N seeded, randomly-rotated copies (a
+  swarm/field — a plate of bitterballen, a flock of logos), the stage's equivalent of the reel's
+  `flock:`. Reuses `morph::cluster_of`; deterministic.
 - Self-contained single-binary bundle (`--features bundle`): show assets are lz4-embedded and
   self-extract at startup.
 - `KHR_gaussian_splatting` glTF loading (`MARTIN_GLB=<file.glb>`): render a standard-container splat
