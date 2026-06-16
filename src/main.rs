@@ -39,6 +39,7 @@ mod mcp;
 mod mesh;
 mod morph;
 mod music;
+mod particles;
 mod post;
 mod scene;
 mod score;
@@ -262,6 +263,7 @@ fn main() {
             crate::fourd::FourDTestPlugin,
             crate::serve::ServePlugin,
             crate::post::PostPlugin,
+            crate::particles::ParticlesPlugin,
         ))
         .run();
 }

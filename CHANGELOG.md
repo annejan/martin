@@ -60,6 +60,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   deterministic, on both the backdrop + `shader:` interlude layers.
 - **Visual sidechain** (`MARTIN_SIDECHAIN`): the kick ducks the whole frame (splats + backdrop) and it
   swells back — the music's pumping made visible. Scaled by beat intensity, default-off, deterministic.
+- **Additive ember particle layer** (`MARTIN_PARTICLES=embers`, `MARTIN_PARTICLE_COUNT`): glowing warm
+  points drift up through the scene among the splats — a second, independent motion layer. CPU-animated
+  `StandardMaterial` (`AlphaMode::Add`, emissive, a generated radial-gradient texture for soft round
+  glow) on real geometry — RADV-safe, since a custom additive *shader* material crashes the splat
+  pipeline. Deterministic: each ember's path is a pure function of its seed + the show clock.
 - Self-contained single-binary bundle (`--features bundle`): show assets are lz4-embedded and
   self-extract at startup.
 - `KHR_gaussian_splatting` glTF loading (`MARTIN_GLB=<file.glb>`): render a standard-container splat
