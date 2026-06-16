@@ -9,6 +9,8 @@ struct BgData {
     aspect: f32,
     dim: f32,
     beat: vec4<f32>,
+    spectrum_lo: vec4<f32>, // FFT bands 0..3: sub, low, low-mid, mid  (MARTIN_FFT-scaled; 0 = off)
+    spectrum_hi: vec4<f32>, // FFT bands 4..7: mid-hi, presence, brilliance, air
 };
 @group(3) @binding(0) var<uniform> bg: BgData;
 
@@ -82,6 +84,18 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // beat: the kick brightens the whole field (scaled by MARTIN_BEAT intensity).
     col *= 1.0 + bg.beat.x * 0.6 * bg.beat.w;
+
+    // spectrum (FFT of the rendered track): the bass SWELLS the whole field, the mids wash a slow
+    // colour over it, the air SPARKLES — so the backdrop is the music. All zero when MARTIN_FFT=0,
+    // making this branch a no-op (backdrop byte-identical to before).
+    let bass = bg.spectrum_lo.x + bg.spectrum_lo.y;                       // sub + low
+    let mids = bg.spectrum_lo.z + bg.spectrum_lo.w + bg.spectrum_hi.x;    // low-mid..mid
+    let air  = bg.spectrum_hi.z + bg.spectrum_hi.w;                       // brilliance + air
+    col *= 1.0 + bass * 0.35;
+    col += (0.5 + 0.5 * cos(vec3<f32>(0.0, 2.1, 4.2) + bg.time * 0.3)) * mids * 0.05;
+    let spk = step(0.992, hash21(floor(uv * vec2<f32>(240.0, 135.0)) + floor(bg.time * 24.0)));
+    col += vec3<f32>(0.7, 0.85, 1.0) * spk * air * 0.5;
+
     col *= bg.dim; // MARTIN_BG_DIM — dial the backdrop down so foreground content reads
     return vec4<f32>(col, 1.0);
 }

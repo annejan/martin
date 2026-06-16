@@ -34,6 +34,12 @@ pub(crate) struct FxUniform {
     /// brightness (default 1.0), the interlude as its fade-to-black alpha (0 at the edges of the part).
     pub level: f32,
     pub beat: Vec4, // x=kick y=snare z=hat w=intensity
+    /// FFT band energies of the rendered track (`scene::spectrum`), already `MARTIN_FFT`-scaled:
+    /// `lo` = bands 0–3 (sub … low-mid), `hi` = bands 4–7 (mid … air). Zero when FFT is off, so the
+    /// backdrop is byte-identical to before. **Appended at the struct end** to keep the std140 layout
+    /// stable across the two WGSL mirrors (`bg.wgsl` / `shader_part.wgsl`).
+    pub spectrum_lo: Vec4,
+    pub spectrum_hi: Vec4,
 }
 
 /// The fullscreen quad that fills the default-FOV (π/4) frustum at distance `d`, with a little
@@ -157,6 +163,7 @@ fn spawn_bg(
 fn update_bg(
     clock: Res<SeqClock>,
     beat: Res<Beat>,
+    spectrum: Res<crate::scene::spectrum::Spectrum>,
     default_mode: Option<Res<BgDefault>>,
     seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
@@ -197,6 +204,8 @@ fn update_bg(
             }
             m.data.time = clock.t;
             m.data.beat = beat.as_vec4();
+            m.data.spectrum_lo = spectrum.as_vec4_lo();
+            m.data.spectrum_hi = spectrum.as_vec4_hi();
             m.data.level = level; // static MARTIN_BG_DIM, or the `[sync]` keyframed value
         }
     }

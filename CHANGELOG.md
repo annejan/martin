@@ -74,6 +74,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 - Example scores showing the range: `assets/tropical.txt`, `assets/rain.txt`.
 - Score split: the engine ships a **neutral** tropical-house builtin (`assets/score.txt`); each
   production owns its own arrangement (e.g. `productions/camping/score.txt`, the "Op de Camping" track).
+- **Spectral reactivity** (`MARTIN_FFT`, default on): the rendered track is FFT'd into 8 log frequency
+  bands (sub→air) and baked into a frame-indexed table; the background (`MARTIN_BG`) and `shader:`
+  interludes react to the actual *spectrum* — bass swells the field, mids wash colour, air sparkles —
+  not just the drum triggers. Dependency-free hand-rolled radix-2 FFT (`src/audio/analyze.rs`), baked
+  off-thread live and synchronously in record mode, indexed by show-time → bit-identical in recordings.
+  Splat-only morph shows are untouched (the coupling lives in the fullscreen-effect uniform).
 
 ### Content & productions
 - The **default show is the intro production** — a bare `cargo run` (and a fresh `git clone`) plays

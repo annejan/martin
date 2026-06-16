@@ -10,6 +10,8 @@ struct FxData {
     aspect: f32,
     alpha: f32,   // fade — driven by the part window (0 at the edges, 1 while held)
     beat: vec4<f32>,
+    spectrum_lo: vec4<f32>, // FFT bands 0..3: sub, low, low-mid, mid  (MARTIN_FFT-scaled; 0 = off)
+    spectrum_hi: vec4<f32>, // FFT bands 4..7: mid-hi, presence, brilliance, air
 };
 @group(3) @binding(0) var<uniform> fx: FxData;
 
@@ -75,6 +77,14 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // beat: the kick brightens the whole field (scaled by MARTIN_BEAT intensity).
     col *= 1.0 + fx.beat.x * 0.7 * fx.beat.w;
+
+    // spectrum (FFT of the rendered track): bass swells the field, air sparkles. Zero when FFT off.
+    let bass = fx.spectrum_lo.x + fx.spectrum_lo.y;
+    let air = fx.spectrum_hi.z + fx.spectrum_hi.w;
+    col *= 1.0 + bass * 0.4;
+    let spk = step(0.992, hash21(floor(uv * vec2<f32>(240.0, 135.0)) + floor(fx.time * 24.0)));
+    col += vec3<f32>(0.7, 0.85, 1.0) * spk * air * 0.6;
+
     // opaque (far plane); fade to BLACK via alpha, so the clearing/returning splats crossfade over it.
     return vec4<f32>(col * fx.alpha, 1.0);
 }

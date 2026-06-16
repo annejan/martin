@@ -16,6 +16,7 @@ use fundsp::prelude32::*;
 
 use crate::score::Score;
 
+pub(crate) mod analyze;
 mod effects;
 mod render;
 pub(crate) mod stream;

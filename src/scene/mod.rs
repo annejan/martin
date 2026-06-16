@@ -14,6 +14,7 @@ pub mod effects;
 pub mod gl_dissolve;
 pub mod sequence;
 pub mod shader_part;
+pub mod spectrum;
 
 use compose::Composition;
 use content::PartContent;
@@ -166,6 +167,7 @@ pub(crate) struct ScenePlugin;
 impl Plugin for ScenePlugin {
     fn build(&self, app: &mut App) {
         beat::plugin(app); // score-driven beat pulses, read by the directors below
+        spectrum::plugin(app); // FFT of the rendered track → band table, read by the bg + interlude layers
         app.init_resource::<SeqClock>()
             .insert_resource(sequence::FlashStrength(
                 std::env::var("MARTIN_FLASH")

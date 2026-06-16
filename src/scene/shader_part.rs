@@ -100,6 +100,7 @@ fn spawn_shader_parts(
 fn update_shader_parts(
     clock: Res<SeqClock>,
     beat: Res<Beat>,
+    spectrum: Res<crate::scene::spectrum::Spectrum>,
     seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
     mut mats: ResMut<Assets<ShaderPartMaterial>>,
@@ -131,6 +132,8 @@ fn update_shader_parts(
             m.data.time = clock.t;
             m.data.level = alpha;
             m.data.beat = beat.as_vec4();
+            m.data.spectrum_lo = spectrum.as_vec4_lo();
+            m.data.spectrum_hi = spectrum.as_vec4_hi();
         }
     }
 }

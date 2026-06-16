@@ -89,6 +89,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_DEFORM_AMP` | `1.0` | Scales the deform amplitude — **`0.2`–`0.3` ≈ a gentle wobble on a big scene**, `1` = default, higher = wild. |
 | `MARTIN_DEFORM_SPEED` | `2.0` | Deform animation rate — `0.6`–`1` = slow/dreamy, higher = faster. |
 | `MARTIN_BEAT` | `1.0` | **Beat-reactive visuals** strength (`0` = off). The score's drums drive the look: kick → a scale "thump", snare → a bloom flare, hat → a shimmer, and any active `^deform` swells on the beat. Per-Shot `beat:<scale>` dials it per shot. See [Beat-reactive visuals](#beat-reactive-visuals). |
+| `MARTIN_FFT` | `1.0` | **Spectral reactivity** strength (`0` = off). An FFT of the rendered track is baked into 8 log frequency bands (sub→air); the **background** (`MARTIN_BG`) and **`shader:` interludes** then react to the actual *spectrum* — the bass swells the whole field, the mids wash colour over it, the air sparkles — not just the drum triggers (`MARTIN_BEAT`). Deterministic (baked once from the score, indexed by show-time), so it bakes identically into recordings. Only affects shows with a backdrop/interlude; splat-only morph shows are untouched. See [Spectral reactivity](#spectral-reactivity). |
 | `MARTIN_CAM_PUMP` | `0` (off) | Kick-driven **camera lunge** (a transient pull-in on each kick). **Off by default** — the shake is nauseating over a long loop. Opt in with a small value (`0.04` ≈ the old default) for a single punchy clip. |
 | `MARTIN_BG` | — | **Fullscreen background shader** behind the splats (the demoscene classic): `plasma` / `tunnel` / `stars` / `warp` / `rings` / `grid` / `kaleido` / `bolt` (or a number). A custom-material quad parented to the camera, opaque at the far plane so the splats blend over it; fed time + beat (kick brightens). The WGSL is `assets/bg.wgsl` — a `mode` uniform switches effects; edit it / add your own (Shadertoy-ish: work in `p` + `bg.time`). |
 | `MARTIN_BG_DIM` | `1.0` | Scales the background brightness so foreground content (a logo, glowing text) reads over it — e.g. `0.4` for a punchy effect dialled back to a backdrop. |
@@ -568,6 +569,31 @@ it (`0` = off, `2`–`3` = exaggerated):
 
 It's the same data path as the synth + `@@anchor`s, so the visuals react to *any* score. Camera
 pump + thump are deterministic (clock-driven), so they bake identically into a recording.
+
+### Spectral reactivity
+
+Where the beat reactions above are *triggers* (a kick fired, a snare fired), **`MARTIN_FFT`** makes the
+look react to the actual **spectrum** of the music. The rendered track is FFT'd once into **8 log
+frequency bands** (sub · low · low-mid · mid · mid-hi · presence · brilliance · air) and baked into a
+frame-indexed table; the **background** (`MARTIN_BG`) and **`shader:` interludes** then breathe with it:
+
+| band group | reaction on the backdrop |
+|---|---|
+| **bass** (sub + low) | swells the brightness of the whole field — the backdrop *pumps* with the low end |
+| **mids** | a slow colour wash drifts across the field as the mids fill in |
+| **air** (brilliance + top) | a fine sparkle twinkles in on the high harmonics (the lead, the hats' shimmer) |
+
+`MARTIN_FFT=<scale>` tunes the strength (`1.0` default, `0` = off, `2`–`3` = exaggerated). Because the
+table is baked from the score and indexed by **show-time** (not wall-clock), it's fully deterministic —
+a recording bakes the exact same spectrum frame-for-frame. The analysis is a pure, dependency-free
+radix-2 FFT (`src/audio/analyze.rs`); the bake runs on a background thread live, and synchronously in
+record mode so frame 0 is never raced. **Only shows with a backdrop or `shader:` interlude react** —
+a splat-only morph show is byte-identical with FFT on or off.
+
+```bash
+# a plasma backdrop that breathes with Cinder's spectrum behind the morphing splats
+MARTIN_BG=plasma MARTIN_FFT=1.5 MARTIN_SHOW=productions/cities/cities-defeest.show cargo +nightly run --release
+```
 
 ### Cue-anchoring: `@@anchor` (lock a part to the music)
 
