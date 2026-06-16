@@ -14,7 +14,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use super::{SAMPLE_RATE, section_time, section_window, set_oversampling, sub_freq};
+use super::{SAMPLE_RATE, section_time, set_oversampling, sub_freq};
 use crate::score::{Inst, Score};
 
 /// One scheduled note/hit/accent. `t` is the RAW musical start used only to bucket it into a
@@ -413,54 +413,11 @@ pub(crate) fn produce(score: &Score, mut sink: impl FnMut(&[f32])) {
     let stereo = total * 2;
     super::progress_reset();
 
-    // sidechain duck + reverb-depth automation (cheap precompute, no audio data needed)
+    // sidechain duck + reverb-depth automation (cheap precompute, no audio data needed) — the exact
+    // same per-frame envelopes the batch `master` builds, so the two engines duck/reverb identically.
     let kicks = score.hits(Inst::Kick);
-    let mut duck = vec![1.0f32; total];
-    let (depth, tau) = (score.param("sidechain", 0.78), 0.085f32);
-    for &kt in &kicks {
-        let k0 = (kt * sr) as usize;
-        for j in 0..(0.34 * sr) as usize {
-            let i = k0 + j;
-            if i >= total {
-                break;
-            }
-            let d = 1.0 - depth * (-(j as f32 / sr) / tau).exp();
-            if d < duck[i] {
-                duck[i] = d;
-            }
-        }
-    }
-    let reverbauto = score.param("reverbauto", 1.0);
-    let mut rv_env = vec![1.0f32; total];
-    {
-        let secmul = |name: &str| match name {
-            "intro" => 1.5,
-            "build" => 1.15,
-            "drop" => 0.7,
-            "breakdown" => 1.7,
-            "climax" => 0.85,
-            "outro" => 1.25,
-            _ => 1.0,
-        };
-        let mut target = vec![1.0f32; total];
-        for s in &score.sections {
-            if let Some((s0, s1)) = section_window(score, &s.name) {
-                let i0 = (s0 * sr) as usize;
-                let i1 = std::cmp::min((s1 * sr) as usize, total);
-                let mul = secmul(&s.name);
-                for v in target.iter_mut().take(i1).skip(i0) {
-                    *v = mul;
-                }
-            }
-        }
-        let dt = 1.0 / sr;
-        let sm = 1.0 - (-dt / 0.3).exp();
-        let mut e = target.first().copied().unwrap_or(1.0);
-        for i in 0..total {
-            e += (target[i] - e) * sm;
-            rv_env[i] = 1.0 + reverbauto * (e - 1.0);
-        }
-    }
+    let duck = super::render::sidechain_duck(score, &kicks, total);
+    let rv_env = super::render::reverb_env(score, total);
 
     // time-ordered events per lane
     let mut lanes = super::render::collect_events(score);

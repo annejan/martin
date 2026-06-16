@@ -577,6 +577,68 @@ pub(super) fn render_fx(bed: &mut [f32], score: &Score, total: usize) {
     );
 }
 
+/// Sidechain duck envelope (one value per mono frame): a fast dip to `1-depth` right on each kick,
+/// recovering over ~0.11 s — the dance "breath". `set sidechain=` scales the depth. Shared verbatim
+/// by the batch `master` and the streaming `produce`, so both engines duck identically.
+pub(super) fn sidechain_duck(score: &Score, kicks: &[f32], total: usize) -> Vec<f32> {
+    let sr = SAMPLE_RATE as f32;
+    let mut duck = vec![1.0f32; total];
+    let (depth, tau) = (score.param("sidechain", 0.78), 0.085f32);
+    for &kt in kicks {
+        let k0 = (kt * sr) as usize;
+        for j in 0..(0.34 * sr) as usize {
+            let i = k0 + j;
+            if i >= total {
+                break;
+            }
+            let d = 1.0 - depth * (-(j as f32 / sr) / tau).exp();
+            if d < duck[i] {
+                duck[i] = d;
+            }
+        }
+    }
+    duck
+}
+
+/// Reverb-depth automation envelope (one value per mono frame): a per-section wet multiplier — open
+/// in the sparse/emotional sections (intro/breakdown/outro), tight in the punchy drops — one-pole
+/// smoothed (~0.3 s glide) so it glides at section boundaries. `set reverbauto=0` → flat (all 1.0).
+/// Automating the reverb like this is a big part of what reads as a produced, 3D record vs a flat
+/// one. Shared verbatim by the batch `master` and the streaming `produce`.
+pub(super) fn reverb_env(score: &Score, total: usize) -> Vec<f32> {
+    let sr = SAMPLE_RATE as f32;
+    let reverbauto = score.param("reverbauto", 1.0);
+    let secmul = |name: &str| match name {
+        "intro" => 1.5,
+        "build" => 1.15,
+        "drop" => 0.7,
+        "breakdown" => 1.7,
+        "climax" => 0.85,
+        "outro" => 1.25,
+        _ => 1.0,
+    };
+    let mut target = vec![1.0f32; total];
+    for s in &score.sections {
+        if let Some((s0, s1)) = section_window(score, &s.name) {
+            let i0 = (s0 * sr) as usize;
+            let i1 = std::cmp::min((s1 * sr) as usize, total);
+            let mul = secmul(&s.name);
+            for v in target.iter_mut().take(i1).skip(i0) {
+                *v = mul;
+            }
+        }
+    }
+    let dt = 1.0 / sr;
+    let sm = 1.0 - (-dt / 0.3).exp(); // ~0.3 s glide between sections
+    let mut rv_env = vec![1.0f32; total];
+    let mut e = target.first().copied().unwrap_or(1.0);
+    for i in 0..total {
+        e += (target[i] - e) * sm;
+        rv_env[i] = 1.0 + reverbauto * (e - 1.0); // blend toward flat as reverbauto→0
+    }
+    rv_env
+}
+
 /// The master chain: build the sidechain duck (from `kicks`), the spread reverb send + its per-section
 /// depth automation, the Haas stereo widen (mutates `bed` in place), then the 2-band master loop →
 /// the final interleaved stereo buffer (the caller wraps it in a `Track`).
@@ -591,60 +653,9 @@ pub(super) fn master(
     use std::f32::consts::TAU;
     let sr = SAMPLE_RATE as f32;
     let dt = 1.0 / sr;
-    // sidechain pump: a fast dip right on each kick recovering over ~0.11s → the dance "breath".
-    let mut duck = vec![1.0f32; total];
-    let (depth, tau) = (score.param("sidechain", 0.78), 0.085f32); // `set sidechain=` — pump depth
-    for &kt in kicks {
-        let k0 = (kt * sr) as usize;
-        for j in 0..(0.34 * sr) as usize {
-            let i = k0 + j;
-            if i >= total {
-                break;
-            }
-            let d = 1.0 - depth * (-(j as f32 / sr) / tau).exp();
-            if d < duck[i] {
-                duck[i] = d;
-            }
-        }
-    }
-
+    let duck = sidechain_duck(score, kicks, total);
     let wet = reverb_send(bed, sr);
-
-    // reverb-depth AUTOMATION: instead of one flat wet send, open the space in the sparse/emotional
-    // sections (intro/breakdown/outro — size + feeling) and pull it back in the punchy drops (so the
-    // kick + wall stay tight and dry). Automating the reverb like this is a big part of what reads as a
-    // produced, 3D record vs a flat one. A per-section target, one-pole smoothed so it glides at the
-    // boundaries. (`set reverbauto=0` → flat send.)
-    let reverbauto = score.param("reverbauto", 1.0);
-    let mut rv_env = vec![1.0f32; total];
-    {
-        let secmul = |name: &str| match name {
-            "intro" => 1.5,
-            "build" => 1.15,
-            "drop" => 0.7,
-            "breakdown" => 1.7,
-            "climax" => 0.85,
-            "outro" => 1.25,
-            _ => 1.0,
-        };
-        let mut target = vec![1.0f32; total];
-        for s in &score.sections {
-            if let Some((s0, s1)) = section_window(score, &s.name) {
-                let i0 = (s0 * sr) as usize;
-                let i1 = std::cmp::min((s1 * sr) as usize, total);
-                let mul = secmul(&s.name);
-                for v in target.iter_mut().take(i1).skip(i0) {
-                    *v = mul;
-                }
-            }
-        }
-        let sm = 1.0 - (-dt / 0.3).exp(); // ~0.3 s glide between sections
-        let mut e = target.first().copied().unwrap_or(1.0);
-        for i in 0..total {
-            e += (target[i] - e) * sm;
-            rv_env[i] = 1.0 + reverbauto * (e - 1.0); // blend toward flat as reverbauto→0
-        }
-    }
+    let rv_env = reverb_env(score, total);
 
     // Haas-style stereo widen on the lead: a 12 ms offset between L and R channels makes the
     // lead read as a wide stereo presence without audible echo. Apply ONLY to the lead's
