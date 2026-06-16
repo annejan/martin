@@ -8,8 +8,11 @@ edits in two places.
 
 ---
 
-> **STATUS (2026-06-16):** #2 ✅ · #3 ✅ · #4 ✅ · #5a ✅ · #5b ✅ · #6 ✅ · #1 ◪ partial
-> (shared `sidechain_duck`/`reverb_env`; the `collect_events`↔batch note-gen unification in progress).
+> **STATUS (2026-06-16):** ALL RESOLVED — #1 ✅ · #2 ✅ · #3 ✅ · #4 ✅ · #5a ✅ · #5b ✅ · #6 ✅.
+> #1: `synth_track` is now a thin wrapper over `stream::produce`; the entire mirror DSP (render.rs
+> passes + master, effects.rs whole-buffer fx) is deleted (~880 lines, render.rs 1166 → 484). One
+> engine — a recording is byte-for-byte the streamed signal (`batch_is_the_collected_stream`),
+> verified ≤1 PCM LSB vs the old batch on the real score.
 
 ## 🔴 BLOCKER 1 — `audio/render.rs` (1166 lines): `collect_events` is a full second copy of the batch passes
 
