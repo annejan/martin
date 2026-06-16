@@ -272,7 +272,7 @@ shader:warp                      # a fullscreen WGSL effect as an INTERLUDE: the
                                  #   in/out across the part — a demoscene effect between scenes
 splat:name.ply                   # a splat (filename in the asset folder)
 splat:a.ply+b.ply                # several splats, auto-arranged side by side
-…any of the above… @hold,morph,bulge   ~entrance   ^deform[:amp]   exit:departure   rot:rx,ry,rz   flock:N   @@anchor   backdrop:name   raster:mode   flash:strength
+…any of the above… @hold,morph,bulge   ~entrance   ^deform[:amp]   exit:departure   rot:rx,ry,rz   flock:N   @@anchor   backdrop:name   raster:mode   flash:strength   ease:curve
 ```
 
 > **Per-Shot look overrides (scene-scoped looks):** `flash:<strength>` flares the cut-bloom on *this*
@@ -331,6 +331,28 @@ The optional trailing `@hold,morph,bulge` sets, in **seconds** (and ball amount)
 - **hold** — how long to rest on this part once it arrives (default `1.5`)
 - **morph** — how long the morph *into* this part takes (default `3.0`)
 - **bulge** — ball-pulse explosiveness, `0`–`~1.4` (default `0.9`; **`morph` transition only**)
+
+**Morph easing (`ease:<curve>`)** shapes *how the morph lands in time* — where `~entrance` picks the
+spatial motion, `ease:` bends the blend curve, so an entrance can **land on the beat** instead of
+always drifting in. Default is `smooth` (the classic ease-in-out — unchanged). It pairs perfectly with
+`@@anchor`: anchor the shot to the drop, give it `ease:snap`, and the shape *slams together* on the kick.
+
+| `ease:` | The morph… |
+|---|---|
+| `smooth` (default; `smoothstep`) | eases in and out — gentle, drifts into place |
+| `snap` (`slam`) | hangs low, then **slams** in (cubic ease-in) — lands hard, late |
+| `hold-snap` (`hold`) | stays as the *source* the whole morph, then **snaps** into shape over the last 20% — the punchiest landing |
+| `anticipate` (`back`) | winds *back* first, then whips in — a little overshoot of intent |
+| `stutter` (`step`) | clicks forward in discrete chunks — mechanical / stop-motion |
+
+```
+splat:knot.ply  ~shockwave  @@drop  @2,1.5  ease:snap   # the knot SLAMS together on the drop's kick
+text:deFEEST    ~ball       ease:hold-snap               # particles hover, then snap to the wordmark
+```
+
+Easing is pure scalar math (no GPU), fully deterministic, and works the same in `[reel]` shots and
+`[compose]`/`[stage]` objects. The default `smooth` is byte-identical to before, so existing shows are
+unchanged.
 
 The optional trailing **`~transition`** picks *how* the part arrives (the ball is just one
 of them). It can sit anywhere on the line, but reads best last:

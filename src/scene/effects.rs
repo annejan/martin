@@ -117,6 +117,58 @@ impl Entrance {
     }
 }
 
+/// How a shot's morph factor is **shaped** over time (`ease:name`). The factor runs 0→1 across the
+/// `morph` window; this bends it before it becomes `CloudSettings.time`, so the same entrance can
+/// drift in gently (`smoothstep`) or LAND on the beat (`snap`/`hold-snap`). Pure scalar — no GPU, no
+/// clock, fully deterministic. `Smoothstep` is the default and reproduces the original behaviour
+/// bit-for-bit. The single source of the morph curve: the reel (`shot_director`) and the stage
+/// (`compose`) both route their factor through `Ease::apply`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub(crate) enum Ease {
+    #[default]
+    Smoothstep, // f²(3-2f) — the classic ease-in-out (default, unchanged)
+    Snap,       // cubic ease-in (f³): hangs low, then SLAMS up — lands hard on the beat
+    Anticipate, // back-ease-in: winds back (clamped at the source) then whips in
+    Stutter,    // stepped: the morph clicks forward in discrete chunks (mechanical, stop-motion)
+    HoldSnap,   // holds at the source, then snaps in over the last 20% — the punchiest landing
+}
+
+impl Ease {
+    pub(crate) fn parse(s: &str) -> Option<Ease> {
+        Some(match s.trim().to_ascii_lowercase().as_str() {
+            "smooth" | "smoothstep" | "ease" => Ease::Smoothstep,
+            "snap" | "slam" => Ease::Snap,
+            "anticipate" | "back" | "wind" => Ease::Anticipate,
+            "stutter" | "step" | "click" => Ease::Stutter,
+            "hold-snap" | "holdsnap" | "hold" => Ease::HoldSnap,
+            _ => return None,
+        })
+    }
+
+    /// Shape a morph factor `f ∈ [0,1]` into the eased blend value. Output is clamped to `[0,1]` so
+    /// `CloudSettings.time` always stays a valid blend (the `Anticipate` backwind would otherwise dip
+    /// below 0). `Smoothstep` is identical to the long-standing `f*f*(3-2*f)`.
+    pub(crate) fn apply(self, f: f32) -> f32 {
+        let f = f.clamp(0.0, 1.0);
+        match self {
+            Ease::Smoothstep => f * f * (3.0 - 2.0 * f),
+            Ease::Snap => f * f * f,
+            Ease::Anticipate => {
+                const S: f32 = 1.70158; // standard back-ease overshoot constant
+                (f * f * ((S + 1.0) * f - S)).clamp(0.0, 1.0)
+            }
+            Ease::Stutter => {
+                const STEPS: f32 = 6.0; // 6 chunks across the morph; reaches exactly 1.0 at f=1
+                (f * STEPS).floor() / STEPS
+            }
+            Ease::HoldSnap => {
+                let g = ((f - 0.8) / 0.2).clamp(0.0, 1.0); // 0 until 80%, then 0→1
+                g * g * (3.0 - 2.0 * g)
+            }
+        }
+    }
+}
+
 /// A *persistent* vertex deform (`^name` token / `MARTIN_DEFORM`). Unlike a `Entrance` (which
 /// plays once on arrival), this keeps running while the part is **held** — so a `wall:` of text
 /// can ripple, billow or curl the whole time it's on screen. Drives the fork shader's deform
@@ -186,6 +238,7 @@ pub(crate) enum FxMod {
     Entrance(Entrance),
     Deform(Deform, Option<f32>), // (deform, optional `:amp` strength)
     Tint(crate::scene::colorize::Tint),
+    Ease(Ease), // `ease:name` — shapes the morph curve (snap/anticipate/…)
 }
 
 /// Parse one whitespace token as a shared fx modifier. `None` = not one of these sigils (keep the
@@ -212,6 +265,13 @@ pub(crate) fn parse_fx_modifier(tok: &str) -> Option<Result<FxMod, String>> {
             crate::scene::colorize::Tint::parse(tn)
                 .map(FxMod::Tint)
                 .ok_or_else(|| format!("unknown tint 'tint:{tn}'")),
+        );
+    }
+    if let Some(en) = tok.strip_prefix("ease:") {
+        return Some(
+            Ease::parse(en)
+                .map(FxMod::Ease)
+                .ok_or_else(|| format!("unknown ease 'ease:{en}'")),
         );
     }
     None
@@ -270,10 +330,15 @@ mod tests {
             parse_fx_modifier("tint:fry"),
             Some(Ok(FxMod::Tint(Tint::Fry)))
         );
+        assert_eq!(
+            parse_fx_modifier("ease:snap"),
+            Some(Ok(FxMod::Ease(Ease::Snap)))
+        );
         // recognized sigil, bad value → Err (caller warns + consumes)
         assert!(matches!(parse_fx_modifier("~bogus"), Some(Err(_))));
         assert!(matches!(parse_fx_modifier("^bogus"), Some(Err(_))));
         assert!(matches!(parse_fx_modifier("tint:bogus"), Some(Err(_))));
+        assert!(matches!(parse_fx_modifier("ease:bogus"), Some(Err(_))));
         // not an fx token → None (the caller keeps it for the head/placement)
         assert_eq!(parse_fx_modifier("splat:x.ply"), None);
         assert_eq!(parse_fx_modifier("@5,3,0"), None);
@@ -290,6 +355,33 @@ mod tests {
         assert_eq!(Entrance::parse("unfold"), Some(Entrance::Fold)); // alias
         assert_eq!(Entrance::parse("telescope"), Some(Entrance::Zoom)); // alias
         assert_eq!(Entrance::parse("nope"), None);
+    }
+
+    #[test]
+    fn ease_curves_endpoints_and_shape() {
+        // every curve pins the endpoints (a morph always completes), default = old smoothstep.
+        for e in [
+            Ease::Smoothstep,
+            Ease::Snap,
+            Ease::Anticipate,
+            Ease::Stutter,
+            Ease::HoldSnap,
+        ] {
+            assert!(e.apply(0.0).abs() < 1e-6, "{e:?} f=0");
+            assert!((e.apply(1.0) - 1.0).abs() < 1e-6, "{e:?} f=1");
+            // output always a valid blend factor (Anticipate's backwind is clamped).
+            for i in 0..=10 {
+                let v = e.apply(i as f32 / 10.0);
+                assert!((0.0..=1.0).contains(&v), "{e:?} out of range: {v}");
+            }
+        }
+        assert_eq!(Ease::default(), Ease::Smoothstep);
+        assert_eq!(Ease::Smoothstep.apply(0.5), 0.5); // smoothstep(0.5)=0.5
+        assert!(Ease::Snap.apply(0.5) < 0.5); // ease-in hangs low at the midpoint
+        assert_eq!(Ease::HoldSnap.apply(0.5), 0.0); // still at the source before 80%
+        assert_eq!(Ease::parse("slam"), Some(Ease::Snap)); // alias
+        assert_eq!(Ease::parse("hold-snap"), Some(Ease::HoldSnap));
+        assert_eq!(Ease::parse("nope"), None);
     }
 
     #[test]

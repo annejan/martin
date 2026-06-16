@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use bevy_gaussian_splatting::{PlanarGaussian3d, RasterizeMode};
 
 use crate::scene::content::PartContent;
-use crate::scene::effects::{Deform, Departure, Entrance};
+use crate::scene::effects::{Deform, Departure, Ease, Entrance};
 
 /// One shot morphs in from the previous (or, for shot 0, from a ball), then holds.
 #[derive(Clone)]
@@ -31,6 +31,7 @@ pub(crate) struct Shot {
     pub deform_amp: Option<f32>, // `^name:<amp>` → this shot's deform strength scale (None = 1.0)
     pub beat: Option<f32>, // `beat:<scale>` → this shot's beat-bounce reaction (0 = still; None = 1.0)
     pub tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow|brand` → recolour this shape
+    pub ease: Ease, // `ease:<name>` → shape the morph curve (default Smoothstep = unchanged)
 }
 
 impl Shot {
@@ -55,6 +56,7 @@ impl Shot {
             deform_amp: None,
             beat: None,
             tint: None,
+            ease: Ease::Smoothstep,
         }
     }
 }
@@ -82,6 +84,7 @@ pub(crate) struct BuiltShot {
     pub flash: Option<f32>, // per-shot cut-bloom strength (`flash:N`); None = global MARTIN_FLASH
     pub beat: Option<f32>,  // per-shot beat-bounce scale (`beat:N`); None = 1.0, 0 = still
     pub raster: RasterizeMode,
+    pub ease: Ease, // morph-curve shaping (`ease:`); applied to the blend factor in the director
     pub start: f32, // absolute start time (s) of this shot
     // copied from the source Shot so the director needs only BuiltShot. (`hold` lives only on the
     // source `Shot` — the cue timeline reads it there via `show_end`; the director never needs it.)

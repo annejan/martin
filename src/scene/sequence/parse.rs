@@ -98,6 +98,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         let mut deform_amp = None;
         let mut beat = None;
         let mut tint = None;
+        let mut ease = crate::scene::effects::Ease::Smoothstep;
         // Pull each modifier token out of the line by its sigil/prefix. A token carrying a known
         // prefix is ALWAYS consumed (never leaks into the head/text) — if it fails to parse we warn,
         // so a typo (`~explod`, `^wave2`) is a visible error, not a silently-dropped effect.
@@ -154,6 +155,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                             deform_amp = a;
                         }
                         Ok(FxMod::Tint(x)) => tint = Some(x),
+                        Ok(FxMod::Ease(e)) => ease = e,
                         Err(w) => eprintln!("seq: {w} — ignored"),
                     }
                 } else {
@@ -204,6 +206,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
             deform_amp,
             beat,
             tint,
+            ease,
         });
     }
     parts

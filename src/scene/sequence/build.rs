@@ -243,6 +243,7 @@ pub(crate) fn build_sequence(
             flash: shot.flash,
             beat: shot.beat,
             raster: rasters[idx],
+            ease: shot.ease,
             start: starts[idx],
             morph: shot.morph,
             bulge: shot.bulge,

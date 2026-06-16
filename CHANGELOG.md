@@ -16,6 +16,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   camera track. Composed via `MARTIN_*` env vars or a single unified `.show` file (`MARTIN_SHOW`).
 - mesh→splat sampling: density-adaptive disk size + R2 low-discrepancy distribution, per-splat
   translucency (`MARTIN_MESH_OPACITY`), and a glTF (`.glb`) loader.
+- **Per-shot morph easing** (`ease:<curve>`): shapes the blend curve so an entrance can LAND on the
+  beat instead of always drifting in — `smooth` (default, unchanged), `snap`, `hold-snap`, `anticipate`,
+  `stutter`. Pure scalar, deterministic; the single source of the morph curve now (the reel director and
+  the compose stage both route their factor through `Ease::apply`, retiring the duplicated smoothstep).
 - Self-contained single-binary bundle (`--features bundle`): show assets are lz4-embedded and
   self-extract at startup.
 - `KHR_gaussian_splatting` glTF loading (`MARTIN_GLB=<file.glb>`): render a standard-container splat

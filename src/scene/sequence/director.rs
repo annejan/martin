@@ -87,8 +87,9 @@ pub(crate) fn shot_director(
         interp.rhs = PlanarGaussian3dHandle(want_rhs.clone());
     }
     let morphing = arriving || departing;
-    let eased = factor * factor * (3.0 - 2.0 * factor);
-    cs.time = eased;
+    // shape the blend factor with the shot's `ease:` curve (default Smoothstep = the old f²(3-2f)),
+    // so a morph can LAND on the beat (snap/hold-snap) instead of always drifting in.
+    cs.time = s.ease.apply(factor);
     // per-shot raster mode (raster:/MARTIN_RASTER): the active shot's debug shading (colour = normal).
     let want_raster = s.raster;
     if cs.rasterize_mode != want_raster {

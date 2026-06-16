@@ -15,7 +15,7 @@ use crate::camera::{DEFAULT_PITCH, FRONT_YAW, OrbitCam};
 use crate::capture::RecordState;
 use crate::morph::resample_morton;
 use crate::scene::content::{PartContent, parse_source, sample_content};
-use crate::scene::effects::{Deform, Entrance, source_cloud};
+use crate::scene::effects::{Deform, Ease, Entrance, source_cloud};
 use crate::scene::sequence::{SeqState, Sequence};
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, SeqClock, cloud_base_rotation};
 use crate::score;
@@ -41,6 +41,7 @@ pub(crate) struct Prop {
     deform: Option<Deform>, // `^name`: a persistent wobble while it's up
     deform_amp: Option<f32>, // `^name:amp`: scales the deform strength (None = 1.0)
     tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow|brand`: recolour the sampled splats
+    ease: Ease, // `ease:name`: shapes the assemble curve (default Smoothstep = unchanged)
 }
 
 impl Prop {
@@ -93,6 +94,7 @@ impl Prop {
                 (mode, amp * self.deform_amp.unwrap_or(1.0), freq)
             }),
             reveal: self.entrance.and_then(|t| t.shader_uniforms()),
+            ease: self.ease,
         }
     }
 }
@@ -137,6 +139,7 @@ pub(crate) struct ComposeAnim {
     deform: Option<(u32, f32, f32)>, // `^name` deform uniforms (mode, amp, freq)
     reveal: Option<(u32, f32, u32)>, // the entrance's per-particle reveal shader (mode/softness/axis) —
                                      // pen-write traces the letters in as it assembles (only while assembling, then off)
+    ease: Ease,                      // shapes the assemble curve (`ease:`)
 }
 
 /// Parse `MARTIN_COMPOSE` (a file path or inline string). Each line: a `<source>` head (text/splat/
@@ -163,6 +166,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let mut deform = None;
         let mut deform_amp = None;
         let mut tint = None;
+        let mut ease = Ease::Smoothstep;
         let toks: Vec<&str> = s
             .split_whitespace()
             .filter(|t| {
@@ -177,6 +181,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                             deform_amp = a;
                         }
                         Ok(FxMod::Tint(x)) => tint = Some(x),
+                        Ok(FxMod::Ease(e)) => ease = e,
                         Err(w) => eprintln!("compose: {w} — ignored"),
                     }
                     return false;
@@ -242,6 +247,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             deform,
             deform_amp,
             tint,
+            ease,
         });
     }
     out
@@ -484,7 +490,7 @@ pub(crate) fn animate_composition(
             cs.global_opacity = op * (1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k);
             if a.interpolate {
                 let f = ((t - a.appear.max(0.0)) / COMPOSE_MORPH).clamp(0.0, 1.0);
-                cs.time = f * f * (3.0 - 2.0 * f); // eased assemble
+                cs.time = a.ease.apply(f); // eased assemble (shared curve; `ease:` shapes it)
                 // run the per-particle reveal shader WHILE assembling (pen-write traces the letters
                 // in), then switch it off so the held cloud renders plain + sort-safe.
                 let (mode, soft, axis) = if f < 1.0 {
