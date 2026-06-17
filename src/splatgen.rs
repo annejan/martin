@@ -442,9 +442,9 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
             // Hazy desaturated blue (atmospheric distance), a touch lighter toward the peaks.
             for _ in 0..N {
                 let x = rng.uniform(-1.0, 1.0);
-                let h = (2.7 * x).sin().abs() * 0.55
-                    + (6.1 * x + 0.7).sin().abs() * 0.3
-                    + (11.3 * x).sin().abs() * 0.15; // layered jagged peaks, ~0..1
+                let h = (7.0 * x).sin().abs() * 0.5
+                    + (15.0 * x + 0.7).sin().abs() * 0.3
+                    + (29.0 * x).sin().abs() * 0.2; // many layered jagged peaks → a RIDGE, not 2 humps
                 let fill = rng.unit(); // 0 = base, 1 = the ridge line → a solid silhouette
                 pos.push([
                     x,
@@ -713,6 +713,69 @@ mod tests {
     #[test]
     fn unknown_shape_is_none() {
         assert!(gen_shape("definitely-not-a-shape").is_none());
+    }
+
+    #[test]
+    fn directional_shapes_render_right_way_up_after_the_load_flip() {
+        // martin flips every .ply 180° about X on load (`cloud_base_rotation`), which negates Y.
+        // Directional shapes are authored inverted (the per-shape `-Y` negate) so they land
+        // right-way-up in WORLD. Anchor each on an unmistakable coloured feature and assert it ends
+        // up where it belongs — a forgotten negate (e.g. the upside-down `mountains` regression that
+        // turned peaks into stalactites) flips these and fails here, in CI, not on screen.
+        let mean_world_y = |name: &str, pick: &dyn Fn([f32; 3]) -> bool| -> f32 {
+            let (pos, rgb) = gen_shape(name).unwrap();
+            let ys: Vec<f32> = pos
+                .iter()
+                .zip(&rgb)
+                .filter(|(_, c)| pick(**c))
+                .map(|(p, _)| -p[1]) // -Y = the engine's load flip
+                .collect();
+            assert!(
+                !ys.is_empty(),
+                "{name}: no points matched the colour anchor"
+            );
+            ys.iter().sum::<f32>() / ys.len() as f32
+        };
+        // pine: the brown trunk (r>g>b) sits BELOW the green needles (g>r).
+        let trunk = mean_world_y("pine", &|c| c[0] > c[1] && c[1] > c[2]);
+        let needles = mean_world_y("pine", &|c| c[1] > c[0]);
+        assert!(
+            trunk < needles,
+            "pine upside-down: trunk {trunk:.2} not below needles {needles:.2}"
+        );
+        // flame: a tongue tapering UP — its base is wider than its tip. (Colour rides radius too, so
+        // it isn't a clean height anchor; geometry is.) Compare mean horizontal radius of the lowest
+        // vs the highest world-Y band.
+        {
+            let (pos, _) = gen_shape("flame").unwrap();
+            let w: Vec<[f32; 3]> = pos.iter().map(|p| [p[0], -p[1], p[2]]).collect();
+            let (lo, hi) = w
+                .iter()
+                .fold((f32::MAX, f32::MIN), |(l, h), p| (l.min(p[1]), h.max(p[1])));
+            let band = (hi - lo) * 0.2;
+            let radius = |keep: &dyn Fn(f32) -> bool| {
+                let r: Vec<f32> = w
+                    .iter()
+                    .filter(|p| keep(p[1]))
+                    .map(|p| (p[0] * p[0] + p[2] * p[2]).sqrt())
+                    .collect();
+                r.iter().sum::<f32>() / r.len().max(1) as f32
+            };
+            let base = radius(&|y| y <= lo + band);
+            let tip = radius(&|y| y >= hi - band);
+            assert!(
+                base > tip,
+                "flame upside-down: base radius {base:.2} not wider than tip {tip:.2}"
+            );
+        }
+        // mountains: the lighter peaks (high value) sit ABOVE the darker base.
+        let value = |c: [f32; 3]| c[0].max(c[1]).max(c[2]);
+        let peaks = mean_world_y("mountains", &|c| value(c) > 0.42);
+        let base = mean_world_y("mountains", &|c| value(c) < 0.30);
+        assert!(
+            peaks > base,
+            "mountains upside-down: peaks {peaks:.2} not above base {base:.2}"
+        );
     }
 
     #[test]
