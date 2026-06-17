@@ -1,28 +1,43 @@
-# martin — A NIGHT CAMPSITE: a tent + pines + a campfire (flame + rising embers) on rolling ground,
-# under a starry sky with a moon. Built ENTIRELY from procedural splatgen shapes — no captures, no
-# baked .ply (the engine synthesizes them on launch). A static tableau on the composition stage.
+# martin — NIGHT CAMPSITE (animated): the camp ASSEMBLES over the camping track — empty moonlit land →
+# the tent goes up → the campfire IGNITES on the drop → the pines fill in at the climax. Camera pushes
+# in on the fire as it lights, then pulls back to orbit the full site. Fire flickers (^turbulence) and
+# pulses on the beat; embers drift up the whole time. 100% procedural splatgen shapes (nothing baked).
 #
 #   MARTIN_SHOW=productions/camping/campsite.show cargo +nightly run --release
-#
-# Compose line: <source> [@x,y,z] [*scale] [spin a,b,c deg/s] [sway a,b,c deg] [bob amp] [drift …]
+#   MARTIN_SHOW=productions/camping/campsite.show ./record.sh campsite.mp4
 
 [settings]
-budget         = 100000          # splats PER object
-bg             = stars           # night sky behind it all
-particles      = embers          # campfire sparks drifting up
-particle_count = 280
-bg_dim         = 0.5
+kind           = demo
+score          = productions/camping/score.txt   # Op de camping — Gm/140 BPM, intro→…→outro
+budget         = 100000
+bg             = stars
+particles      = embers
+particle_count = 300
+bg_dim         = 0.55
 
-[compose]
-splat:terrain.ply   @0,-1.25,0      *2.4   spin 0,5,0      # rolling ground (slow drift), the floor
-splat:tent.ply      @-1.0,-0.45,0.2 *0.85  sway 0,9,0      # the tent, pitched on the left
-splat:pine.ply      @1.15,-0.30,-0.4 *0.95 sway 0,7,0      # a conifer
-splat:pine.ply      @1.85,-0.45,0.6 *0.65  sway 0,7,0      # a smaller one behind
-splat:flame.ply     @0,-0.55,0.7    *0.5   bob 0.05        # the campfire — embers rise off it
-splat:moon.ply      @1.5,1.35,-2.0  *0.55  spin 0,4,0      # the moon, up in the sky
+[stage]
+splat:terrain.ply   @0,-1.25,0      *2.4   spin 0,4,0    ~fade  in intro             # the moonlit land
+splat:moon.ply      @1.5,1.35,-2.0  *0.55  spin 0,3,0    ~fade  in intro             # the moon, from the start
+splat:tent.ply      @-1.0,-0.45,0.2 *0.85  sway 0,8,0    ~fade  in build             # pitch the tent
+splat:pine.ply      @1.15,-0.30,-0.4 *0.95 sway 0,7,0    ~fade  in build             # first conifer
+splat:flame.ply     @0,-0.55,0.7    *0.55  bob 0.06  ^turbulence:0.35  ~fade  in drop  # campfire IGNITES on the drop
+splat:pine.ply      @1.85,-0.45,0.6 *0.65  sway 0,7,0    ~fade  in climax            # the grove fills in
+splat:pine.ply      @-1.8,-0.4,-0.3 *0.7   sway 0,7,0    ~fade  in climax
 
-# camera: a gentle high-ish front orbit framing the whole site
+# camera: wide over the empty land → settle as the tent rises → PUSH IN on the fire at the drop →
+# pull back to orbit the full camp at the climax → settle for the night.
 [camera]
-t=0.0   pos=0,0.25,0   dist=2.9   yaw=1.25   pitch=0.20
-t=14.0  pos=0,0.25,0   dist=2.7   yaw=1.62   pitch=0.18
-t=28.0  pos=0,0.25,0   dist=2.9   yaw=1.25   pitch=0.20
+t=@@intro      pos=0,0.42,0   dist=3.2   yaw=1.28   pitch=0.30
+t=@@build      pos=0,0.25,0   dist=2.8   yaw=1.46   pitch=0.20
+t=@@drop       pos=0,0.08,0   dist=1.9   yaw=1.55   pitch=0.10   # in tight on the campfire
+t=@@breakdown  pos=0,0.18,0   dist=2.4   yaw=1.30   pitch=0.16
+t=@@climax     pos=0,0.22,0   dist=2.7   yaw=1.18   pitch=0.20   # orbit the full site
+t=@@outro      pos=0,0.38,0   dist=3.0   yaw=1.45   pitch=0.28
+
+# look track: hushed + dim over the land, bloom + beat lift when the fire lights, settle at the end.
+[sync]
+t=@@intro      flash=0.1   bg_dim=0.6   beat=0.4
+t=@@build      flash=0.15  bg_dim=0.5   beat=0.7
+t=@@drop       flash=0.4   bg_dim=0.4   beat=1.4      # fire + energy
+t=@@climax     flash=0.3   bg_dim=0.4   beat=1.2
+t=@@outro      flash=0.15  bg_dim=0.55  beat=0.6
