@@ -41,6 +41,7 @@ pub const SHAPES: &[&str] = &[
     "flame",
     "terrain",
     "moon",
+    "mountains",
 ];
 
 /// For each referenced `*.ply` that's MISSING and is a shape we know how to synthesize, generate it
@@ -433,6 +434,24 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
                 pos.push(d);
                 let g = 0.72 * shade;
                 rgb.push([g, g, (g * 1.04).min(1.0)]);
+            }
+        }
+        "mountains" => {
+            // A distant ridge silhouette: a WIDE, THIN, filled jagged skyline — meant to sit far
+            // BEHIND a scene (place it back + wide) so it reads as background mountains, not ground.
+            // Hazy desaturated blue (atmospheric distance), a touch lighter toward the peaks.
+            for _ in 0..N {
+                let x = rng.uniform(-1.0, 1.0);
+                let h = (2.7 * x).sin().abs() * 0.55
+                    + (6.1 * x + 0.7).sin().abs() * 0.3
+                    + (11.3 * x).sin().abs() * 0.15; // layered jagged peaks, ~0..1
+                let fill = rng.unit(); // 0 = base, 1 = the ridge line → a solid silhouette
+                pos.push([
+                    x,
+                    0.7 - h * fill * 1.4, // -Y: peaks point UP after martin's base flip (else upside-down)
+                    rng.uniform(-0.08, 0.08), // a thin ridge (depth)
+                ]);
+                rgb.push(hsv(0.62, 0.3, 0.26 + 0.22 * fill)); // hazy blue-grey, lighter near the peaks
             }
         }
         "lsystem" => {

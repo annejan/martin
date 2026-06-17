@@ -22,8 +22,10 @@ bg             = stars
 bg_dim         = 0.5
 
 [stage]
-# the ground persists through the earthbound scenes (camera just re-frames it); gone for the cosmos.
-splat:terrain.ply   @0,-2.1,0       *4.6   ~fade  in intro  out climax
+# distant mountain ridge on the horizon (far BACK + wide → reads as background, not ground) + a flat
+# near field under the camp. Both persist through the earthbound scenes; gone for the cosmos.
+splat:mountains.ply @0,-0.55,-8.0   *5.5   ~fade  in intro  out climax  # FAR back + low → a distant ridge
+splat:terrain.ply   @0,-0.95,0      *2.8   ~fade  in intro  out climax  # a clearing UNDER the camp, not a vast field
 
 # SCENE 1 — lone camp (intro → build)
 splat:tent.ply      @-0.5,-0.6,0.2  *0.8   sway 0,7,0  ~explode  in intro  out build
