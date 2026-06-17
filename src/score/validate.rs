@@ -69,3 +69,62 @@ pub(super) fn validate(sections: &[Section]) -> Vec<String> {
     }
     w
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sec(name: &str, bars: u32, phases: Vec<u32>, fill: bool) -> Section {
+        Section::empty(name.to_string(), bars, phases, fill)
+    }
+
+    /// A melodic phrase (one bar) that actually plays a note (vs. all-rests).
+    fn note_phrase() -> Vec<[Option<f32>; 16]> {
+        let mut g = [None; 16];
+        g[0] = Some(440.0);
+        vec![g]
+    }
+
+    #[test]
+    fn clean_section_has_no_warnings() {
+        assert!(validate(&[sec("intro", 4, vec![4], false)]).is_empty());
+        // phases + fill summing to bars is also clean
+        assert!(validate(&[sec("verse", 8, vec![4, 3], true)]).is_empty());
+    }
+
+    #[test]
+    fn bar_count_mismatch_warns() {
+        // the classic trap: `section x 8 4,4 fill` → 4+4+1 = 9 ≠ 8
+        let w = validate(&[sec("x", 8, vec![4, 4], true)]);
+        assert_eq!(w.len(), 1);
+        assert!(w[0].contains("`x`") && w[0].contains("8 bars") && w[0].contains("sum to 9"));
+    }
+
+    #[test]
+    fn drum_phase_beyond_section_warns() {
+        let mut s = sec("x", 4, vec![4], false); // section has ONE phase
+        s.kick.phases = vec![[false; 16], [true; 16]]; // …but kick defines a p1 → never plays
+        let w = validate(&[s]);
+        assert_eq!(w.len(), 1);
+        assert!(w[0].contains("`x.kick`") && w[0].contains("never plays"));
+    }
+
+    #[test]
+    fn melodic_p1_phrase_is_flagged_ignored() {
+        let mut s = sec("x", 4, vec![4], false);
+        s.lead.phases = vec![note_phrase(), note_phrase()]; // p0 + a p1 that's silently dropped
+        let w = validate(&[s]);
+        assert_eq!(w.len(), 1);
+        assert!(w[0].contains("`x.lead`") && w[0].contains("p1+ phrases are ignored"));
+    }
+
+    #[test]
+    fn melodic_only_p1_is_flagged_silent() {
+        let mut s = sec("x", 4, vec![4], false);
+        // p0 is all-rests, the real line sits in p1 → the whole lane plays SILENT
+        s.bass.phases = vec![vec![[None; 16]], note_phrase()];
+        let w = validate(&[s]);
+        assert!(w.iter().any(|m| m.contains("SILENT")));
+        assert!(w.iter().any(|m| m.contains("p1+ phrases are ignored")));
+    }
+}
