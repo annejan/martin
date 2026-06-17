@@ -40,4 +40,4 @@ t=@@intro      flash=0.1   bg_dim=0.6   beat=0.4
 t=@@build      flash=0.15  bg_dim=0.5   beat=0.7
 t=@@drop       flash=0.4   bg_dim=0.4   beat=1.4      # fire + energy
 t=@@climax     flash=0.3   bg_dim=0.4   beat=1.2
-t=@@outro      flash=0.15  bg_dim=0.55  beat=0.6
+t=@@outro      flash=0.15  bg_dim=0.55  beat=0.6  bg=fractal   # the night sky dissolves into fractals for the finale

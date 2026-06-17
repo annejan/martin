@@ -27,6 +27,7 @@ pub struct SyncTrack {
     exposure: Vec<(f32, f32)>,
     fov: Vec<(f32, f32)>,
     tint_music: Vec<(f32, f32)>,
+    bg: Vec<(f32, f32)>, // backdrop MODE index over time (STEP, not lerped) — e.g. switch to fractal at the outro
 }
 
 impl SyncTrack {
@@ -48,6 +49,11 @@ impl SyncTrack {
     pub fn tint_music_at(&self, t: f32) -> Option<f32> {
         eval(&self.tint_music, t)
     }
+    /// Backdrop mode index at `t` — a STEP (discrete; lerping between modes is meaningless). `None`
+    /// before the first `bg=` keyframe (→ the env / per-part backdrop wins).
+    pub fn bg_at(&self, t: f32) -> Option<f32> {
+        step(&self.bg, t)
+    }
     pub fn is_empty(&self) -> bool {
         self.flash.is_empty()
             && self.bg_dim.is_empty()
@@ -55,6 +61,7 @@ impl SyncTrack {
             && self.exposure.is_empty()
             && self.fov.is_empty()
             && self.tint_music.is_empty()
+            && self.bg.is_empty()
     }
 
     /// `(knob, keyframes)` for each knob that has any — for the `MARTIN_VALIDATE` dump.
@@ -66,6 +73,7 @@ impl SyncTrack {
             ("exposure", &self.exposure),
             ("fov", &self.fov),
             ("tint_music", &self.tint_music),
+            ("bg", &self.bg),
         ]
         .into_iter()
         .filter(|(_, k)| !k.is_empty())
@@ -96,6 +104,15 @@ fn eval(keys: &[(f32, f32)], t: f32) -> Option<f32> {
     }
 }
 
+/// STEP lookup: the value of the last keyframe at or before `t` (no interpolation — for discrete
+/// values like a mode index). `None` before the first keyframe, so a default can win until then.
+fn step(keys: &[(f32, f32)], t: f32) -> Option<f32> {
+    if keys.is_empty() || t < keys[0].0 {
+        return None;
+    }
+    Some(keys[keys.partition_point(|&(kt, _)| kt <= t) - 1].1)
+}
+
 /// Parse `[sync]` lines (same time grammar as `[camera]`): `t=<secs|@@anchor> knob=value …`. The
 /// score resolves the anchors. Unknown knobs warn and are skipped.
 pub fn parse_sync(lines: &[String], score: &crate::score::Score) -> SyncTrack {
@@ -121,6 +138,13 @@ pub fn parse_sync(lines: &[String], score: &crate::score::Score) -> SyncTrack {
             continue;
         };
         for (k, v) in s.split_whitespace().filter_map(|t| t.split_once('=')) {
+            // `bg`/`backdrop` takes a mode NAME (stars/fractal/…), not a number — map it to an index.
+            if k == "bg" || k == "backdrop" {
+                track
+                    .bg
+                    .push((time, crate::background::mode_index(v) as f32));
+                continue;
+            }
             let Ok(val) = v.parse::<f32>() else { continue };
             match k {
                 "t" | "time" => {}
@@ -132,7 +156,7 @@ pub fn parse_sync(lines: &[String], score: &crate::score::Score) -> SyncTrack {
                 "tint_music" | "tint" => track.tint_music.push((time, val)),
                 other => {
                     eprintln!(
-                        "sync: unknown knob '{other}' — skipped (have: flash/bg_dim/beat/exposure/fov/tint_music)"
+                        "sync: unknown knob '{other}' — skipped (have: flash/bg_dim/beat/exposure/fov/tint_music/bg)"
                     )
                 }
             }
@@ -145,6 +169,7 @@ pub fn parse_sync(lines: &[String], score: &crate::score::Score) -> SyncTrack {
         &mut track.exposure,
         &mut track.fov,
         &mut track.tint_music,
+        &mut track.bg,
     ] {
         v.sort_by(|a, b| a.0.total_cmp(&b.0));
     }
@@ -202,5 +227,23 @@ mod tests {
         assert_eq!(tr.exposure_at(10.0), Some(1.6)); // exposure knob
         assert_eq!(tr.fov_at(10.0), Some(0.6)); // fov lens-slam knob
         assert!(tr.fov_at(-1.0) == Some(1.0)); // clamps to the first fov keyframe
+    }
+
+    #[test]
+    fn bg_keyframe_is_a_name_mapped_step() {
+        let score = crate::score::Score::builtin();
+        // bg takes a mode NAME → index, and switches as a STEP (no lerp), None before the first key.
+        let tr = parse_sync(&["t=10 bg=fractal".to_string()], &score);
+        assert_eq!(tr.bg_at(5.0), None); // before → default backdrop wins
+        assert_eq!(tr.bg_at(10.0), Some(8.0)); // fractal = mode 8
+        assert_eq!(tr.bg_at(50.0), Some(8.0)); // holds (step)
+        // two keys → hard switch at the second, no fractional mode between
+        let tr = parse_sync(
+            &["t=0 bg=stars".to_string(), "t=10 bg=clouds".to_string()],
+            &score,
+        );
+        assert_eq!(tr.bg_at(3.0), Some(2.0)); // stars
+        assert_eq!(tr.bg_at(9.9), Some(2.0)); // still stars (no lerp toward clouds)
+        assert_eq!(tr.bg_at(10.0), Some(9.0)); // clouds = mode 9
     }
 }

@@ -229,6 +229,11 @@ fn update_bg(
             mode = Some(m);
         }
     }
+    // A `[sync] bg=<mode>` keyframe switches the backdrop mode over the timeline (a step change, e.g.
+    // to fractal for the outro). Wins over env / per-part, like the other look-track knobs.
+    if let Some(idx) = sync.as_ref().and_then(|s| s.bg_at(clock.t)) {
+        mode = Some(idx as u32);
+    }
     for (h, mut vis) in &mut q {
         *vis = match mode {
             Some(m) if m != BG_OFF => Visibility::Visible,
