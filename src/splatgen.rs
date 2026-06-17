@@ -36,6 +36,11 @@ pub const SHAPES: &[&str] = &[
     "fern",
     "menger",
     "shell",
+    "tent",
+    "pine",
+    "flame",
+    "terrain",
+    "moon",
 ];
 
 /// For each referenced `*.ply` that's MISSING and is a shape we know how to synthesize, generate it
@@ -333,6 +338,99 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
             for (p, u) in raw {
                 pos.push([p[0] / maxv, p[1] / maxv, p[2] / maxv]);
                 rgb.push(hsv(0.02 + 0.5 * u, 0.85, 1.0)); // warm → cool along the coil
+            }
+        }
+        "tent" => {
+            // A ridge tent: two canvas panels sloping from a ridge (along X, height HH) down to the
+            // ground at ±Z, plus two triangular end walls. ~80% of the splats on the panels (more area).
+            let (hl, hw, hh) = (0.95f32, 0.7f32, 0.85f32);
+            for _ in 0..N {
+                let p = if rng.unit() < 0.8 {
+                    let side = if rng.unit() < 0.5 { 1.0 } else { -1.0 };
+                    let t = rng.unit(); // 0 = ridge, 1 = ground edge
+                    [rng.uniform(-hl, hl), hh * (1.0 - t), side * hw * t]
+                } else {
+                    let ex = if rng.unit() < 0.5 { hl } else { -hl };
+                    let (mut a, mut b) = (rng.unit(), rng.unit());
+                    if a + b > 1.0 {
+                        a = 1.0 - a;
+                        b = 1.0 - b;
+                    } // uniform point in the end triangle (ridge-top, two base corners)
+                    [ex, hh * (1.0 - a - b), (b - a) * hw]
+                };
+                // Negate Y: martin flips Y-down .ply upright on load (capture convention), so build
+                // these directional shapes inverted to render the right way up (ridge up). Same below.
+                pos.push([p[0], 0.4 - p[1], p[2]]);
+                rgb.push(hsv(0.05, 0.72, 0.9)); // warm canvas orange
+            }
+        }
+        "pine" => {
+            // A conifer: stacked shrinking cones (tiers of needles) on a short brown trunk.
+            let tiers = 4u64;
+            for _ in 0..N {
+                if rng.unit() < 0.1 {
+                    let a = rng.uniform(0.0, tau);
+                    let r = 0.05 * rng.unit().sqrt();
+                    pos.push([r * a.cos(), -rng.uniform(-1.0, -0.6), r * a.sin()]); // -Y (see tent)
+                    rgb.push([0.35, 0.22, 0.12]); // trunk
+                } else {
+                    let tier = rng.int(tiers) as f32;
+                    let t = rng.unit(); // 0 = tier base, 1 = tier tip
+                    let r = 0.6 * (1.0 - tier / tiers as f32 * 0.7) * (1.0 - t);
+                    let a = rng.uniform(0.0, tau);
+                    pos.push([r * a.cos(), -(-0.6 + tier * 0.42 + t * 0.5), r * a.sin()]); // -Y
+                    rgb.push(hsv(0.33, 0.7, 0.45 + 0.3 * t)); // green, lighter at the tips
+                }
+            }
+        }
+        "flame" => {
+            // A campfire tongue: wide + hot at the base, tapering to a point, with angular flicker.
+            // Pairs with MARTIN_PARTICLES=embers. Colour rides the temperature (white-yellow core → red).
+            for _ in 0..N {
+                let h = rng.unit().powf(0.7); // bias toward the base
+                let a = rng.uniform(0.0, tau);
+                let tongue = 1.0 + 0.25 * (3.0 * a).sin();
+                let r = (1.0 - h) * 0.5 * tongue * (0.6 + 0.4 * rng.unit());
+                pos.push([r * a.cos(), 1.0 - h * 2.0, r * a.sin() * 0.6]); // -Y: hot base renders low
+                let heat = ((1.0 - h) * (1.0 - (r / 0.5).min(1.0))).clamp(0.0, 1.0);
+                rgb.push([1.0, (0.3 + 0.7 * heat).min(1.0), 0.1 * heat]);
+            }
+        }
+        "terrain" => {
+            // A patch of rolling ground (hills via summed sines) so scenes have a floor instead of
+            // floating in the void. Wide + low; the engine's normalize fits it under other content.
+            for _ in 0..N {
+                let x = rng.uniform(-1.0, 1.0);
+                let z = rng.uniform(-1.0, 1.0);
+                let y = 0.18
+                    * ((2.3 * x).sin() * (1.9 * z).cos()
+                        + 0.5 * (5.1 * x + 1.0).sin() * (4.3 * z).cos())
+                    - 0.55;
+                pos.push([x, -y, z]); // -Y: hills bump up after martin's flip
+                let g = ((y + 0.85) * 1.6).clamp(0.0, 1.0);
+                rgb.push(hsv(0.28 - 0.07 * g, 0.5, 0.3 + 0.4 * g)); // grass-green → tan ridges
+            }
+        }
+        "moon" => {
+            // A grey cratered moon (vs the rainbow `sphere`): points on the unit sphere, darkened
+            // inside a fixed set of craters (darkest at the centre, lighter to the rim).
+            let craters: Vec<([f32; 3], f32)> = (0..18)
+                .map(|_| (norm(rng.normal3()), rng.uniform(0.12, 0.34)))
+                .collect();
+            for _ in 0..N {
+                let d = norm(rng.normal3());
+                let mut shade = 1.0f32;
+                for (c, rad) in &craters {
+                    let ang = (d[0] * c[0] + d[1] * c[1] + d[2] * c[2])
+                        .clamp(-1.0, 1.0)
+                        .acos();
+                    if ang < *rad {
+                        shade = shade.min(0.45 + 0.55 * (ang / rad));
+                    }
+                }
+                pos.push(d);
+                let g = 0.72 * shade;
+                rgb.push([g, g, (g * 1.04).min(1.0)]);
             }
         }
         "lsystem" => {
