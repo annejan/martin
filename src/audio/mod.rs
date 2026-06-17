@@ -179,14 +179,15 @@ pub(super) fn chord_spread(
 }
 
 /// Keep a chord root in the deep sub range. Score roots are parsed around octave 3; the sub layer
-/// wants the same pitch class down around 24-38 Hz, with an added harmonic later for translation on
-/// smaller speakers.
+/// wants the same pitch class folded into a 19-38 Hz window. The bounds span exactly one octave
+/// (38/19 = 2), so EVERY pitch class lands inside — a sub-octave window let D#/E/F escape above the
+/// top (E rang at ~41 Hz instead of a true sub). An added harmonic later aids small-speaker translation.
 pub(super) fn sub_freq(root: f32) -> f32 {
     let mut f = root;
     while f > 38.0 {
         f *= 0.5;
     }
-    while f < 24.0 {
+    while f < 19.0 {
         f *= 2.0;
     }
     f
@@ -325,20 +326,15 @@ mod tests {
 
     #[test]
     fn sub_and_bass_freq_fold_to_their_windows() {
-        // octave-related roots (what the score actually feeds — pitch classes off octave 3) fold into
-        // the deep-sub window; bass sits exactly an octave above. (The fold isn't closed for arbitrary
-        // off-octave inputs — sequential halve-then-double can bounce — but real roots are powers of
-        // two apart, so the lower clamp + power-of-two pitch class are the invariants that hold.)
-        for &root in &[27.5f32, 55.0, 110.0, 220.0, 440.0] {
+        // The sub window [19,38] spans exactly one octave (38/19 = 2), so the fold is CLOSED — every
+        // pitch class lands inside, including D#/E/F (E1 = 41.2 → 20.6), which a sub-octave window let
+        // escape above the top. Bass sits exactly an octave above. (41.2 = E1, 82.4 = E2.)
+        for &root in &[27.5f32, 41.2, 55.0, 82.4, 110.0, 220.0, 440.0, 1000.0, 30.0] {
             let s = sub_freq(root);
-            assert!((24.0..38.0).contains(&s), "root {root} → sub {s}");
+            assert!((19.0..=38.0).contains(&s), "root {root} → sub {s}");
             assert_eq!(bass_freq(root), s * 2.0);
             let ratio = (root / s).log2(); // same pitch class: ratio is a power of two
             assert!((ratio - ratio.round()).abs() < 1e-4, "root {root} sub {s}");
-        }
-        // lower-clamp invariant holds for any positive input, even the bouncing ones.
-        for &root in &[41.2f32, 30.0, 1000.0, 19.0] {
-            assert!(sub_freq(root) >= 24.0, "root {root}");
         }
     }
 
