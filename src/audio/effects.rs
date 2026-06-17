@@ -46,12 +46,14 @@ pub(super) fn render_hardkick(buf: &mut [f32], t: f32, root: f32, amp: f32) {
     let sr = SAMPLE_RATE as f32;
     let start = (t.max(0.0) * sr) as usize;
     let n = (0.5 * sr) as usize;
-    // pitch the tonal tail to the root pitch-class in a punchy 55-90 Hz window
+    // Pitch the tonal tail to the root pitch-class, folded into a punchy 45-90 Hz window. The bounds
+    // span exactly one octave (90/45 = 2), so EVERY pitch class has a representative inside — unlike a
+    // sub-octave window, where G/G#/F# escaped above the top and the kick rang thin on those roots.
     let mut tail_hz = root;
     while tail_hz > 90.0 {
         tail_hz *= 0.5;
     }
-    while tail_hz < 55.0 {
+    while tail_hz < 45.0 {
         tail_hz *= 2.0;
     }
     let (mut ph_b, mut ph_t) = (0.0f32, 0.0f32);
