@@ -68,6 +68,22 @@ MARTIN_GLB=assets/trellis.glb MARTIN_GLB_DIST=2.6 cargo r-sh0    # a KHR_gaussia
 The go-board is a real multi-view capture (its `sh3` glint is visible — `cargo r-sh3`); the trellis is a
 single-image TRELLIS export (flat SH, so `sh0` loses nothing). See [build profiles](#build-profiles).
 
+### Procedural shapes (`splatgen`)
+
+No capture, no python — synthesize an abstract cloud straight to a `.ply` with the `splatgen` tool (it
+shares the exact generator `build.rs` uses to auto-make the demo splats, so the clouds morph cleanly
+with everything else):
+
+```bash
+cargo run --release --bin splatgen -- list                  # sphere cube torus ring helix galaxy star wave knot mobius supershape lsystem
+cargo run --release --bin splatgen -- lsystem assets/tree.ply   # a 3D L-system plant
+cargo run --release --bin splatgen -- torus                 # → torus.ply
+MARTIN_PLY=assets/tree.ply cargo run --release              # then view / use it in a show (splat:tree.ply)
+```
+
+`lsystem` is a 3D fractal plant (branching turtle, brown trunk → green canopy); the rest are parametric
+solids. All ~140k splats, deterministic (fixed seed → reproducible `.ply`).
+
 ## Running the demo
 
 With nothing set, `cargo +nightly run --release` plays the **intro production**
