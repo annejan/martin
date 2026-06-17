@@ -220,6 +220,11 @@ fn main() {
     // Point Bevy's AssetServer at the SAME (absolute) root martin's std::fs reads use.
     plugins = plugins.set(AssetPlugin {
         file_path: asset_root_path.to_string_lossy().into_owned(),
+        // The bundled binary self-extracts its assets to /tmp and loads music.wav by ABSOLUTE path;
+        // Bevy 0.18 rejects out-of-root absolute paths by default (UnapprovedPathMode::Deny), so the
+        // WAV never loads, the AudioGate never opens, and the loader hangs forever. martin only ever
+        // loads its OWN local files (never untrusted web input), so allow them.
+        unapproved_path_mode: bevy::asset::UnapprovedPathMode::Allow,
         ..default()
     });
     if recording {
