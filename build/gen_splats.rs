@@ -33,6 +33,9 @@ pub const SHAPES: &[&str] = &[
     "mobius",
     "supershape",
     "lsystem",
+    "fern",
+    "menger",
+    "shell",
 ];
 
 /// For each referenced `*.ply` that's missing and is a shape we know how to synthesize, generate it.
@@ -275,7 +278,71 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
                 rgb.push(hsv(0.55 + 0.4 * (2.0 * ph).sin(), 0.9, 1.0));
             }
         }
-        "lsystem" => return Some(lsystem_plant(&mut rng)),
+        "menger" => {
+            // Rejection-sample a depth-3 Menger sponge: a sub-cell is a hole when ≥2 of its three
+            // ternary digits are the centre. Accept rate ≈ (20/27)^3 ≈ 0.4, so this fills quickly;
+            // a generous attempt cap + a top-up keep the count at exactly N.
+            let mut tries = 0u64;
+            while pos.len() < N && tries < (N as u64) * 50 {
+                tries += 1;
+                let p = [
+                    rng.uniform(-1.0, 1.0),
+                    rng.uniform(-1.0, 1.0),
+                    rng.uniform(-1.0, 1.0),
+                ];
+                if in_menger(p, 3) {
+                    let s = (p[0] + p[1] + p[2]) * 0.18;
+                    pos.push(p);
+                    rgb.push(hsv(0.55 + 0.12 * s, 0.55, 0.92));
+                }
+            }
+            while pos.len() < N {
+                let i = pos.len() - 1; // defensive top-up (won't trigger at this accept rate)
+                pos.push(pos[i]);
+                rgb.push(rgb[i]);
+            }
+        }
+        "shell" => {
+            // A logarithmic-spiral nautilus: a tube of growing radius coiled ~3 turns in a near-plane.
+            let turns = 3.0f32;
+            let mut raw = Vec::with_capacity(N);
+            let mut maxv = 1e-6f32;
+            for _ in 0..N {
+                let t = rng.uniform(0.0, turns * tau);
+                let grow = (0.20 * t).exp();
+                let rr = 0.05 * grow; // spiral radius
+                let tube = 0.34 * rr; // cross-section thickens with the radius
+                let a = rng.uniform(0.0, tau);
+                let p = [
+                    (rr + tube * a.cos()) * t.cos(),
+                    tube * a.sin() + 0.06 * grow, // a gentle conic lift out of plane
+                    (rr + tube * a.cos()) * t.sin(),
+                ];
+                maxv = maxv.max(p[0].abs()).max(p[1].abs()).max(p[2].abs());
+                raw.push((p, t / (turns * tau)));
+            }
+            for (p, u) in raw {
+                pos.push([p[0] / maxv, p[1] / maxv, p[2] / maxv]);
+                rgb.push(hsv(0.02 + 0.5 * u, 0.85, 1.0)); // warm → cool along the coil
+            }
+        }
+        "lsystem" => {
+            return Some(turtle_plant(
+                &mut rng,
+                &expand("X", "F[&X]/[&X]/[&X]", "FF", 5),
+                28.0,
+                120.0,
+            ));
+        }
+        "fern" => {
+            // The canonical fractal-plant L-system (arching frond), rolled into 3D between branches.
+            return Some(turtle_plant(
+                &mut rng,
+                &expand("X", "F-[[X]+X]/+F[+FX]-X", "FF", 4),
+                22.0,
+                90.0,
+            ));
+        }
         _ => return None,
     }
     Some((pos, rgb))
@@ -305,21 +372,18 @@ fn rot(a: &mut [f32; 3], b: &mut [f32; 3], axis: [f32; 3], ang: f32) {
     *b = norm(rodr(*b));
 }
 
-/// A 3D L-system "plant": expand a ternary branching rule, walk it with a 3D turtle (heading/left/up
-/// frame + a push/pop stack), collect the drawn segments, then scatter the splats along them — thicker
-/// + browner at the base, thinner + greener toward the twigs. Deterministic (fixed-seed `rng`).
-fn lsystem_plant(rng: &mut Rng) -> Cloud {
-    // Expand "X" under X → F[&X]/[&X]/[&X] (a 3-way branch, rolled 120° between children) and F → FF
-    // (elongating internodes). Cap the string so the exponential growth can't run away.
-    const ITERS: usize = 5;
+/// Expand an L-system: rewrite `X`→`rx` and `F`→`rf` for `iters` passes from `axiom`, leaving turtle
+/// commands (`+-&^/\[]`) untouched. The string is capped (`MAX_LEN`) so the exponential growth of a
+/// branching rule can't run away into a multi-GB allocation.
+fn expand(axiom: &str, rx: &str, rf: &str, iters: usize) -> String {
     const MAX_LEN: usize = 400_000;
-    let mut s = String::from("X");
-    for _ in 0..ITERS {
+    let mut s = String::from(axiom);
+    for _ in 0..iters {
         let mut next = String::with_capacity(s.len() * 3);
         for c in s.chars() {
             match c {
-                'X' => next.push_str("F[&X]/[&X]/[&X]"),
-                'F' => next.push_str("FF"),
+                'X' => next.push_str(rx),
+                'F' => next.push_str(rf),
                 other => next.push(other),
             }
         }
@@ -328,10 +392,36 @@ fn lsystem_plant(rng: &mut Rng) -> Cloud {
             break;
         }
     }
+    s
+}
 
+/// Is `p` (in [-1,1]³) inside a depth-`levels` Menger sponge? At each level, map the point into its
+/// 3×3×3 sub-cell; a cell is a "hole" (removed) when ≥2 of its three ternary digits are the centre (1).
+fn in_menger(p: [f32; 3], levels: u32) -> bool {
+    let mut c = [(p[0] + 1.0) * 0.5, (p[1] + 1.0) * 0.5, (p[2] + 1.0) * 0.5]; // → [0,1]
+    for _ in 0..levels {
+        let mut centres = 0;
+        for ci in &mut c {
+            let d = (*ci * 3.0).floor().clamp(0.0, 2.0);
+            if d as i32 == 1 {
+                centres += 1;
+            }
+            *ci = *ci * 3.0 - d;
+        }
+        if centres >= 2 {
+            return false;
+        }
+    }
+    true
+}
+
+/// Walk an expanded L-system string `s` with a 3D turtle (heading/left/up frame + a push/pop branch
+/// stack; `ang_deg` yaw/pitch, `roll_deg` roll), collect the drawn segments, then scatter the splats
+/// along them — thicker + browner at the base, thinner + greener toward the twigs. Deterministic.
+fn turtle_plant(rng: &mut Rng, s: &str, ang_deg: f32, roll_deg: f32) -> Cloud {
     // Walk the string with a 3D turtle; collect drawn segments as (start, end, depth).
-    let ang = 28f32.to_radians();
-    let roll = 120f32.to_radians();
+    let ang = ang_deg.to_radians();
+    let roll = roll_deg.to_radians();
     let mut pos = [0.0f32, -1.0, 0.0];
     let mut h = [0.0f32, 1.0, 0.0]; // heading (grows up)
     let mut l = [1.0f32, 0.0, 0.0]; // left

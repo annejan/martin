@@ -75,14 +75,16 @@ shares the exact generator `build.rs` uses to auto-make the demo splats, so the 
 with everything else):
 
 ```bash
-cargo run --release --bin splatgen -- list                  # sphere cube torus ring helix galaxy star wave knot mobius supershape lsystem
+cargo run --release --bin splatgen -- list                  # sphere cube torus ring helix galaxy star wave knot mobius supershape lsystem fern menger shell
 cargo run --release --bin splatgen -- lsystem assets/tree.ply   # a 3D L-system plant
 cargo run --release --bin splatgen -- torus                 # → torus.ply
 MARTIN_PLY=assets/tree.ply cargo run --release              # then view / use it in a show (splat:tree.ply)
 ```
 
-`lsystem` is a 3D fractal plant (branching turtle, brown trunk → green canopy); the rest are parametric
-solids. All ~140k splats, deterministic (fixed seed → reproducible `.ply`).
+The fractal/organic shapes: `lsystem` (3D branching tree, brown trunk → green canopy), `fern` (an
+arching fractal-plant frond), `menger` (a depth-3 Menger sponge), `shell` (a log-spiral nautilus). The
+rest are parametric solids (sphere/cube/torus/ring/helix/galaxy/star/wave/knot/mobius/supershape). All
+~140k splats, deterministic (fixed seed → reproducible `.ply`).
 
 ## Running the demo
 
