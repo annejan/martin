@@ -28,10 +28,24 @@ struct Ember {
 /// Half-extent of the box the embers drift within (around the normalized content at the origin).
 const FIELD: f32 = 2.6;
 
+/// The ember material's full warm colour + HDR glow (`fade_particles` ramps these in by a factor).
+const EMB_BASE: [f32; 3] = [1.0, 0.55, 0.2];
+const EMB_EMIT: [f32; 3] = [2.5, 1.1, 0.35];
+const EMBER_FADE: f32 = 1.5; // glow ramp-in duration (s)
+
+/// `MARTIN_PARTICLE_AT=<secs|@@anchor>`: ramp the embers in starting at this show-time, so a campfire's
+/// sparks appear WITH the fire instead of hanging in the air before it's lit. `start <= 0` = on from t0.
+#[derive(Resource)]
+struct EmberFade {
+    mat: Handle<StandardMaterial>,
+    start: f32,
+}
+
 /// Spawn the ember field once, at startup, when `MARTIN_PARTICLES` is set. `MARTIN_PARTICLE_COUNT`
 /// sets the number (default 200); they share one mesh + one material + one gradient texture.
 fn spawn_particles(
     mut commands: Commands,
+    score: Res<crate::music::ScoreRes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mats: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
@@ -46,12 +60,23 @@ fn spawn_particles(
     let gradient = images.add(radial_glow(32));
     let quad = meshes.add(Rectangle::new(0.12, 0.12));
     let mat = mats.add(StandardMaterial {
-        base_color: Color::srgb(1.0, 0.55, 0.2), // warm ember
+        base_color: Color::srgb(EMB_BASE[0], EMB_BASE[1], EMB_BASE[2]), // warm ember
         base_color_texture: Some(gradient),
-        emissive: LinearRgba::rgb(2.5, 1.1, 0.35), // HDR → blooms
+        emissive: LinearRgba::rgb(EMB_EMIT[0], EMB_EMIT[1], EMB_EMIT[2]), // HDR → blooms
         unlit: true,
         alpha_mode: AlphaMode::Add, // additive (StandardMaterial → RADV-safe, unlike a custom material)
         ..default()
+    });
+    // When does the glow ramp in? `MARTIN_PARTICLE_AT` (seconds or `@@anchor`, resolved by the score);
+    // unset → 0 (on from the start, the previous behaviour).
+    let start = std::env::var("MARTIN_PARTICLE_AT")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .and_then(|s| score.0.anchor_seconds(s.trim_start_matches("@@")))
+        .unwrap_or(0.0);
+    commands.insert_resource(EmberFade {
+        mat: mat.clone(),
+        start,
     });
 
     for i in 0..count {
@@ -138,9 +163,33 @@ fn radial_glow(size: u32) -> Image {
 /// The additive ember layer — spawns when `MARTIN_PARTICLES` is set, drifts deterministically.
 pub(crate) struct ParticlesPlugin;
 
+/// Ramp the shared ember glow 0 → full over `EMBER_FADE`, starting at `EmberFade.start` — so the
+/// sparks fade in WITH the fire. No-op (embers full from t0) when `start <= 0`; stops touching the
+/// material once fully in. Deterministic: a pure function of the show clock.
+fn fade_particles(
+    clock: Res<SeqClock>,
+    ctl: Option<Res<EmberFade>>,
+    mut mats: ResMut<Assets<StandardMaterial>>,
+    mut done: Local<bool>,
+) {
+    let Some(ctl) = ctl else { return };
+    if *done || ctl.start <= 0.0 {
+        return;
+    }
+    let x = ((clock.t - ctl.start) / EMBER_FADE).clamp(0.0, 1.0);
+    let f = x * x * (3.0 - 2.0 * x); // smoothstep
+    if let Some(m) = mats.get_mut(&ctl.mat) {
+        m.base_color = Color::srgb(EMB_BASE[0] * f, EMB_BASE[1] * f, EMB_BASE[2] * f);
+        m.emissive = LinearRgba::rgb(EMB_EMIT[0] * f, EMB_EMIT[1] * f, EMB_EMIT[2] * f);
+    }
+    if x >= 1.0 {
+        *done = true;
+    }
+}
+
 impl Plugin for ParticlesPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_particles)
-            .add_systems(Update, animate_particles);
+            .add_systems(Update, (animate_particles, fade_particles));
     }
 }

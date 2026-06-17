@@ -1,40 +1,40 @@
 # martin — NIGHT CAMPSITE (animated): the camp ASSEMBLES over the camping track — empty moonlit land →
-# the tent goes up → the campfire IGNITES on the drop → the pines fill in at the climax. Camera pushes
-# in on the fire as it lights, then pulls back to orbit the full site. Fire flickers (^turbulence) and
-# pulses on the beat; embers drift up the whole time. 100% procedural splatgen shapes (nothing baked).
+# the tent goes up → the campfire IGNITES on the drop (and only THEN do the sparks fly) → the pines
+# fill in at the climax. Camera surveys wide, eases in near the fire, pulls back to orbit. The terrain
+# is a wide static ground (no spin → no clipping); props sit on it. 100% procedural splatgen shapes.
 #
 #   MARTIN_SHOW=productions/camping/campsite.show cargo +nightly run --release
 #   MARTIN_SHOW=productions/camping/campsite.show ./record.sh campsite.mp4
 
 [settings]
 kind           = demo
-score          = productions/camping/score.txt   # Op de camping — Gm/140 BPM, intro→…→outro
+score          = productions/camping/score.txt   # Op de camping — 140 BPM, intro→…→outro
 budget         = 100000
 bg             = stars
 particles      = embers
-particle_count = 300
+particle_count = 220
+particle_at    = @@drop          # sparks fade in WITH the campfire, not before it's lit
 bg_dim         = 0.55
 
 [stage]
-splat:terrain.ply   @0,-1.25,0      *2.4   spin 0,4,0    ~fade  in intro             # the moonlit land
-splat:moon.ply      @1.5,1.35,-2.0  *0.55  spin 0,3,0    ~fade  in intro             # the moon, from the start
-splat:tent.ply      @-1.0,-0.45,0.2 *0.85  sway 0,8,0    ~fade  in build             # pitch the tent
-splat:pine.ply      @1.15,-0.30,-0.4 *0.95 sway 0,7,0    ~fade  in build             # first conifer
-splat:flame.ply     @0,-0.55,0.7    *0.55  bob 0.06  ^turbulence:0.35  ~fade  in drop  # campfire IGNITES on the drop
-splat:pine.ply      @1.85,-0.45,0.6 *0.65  sway 0,7,0    ~fade  in climax            # the grove fills in
-splat:pine.ply      @-1.8,-0.4,-0.3 *0.7   sway 0,7,0    ~fade  in climax
+splat:terrain.ply   @0,-1.55,0      *3.2   ~fade  in intro              # wide STATIC ground (no spin)
+splat:moon.ply      @1.5,1.4,-2.3   *0.55  spin 0,3,0   ~fade  in intro # the moon, from the start
+splat:tent.ply      @-0.95,-0.7,0.3 *0.85  sway 0,7,0   ~fade  in build # pitch the tent, on the ground
+splat:pine.ply      @1.1,-0.6,0.15  *0.95  sway 0,6,0   ~fade  in build # first conifer, planted up front
+splat:flame.ply     @0,-0.78,0.7    *0.55  bob 0.05  ^turbulence:0.35  ~fade  in drop  # campfire ignites
+splat:pine.ply      @1.75,-0.68,0.5 *0.6   sway 0,6,0   ~fade  in climax # the grove fills in
+splat:pine.ply      @-1.7,-0.66,0.0 *0.7   sway 0,6,0   ~fade  in climax # a distant tree
 
-# camera: wide over the empty land → settle as the tent rises → PUSH IN on the fire at the drop →
-# pull back to orbit the full camp at the climax → settle for the night.
+# camera: wide over the empty land → ease toward the fire as it lights (not too tight) → pull back to
+# orbit the full camp. A touch more pitch so the ground reads as a solid floor under it all.
 [camera]
-t=@@intro      pos=0,0.42,0   dist=3.2   yaw=1.28   pitch=0.30
-t=@@build      pos=0,0.25,0   dist=2.8   yaw=1.46   pitch=0.20
-t=@@drop       pos=0,0.08,0   dist=1.9   yaw=1.55   pitch=0.10   # in tight on the campfire
-t=@@breakdown  pos=0,0.18,0   dist=2.4   yaw=1.30   pitch=0.16
-t=@@climax     pos=0,0.22,0   dist=2.7   yaw=1.18   pitch=0.20   # orbit the full site
-t=@@outro      pos=0,0.38,0   dist=3.0   yaw=1.45   pitch=0.28
+t=@@intro      pos=0,0.5,0    dist=3.7   yaw=1.30   pitch=0.34
+t=@@build      pos=0,0.32,0   dist=3.2   yaw=1.46   pitch=0.26
+t=@@drop       pos=0,0.18,0   dist=2.5   yaw=1.55   pitch=0.18   # ease in near the campfire
+t=@@breakdown  pos=0,0.28,0   dist=2.9   yaw=1.30   pitch=0.24
+t=@@climax     pos=0,0.34,0   dist=3.3   yaw=1.15   pitch=0.28   # orbit the full site, ground filling the base
+t=@@outro      pos=0,0.5,0    dist=3.6   yaw=1.45   pitch=0.34
 
-# look track: hushed + dim over the land, bloom + beat lift when the fire lights, settle at the end.
 [sync]
 t=@@intro      flash=0.1   bg_dim=0.6   beat=0.4
 t=@@build      flash=0.15  bg_dim=0.5   beat=0.7
