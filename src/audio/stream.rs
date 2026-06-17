@@ -411,8 +411,8 @@ pub(crate) fn produce(score: &Score, mut sink: impl FnMut(&[f32])) {
     let stereo = total * 2;
     super::progress_reset();
 
-    // sidechain duck + reverb-depth automation (cheap precompute, no audio data needed) — the exact
-    // same per-frame envelopes the batch `master` builds, so the two engines duck/reverb identically.
+    // sidechain duck + reverb-depth automation (cheap precompute, no audio data needed) — the
+    // per-frame envelopes the master chain applies below.
     let kicks = score.hits(Inst::Kick);
     let duck = super::render::sidechain_duck(score, &kicks, total);
     let rv_env = super::render::reverb_env(score, total);

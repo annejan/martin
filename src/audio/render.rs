@@ -13,8 +13,8 @@ use super::{
 use crate::score::{Inst, Score};
 
 /// Sidechain duck envelope (one value per mono frame): a fast dip to `1-depth` right on each kick,
-/// recovering over ~0.11 s — the dance "breath". `set sidechain=` scales the depth. Shared verbatim
-/// by the batch `master` and the streaming `produce`, so both engines duck identically.
+/// recovering over ~0.11 s — the dance "breath". `set sidechain=` scales the depth. Built once and
+/// applied by the master chain inside the sole engine, `stream::produce`.
 pub(super) fn sidechain_duck(score: &Score, kicks: &[f32], total: usize) -> Vec<f32> {
     let sr = SAMPLE_RATE as f32;
     let mut duck = vec![1.0f32; total];
@@ -39,7 +39,7 @@ pub(super) fn sidechain_duck(score: &Score, kicks: &[f32], total: usize) -> Vec<
 /// in the sparse/emotional sections (intro/breakdown/outro), tight in the punchy drops — one-pole
 /// smoothed (~0.3 s glide) so it glides at section boundaries. `set reverbauto=0` → flat (all 1.0).
 /// Automating the reverb like this is a big part of what reads as a produced, 3D record vs a flat
-/// one. Shared verbatim by the batch `master` and the streaming `produce`.
+/// one. Built once and applied by the master chain inside the sole engine, `stream::produce`.
 pub(super) fn reverb_env(score: &Score, total: usize) -> Vec<f32> {
     let sr = SAMPLE_RATE as f32;
     let reverbauto = score.param("reverbauto", 1.0);

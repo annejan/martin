@@ -545,8 +545,12 @@ pub(crate) fn compose_camera(
         return;
     }
     if comp.map(|c| c.built).unwrap_or(false) {
+        // Record: use the real per-frame step (rec.dt = 1/MARTIN_PREVIEW_FPS), NOT a hardcoded 1/60 —
+        // the recorder runs one Update per frame with clock.t = i·rec.dt, so yaw += 0.12·rec.dt makes
+        // the drift land at 0.12·clock.t regardless of preview fps (fps-invariant, record-safe). Live:
+        // integrate real delta so the drift stays additive with the arrow keys.
         let dt = if rec.dir.is_some() {
-            1.0 / 60.0
+            rec.dt
         } else {
             time.delta_secs()
         };

@@ -6,6 +6,14 @@ use super::types::{Chord, Ramp, Section};
 use super::validate::{strict_scores, validate};
 use super::{DEFAULT_SCORE, Score};
 
+/// Upper bound on a `pN` phase index (it directly sizes/indexes a lane's phase Vec). A section never
+/// has more than a handful of phases; this caps a malformed `p999999999` before it triggers a
+/// multi-GB resize or a `usize` overflow. See `MAX_BARS` for the matching whole-track guard.
+const MAX_PHASE: usize = 64;
+/// Upper bound on a section's bar count (a runaway `section x 4000000000` would make the synth-prep
+/// walks iterate `bars·16` slots into an unbounded Vec → hang/OOM). 10k bars ≈ hours of music.
+const MAX_BARS: u32 = 10_000;
+
 impl Score {
     /// `MARTIN_SCORE=<file>` loads a tracker-DSL score; on any error we log + fall back to the
     /// built-in, so a bad score file never stops the show.
@@ -121,12 +129,16 @@ impl Score {
                 let phase: Option<usize> = if phase_tok.eq_ignore_ascii_case("fill") {
                     None
                 } else {
-                    Some(
-                        phase_tok
-                            .trim_start_matches('p')
-                            .parse()
-                            .map_err(|_| format!("line {ln}: bad phase `{phase_tok}`"))?,
-                    )
+                    let p: usize = phase_tok
+                        .trim_start_matches('p')
+                        .parse()
+                        .map_err(|_| format!("line {ln}: bad phase `{phase_tok}`"))?;
+                    if p > MAX_PHASE {
+                        return Err(format!(
+                            "line {ln}: phase p{p} out of range (max p{MAX_PHASE})"
+                        ));
+                    }
+                    Some(p)
                 };
                 if inst == "chords" {
                     // per-section chord override: `<section>.chords: G Am Bb D` (cycles in-section).
@@ -192,6 +204,9 @@ impl Score {
                         .next()
                         .and_then(pf)
                         .ok_or_else(|| format!("line {ln}: bpm needs a number"))?;
+                    if bpm <= 0.0 || bpm.is_nan() {
+                        return Err(format!("line {ln}: bpm must be > 0 (got {bpm})"));
+                    }
                 }
                 "section" => {
                     let name = it
@@ -202,6 +217,12 @@ impl Score {
                         .next()
                         .and_then(|x| x.parse().ok())
                         .ok_or_else(|| format!("line {ln}: section needs a bar count"))?;
+                    if bars > MAX_BARS {
+                        return Err(format!(
+                            "line {ln}: section `{name}` has {bars} bars (max {MAX_BARS}) — the \
+                             whole-track walks would hang/OOM"
+                        ));
+                    }
                     let mut phases = vec![bars];
                     let mut fill = false;
                     for tok in it {

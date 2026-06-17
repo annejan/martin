@@ -1,13 +1,13 @@
 //! Music score — the *composition*, data-driven. Ported from Cinder's (Kristian Vlaardingerbroek,
 //! deFEEST) `term-demo` (MIT, Outline 2026): the BPM→beat→bar grid, the section timeline
 //! (intro→build→drop→breakdown→climax→outro), the drum patterns and the per-section dynamics that
-//! the synth (`audio.rs`) and the visual `@@anchor`s both read.
+//! the synth (the `audio` module) and the visual `@@anchor`s both read.
 //!
 //! The music lives in a **text file**, not in code: `assets/score.txt` (a tracker-DSL score) is
 //! loaded by default — edit it, no recompile — and `include_str!`'d as the embedded fallback for a
 //! bundled binary (so the notes/patterns/chords are not duplicated in Rust). `MARTIN_SCORE=<file>`
 //! overrides it; `MARTIN_SCORE_DUMP=<file>` writes a copy. The *instrument* (how a kick/stab
-//! sounds) stays in `audio.rs`. 16 steps per bar (16th notes).
+//! sounds) stays in the `audio` module. 16 steps per bar (16th notes).
 //!
 //! This module is split by concern: `types` (the data), `parse` (text → `Score`), `dump`
 //! (`Score` → text), `validate` (the structural lint), and the timeline maths on `Score` below.
@@ -173,7 +173,10 @@ impl Score {
         let i = self.section_index_at(t);
         let s = &self.sections[i];
         let into = (self.bar_idx_at(t) as i64 - s.start_bar as i64).max(0) as u32;
-        let is_fill = s.fill && into == s.bars - 1;
+        // Use the SAME fill-bar sentinel the drum lanes use (phase_at → 255), not `into == bars-1`, so
+        // the melodic fill and the drum fill always land on the same bar — they desync only when
+        // phases+fill don't sum to bars (the already-linted typo). Identical for every clean score.
+        let is_fill = s.phase_at(into) == 255;
         pick(s).bar(into, is_fill)
     }
 
@@ -490,6 +493,27 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn malformed_magnitudes_error_instead_of_hanging_or_oom() {
+        // A huge phase index would resize/index a lane Vec by ~1e9 (OOM) or overflow usize (panic);
+        // a huge bar count would make the whole-track walks iterate bars·16 into an unbounded Vec;
+        // bpm 0 makes beat()/demo_len() infinite. All must be rejected (→ fall back to the built-in).
+        assert!(
+            Score::from_str("bpm 120\nsection a 4 4\na.kick p999999999: x... .... .... ....")
+                .is_err()
+        );
+        assert!(
+            Score::from_str(
+                "bpm 120\nsection a 4 4\na.kick p18446744073709551615: x... .... .... ...."
+            )
+            .is_err()
+        );
+        assert!(Score::from_str("bpm 120\nsection a 4000000000 4").is_err());
+        assert!(Score::from_str("bpm 0\nsection a 4 4").is_err());
+        // a sane phase + bar count still parses
+        assert!(Score::from_str("bpm 120\nsection a 4 4\na.kick p1: x... .... .... ....").is_ok());
     }
 
     #[test]

@@ -2,7 +2,7 @@
 //! ramps, and the enveloped levels the synth reads. Pure data — parsing is in `parse`, the text dump
 //! in `dump`, the structural lint in `validate`, and the timeline maths on `Score` in `mod`.
 
-/// The four sequenced drum/voice lanes (the *instrument* synthesis lives in `audio.rs`).
+/// The four sequenced drum/voice lanes (the *instrument* synthesis lives in the `audio` module).
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Inst {
     Kick,

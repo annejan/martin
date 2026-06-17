@@ -21,6 +21,18 @@ pub(super) fn strict_scores() -> bool {
 ///     `NoteLane::bar`), so any `p1`+ is silently ignored, and a lane with ONLY a `p1` is dead silent.
 pub(super) fn validate(sections: &[Section]) -> Vec<String> {
     let mut w = Vec::new();
+    // Duplicate section names: `section_time`/`section_window`/`fx_on` resolve a section by FIRST name
+    // match, so a second section with the same name silently inherits the first's window/FX gate — its
+    // own reverb/FX automation never fires. Flag it (names should be unique).
+    for (i, s) in sections.iter().enumerate() {
+        if sections[..i].iter().any(|o| o.name == s.name) {
+            w.push(format!(
+                "section `{}`: duplicate name — only the FIRST is found when resolving section \
+                 windows/FX, so this one's reverb/FX automation is silently dropped",
+                s.name
+            ));
+        }
+    }
     for s in sections {
         let declared = s.phases.iter().sum::<u32>() + u32::from(s.fill);
         if declared != s.bars {
@@ -116,6 +128,15 @@ mod tests {
         let w = validate(&[s]);
         assert_eq!(w.len(), 1);
         assert!(w[0].contains("`x.lead`") && w[0].contains("p1+ phrases are ignored"));
+    }
+
+    #[test]
+    fn duplicate_section_name_warns() {
+        let w = validate(&[
+            sec("verse", 4, vec![4], false),
+            sec("verse", 4, vec![4], false),
+        ]);
+        assert!(w.iter().any(|m| m.contains("duplicate name")));
     }
 
     #[test]
