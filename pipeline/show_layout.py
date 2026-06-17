@@ -173,26 +173,28 @@ def plot_scene_3d(ax, props, fg, asset_dir, elev, azim, cam=None):
     fcx, fcz, fx, fz, fy = fg
     th = np.linspace(0, 2 * math.pi, 80)
     ax.plot(fcx + fx * np.cos(th), fcz + fz * np.sin(th), fy, color="#3c7a32", lw=1, alpha=0.7)
+    ax.set_facecolor("#0b0e1a")  # night backdrop → the splat colours pop
     missing = []
     for o in props:
         if o["cat"] == "moon":
             continue  # far backdrop (z≈-50) — would blow the axes
-        wp, col = load_ply_world(o, asset_dir, 3500 if o["cat"] in ("terrain", "mountains") else 1800)
+        wp, col = load_ply_world(o, asset_dir, 9000 if o["cat"] in ("terrain", "mountains") else 4500)
         if wp is None:
             missing.append(o["name"])
             continue
-        ax.scatter(wp[:, 0], wp[:, 2], wp[:, 1], c=col, s=2, alpha=0.55, depthshade=True, linewidths=0)
+        ax.scatter(wp[:, 0], wp[:, 2], wp[:, 1], c=col, s=5, alpha=0.8, depthshade=False, linewidths=0)
     if cam is not None:
         cw = cam_world(cam)
-        ax.scatter([cw[0]], [cw[2]], [cw[1]], c="black", marker="^", s=90)
+        ax.scatter([cw[0]], [cw[2]], [cw[1]], c="red", marker="^", s=110)
     ax.view_init(elev=elev, azim=azim)
     ax.set_xlabel("X")
     ax.set_ylabel("Z (depth)")
     ax.set_zlabel("Y up")
-    ax.set_xlim(-14, 14)
-    ax.set_ylim(-22, 8)
-    ax.set_zlim(-3, 6)
-    ax.set_box_aspect((28, 30, 9))
+    ax.set_xlim(-13, 13)
+    ax.set_ylim(-17, 7)
+    ax.set_zlim(-3, 3.5)
+    ax.set_box_aspect((26, 24, 6.5))
+    ax.grid(False)
     # martin→matplotlib (X,Z,Y) swaps two axes = a REFLECTION → the view came out mirrored
     # (tent on the wrong side). Inverting X restores a proper rotation so left/right matches the render.
     ax.invert_xaxis()
@@ -319,15 +321,15 @@ def draw(path, cam_idx, hfov, out, asset_dir="assets", az_off=0.0):
 
     # ===== standalone BIG 3D — two angles (camera POV + a clear bird's-eye 3/4) =====
     out3d = out[:-4] + "_3d.png" if out.endswith(".png") else out + "_3d.png"
-    f2 = plt.figure(figsize=(18, 9))
+    f2 = plt.figure(figsize=(24, 12))
     a = f2.add_subplot(1, 2, 1, projection="3d")
     a.set_title(f"camera POV (cam #{cam_idx})")
     plot_scene_3d(a, props, fg, asset_dir, cam_el, cam_az, cam)
     b = f2.add_subplot(1, 2, 2, projection="3d")
     b.set_title("bird's-eye 3/4 (structure)")
-    plot_scene_3d(b, props, fg, asset_dir, 50, -55, cam)
+    plot_scene_3d(b, props, fg, asset_dir, 45, -60, cam)
     f2.tight_layout()
-    f2.savefig(out3d, dpi=120)
+    f2.savefig(out3d, dpi=150)
     print(f"wrote {out3d}")
     # text summary
     print(f"field: centre=({fcx},{fcz}) radius X={fx:.2f} Z={fz:.2f} surface Y={fy:.2f}")
@@ -342,6 +344,25 @@ def draw(path, cam_idx, hfov, out, asset_dir="assets", az_off=0.0):
         print(f"  {o['cat']:9} @({x:+.2f},{o['pos'][1]:+.2f},{z:+.2f}) base Y={base:+.2f}{flag}")
     for a, b, d in overlaps:
         print(f"  ⚠ OVERLAP: {a['cat']} & {b['cat']} (gap {d:.2f} < radii {a['r'] + b['r']:.2f})")
+    # GROUNDING from the REAL .ply geometry: each prop's true base Y vs the field surface, and the
+    # @y that would sit it exactly on the field (so it neither floats nor clips through the ground).
+    terr = next((o for o in props if o["cat"] == "terrain"), None)
+    surf = fy
+    if terr is not None:
+        tp, _ = load_ply_world(terr, asset_dir, 9000)
+        if tp is not None:
+            surf = float(np.percentile(tp[:, 1], 60))  # the field's typical top surface
+    print(f"grounding (real .ply, field surface Y≈{surf:+.2f}):")
+    for o in props:
+        if o["cat"] in ("terrain", "moon", "mountains"):
+            continue
+        wp, _ = load_ply_world(o, asset_dir, 5000)
+        if wp is None:
+            continue
+        rb = float(wp[:, 1].min())
+        gap = rb - surf
+        tag = "FLOAT" if gap > 0.06 else ("CLIP/sunk" if gap < -0.06 else "ok")
+        print(f"  {o['cat']:9} real base Y={rb:+.2f} (gap {gap:+.2f} {tag})  → @y {o['pos'][1]:+.2f}→{o['pos'][1] - gap:+.2f}")
 
 
 if __name__ == "__main__":

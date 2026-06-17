@@ -22,19 +22,19 @@ bg_dim         = 0.55
 # ONE wide flat field for the camp to sit on. The ridge sits FAR back + low so it reads as horizon,
 # never as ground; the moon is higher + nearer the camera than the ridge (no "mountains in front of
 # the moon"); the field is big + low so its far edge meets the ridge base, not the sky (no blanket).
-splat:mountains.ply @0,-6.5,-12.0  *11,8.5,9  ~fade  in intro               # distant ridge — stretched WIDE (X) so it spans the whole horizon; base hidden, only serrated tops show
+splat:mountains.ply @0,-1.2,-12.0  *11,3,9  ~fade  in intro               # distant ridge — stretched WIDE (X) so it spans the whole horizon; base hidden, only serrated tops show
 splat:moon.ply      @0.8,3.0,-50.0 *7.0   spin 0,3,0   ~fade  in intro    # the moon — REALLY far, CENTERED behind the camp so it stacks above it at any angle
 splat:terrain.ply   @0,-1.5,0      *5.5,4.5,4.0   ~fade  in intro         # ONE moonlit field — a gentle OVAL diorama base, props read BIG on it
 
 # THE CAMP assembles on the field — props stand UP out of the ground, and kept WELL CLEAR of the fire
 # (no flammable tent/tree right next to the flames). Fire centre, tent + grove spaced out around it.
-splat:tent.ply      @-1.6,-0.45,0.5  *0.85  sway 0,7,0   ~fade  in build  # the tent pitches (safe distance, stage left)
-splat:flame.ply     @0.2,-0.5,0.7    *0.7   bob 0.05  ^turbulence:0.35  ~fade  in drop  # the campfire ignites (centre, clear ground)
-splat:pine.ply      @1.6,-0.4,0.4    *0.9   sway 0,6,0   ~fade  in build  # the grove… (stage right, away from the fire)
-splat:pine.ply      @2.4,-0.45,-0.2  *0.7   sway 0,6,0   ~fade  in build
-splat:pine.ply      @-0.7,-0.42,-0.1 *0.8   sway 0,6,0   ~fade  in climax  # centre-left, clear of the tent
-splat:pine.ply      @-2.6,-0.4,-0.4  *0.85  sway 0,6,0   ~fade  in climax  # mid-left
-splat:pine.ply      @0.1,-0.4,-1.9   *0.9   sway 0,6,0   ~fade  in climax  # back-centre (deeper in the field)
+splat:tent.ply      @-1.6,-1.11,0.5  *0.85  sway 0,7,0   ~fade  in build  # the tent pitches (safe distance, stage left)
+splat:flame.ply     @0.2,-0.44,0.7   *0.7   bob 0.05  ^turbulence:0.35  ~fade  in drop  # the campfire ignites (centre, clear ground)
+splat:pine.ply      @1.6,-0.31,0.4   *0.9   sway 0,6,0   ~fade  in build  # the grove… (stage right, away from the fire)
+splat:pine.ply      @2.4,-0.56,-0.2  *0.7   sway 0,6,0   ~fade  in build
+splat:pine.ply      @-0.7,-0.44,-0.1 *0.8   sway 0,6,0   ~fade  in climax  # centre-left, clear of the tent
+splat:pine.ply      @-2.6,-0.38,-0.4 *0.85  sway 0,6,0   ~fade  in climax  # mid-left
+splat:pine.ply      @0.1,-0.31,-1.9  *0.9   sway 0,6,0   ~fade  in climax  # back-centre (deeper in the field)
 
 # camera: one slow drift — survey wide, ease toward the fire on the drop, pull back to orbit. Pitched
 # DOWN steeply so we look ONTO the field (props stand clear of it), with the ridge + moon up top.
