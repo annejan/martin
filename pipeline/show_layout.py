@@ -184,8 +184,29 @@ def plot_scene_3d(ax, props, fg, asset_dir, elev, azim, cam=None):
             continue
         ax.scatter(wp[:, 0], wp[:, 2], wp[:, 1], c=col, s=5, alpha=0.8, depthshade=False, linewidths=0)
     if cam is not None:
-        cw = cam_world(cam)
+        cw = np.array(cam_world(cam))
+        tgt = np.array(cam["pos"], dtype=float)
         ax.scatter([cw[0]], [cw[2]], [cw[1]], c="red", marker="^", s=110)
+        # camera FRUSTUM: a red view-cone from the camera through its FOV to past the camp, so you can
+        # SEE what the shot captures. Engine default FOV = π/4 vertical; horizontal from 16:9 aspect.
+        fwd = tgt - cw
+        fwd /= max(np.linalg.norm(fwd), 1e-6)
+        right = np.cross(fwd, [0.0, 1.0, 0.0])
+        right /= max(np.linalg.norm(right), 1e-6)
+        tup = np.cross(right, fwd)
+        vfov = math.pi / 4
+        hfov = 2 * math.atan(math.tan(vfov / 2) * 16 / 9)
+        L = np.linalg.norm(tgt - cw) + 6.0  # reach past the camp
+        hw, hh = L * math.tan(hfov / 2), L * math.tan(vfov / 2)
+        ctr = cw + fwd * L
+        corners = [ctr + sr * right * hw + su * tup * hh for sr in (-1, 1) for su in (-1, 1)]
+        P = lambda v: ([v[0]], [v[2]], [v[1]])  # noqa: E731 — to mpl (x, z-depth, y-up)
+        for c in corners:  # camera apex → each far corner
+            ax.plot([cw[0], c[0]], [cw[2], c[2]], [cw[1], c[1]], color="red", lw=0.8, alpha=0.6)
+        loop = [corners[0], corners[1], corners[3], corners[2], corners[0]]  # far rectangle
+        ax.plot([c[0] for c in loop], [c[2] for c in loop], [c[1] for c in loop],
+                color="red", lw=0.8, alpha=0.6)
+        ax.plot([cw[0], ctr[0]], [cw[2], ctr[2]], [cw[1], ctr[1]], color="orange", lw=1.2)  # look dir
     ax.view_init(elev=elev, azim=azim)
     ax.set_xlabel("X")
     ax.set_ylabel("Z (depth)")
@@ -206,16 +227,22 @@ def draw(path, cam_idx, hfov, out, asset_dir="assets", az_off=0.0):
     field = field_of(props)
     cam = cams[cam_idx] if cams and cam_idx < len(cams) else None
 
-    # footprint radius (XZ) per prop + pairwise OVERLAP detection (props sitting in each other's area)
+    # footprint radius (XZ) per prop + pairwise OVERLAP detection (props sitting in each other's area).
+    # Use the REAL .ply horizontal extent (90th-pct radius) so wide shapes (the tent!) aren't under-sized.
     fld = [o for o in props if o["cat"] not in ("terrain", "moon", "mountains")]
     for o in fld:
-        o["r"] = FOOTPRINT.get(o["cat"], 0.4) * max(o["scale"])
+        wp, _ = load_ply_world(o, "assets", 3000)
+        if wp is not None:
+            rad = np.hypot(wp[:, 0] - o["pos"][0], wp[:, 2] - o["pos"][2])
+            o["r"] = float(np.percentile(rad, 90))
+        else:
+            o["r"] = FOOTPRINT.get(o["cat"], 0.4) * max(o["scale"])
     overlaps = []
     for i in range(len(fld)):
         for j in range(i + 1, len(fld)):
             a, b = fld[i], fld[j]
             d = math.hypot(a["pos"][0] - b["pos"][0], a["pos"][2] - b["pos"][2])
-            if d < (a["r"] + b["r"]) * 0.9:  # 0.9 → allow a slight touch
+            if d < (a["r"] + b["r"]) * 1.1:  # 1.1 → margin, so visual touching is caught too
                 overlaps.append((a, b, d))
 
     fig = plt.figure(figsize=(21, 7))
@@ -236,6 +263,8 @@ def draw(path, cam_idx, hfov, out, asset_dir="assets", az_off=0.0):
     # ===== TOP-DOWN (X horizontal, Z vertical; camera looks toward -Z by convention) =====
     axt.set_title("top-down (X→, Z↑)  ·  is it ON the field & IN frame?")
     axt.add_patch(Ellipse((fcx, fcz), 2 * fx, 2 * fz, fill=True, fc="#bfe3b0", ec="#5aa54a", lw=2, zorder=0))
+    # safe-zone ring (~0.85 radius): props OUTSIDE it sit near the rim → bases clip at the horizon
+    axt.add_patch(Ellipse((fcx, fcz), 2 * fx * 0.85, 2 * fz * 0.85, fill=False, ec="orange", ls="--", lw=1, alpha=0.6, zorder=1))
     for o in props:
         if o["cat"] in ("terrain", "moon", "mountains"):
             continue
@@ -292,12 +321,15 @@ def draw(path, cam_idx, hfov, out, asset_dir="assets", az_off=0.0):
             if o["cat"] in ("terrain", "moon", "mountains"):
                 continue
             d = depth(o["pos"][0], o["pos"][2])
-            half_h = PROP_HALF_H * o["scale"][1]
-            base, top = o["pos"][1] - half_h, o["pos"][1] + half_h
+            wp, _ = load_ply_world(o, asset_dir, 3000)  # REAL base/top (the model lies for flat shapes)
+            if wp is not None:
+                base, top = float(wp[:, 1].min()), float(wp[:, 1].max())
+            else:
+                base, top = o["pos"][1] - PROP_HALF_H * o["scale"][1], o["pos"][1] + PROP_HALF_H * o["scale"][1]
             float_sink = ""
             if base > fy + 0.15:
                 float_sink = " ⚠FLOAT"
-            elif base < fy - 0.40:
+            elif base < fy - 0.20:
                 float_sink = " ⚠SINK"
             axs.plot([d, d], [base, top], color=COLOR.get(o["cat"], "#888"), lw=6, alpha=0.8)
             axs.plot([0, d], [cw[1], base], "r:", lw=0.8, alpha=0.5)  # sight ray to base
@@ -339,11 +371,40 @@ def draw(path, cam_idx, hfov, out, asset_dir="assets", az_off=0.0):
         x, z = o["pos"][0], o["pos"][2]
         inside = ((x - fcx) / fx) ** 2 + ((z - fcz) / fz) ** 2 <= 1.0
         base = o["pos"][1] - PROP_HALF_H * o["scale"][1]
+        ratio = ((x - fcx) / fx) ** 2 + ((z - fcz) / fz) ** 2  # 1.0 = on the ellipse edge
         flag = "" if inside else " OFF-FIELD"
-        flag += " FLOAT" if base > fy + 0.15 else (" SINK" if base < fy - 0.40 else "")
-        print(f"  {o['cat']:9} @({x:+.2f},{o['pos'][1]:+.2f},{z:+.2f}) base Y={base:+.2f}{flag}")
+        if inside and ratio > 0.72:  # near the rim → base clips at the horizon ("achter onder")
+            flag += " NEAR-RIM"
+        # FLOAT/SINK comes from the REAL .ply grounding report below (the model half-height is only a
+        # rough footprint and lies for flat shapes like the tent) — here just position flags.
+        print(f"  {o['cat']:9} @({x:+.2f},{z:+.2f}) rim {ratio:.2f}{flag}")
     for a, b, d in overlaps:
         print(f"  ⚠ OVERLAP: {a['cat']} & {b['cat']} (gap {d:.2f} < radii {a['r'] + b['r']:.2f})")
+    # FRUSTUM membership: is each prop actually IN the shot for this camera? (catches the
+    # "disappearing tent" — a prop that's in 3D but outside the camera's FOV cone.)
+    if cam is not None:
+        cw = np.array(cam_world(cam))
+        fwd = np.array(cam["pos"], float) - cw
+        fwd /= max(np.linalg.norm(fwd), 1e-6)
+        right = np.cross(fwd, [0.0, 1.0, 0.0])
+        right /= max(np.linalg.norm(right), 1e-6)
+        tup = np.cross(right, fwd)
+        vfov = math.pi / 4
+        hfov = 2 * math.atan(math.tan(vfov / 2) * 16 / 9)
+        print(f"in-shot (cam #{cam_idx}, FOV {math.degrees(hfov):.0f}°×{math.degrees(vfov):.0f}°):")
+        for o in props:
+            if o["cat"] == "moon":
+                continue
+            v = np.array(o["pos"], float) - cw
+            depth = float(np.dot(v, fwd))
+            if depth <= 0.05:
+                print(f"  {o['cat']:9} BEHIND camera")
+                continue
+            ah = math.degrees(math.atan2(float(np.dot(v, right)), depth))
+            av = math.degrees(math.atan2(float(np.dot(v, tup)), depth))
+            inh, inv = abs(ah) < math.degrees(hfov / 2), abs(av) < math.degrees(vfov / 2)
+            tag = "in shot" if (inh and inv) else f"OUT ({'h' if not inh else ''}{'v' if not inv else ''})"
+            print(f"  {o['cat']:9} h={ah:+5.1f}° v={av:+5.1f}° depth={depth:4.1f}  {tag}")
     # GROUNDING from the REAL .ply geometry: each prop's true base Y vs the field surface, and the
     # @y that would sit it exactly on the field (so it neither floats nor clips through the ground).
     terr = next((o for o in props if o["cat"] == "terrain"), None)

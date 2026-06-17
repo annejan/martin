@@ -19,22 +19,22 @@ bg_dim         = 0.5
 [stage]
 splat:mountains.ply @0,-1.2,-12.0  *11,3,9  ~fade  in intro   # wide ridge across the horizon
 splat:moon.ply      @0.8,3.0,-50.0 *7.0   spin 0,3,0   ~fade  in intro   # far, centred moon
-splat:terrain.ply   @0,-1.5,0      *5.5,4.5,4.0   ~fade  in intro   # the field — a gentle OVAL diorama base
+splat:terrain.ply   @0,-1.5,0      *6,4.5,5.0   ~fade  in intro   # the field — a gentle OVAL diorama base
 # @y values GROUNDED via show_layout.py's real-.ply base check (each base sits on the field, no float/clip)
 splat:tent.ply      @-1.6,-1.11,0.5  *0.85  ~fade  in intro   # tent (stage left)
 splat:flame.ply     @0.3,-0.44,1.0   *0.7   bob 0.05 ^turbulence:0.35  ~fade  in intro  # fire (centre, nudged forward)
-splat:pine.ply      @1.6,-0.31,0.4   *0.9   ~fade  in intro   # right grove
-splat:pine.ply      @2.4,-0.56,-0.2  *0.7   ~fade  in intro
-splat:pine.ply      @-0.7,-0.44,-0.1 *0.8   ~fade  in intro   # centre-left, clear of the tent
-splat:pine.ply      @-2.6,-0.38,-0.4 *0.85  ~fade  in intro   # mid-left
-splat:pine.ply      @0.1,-0.31,-1.9  *0.9   ~fade  in intro   # back-centre (deeper in the field)
-splat:pine.ply      @1.2,-0.50,-1.4  *0.75  ~fade  in intro   # back-right
+splat:pine.ply      @1.7,-0.31,0.3   *0.9   ~fade  in intro   # right
+splat:pine.ply      @2.7,-0.56,-0.4  *0.7   ~fade  in intro   # right-back
+splat:pine.ply      @0.5,-0.44,-0.6  *0.8   ~fade  in intro   # centre-back
+splat:pine.ply      @-0.5,-0.38,-1.4 *0.85  ~fade  in intro   # centre-left-back (clear of the WIDE tent)
+splat:pine.ply      @-2.4,-0.31,-1.2 *0.9   ~fade  in intro   # far-left-back
+splat:pine.ply      @1.4,-0.50,-1.6  *0.75  ~fade  in intro   # right-back deep
 
 [camera]
 t=2    pos=0.2,-0.25,0.3   dist=6.5   yaw=1.40   pitch=0.45   # three-quarter beauty
 t=5    pos=0.2,0.0,0.0     dist=11.0  yaw=1.45   pitch=0.50   # epic vista (tiny camp, big sky)
 t=8    pos=0.2,-0.45,0.7   dist=3.2   yaw=1.50   pitch=0.18   # fire hero / ember pillar (low + close)
-t=11   pos=0.2,-0.30,0.2   dist=6.0   yaw=1.40   pitch=1.05   # god-view diorama (near top-down)
+t=11   pos=0.2,-0.30,0.2   dist=6.4   yaw=1.40   pitch=0.72   # god-view diorama (near top-down)
 t=14   pos=0.2,-0.50,0.3   dist=6.5   yaw=1.40   pitch=0.12   # silhouette against the ridge
 t=17   pos=0.5,-0.30,0.2   dist=6.0   yaw=0.90   pitch=0.40   # side-orbit on the grove
 
