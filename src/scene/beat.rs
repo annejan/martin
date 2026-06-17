@@ -34,6 +34,13 @@ impl Beat {
     pub(crate) fn as_vec4(&self) -> Vec4 {
         Vec4::new(self.kick, self.snare, self.hat, self.intensity)
     }
+
+    /// Sidechain **duck** multiplier (`MARTIN_SIDECHAIN`): `1.0` between kicks, dipping toward 0 on a
+    /// hit — `1 - kick·amount·intensity`, clamped ≥ 0. `amount == 0` (off) → always `1.0` (no-op). The
+    /// kick pumps the whole frame; shared by `shot_director` (splats) and `update_bg` (the backdrop).
+    pub(crate) fn duck(&self, amount: f32) -> f32 {
+        (1.0 - self.kick * amount * self.intensity).max(0.0)
+    }
 }
 
 /// Decaying envelope: `vel × exp(-dt/tau)` after a hit — `tau` sets the snap, and the hit is weighted
@@ -86,4 +93,23 @@ pub(crate) fn plugin(app: &mut App) {
     app.init_resource::<Beat>()
         .add_systems(Startup, setup_beat_track)
         .add_systems(Update, track_beat);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn duck_pumps_on_the_kick() {
+        let b = |kick, intensity| Beat {
+            kick,
+            intensity,
+            ..Default::default()
+        };
+        assert_eq!(b(0.0, 1.0).duck(0.5), 1.0);
+        assert_eq!(b(1.0, 1.0).duck(0.5), 0.5);
+        assert_eq!(b(1.0, 1.0).duck(0.0), 1.0);
+        assert_eq!(b(1.0, 0.0).duck(0.5), 1.0);
+        assert_eq!(b(1.0, 1.0).duck(2.0), 0.0);
+    }
 }

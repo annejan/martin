@@ -209,7 +209,7 @@ pub(crate) fn shot_director(
     let sidechain =
         *sidechain.get_or_insert_with(|| crate::envvar::or("MARTIN_SIDECHAIN", 0.0_f32));
     if sidechain > 0.0 {
-        cs.global_opacity *= (1.0 - beat.kick * sidechain * beat.intensity).max(0.0);
+        cs.global_opacity *= beat.duck(sidechain);
     }
 
     // glb: dissolve — the splats are the exact complement of the mesh (1 − its alpha): present

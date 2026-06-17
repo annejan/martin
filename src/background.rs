@@ -162,6 +162,15 @@ fn spawn_bg(
     );
 }
 
+/// Harmonic tint from the music: a `minor` chord pulls **cool** (−), a major pushes **warm** (+), and
+/// the section `gain` (0..1) biases the same axis (low energy cool, climax warm). Result in `−1..+1`.
+/// Pure — the `MARTIN_TINT_MUSIC` / `[sync] tint_music` value when those aren't driving it directly.
+pub(crate) fn warmth_from(minor: bool, gain: f32) -> f32 {
+    let chord = if minor { -1.0 } else { 1.0 };
+    let energy = ((gain - 0.5) * 2.0).clamp(-1.0, 1.0);
+    (chord * 0.6 + energy * 0.4).clamp(-1.0, 1.0)
+}
+
 /// Feed the show clock + beat into the background material each frame, and resolve the ACTIVE
 /// mode: the last `bg:` token at-or-before the active part wins (sticky), else the `MARTIN_BG`
 /// default, else hidden. `bg:off` hides the layer for that stretch.
@@ -187,7 +196,7 @@ fn update_bg(
     // MARTIN_SIDECHAIN: the kick ducks the backdrop too, so the whole frame pumps together. Off = 0.
     let sidechain =
         *sidechain.get_or_insert_with(|| crate::envvar::or("MARTIN_SIDECHAIN", 0.0_f32));
-    let duck = (1.0 - beat.kick * sidechain * beat.intensity).max(0.0);
+    let duck = beat.duck(sidechain);
     let level = sync
         .as_ref()
         .and_then(|s| s.bg_dim_at(clock.t))
@@ -202,13 +211,7 @@ fn update_bg(
         .or_else(|| {
             (tint_on).then(|| {
                 score.as_ref().map_or(0.0, |sc| {
-                    let minor = if sc.0.chord_at(clock.t).minor {
-                        -1.0
-                    } else {
-                        1.0
-                    };
-                    let energy = ((sc.0.gain_at(clock.t) - 0.5) * 2.0).clamp(-1.0, 1.0);
-                    (minor * 0.6 + energy * 0.4).clamp(-1.0, 1.0)
+                    warmth_from(sc.0.chord_at(clock.t).minor, sc.0.gain_at(clock.t))
                 })
             })
         })
@@ -260,7 +263,24 @@ impl Plugin for BackgroundPlugin {
 
 #[cfg(test)]
 mod tests {
-    use super::mode_index;
+    use super::{mode_index, warmth_from};
+
+    #[test]
+    fn warmth_cools_minor_warms_major_and_clamps() {
+        // at mid energy (gain 0.5 → energy 0): minor = -0.6, major = +0.6.
+        assert!((warmth_from(true, 0.5) + 0.6).abs() < 1e-6);
+        assert!((warmth_from(false, 0.5) - 0.6).abs() < 1e-6);
+        // gain biases the same axis: a major at full climax is warmer than a major at mid.
+        assert!(warmth_from(false, 1.0) > warmth_from(false, 0.5));
+        // a minor at zero energy is the coolest, and the result never leaves [-1, 1].
+        for &(m, g) in &[(true, 0.0), (false, 1.0), (true, 1.0), (false, 0.0)] {
+            let w = warmth_from(m, g);
+            assert!(
+                (-1.0..=1.0).contains(&w),
+                "warmth {w} out of range for ({m},{g})"
+            );
+        }
+    }
 
     #[test]
     fn mode_index_maps_names_aliases_numbers_and_unknown() {
