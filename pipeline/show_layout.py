@@ -13,6 +13,11 @@ This parses the [stage] + [camera] and plots, in <1s:
   * SIDE elevation (depth-vs-height, exact): the field surface, each prop's
     base→top bar, the camera + sight-rays → flags FLOAT (base above ground),
     SINK (base below ground), and rim OCCLUSION.
+  * 3D (the REAL .ply clouds): loads each splat from `assets/`, applies the same
+    pipeline (normalize → base-flip → *scale → +pos) and scatters them — a small
+    panel from the camera angle, plus a big standalone `<out>_3d.png` with the
+    camera POV + a bird's-eye 3/4 so the structure (e.g. the ridge wrap) is
+    obvious. Overlap detection flags props sitting in each other's footprint.
 
 Geometry mirrors the engine: each part is normalized so its largest dim =
 NORMALIZE_EXTENT (2.0) then placed by `@pos *scale` (scale is per-axis, the
@@ -21,19 +26,20 @@ NORMALIZE_EXTENT (2.0) then placed by `@pos *scale` (scale is per-axis, the
 (see src/camera.rs). Heights use a calibratable prop model (see PROP_HALF_H).
 
 Usage:
-  python3 pipeline/show_layout.py productions/camping/hero.show --cam 4 -o /tmp/layout.png
-  python3 pipeline/show_layout.py productions/camping/hero.show --cam 4 --hfov 50
+  python3 pipeline/show_layout.py productions/camping/hero.show --cam 4
+  python3 pipeline/show_layout.py <show> --cam 0 --az-off 20   # tune 3D azimuth to match a render
 """
 import argparse
 import math
+import os
 import re
-import sys
 
 import matplotlib
+import numpy as np
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse, Polygon
+from matplotlib.patches import Ellipse
 
 NORMALIZE_EXTENT = 2.0  # src/scene/mod.rs — each part scaled so largest dim = this
 # A part spans ~±(NORMALIZE_EXTENT/2)=±1 after normalize, so world half-extent ≈ scale.
@@ -131,7 +137,69 @@ def field_of(props):
     return None
 
 
-def draw(path, cam_idx, hfov, out):
+def parse_ply(path, n=2500):
+    """Read a martin sh0 binary .ply (14 f32/vertex) → (positions Nx3, colors Nx3 in 0..1), subsampled."""
+    with open(path, "rb") as f:
+        blob = f.read()
+    end = blob.index(b"end_header\n") + len(b"end_header\n")
+    head = blob[:end].decode("ascii", "replace")
+    count = int(re.search(r"element vertex (\d+)", head).group(1))
+    arr = np.frombuffer(blob[end:end + count * 14 * 4], dtype="<f4").reshape(count, 14)
+    if count > n:  # even stride subsample (clouds are unordered, so this is representative)
+        arr = arr[:: max(1, count // n)]
+    pos = arr[:, 0:3].astype(np.float64)
+    col = np.clip(arr[:, 11:14] * 0.2820948 + 0.5, 0, 1)  # f_dc (SH0) → rgb
+    return pos, col
+
+
+def load_ply_world(obj, asset_dir, n=2500):
+    """Load a splat .ply and apply the engine pipeline: normalize → base-flip(Y,Z) → *scale → +pos."""
+    path = os.path.join(asset_dir, obj["name"])
+    if not os.path.exists(path):
+        return None, None
+    pos, col = parse_ply(path, n)
+    c = pos.mean(axis=0)
+    d = np.linalg.norm(pos - c, axis=1)
+    s = (NORMALIZE_EXTENT * 0.5) / max(np.percentile(d, 90), 1e-6)  # normalize_to (90th-pct radius)
+    pos = (pos - c) * s
+    pos[:, 1] *= -1.0  # base rotation = 180° about X → negate Y …
+    pos[:, 2] *= -1.0  # … and Z
+    pos = pos * np.array(obj["scale"]) + np.array(obj["pos"])
+    return pos, col
+
+
+def plot_scene_3d(ax, props, fg, asset_dir, elev, azim, cam=None):
+    """Scatter the real .ply clouds (engine-transformed) in 3D as (X, Z-depth, Y-up), from a given view."""
+    fcx, fcz, fx, fz, fy = fg
+    th = np.linspace(0, 2 * math.pi, 80)
+    ax.plot(fcx + fx * np.cos(th), fcz + fz * np.sin(th), fy, color="#3c7a32", lw=1, alpha=0.7)
+    missing = []
+    for o in props:
+        if o["cat"] == "moon":
+            continue  # far backdrop (z≈-50) — would blow the axes
+        wp, col = load_ply_world(o, asset_dir, 3500 if o["cat"] in ("terrain", "mountains") else 1800)
+        if wp is None:
+            missing.append(o["name"])
+            continue
+        ax.scatter(wp[:, 0], wp[:, 2], wp[:, 1], c=col, s=2, alpha=0.55, depthshade=True, linewidths=0)
+    if cam is not None:
+        cw = cam_world(cam)
+        ax.scatter([cw[0]], [cw[2]], [cw[1]], c="black", marker="^", s=90)
+    ax.view_init(elev=elev, azim=azim)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Z (depth)")
+    ax.set_zlabel("Y up")
+    ax.set_xlim(-14, 14)
+    ax.set_ylim(-22, 8)
+    ax.set_zlim(-3, 6)
+    ax.set_box_aspect((28, 30, 9))
+    # martin→matplotlib (X,Z,Y) swaps two axes = a REFLECTION → the view came out mirrored
+    # (tent on the wrong side). Inverting X restores a proper rotation so left/right matches the render.
+    ax.invert_xaxis()
+    return missing
+
+
+def draw(path, cam_idx, hfov, out, asset_dir="assets", az_off=0.0):
     props, cams = parse_show(path)
     field = field_of(props)
     cam = cams[cam_idx] if cams and cam_idx < len(cams) else None
@@ -148,7 +216,10 @@ def draw(path, cam_idx, hfov, out):
             if d < (a["r"] + b["r"]) * 0.9:  # 0.9 → allow a slight touch
                 overlaps.append((a, b, d))
 
-    fig, (axt, axs) = plt.subplots(1, 2, figsize=(15, 7))
+    fig = plt.figure(figsize=(21, 7))
+    axt = fig.add_subplot(1, 3, 1)
+    axs = fig.add_subplot(1, 3, 2)
+    ax3 = fig.add_subplot(1, 3, 3, projection="3d")
     fig.suptitle(f"{path}  —  camera #{cam_idx}" + (f" (t={cam['t']})" if cam else ""), fontsize=11)
 
     # ---- field geometry (world) ----
@@ -233,9 +304,31 @@ def draw(path, cam_idx, hfov, out):
     axs.set_ylabel("world Y (up)")
     axs.grid(True, alpha=0.3)
 
+    # ===== 3D (real .ply clouds, engine transform) — small panel from the camera angle =====
+    fg = (fcx, fcz, fx, fz, fy)
+    cam_az = math.degrees(cam["yaw"]) + az_off if cam else -60
+    cam_el = math.degrees(cam["pitch"]) if cam else 25
+    ax3.set_title("3D — real splats, camera angle")
+    missing = plot_scene_3d(ax3, props, fg, asset_dir, cam_el, cam_az, cam)
+    if missing:
+        print(f"  (3D: missing .ply — run a build to generate: {', '.join(missing)})")
+
     fig.tight_layout()
-    fig.savefig(out, dpi=90)
+    fig.savefig(out, dpi=130)
     print(f"wrote {out}")
+
+    # ===== standalone BIG 3D — two angles (camera POV + a clear bird's-eye 3/4) =====
+    out3d = out[:-4] + "_3d.png" if out.endswith(".png") else out + "_3d.png"
+    f2 = plt.figure(figsize=(18, 9))
+    a = f2.add_subplot(1, 2, 1, projection="3d")
+    a.set_title(f"camera POV (cam #{cam_idx})")
+    plot_scene_3d(a, props, fg, asset_dir, cam_el, cam_az, cam)
+    b = f2.add_subplot(1, 2, 2, projection="3d")
+    b.set_title("bird's-eye 3/4 (structure)")
+    plot_scene_3d(b, props, fg, asset_dir, 50, -55, cam)
+    f2.tight_layout()
+    f2.savefig(out3d, dpi=120)
+    print(f"wrote {out3d}")
     # text summary
     print(f"field: centre=({fcx},{fcz}) radius X={fx:.2f} Z={fz:.2f} surface Y={fy:.2f}")
     for o in props:
@@ -258,5 +351,7 @@ if __name__ == "__main__":
     ap.add_argument("--hfov", type=float, default=73.0,
                     help="horizontal FOV (deg); engine default π/4 vertical ≈ 73° horiz @16:9")
     ap.add_argument("-o", "--out", default="/tmp/layout.png")
+    ap.add_argument("--assets", default="assets", help="dir holding the generated .ply clouds")
+    ap.add_argument("--az-off", type=float, default=0.0, help="azimuth offset (deg) to match the render")
     a = ap.parse_args()
-    draw(a.show, a.cam, a.hfov, a.out)
+    draw(a.show, a.cam, a.hfov, a.out, a.assets, a.az_off)
