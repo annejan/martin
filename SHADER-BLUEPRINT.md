@@ -130,28 +130,32 @@ let mt = clamp((gaussian_uniforms.time - gaussian_uniforms.time_start) / denom, 
 > `martin` branch (consumed via `[patch.crates-io]`), not this repo. martin no longer keeps a
 > `vendor/` copy.
 
-All references below are to the **live** file. The relevant landmarks I verified:
+All references below are anchored to **function/branch markers** in the live file
+(line numbers rot across upstream rebases — grep the marker instead). Line numbers
+in parentheses are advisory, verified against rev `57a03ee` (file is 729 lines). The
+landmarks:
 
-- `explode_hash3(i: u32) -> vec3<f32>` helper: `gaussian.wgsl:186-195` (we reuse it
-  for the sparkle/hash phase — no new RNG needed).
-- `vs_points` vertex entry: `gaussian.wgsl:197-498`.
-- the **explode** ballistic branch: `gaussian.wgsl:220-236` (matches `DESIGN.md`
-  §4.2 B6's "~lines 220–236").
-- the **ball-pulse "bulge" branch**: `gaussian.wgsl:245-260` (the
-  `if (interp_active && gaussian_uniforms.bulge > 0.0)` block). We insert the new
-  branch immediately after it.
-- `var opacity = get_opacity(splat_index);` at `gaussian.wgsl:291`.
-- the color/opacity finalize site: `gaussian.wgsl:480-483`:
+- the `fn explode_hash3(i: u32) -> vec3<f32>` helper (~`gaussian.wgsl:186`) — we
+  reuse it for the sparkle/hash phase, no new RNG needed.
+- the `fn vs_points(` vertex entry (~`gaussian.wgsl:225`).
+- the **explode** ballistic branch: the `if (explode_t != 0.0 && !interp_active)`
+  block inside `vs_points` (~`gaussian.wgsl:247`).
+- the **ball-pulse "bulge" branch**: the
+  `if (interp_active && gaussian_uniforms.bulge > 0.0)` block inside `vs_points`
+  (~`gaussian.wgsl:272`). We insert the new branch immediately after it.
+- the `var opacity = get_opacity(splat_index);` line in `vs_points`
+  (~`gaussian.wgsl:453`).
+- the color/opacity finalize site — the `output.color = vec4<f32>(...)` assignment
+  whose alpha is `opacity * gaussian_uniforms.global_opacity * tx_reveal`
+  (~`gaussian.wgsl:642`):
   ```wgsl
   output.color = vec4<f32>(
       rgb,
-      opacity * gaussian_uniforms.global_opacity,
+      opacity * gaussian_uniforms.global_opacity * tx_reveal,
   );
   ```
-  (`DESIGN.md` §5 cites "`opacity * gaussian_uniforms.global_opacity` at
-  `gaussian.wgsl:480-482`" — verified; the multiply is on line 482.)
 
-### 3a. New helper (insert after `explode_hash3`, i.e. after `gaussian.wgsl:195`)
+### 3a. New helper (insert after the `fn explode_hash3` body)
 
 ```wgsl
 // --- per-particle transition phase ∈ [0,1] for staggered transitions (typewriter,

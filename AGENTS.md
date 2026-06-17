@@ -24,9 +24,9 @@ Transform the "Op de Camping" (Ome Henk, 1995) demoscene track from a basic plac
 
 ## File Structure
 - `assets/score.txt`: Tracker DSL — BPM, sections, chords, pattern tables, per-drum-lane hit patterns, gain/sub/mids curves. Editable at runtime (no recompile).
-- `src/audio.rs`: FunDSP voice synthesis — kick, snare, hat, lead, arp, bass, stab, pad, sub, reverb, sidechain, master limiter. Requires recompile.
+- `src/audio/`: FunDSP voice synthesis — kick, snare, hat, lead, arp, bass, stab, pad, sub, reverb, sidechain. Split into `mod.rs`, `voices.rs`, `effects.rs`, `render.rs`, `stream.rs`, `analyze.rs`. Master is the `MasterChain` in `src/audio/stream.rs` (one streaming engine). Requires recompile.
 - `productions/camping/camping.show`: Unified show format — camera track, text sequence with @@anchors to score sections.
-- `src/score.rs`: Parser for score.txt — resolves section timing, drum hits, note lanes, phase lookup.
+- `src/score/`: Parser for score.txt — resolves section timing, drum hits, note lanes, phase lookup. Split into `types.rs`, `parse.rs`, `dump.rs`, `validate.rs`, `mod.rs`.
 - `src/music.rs`: Bevy plugin binding between score and audio playback.
 
 ## Build & Render
@@ -53,7 +53,7 @@ Transform the "Op de Camping" (Ome Henk, 1995) demoscene track from a basic plac
   - Undefined phase = silence `[false; 16]`.
 - Dynamics: `gain|sub|mids <section> <value_or_ramp>` — e.g. `gain build 0.25>1.1` ramps across section.
 
-## Audio Architecture (audio.rs)
+## Audio Architecture (src/audio/)
 - **Kick**: `render_hardkick` — hardstyle/gabber approach: pitched sine body sweep + tonal tail on chord root + click transient. Rendered to own buffer (never ducked by sidechain). Level: `0.92 * (0.9 + 0.1 * vel(...))`.
 - **Snare**: Enhanced with clap body layer (280 Hz low-passed noise, slower decay). ±0.2 pan spread.
 - **Hat**: Enhanced with body layer (3.5 kHz noise layer). ±0.65 pan spread.

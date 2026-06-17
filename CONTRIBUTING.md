@@ -40,8 +40,8 @@ cargo +nightly test --release
 
 ## The music is data, not code
 
-The track is `assets/score.txt` — a tracker DSL parsed by `src/score.rs`, synthesised by
-`src/audio.rs`. Edit the score (or `MARTIN_SCORE=<file>`) and re-render; **no recompile**. The loader
+The track is `assets/score.txt` — a tracker DSL parsed by `src/score/`, synthesised by
+`src/audio/`. Edit the score (or `MARTIN_SCORE=<file>`) and re-render; **no recompile**. The loader
 lints the score — run with `MARTIN_SCORE_STRICT=1` to make a phase/bar typo fatal. See the comments at
 the top of `assets/score.txt`, plus `assets/tropical.txt` / `assets/rain.txt` for the range.
 

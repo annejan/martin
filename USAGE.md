@@ -83,6 +83,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_TEXT` | — | Splat-text: this string assembles out of a ball cloud (glowing). |
 | `MARTIN_SEQ` | — | A timeline of parts (see [Sequences](#sequences)). Highest precedence. |
 | `MARTIN_SHOW` | — | A **unified scene file** (`.show`) — settings + `[seq]` + `[compose]` + a `[camera]` track in one file. Expands into the other `MARTIN_*` vars (which still override it). See [The unified scene file](#the-unified-scene-file-martin_show). |
+| `MARTIN_KIND` | — | Env projection of the show's `kind = intro|demo` setting. An **intro** is a self-contained, asset-budgeted showcase that bundles into the single binary; a **demo** is the full-fat production (heavy local captures allowed). Unknown values are ignored. |
 | `MARTIN_VALIDATE` | — | `=1` **dry-run**: parse the show, print the resolved timeline (part cue times, effects, compose, camera track) and exit — no render. See [Validate a show](#validate-a-show-without-rendering-martin_validate). |
 | `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`rain`/`funnel`/`shatter`/`condense`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`shockwave`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
 | `MARTIN_DEFORM` | — | Scene-wide **persistent deform** field over every part *and* compose object: `wave`/`cloth`/`ripple`/`twist`/`wind`/`turbulence`/`pulse`/`jitter`/`spiral` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
@@ -669,7 +670,7 @@ MARTIN_POST=chroma MARTIN_FFT=1.2 MARTIN_SHOW=productions/cities/cities-defeest.
 
 By default parts are laid **end-to-end** (each starts when the previous finishes). A trailing
 **`@@anchor`** token instead pins a part's *start* to an absolute time on the **music clock**
-(the ported deFEEST score — 140 BPM; see [Music](#music-the-synth) below), so the show locks to
+(the ported deFEEST score — 102 BPM; see [Music](#music-the-synth) below), so the show locks to
 the track no matter how you retime the parts before it:
 
 | `@@anchor` | Part starts at… |
@@ -836,9 +837,9 @@ MARTIN_VALIDATE=1 MARTIN_SHOW=my.show cargo +nightly run --release
 ## Music (the synth)
 
 martin carries a procedural synth + a **section/beat music clock**, ported (MIT) from Cinder's
-(Kristian Vlaardingerbroek, deFEEST) `term-demo` — `src/audio.rs` + `src/score.rs`. The clock
-is 140 BPM with a six-section arc (`intro → build → drop → breakdown → climax → outro`), an
-Am–F–C–G chord progression driving the bass + stab, and a melodic **lead** — all editable in the
+(Kristian Vlaardingerbroek, deFEEST) `term-demo` — `src/audio/` + `src/score/`. The clock
+is 102 BPM with a six-section arc (`intro → build → drop → breakdown → climax → outro`), a
+C–Am–F–G chord progression driving the bass + stab, and a melodic **lead** — all editable in the
 [score file](#the-score-file). Those section/bar/beat times are what `@@anchor` (above) pins parts to, so the visuals lock to the
 track. It **plays live in the window** so you can tune the score by ear — the synth is **streamed**
 (rendered in time-ordered segments on a background thread), so playback + the show start together
