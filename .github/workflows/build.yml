@@ -142,15 +142,17 @@ jobs:
       # gitignored) — build.rs synthesizes any that are missing (build/gen_splats.rs), so no
       # python/numpy step is needed: the bundle build below generates + bakes them in.
 
-      # Pre-render the track to a WAV and bake it into the bundle, so the demo plays the music
-      # INSTANTLY + in sync (the live synth render takes ~30s — too slow for a one-click demo).
-      - name: Render the music
+      # The bundle live-STREAMS the synth at startup (lead ready in ~1s, the loader covers it) — no
+      # baked WAV, so the binary stays lean. We still lint the score here so a phase/bar typo fails
+      # the build: MARTIN_VALIDATE dumps the resolved timeline + exits (headless, no window), and
+      # MARTIN_SCORE_STRICT makes any lint warning fatal.
+      - name: Validate the score (strict)
         shell: bash
         env:
-          MARTIN_SYNTH_WAV: productions/intro/intro.wav
           MARTIN_SCORE: productions/intro/score.txt
-          MARTIN_SCORE_STRICT: "1" # fail the build on any score lint warning (phase/bar mismatch, …)
-        run: cargo run --release   # the MARTIN_SYNTH_WAV path renders the WAV and exits (no window)
+          MARTIN_SCORE_STRICT: "1"
+          MARTIN_VALIDATE: "1"
+        run: cargo run --release
 
       - name: Build single binary (the intro production, --features bundle)
         shell: bash

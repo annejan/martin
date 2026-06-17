@@ -2,11 +2,12 @@
 # CI-buildable engine showcase (repo assets + generated procedural splats only). This is the bundle
 # CI builds and uploads from every clean checkout:
 #
-#   MARTIN_SYNTH_WAV=productions/intro/intro.wav MARTIN_SCORE=productions/intro/score.txt cargo run --release
 #   MARTIN_BUNDLE=productions/intro/bundle.toml cargo build --release --features bundle
 # (the procedural splats are synthesized by build.rs — build/gen_splats.rs — during the build)
+#
+# NO baked music: the synth STREAMS live at startup (lead ready in ~1s, the loader covers it), same as
+# a dev run — so the binary stays lean (no ~15 MB WAV packed in). Demoscene: ship only what's needed.
 
 show = "productions/intro/intro.show"     # the engine-showcase show (seq + camera)
 score = "productions/intro/score.txt"     # the production's own tropical track + @@anchor timing
 logo = "defeest-logo.png"                 # the loader screen while it decompresses
-music = "productions/intro/intro.wav"     # pre-rendered track baked in (instant + in sync; gitignored)
