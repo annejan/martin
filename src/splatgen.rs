@@ -346,10 +346,14 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
             // ground at ±Z, plus two triangular end walls. ~80% of the splats on the panels (more area).
             let (hl, hw, hh) = (0.95f32, 0.7f32, 0.85f32);
             for _ in 0..N {
-                let p = if rng.unit() < 0.8 {
+                // `seam` = this point sits on an EDGE (ridge line, ground hem, gable A-frame, corner
+                // poles) → coloured as canvas trim, the rest as canvas. A cartoon-outlined tent.
+                let (p, seam) = if rng.unit() < 0.8 {
                     let side = if rng.unit() < 0.5 { 1.0 } else { -1.0 };
                     let t = rng.unit(); // 0 = ridge, 1 = ground edge
-                    [rng.uniform(-hl, hl), hh * (1.0 - t), side * hw * t]
+                    let x = rng.uniform(-hl, hl);
+                    let seam = !(0.04..=0.96).contains(&t) || x.abs() > hl * 0.96; // ridge, hem, gable ends
+                    ([x, hh * (1.0 - t), side * hw * t], seam)
                 } else {
                     let ex = if rng.unit() < 0.5 { hl } else { -hl };
                     let (mut a, mut b) = (rng.unit(), rng.unit());
@@ -357,12 +361,17 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
                         a = 1.0 - a;
                         b = 1.0 - b;
                     } // uniform point in the end triangle (ridge-top, two base corners)
-                    [ex, hh * (1.0 - a - b), (b - a) * hw]
+                    let seam = a < 0.04 || b < 0.04 || a + b > 0.96; // the gable's A-frame outline
+                    ([ex, hh * (1.0 - a - b), (b - a) * hw], seam)
                 };
                 // Negate Y: martin flips Y-down .ply upright on load (capture convention), so build
                 // these directional shapes inverted to render the right way up (ridge up). Same below.
                 pos.push([p[0], 0.4 - p[1], p[2]]);
-                rgb.push(hsv(0.74, 0.55, 0.85)); // violet canvas — pops against the orange fire + green pines
+                rgb.push(if seam {
+                    hsv(0.09, 0.55, 0.85) // warm canvas trim / poles — cartoon seams
+                } else {
+                    hsv(0.74, 0.55, 0.85) // violet canvas — pops against the orange fire + green pines
+                });
             }
         }
         "pine" => {
@@ -398,11 +407,13 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
             }
         }
         "terrain" => {
-            // A patch of rolling ground (hills via summed sines) so scenes have a floor instead of
-            // floating in the void. Wide + low; the engine's normalize fits it under other content.
+            // A ROUND field (disc) so scenes have a floor instead of floating in the void — reads as
+            // a clean diorama base, not a square slab with corners. The show can stretch it to an
+            // OVAL with a non-uniform scale (`*wx,wy,wz`). Gentle undulation only.
             for _ in 0..N {
-                let x = rng.uniform(-1.0, 1.0);
-                let z = rng.uniform(-1.0, 1.0);
+                let ang = rng.uniform(0.0, tau);
+                let r = rng.unit().sqrt(); // sqrt → uniform over the disc area (no centre clump)
+                let (x, z) = (r * ang.cos(), r * ang.sin());
                 // gentle undulation only — a near-flat FIELD, not mounds (tall hills loom over props
                 // placed on it and read as a "second field" floating above the scene).
                 let y = 0.06
