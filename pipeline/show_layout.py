@@ -259,6 +259,12 @@ def draw(path, cam_idx, hfov, out, asset_dir="assets", az_off=0.0):
     # calibrated against grounded renders (hero t=14 / god-view t=11). UNDUL = 0.06 in splatgen.
     famp = 0.06 * DISC_FACTOR * field["scale"][1] if field else 0.27
     fy = (field["pos"][1] + famp) if field else -1.5
+    # REAL field surface from the terrain .ply (60th-pct top) — used for the side view + grounding so
+    # the field line and the prop bars agree (no false SINK). Falls back to the model fy.
+    if field is not None:
+        _tp, _ = load_ply_world(field, asset_dir, 9000)
+        if _tp is not None:
+            fy = float(np.percentile(_tp[:, 1], 60))
 
     # ===== TOP-DOWN (X horizontal, Z vertical; camera looks toward -Z by convention) =====
     axt.set_title("top-down (X→, Z↑)  ·  is it ON the field & IN frame?")

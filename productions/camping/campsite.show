@@ -28,13 +28,14 @@ splat:terrain.ply   @0,-1.5,-7     *13,4.5,11   ~fade  in intro         # field 
 
 # THE CAMP assembles on the field — props stand UP out of the ground, and kept WELL CLEAR of the fire
 # (no flammable tent/tree right next to the flames). Fire centre, tent + grove spaced out around it.
-splat:tent.ply      @-1.6,-1.11,0.5  *0.85  sway 0,7,0   ~fade  in build  # the tent pitches (safe distance, stage left)
-splat:flame.ply     @0.2,-0.44,0.7   *0.7   bob 0.05  ^turbulence:0.35  ~fade  in drop  # the campfire ignites (centre, clear ground)
-splat:pine.ply      @1.7,-0.31,0.3   *0.9   sway 0,6,0   ~fade  in build  # the grove… (stage right, away from the fire)
-splat:pine.ply      @2.7,-0.56,-0.4  *0.7   sway 0,6,0   ~fade  in build
-splat:pine.ply      @0.5,-0.44,-0.6  *0.8   sway 0,6,0   ~fade  in climax  # centre-left, clear of the tent
-splat:pine.ply      @-0.5,-0.38,-1.4 *0.85  sway 0,6,0   ~fade  in climax  # mid-left
-splat:pine.ply      @-2.4,-0.31,-1.2 *0.9   sway 0,6,0   ~fade  in climax  # back-centre (deeper in the field)
+# ROOMIER spread (the field has the space; all props well in front of the terrain centre @z-7 -> Z-safe)
+splat:tent.ply      @-2.8,-1.11,0.7  *0.85  sway 0,7,0   ~fade  in build  # the tent pitches (stage left, out wide)
+splat:flame.ply     @0.0,-0.44,0.3   *0.7   bob 0.05  ^turbulence:0.35  ~fade  in drop  # the campfire (centre)
+splat:pine.ply      @3.0,-0.31,0.5   *0.9   sway 0,6,0   ~fade  in build  # the grove... (stage right)
+splat:pine.ply      @3.8,-0.56,-0.6  *0.7   sway 0,6,0   ~fade  in build
+splat:pine.ply      @1.7,-0.44,-1.7  *0.8   sway 0,6,0   ~fade  in climax  # centre-right-back
+splat:pine.ply      @-1.5,-0.38,-1.9 *0.85  sway 0,6,0   ~fade  in climax  # centre-left-back
+splat:pine.ply      @-3.5,-0.31,-0.9 *0.9   sway 0,6,0   ~fade  in climax  # far-left
 
 # CURATED CUT-SEQUENCE: a handful of vetted shots, all at LOW pitch (~0.15-0.30 = the splat sweet spot
 # where props stand clear of the ground cloud), CUT between on the section hits (no panning through the

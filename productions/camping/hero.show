@@ -21,13 +21,15 @@ splat:mountains.ply @0,-1.2,-12.0  *11,3,9  ~fade  in intro   # wide ridge acros
 splat:moon.ply      @0.8,3.0,-50.0 *7.0   spin 0,3,0   ~fade  in intro   # far, centred moon
 splat:terrain.ply   @0,-1.5,-7     *13,4.5,11   ~fade  in intro   # field — CENTER pushed back (z-7) so this backdrop cloud SORTS BEHIND all props (no disappearing); big disc still reaches forward under them. Don't move to z0.
 # @y values GROUNDED via show_layout.py's real-.ply base check (each base sits on the field, no float/clip)
-splat:tent.ply      @-1.6,-1.11,0.5  *0.85  ~fade  in intro   # tent (stage left)
-splat:flame.ply     @0.3,-0.44,1.0   *0.7   bob 0.05 ^turbulence:0.35  ~fade  in intro  # fire (centre, nudged forward)
-splat:pine.ply      @1.7,-0.31,0.3   *0.9   ~fade  in intro   # right
-splat:pine.ply      @2.7,-0.56,-0.4  *0.7   ~fade  in intro   # right-back
-splat:pine.ply      @0.5,-0.44,-0.6  *0.8   ~fade  in intro   # centre-back
-splat:pine.ply      @-0.5,-0.38,-1.4 *0.85  ~fade  in intro   # centre-left-back (clear of the WIDE tent)
-splat:pine.ply      @-2.4,-0.31,-1.2 *0.9   ~fade  in intro   # far-left-back
+# ROOMIER spread (the field has the space; all props well in front of the terrain centre @z-7 → Z-safe)
+splat:tent.ply      @-2.8,-1.11,0.7  *0.85  ~fade  in intro   # tent (stage left, out wide)
+splat:flame.ply     @0.0,-0.44,0.3   *0.7   bob 0.05 ^turbulence:0.35  ~fade  in intro  # fire (centre)
+splat:pine.ply      @3.0,-0.31,0.5   *0.9   ~fade  in intro   # right
+splat:pine.ply      @3.8,-0.56,-0.6  *0.7   ~fade  in intro   # right-back
+splat:pine.ply      @1.7,-0.44,-1.7  *0.8   ~fade  in intro   # centre-right-back
+splat:pine.ply      @-1.5,-0.38,-1.9 *0.85  ~fade  in intro   # centre-left-back
+splat:pine.ply      @-3.5,-0.31,-0.9 *0.9   ~fade  in intro   # far-left
+splat:pine.ply      @2.2,-0.50,1.3   *0.75  ~fade  in intro   # right-foreground
 splat:pine.ply      @1.4,-0.50,-1.6  *0.75  ~fade  in intro   # right-back deep
 
 [camera]
