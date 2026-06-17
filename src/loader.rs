@@ -134,7 +134,7 @@ fn update_loader(
     gate: Option<Res<AudioGate>>,
     mut fill: Query<&mut Node, With<LoaderFill>>,
     mut bg: Query<&mut BackgroundColor, With<LoaderFade>>,
-    mut img: Query<&mut ImageNode, With<LoaderFade>>,
+    mut img: Query<(&mut ImageNode, &mut Visibility), With<LoaderFade>>,
     root: Query<Entity, With<LoaderRoot>>,
     mut shown: Local<f32>, // total loader uptime (so the logo is seen even on an instant build)
     mut fade: Local<f32>,  // elapsed cross-fade time, accumulates once we start lifting off
@@ -170,15 +170,28 @@ fn update_loader(
     if !built || !audio_ready || *shown < MIN_SHOW {
         return;
     }
+    // Two-stage lift, so the flat 2D logo and the show's 3D logo never overlap (they're framed
+    // differently, so a cross-fade made the flat one read as a dark box floating over the show):
+    //   1. fade the LOGO out over LOGO_FADE while the cover stays FULLY opaque (it dissolves on black),
+    //   2. THEN fade the black cover out over FADE_OUT, revealing the model onto clean black.
+    const LOGO_FADE: f32 = 0.25;
     *fade += time.delta_secs();
-    let alpha = (1.0 - *fade / FADE_OUT).clamp(0.0, 1.0); // 1 → 0 over FADE_OUT
+    let logo_alpha = (1.0 - *fade / LOGO_FADE).clamp(0.0, 1.0);
+    let cover_alpha = (1.0 - (*fade - LOGO_FADE) / FADE_OUT).clamp(0.0, 1.0);
     for mut c in &mut bg {
-        c.0.set_alpha(alpha);
+        c.0.set_alpha(cover_alpha);
     }
-    for mut i in &mut img {
-        i.color.set_alpha(alpha);
+    for (mut i, mut vis) in &mut img {
+        i.color.set_alpha(logo_alpha);
+        // A fully-transparent ImageNode still renders a faint quad (a dark box over the show); once
+        // the logo has finished fading, HIDE it so the cover lifts onto clean black.
+        *vis = if logo_alpha <= 0.0 {
+            Visibility::Hidden
+        } else {
+            Visibility::Inherited
+        };
     }
-    if alpha <= 0.0 {
+    if cover_alpha <= 0.0 {
         for e in &root {
             commands.entity(e).despawn();
         }
