@@ -115,6 +115,7 @@ fn record_driver(
     seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
     comp: Option<Res<Composition>>,
+    score: Option<Res<crate::music::ScoreRes>>,
     target: Option<Res<RecordTarget>>,
     mut clock: ResMut<SeqClock>,
     mut camq: Query<&mut OrbitCam>,
@@ -162,7 +163,11 @@ fn record_driver(
     } else {
         0.0
     };
-    let dur = seq_dur.max(comp_dur).max(12.0);
+    // Run to the end of the MUSIC too: a music-synced show (e.g. a compose stage whose [sync]/[camera]
+    // tracks key off @@outro) is shorter by its object timeline than the track, so without this the
+    // clip would cut before the finale. The video should never end before the song.
+    let score_dur = score.as_ref().map(|s| s.0.demo_len() + 1.0).unwrap_or(0.0);
+    let dur = seq_dur.max(comp_dur).max(score_dur).max(12.0);
     let total = (dur / rec.dt).ceil() as u32;
     if rec.i >= total {
         // Wait for the async PNG writes to actually land before exiting — a fast (release)
