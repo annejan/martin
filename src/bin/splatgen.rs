@@ -3,7 +3,7 @@
 //
 //! `splatgen` — a standalone CLI that writes any procedural shape to martin's sh0 binary `.ply`, so
 //! you can author new abstract content without a python/numpy step or a real capture. It shares the
-//! exact generator `build.rs` uses to auto-synthesize the demo splats (`build/gen_splats.rs`), so a
+//! exact generator the engine + `build.rs` use to synthesize the demo splats (`src/splatgen.rs`), so a
 //! `splatgen <shape>` cloud is identical to the auto-generated one and morphs cleanly with the rest.
 //!
 //!   cargo run --release --bin splatgen -- list                 # the shapes it knows
@@ -12,7 +12,7 @@
 //!
 //! Then reference the `.ply` from a show (`splat:tree.ply`, `mesh:`/`glb:` are for real geometry).
 
-#[path = "../../build/gen_splats.rs"]
+#[path = "../splatgen.rs"]
 mod splats;
 
 use std::path::Path;

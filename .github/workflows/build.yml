@@ -139,8 +139,8 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       # The show's procedural splats (galaxy/supershape/knot/helix/torus) aren't in the repo (.ply is
-      # gitignored) — build.rs synthesizes any that are missing (build/gen_splats.rs), so no
-      # python/numpy step is needed: the bundle build below generates + bakes them in.
+      # gitignored) and are NOT baked into the bundle — the engine regenerates them at startup
+      # (src/splatgen), so no python/numpy step is needed and the binary stays lean.
 
       # The bundle live-STREAMS the synth at startup (lead ready in ~1s, the loader covers it) — no
       # baked WAV, so the binary stays lean. We still lint the score here so a phase/bar typo fails

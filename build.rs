@@ -9,9 +9,9 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-#[path = "build/gen_splats.rs"]
-mod gen_splats;
-use gen_splats::ensure_splats;
+#[path = "src/splatgen.rs"]
+mod splatgen;
+use splatgen::{ensure_splats, is_procedural_ply};
 
 /// The show whose `.ply` get auto-generated for a bare `cargo run` (the default + CI binary).
 const DEFAULT_SHOW: &str = "productions/intro/intro.show";
@@ -19,12 +19,16 @@ const DEFAULT_SHOW: &str = "productions/intro/intro.show";
 fn main() {
     println!("cargo:rerun-if-changed=bundle.toml");
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=build/gen_splats.rs");
+    println!("cargo:rerun-if-changed=src/splatgen.rs");
     println!("cargo:rerun-if-changed={DEFAULT_SHOW}");
 
-    // (1) Ensure the default show's procedural splats exist (idempotent — skips any already present).
+    // (1) Generate the default show's procedural splats up front for a fast dev first-run (idempotent —
+    // skips any already present). Not strictly required anymore — the engine also synthesizes missing
+    // ones at startup (src/splatgen) — but baking them now means `cargo run` doesn't pay it on launch.
     if let Ok(src) = std::fs::read_to_string(DEFAULT_SHOW) {
-        ensure_splats(Path::new("assets"), &referenced_assets(&src));
+        for n in ensure_splats(Path::new("assets"), &referenced_assets(&src)) {
+            println!("cargo:warning=gen: synthesized assets/{n}");
+        }
     }
 
     // Only do the bundle work for a bundled build (cargo sets CARGO_FEATURE_<NAME> per enabled feature).
@@ -66,13 +70,14 @@ fn main() {
         names.push(logo.clone());
     }
 
-    // Synthesize any referenced procedural splats that aren't present (same as the default-build step,
-    // for the bundle's own show + asset_dir) — so a bundle build needs no python/numpy pre-step either.
-    ensure_splats(&asset_dir, &names);
-
     // The archive: per entry [u32 name_len][name][u32 data_len][lz4 data]; prefixed by [u32 count].
     let mut files: Vec<(String, Vec<u8>)> = Vec::new();
     for name in &names {
+        // Procedural shapes are NOT baked — the engine regenerates them at startup (src/splatgen),
+        // so the binary ships only the real assets (meshes, logo, captures). Demoscene: compute, don't pack.
+        if is_procedural_ply(name) {
+            continue;
+        }
         let path = asset_dir.join(name);
         println!("cargo:rerun-if-changed={}", path.display());
         // a `.mtl` sibling is optional — an .obj without one just renders with the flat fallback.

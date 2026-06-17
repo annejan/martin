@@ -38,11 +38,14 @@ pub const SHAPES: &[&str] = &[
     "shell",
 ];
 
-/// For each referenced `*.ply` that's missing and is a shape we know how to synthesize, generate it.
-/// Names we don't recognise (real captures) are left alone — they fail loudly downstream if absent.
-/// `allow(dead_code)`: called by `build.rs`, unreferenced when this file is included by the `splatgen` bin.
+/// For each referenced `*.ply` that's MISSING and is a shape we know how to synthesize, generate it
+/// into `asset_dir`. Real captures (names we don't recognise) are left alone. Returns the names it
+/// generated — the caller logs them (build.rs as a `cargo:warning`, the runtime as an `info!`); this
+/// fn itself prints nothing, since it runs both at build time AND at startup (bundle/dev).
+/// `allow(dead_code)`: unreferenced when this file is `#[path]`-included by the `splatgen` bin.
 #[allow(dead_code)]
-pub fn ensure_splats(asset_dir: &Path, names: &[String]) {
+pub fn ensure_splats(asset_dir: &Path, names: &[String]) -> Vec<String> {
+    let mut made = Vec::new();
     for name in names {
         let Some(stem) = name.strip_suffix(".ply") else {
             continue;
@@ -58,11 +61,17 @@ pub fn ensure_splats(asset_dir: &Path, names: &[String]) {
             let _ = std::fs::create_dir_all(dir);
         }
         write_ply(&path, stem, &pos, &rgb);
-        println!(
-            "cargo:warning=gen: synthesized {} ({N} splats)",
-            path.display()
-        );
+        made.push(name.clone());
     }
+    made
+}
+
+/// Whether `name` is a `.ply` we can synthesize at runtime — so the bundle can SKIP baking it (it's
+/// regenerated on startup) and ship a leaner binary. Real captures (`austin_tight.ply`, …) return false.
+#[allow(dead_code)]
+pub fn is_procedural_ply(name: &str) -> bool {
+    name.strip_suffix(".ply")
+        .is_some_and(|stem| SHAPES.contains(&stem))
 }
 
 /// A tiny splitmix64 PRNG — enough for uniform/normal/integer draws, no `rand` crate in build deps.

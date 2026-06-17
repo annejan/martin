@@ -46,6 +46,7 @@ mod score;
 mod serve;
 mod show;
 mod splat_image;
+mod splatgen;
 mod sync;
 mod text;
 mod validate;

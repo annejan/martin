@@ -129,6 +129,7 @@ fn advance_seq_clock(
 fn load_splats(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    root: Res<AssetRoot>,
     seq: Res<Sequence>,
     comp: Res<Composition>,
 ) {
@@ -147,6 +148,14 @@ fn load_splats(
     }
     for o in &comp.objects {
         add(o.content(), &mut names);
+    }
+    // Procedural shapes (galaxy/knot/lsystem/…) are GENERATED here if missing, rather than shipped:
+    // a fresh clone, and the single-binary bundle (which no longer bakes them), synthesize them into
+    // the asset root on first launch — the loader covers the ~sub-second cost. Real captures are left
+    // alone (→ they fail loudly at load if absent, as before).
+    let made = crate::splatgen::ensure_splats(&root.0, &names);
+    if !made.is_empty() {
+        info!("generated {} procedural splat(s): {made:?}", made.len());
     }
     let loads = names
         .iter()
