@@ -361,7 +361,7 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
                 // Negate Y: martin flips Y-down .ply upright on load (capture convention), so build
                 // these directional shapes inverted to render the right way up (ridge up). Same below.
                 pos.push([p[0], 0.4 - p[1], p[2]]);
-                rgb.push(hsv(0.05, 0.72, 0.9)); // warm canvas orange
+                rgb.push(hsv(0.74, 0.55, 0.85)); // violet canvas — pops against the orange fire + green pines
             }
         }
         "pine" => {
@@ -402,7 +402,9 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
             for _ in 0..N {
                 let x = rng.uniform(-1.0, 1.0);
                 let z = rng.uniform(-1.0, 1.0);
-                let y = 0.18
+                // gentle undulation only — a near-flat FIELD, not mounds (tall hills loom over props
+                // placed on it and read as a "second field" floating above the scene).
+                let y = 0.06
                     * ((2.3 * x).sin() * (1.9 * z).cos()
                         + 0.5 * (5.1 * x + 1.0).sin() * (4.3 * z).cos())
                     - 0.55;

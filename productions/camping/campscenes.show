@@ -1,0 +1,70 @@
+# martin — CAMP SCENES: a flow through DIFFERENT multi-object compositions, each its own camera angle,
+# crossfading scene→scene (props dissolve out as the next scene's splats assemble in). Per the track:
+#   intro  — lone camp, wide establishing
+#   build  — the camp grows (more tents + pines), lower 3/4
+#   drop   — campfire night, in tight + low (embers ignite)
+#   breakdown — into the woods (a pine forest), wandering side angle
+#   climax — cosmic: the moon + a deep-fried bitterbal, up-angle, fractal sky
+#   outro  — the deFEEST logo, settle
+# All procedural splatgen shapes + the two in-repo meshes.
+#
+#   MARTIN_SHOW=productions/camping/campscenes.show cargo +nightly run --release
+
+[settings]
+kind           = demo
+score          = productions/camping/score.txt
+budget         = 80000           # per object (many overlap at the crossfades)
+ply            = assets/terrain.ply
+particles      = embers
+particle_count = 240
+particle_at    = @@drop
+bg             = stars
+bg_dim         = 0.5
+
+[stage]
+# the ground persists through the earthbound scenes (camera just re-frames it); gone for the cosmos.
+splat:terrain.ply   @0,-1.6,0       *4.6   ~fade  in intro  out climax
+
+# SCENE 1 — lone camp (intro → build)
+splat:tent.ply      @-0.5,-0.6,0.2  *0.8   sway 0,7,0  ~ball  in intro  out build
+splat:pine.ply      @0.7,-0.5,0.0   *0.9   sway 0,6,0  ~ball  in intro  out build
+
+# SCENE 2 — the camp grows (build → drop)
+splat:tent.ply      @-1.1,-0.6,0.3  *0.8   sway 0,7,0  ~ball  in build  out drop
+splat:tent.ply      @0.3,-0.62,-0.2 *0.7   sway 0,7,0  ~ball  in build  out drop
+splat:pine.ply      @1.3,-0.5,0.2   *0.9   sway 0,6,0  ~ball  in build  out drop
+splat:pine.ply      @-1.8,-0.5,-0.3 *0.7   sway 0,6,0  ~ball  in build  out drop
+
+# SCENE 3 — campfire night (drop → breakdown), in tight + low
+splat:tent.ply      @-0.9,-0.6,0.1  *0.85  sway 0,7,0  ~ball  in drop   out breakdown
+splat:flame.ply     @0,-0.65,0.5    *0.8   bob 0.05  ^turbulence:0.4  ~ball  in drop  out breakdown
+splat:pine.ply      @1.1,-0.5,0.0   *0.9   sway 0,6,0  ~ball  in drop   out breakdown
+
+# SCENE 4 — into the woods (breakdown → climax): a pine forest, no tents
+splat:pine.ply      @-1.3,-0.5,0.3  *1.0   sway 0,6,0  ~ball  in breakdown  out climax
+splat:pine.ply      @0.0,-0.55,-0.2 *0.85  sway 0,6,0  ~ball  in breakdown  out climax
+splat:pine.ply      @1.4,-0.5,0.4   *0.95  sway 0,6,0  ~ball  in breakdown  out climax
+splat:pine.ply      @0.7,-0.6,-0.6  *0.7   sway 0,6,0  ~ball  in breakdown  out climax
+
+# SCENE 5 — cosmic (climax → outro): moon + deep-fried bitterbal, fractal sky
+splat:moon.ply      @-0.9,0.5,-1.0  *0.8   spin 0,3,0  ~ball  in climax  out outro
+mesh:bitterbal.glb  @0.6,0.0,0.0    *0.16  spin 14,37,9  ^turbulence:0.3  tint:fry  ~morph  in climax  out outro
+
+# SCENE 6 — the brand (outro)
+mesh:defeest.glb    rot:180,0,0  @0,0,0  *0.9  ~ball  in outro
+
+# camera: a DISTINCT angle per scene (wide → 3/4 → tight-low → wandering → up → front).
+[camera]
+t=@@intro      pos=0,0.35,0    dist=4.5   yaw=1.30   pitch=0.40   # high + wide
+t=@@build      pos=0,0.15,0    dist=3.6   yaw=1.62   pitch=0.26   # lower 3/4, swung round
+t=@@drop       pos=0,0.0,0     dist=2.6   yaw=1.42   pitch=0.12   # in tight + low on the fire
+t=@@breakdown  pos=0,0.1,0     dist=3.2   yaw=1.00   pitch=0.20   # wander the woods, side-on
+t=@@climax     pos=0,0.4,0     dist=3.4   yaw=1.70   pitch=0.46   # look UP into the cosmos
+t=@@outro      pos=0,0.18,0    dist=3.0   yaw=1.45   pitch=0.20   # settle, front-on the logo
+
+[sync]
+t=@@intro      flash=0.1   bg_dim=0.55  beat=0.4
+t=@@drop       flash=0.5   bg_dim=0.4   beat=1.4
+t=@@breakdown  flash=0.15  bg_dim=0.5   beat=0.7  bg=clouds      # misty woods
+t=@@climax     flash=0.5   bg_dim=0.35  beat=1.4  bg=fractal     # cosmic sky
+t=@@outro      flash=0.2   bg_dim=0.5   beat=0.8  bg=fractal

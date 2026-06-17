@@ -502,18 +502,22 @@ pub(crate) fn animate_composition(
             // only the OUT fade touches opacity. BUT it must stay HIDDEN until its `in` cue, else its
             // source cloud (cs.time=0) renders from t=0 (a bitterbal floating through the intro).
             let started = a.appear < 0.0 || t >= a.appear;
-            let op = if a.interpolate {
-                if started { fout } else { 0.0 }
-            } else {
-                vis
-            };
-            cs.global_opacity = op * (1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k);
             if a.interpolate {
-                let f = ((t - a.appear.max(0.0)) / COMPOSE_MORPH).clamp(0.0, 1.0);
-                cs.time = a.ease.apply(f); // eased assemble (shared curve; `ease:` shapes it)
-                // run the per-particle reveal shader WHILE assembling (pen-write traces the letters
-                // in), then switch it off so the held cloud renders plain + sort-safe.
-                let (mode, soft, axis) = if f < 1.0 {
+                // assemble IN from the source cloud (cs.time 0→1 = cloud→object), then on `out` REVERSE
+                // the morph (1→0) so the object SCATTERS back into its cloud as it fades — a stage
+                // object does object→cloud→object across a scene cut, not a flat fade. Each object
+                // morphs on its own (separate clouds, simultaneously) — the dreamy splat flow.
+                let asm = ((t - a.appear.max(0.0)) / COMPOSE_MORPH).clamp(0.0, 1.0); // 0→1 in
+                let dep = if a.out < f32::MAX {
+                    ((a.out + COMPOSE_MORPH - t) / COMPOSE_MORPH).clamp(0.0, 1.0) // 1→0 on exit
+                } else {
+                    1.0
+                };
+                let op = if started { dep } else { 0.0 }; // hold opaque, fade as it scatters out
+                cs.global_opacity = op * (1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k);
+                cs.time = a.ease.apply(asm.min(dep)); // formed = min(assembled, not-yet-departed)
+                // per-particle reveal (pen-write tracing) only while ASSEMBLING in, not on the exit scatter.
+                let (mode, soft, axis) = if asm < 1.0 {
                     a.reveal.unwrap_or((0, 0.0, 0))
                 } else {
                     (0, 0.0, 0)
@@ -521,6 +525,8 @@ pub(crate) fn animate_composition(
                 cs.transition_mode = mode;
                 cs.transition_softness = soft;
                 cs.transition_axis = axis;
+            } else {
+                cs.global_opacity = vis * (1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k);
             }
             if let Some((mode, amp, freq)) = a.deform {
                 cs.deform_mode = mode;

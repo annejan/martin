@@ -17,23 +17,22 @@ particle_at    = @@drop          # sparks fade in WITH the campfire, not before 
 bg_dim         = 0.55
 
 [stage]
-splat:terrain.ply   @0,-1.55,0      *3.2   ~fade  in intro              # wide STATIC ground (no spin)
-splat:moon.ply      @1.5,1.4,-2.3   *0.55  spin 0,3,0   ~fade  in intro # the moon, from the start
-splat:tent.ply      @-0.95,-0.7,0.3 *0.85  sway 0,7,0   ~fade  in build # pitch the tent, on the ground
-splat:pine.ply      @1.1,-0.6,0.15  *0.95  sway 0,6,0   ~fade  in build # first conifer, planted up front
-splat:flame.ply     @0,-0.78,0.7    *0.55  bob 0.05  ^turbulence:0.35  ~fade  in drop  # campfire ignites
-splat:pine.ply      @1.75,-0.68,0.5 *0.6   sway 0,6,0   ~fade  in climax # the grove fills in
-splat:pine.ply      @-1.7,-0.66,0.0 *0.7   sway 0,6,0   ~fade  in climax # a distant tree
+splat:terrain.ply   @0,-1.7,0       *5.0   ~fade  in intro              # a WIDE static field (props are a small cluster in it)
+splat:moon.ply      @1.6,1.5,-2.6   *0.6   spin 0,3,0   ~fade  in intro # the moon, up in the sky
+splat:tent.ply      @-0.7,-0.62,0.3 *0.8   sway 0,7,0   ~fade  in build # pitch the tent, on the field
+splat:pine.ply      @0.85,-0.5,0.1  *0.9   sway 0,6,0   ~fade  in build # first conifer
+splat:flame.ply     @0,-0.7,0.6     *0.7   bob 0.05  ^turbulence:0.35  ~fade  in drop  # the campfire (bigger, readable)
+splat:pine.ply      @1.4,-0.58,0.5  *0.6   sway 0,6,0   ~fade  in climax # the grove fills in
+splat:pine.ply      @-1.4,-0.55,-0.1 *0.7  sway 0,6,0   ~fade  in climax # a distant tree
 
-# camera: wide over the empty land → ease toward the fire as it lights (not too tight) → pull back to
-# orbit the full camp. A touch more pitch so the ground reads as a solid floor under it all.
+# camera: ZOOMED OUT so the whole camp sits in the field, with more pitch (looking down at the floor).
 [camera]
-t=@@intro      pos=0,0.5,0    dist=3.7   yaw=1.30   pitch=0.34
-t=@@build      pos=0,0.32,0   dist=3.2   yaw=1.46   pitch=0.26
-t=@@drop       pos=0,0.18,0   dist=2.5   yaw=1.55   pitch=0.18   # ease in near the campfire
-t=@@breakdown  pos=0,0.28,0   dist=2.9   yaw=1.30   pitch=0.24
-t=@@climax     pos=0,0.34,0   dist=3.3   yaw=1.15   pitch=0.28   # orbit the full site, ground filling the base
-t=@@outro      pos=0,0.5,0    dist=3.6   yaw=1.45   pitch=0.34
+t=@@intro      pos=0,0.35,0   dist=6.0   yaw=1.30   pitch=0.38
+t=@@build      pos=0,0.3,0    dist=5.5   yaw=1.46   pitch=0.34
+t=@@drop       pos=0,0.2,0    dist=4.8   yaw=1.52   pitch=0.30   # ease toward the fire, still wide
+t=@@breakdown  pos=0,0.28,0   dist=5.3   yaw=1.30   pitch=0.32
+t=@@climax     pos=0,0.32,0   dist=5.8   yaw=1.15   pitch=0.36   # orbit the full site
+t=@@outro      pos=0,0.35,0   dist=6.0   yaw=1.45   pitch=0.38
 
 [sync]
 t=@@intro      flash=0.1   bg_dim=0.6   beat=0.4
