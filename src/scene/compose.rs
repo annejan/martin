@@ -28,9 +28,9 @@ const COMPOSE_MORPH: f32 = 3.6; // how long a `~entrance` compose object takes t
 pub(crate) struct Prop {
     content: PartContent,
     pos: Vec3,
-    scale: f32,
-    rot: Vec3,                                  // static orientation, euler degrees
-    spin: Vec3,                                 // auto-rotation, degrees/sec
+    scale: Vec3, // per-axis scale (`*s` → uniform, `*sx,sy,sz` → stretched, e.g. a wide ridge)
+    rot: Vec3,   // static orientation, euler degrees
+    spin: Vec3,  // auto-rotation, degrees/sec
     sway: Vec3, // oscillating rotation amplitude, degrees (swings front-on; for hollow-back splats)
     bob: f32,   // vertical bob amplitude (units)
     drift: Vec3, // translation velocity (units/sec)
@@ -53,13 +53,20 @@ impl Prop {
 
     /// One-line summary for the `MARTIN_VALIDATE` report.
     pub(crate) fn summary(&self) -> String {
+        let sc = if self.scale.x == self.scale.y && self.scale.y == self.scale.z {
+            format!("*{:.2}", self.scale.x)
+        } else {
+            format!(
+                "*{:.2},{:.2},{:.2}",
+                self.scale.x, self.scale.y, self.scale.z
+            )
+        };
         let mut s = format!(
-            "{} @({:.1},{:.1},{:.1}) *{:.2}",
+            "{} @({:.1},{:.1},{:.1}) {sc}",
             self.content.label(),
             self.pos.x,
             self.pos.y,
             self.pos.z,
-            self.scale
         );
         if let Some(t) = self.entrance {
             s += &format!(" ~{t:?}");
@@ -128,7 +135,7 @@ pub(crate) struct Composition {
 pub(crate) struct ComposeAnim {
     base_pos: Vec3,
     base_rot: Quat,
-    base_scale: f32,
+    base_scale: Vec3,
     spin: Vec3, // rad/sec
     sway: Vec3, // rad amplitude, oscillating
     bob: f32,
@@ -213,7 +220,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             continue;
         };
         let rest = &toks[split..];
-        let (mut pos, mut scale, mut rot) = (Vec3::ZERO, 1.0_f32, Vec3::ZERO);
+        let (mut pos, mut scale, mut rot) = (Vec3::ZERO, Vec3::ONE, Vec3::ZERO);
         let (mut spin, mut sway, mut bob, mut drift) =
             (Vec3::ZERO, Vec3::ZERO, 0.0_f32, Vec3::ZERO);
         // appear < 0 = no fade-in (visible from the start); `in <anchor>` sets it to a real time.
@@ -225,7 +232,12 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                 pos = vec3_csv(v);
                 i += 1;
             } else if let Some(v) = t.strip_prefix('*') {
-                scale = v.parse().unwrap_or(1.0);
+                // `*s` = uniform; `*sx,sy,sz` = per-axis stretch (e.g. a wide, low mountain ridge).
+                scale = if v.contains(',') {
+                    vec3_csv(v)
+                } else {
+                    Vec3::splat(v.parse().unwrap_or(1.0))
+                };
                 i += 1;
             } else {
                 let val = rest.get(i + 1).copied().unwrap_or("");
@@ -325,7 +337,7 @@ pub(crate) fn build_composition(
                 Transform {
                     translation: obj.pos,
                     rotation: rot,
-                    scale: Vec3::splat(obj.scale),
+                    scale: obj.scale,
                 },
                 obj.anim(rot, false, field),
             ));
@@ -372,7 +384,7 @@ pub(crate) fn build_composition(
         let tf = Transform {
             translation: obj.pos,
             rotation: rot,
-            scale: Vec3::splat(obj.scale),
+            scale: obj.scale,
         };
         // A `~entrance` object ASSEMBLES from a source cloud → a GaussianInterpolate (its cs.time
         // is driven by animate_composition). Without one it's a PLAIN static cloud (a fade-in) — no
@@ -400,7 +412,7 @@ pub(crate) fn build_composition(
                 obj.anim(rot, false, field),
             ));
         }
-        placed.push((obj.pos, NORMALIZE_EXTENT * 0.5 * obj.scale));
+        placed.push((obj.pos, NORMALIZE_EXTENT * 0.5 * obj.scale.max_element()));
     }
     // Mesh props need lighting (the splats don't); a key + a soft fill so no side goes black.
     if any_model {
@@ -496,7 +508,7 @@ pub(crate) fn animate_composition(
         let has_cs = cs.is_some();
         let scale_vis = if has_cs { 1.0 } else { vis }; // meshes carry the fade in their scale
         // kick thumps the scale (bulge is a no-op on a static cloud, so scale carries it too).
-        tf.scale = Vec3::splat(a.base_scale * scale_vis * (1.0 + beat.kick * 0.06 * k));
+        tf.scale = a.base_scale * (scale_vis * (1.0 + beat.kick * 0.06 * k));
         if let Some(mut cs) = cs {
             // a `~entrance` object assembles via the morph (cs.time) — its IN-fade is the morph, so
             // only the OUT fade touches opacity. BUT it must stay HIDDEN until its `in` cue, else its
