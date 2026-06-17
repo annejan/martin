@@ -34,6 +34,16 @@ fn main() -> ExitCode {
                     .get(2)
                     .cloned()
                     .unwrap_or_else(|| format!("{shape}.ply"));
+                // Create the parent dir first (write_ply panics on a write failure) so a path into a
+                // missing folder fails cleanly instead of with a backtrace.
+                if let Some(dir) = Path::new(&out)
+                    .parent()
+                    .filter(|d| !d.as_os_str().is_empty())
+                    && let Err(e) = std::fs::create_dir_all(dir)
+                {
+                    eprintln!("splatgen: cannot create {}: {e}", dir.display());
+                    return ExitCode::FAILURE;
+                }
                 splats::write_ply(Path::new(&out), shape, &pos, &rgb);
                 println!("splatgen: wrote {out} ({} splats: {shape})", pos.len());
                 ExitCode::SUCCESS
