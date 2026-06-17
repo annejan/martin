@@ -104,15 +104,20 @@ pub(crate) struct SeqState {
     pub load_names: Vec<String>,
     pub loads: Vec<Handle<PlanarGaussian3d>>,
     pub shots: Vec<BuiltShot>,
+    /// Each built shot's absolute start time (s) — the cue timeline, collected ONCE in
+    /// `build_sequence` (immutable after) so the per-frame readers borrow it via `starts()` instead
+    /// of re-allocating a Vec every frame.
+    pub starts: Vec<f32>,
     pub built: bool,
     pub entity: Option<Entity>,
 }
 
 impl SeqState {
-    /// Each built shot's absolute start time (s) — the cue timeline, collected for the readers that
-    /// want a flat slice (the cut-flash loop, `gl_mesh_alpha`, the shader-interlude window).
-    pub(crate) fn starts(&self) -> Vec<f32> {
-        self.shots.iter().map(|s| s.start).collect()
+    /// The cue timeline (each shot's absolute start, s) as a flat slice — borrowed from the cached
+    /// `starts` field, for the readers that want it (the cut-flash loop, `gl_mesh_alpha`, the
+    /// shader-interlude window, `active_shot`). No per-frame allocation.
+    pub(crate) fn starts(&self) -> &[f32] {
+        &self.starts
     }
 }
 

@@ -366,6 +366,7 @@ pub(crate) fn build_sequence(
     }
 
     let built_n = shots.len();
+    state.starts = shots.iter().map(|s| s.start).collect(); // cache the cue timeline once (immutable after)
     state.shots = shots;
     state.entity = Some(entity);
     state.built = true;

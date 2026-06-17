@@ -156,6 +156,7 @@ fn load_splats(
         load_names: names,
         loads,
         shots: Vec::new(),
+        starts: Vec::new(),
         built: false,
         entity: None,
     });

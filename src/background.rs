@@ -220,7 +220,7 @@ fn update_bg(
     if let (Some(seq), Some(state)) = (seq, state)
         && state.built
     {
-        let active = active_shot(&state.starts(), clock.t);
+        let active = active_shot(state.starts(), clock.t);
         if let Some(m) = seq.parts[..=active.min(seq.parts.len().saturating_sub(1))]
             .iter()
             .rev()

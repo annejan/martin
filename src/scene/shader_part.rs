@@ -121,8 +121,8 @@ fn update_shader_parts(
         let end = starts
             .get(sp.part + 1)
             .copied()
-            .unwrap_or_else(|| show_end(&seq.parts, &starts));
-        let alpha = interlude_alpha(&starts, end, sp.part, clock.t);
+            .unwrap_or_else(|| show_end(&seq.parts, starts));
+        let alpha = interlude_alpha(starts, end, sp.part, clock.t);
         *vis = if alpha > 0.001 {
             Visibility::Visible
         } else {

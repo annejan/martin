@@ -23,6 +23,12 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     // CHROMA: shift R outward / B inward along the radial direction from screen centre, magnitude
     // scaling with the kick. At kick=0 the offset is 0 → byte-identical to the source between hits.
     let amt = settings.kick * settings.intensity * 0.012;
+    // Between kicks amt is EXACTLY 0 (kick is the clock-driven beat) → all four taps read the same
+    // texel, so collapse to one sample: the GPU skips 3 taps + the normalize per pixel on every
+    // non-kick frame (most of them). Strict `== 0.0` so any nonzero shear stays byte-identical.
+    if (amt == 0.0) {
+        return textureSample(screen_texture, screen_sampler, uv);
+    }
     let dir = normalize(uv - vec2<f32>(0.5) + vec2<f32>(1e-5));
     let off = dir * amt;
     let r = textureSample(screen_texture, screen_sampler, uv + off).r;

@@ -242,7 +242,7 @@ pub(crate) fn animate_seq_model(
     if !state.built {
         return;
     }
-    let vis = gl_mesh_alpha(&state.starts(), &seq.parts, m.part, clock.t);
+    let vis = gl_mesh_alpha(state.starts(), &seq.parts, m.part, clock.t);
     for h in &handles {
         if let Some(mat) = mats.get_mut(&h.0) {
             mat.base_color.set_alpha(vis);

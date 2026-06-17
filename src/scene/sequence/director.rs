@@ -59,7 +59,7 @@ pub(crate) fn shot_director(
     // the cue timeline — `@@anchor` or laid end-to-end). It morphs in over `morph`, then holds
     // until the next shot starts. Before shot 0's start, `factor` clamps to 0 (its source state).
     let t = clock.t;
-    let idx = active_shot(&starts, t);
+    let idx = active_shot(starts, t);
     let s = &shots[idx];
     // Phase: ARRIVING (origin → shape), holding (shape), or DEPARTING (shape → its faded out-cloud
     // — a distinct step carved from the end of the hold, before the next shot arrives; see `out:`).
@@ -216,6 +216,6 @@ pub(crate) fn shot_director(
     // during the splat-assemble, hidden while the mesh is crisp (no poke-through), and back as it
     // dissolves — so mesh↔splats crossfade, and the dissolve completes before the next shot morphs.
     if s.is_gl_mesh {
-        cs.global_opacity *= 1.0 - gl_mesh_alpha(&starts, &seq.parts, idx, t);
+        cs.global_opacity *= 1.0 - gl_mesh_alpha(starts, &seq.parts, idx, t);
     }
 }

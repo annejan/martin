@@ -215,11 +215,11 @@ fn flypath(
         // morph begins, then reverses through it: no dead hold before the transition, no jump.
         // (So a part's flyby lasts its hold; live still paces by `secs` per leg.)
         let starts = state.starts();
-        let idx = active_shot(&starts, clock.t);
+        let idx = active_shot(starts, clock.t);
         let part_end = starts
             .get(idx + 1)
             .copied()
-            .unwrap_or_else(|| show_end(&seq.parts, &starts));
+            .unwrap_or_else(|| show_end(&seq.parts, starts));
         let local = ((clock.t - starts[idx]) / (part_end - starts[idx]).max(0.1)).clamp(0.0, 1.0);
         if idx.is_multiple_of(2) {
             local
@@ -288,16 +288,17 @@ fn update_exposure(
     sync: Option<Res<crate::sync::SyncTrack>>,
     clock: Res<SeqClock>,
     mut base: Local<Option<f32>>,
+    // MARTIN_EXPOSURE resolved ONCE (env is immutable) — no per-frame getenv+parse. The `[sync]` track
+    // still wins per frame when it keyframes exposure; this is only the static fallback.
+    mut env_exposure: Local<Option<Option<f32>>>,
     mut q: Query<&mut Bloom>,
 ) {
-    let exposure = sync
-        .as_ref()
-        .and_then(|s| s.exposure_at(clock.t))
-        .or_else(|| {
-            std::env::var("MARTIN_EXPOSURE")
-                .ok()
-                .and_then(|s| s.parse::<f32>().ok())
-        });
+    let env = *env_exposure.get_or_insert_with(|| {
+        std::env::var("MARTIN_EXPOSURE")
+            .ok()
+            .and_then(|s| s.parse::<f32>().ok())
+    });
+    let exposure = sync.as_ref().and_then(|s| s.exposure_at(clock.t)).or(env);
     let Some(exposure) = exposure else { return }; // no exposure source → leave NATURAL untouched
     for mut bloom in &mut q {
         let b = *base.get_or_insert(bloom.intensity); // capture NATURAL's intensity once

@@ -153,7 +153,7 @@ fn record_driver(
     // start+morph+hold) and the compose stage's object timeline (they can run together).
     let seq_dur = match (&seq, &state) {
         (Some(seq), Some(state)) if seq_built && !seq.parts.is_empty() => {
-            show_end(&seq.parts, &state.starts()) + 1.0
+            show_end(&seq.parts, state.starts()) + 1.0
         }
         _ => 0.0,
     };
@@ -253,7 +253,7 @@ fn live_end(
     let (Some(seq), Some(state)) = (seq, state) else {
         return;
     };
-    if state.built && clock.t > show_end(&seq.parts, &state.starts()) + 2.5 {
+    if state.built && clock.t > show_end(&seq.parts, state.starts()) + 2.5 {
         exit.write(AppExit::Success);
     }
 }
