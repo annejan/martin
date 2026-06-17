@@ -23,9 +23,11 @@ bg_dim         = 0.5
 
 [stage]
 # distant mountain ridge on the horizon (far BACK + wide → reads as background, not ground) + a flat
-# near field under the camp. Both persist through the earthbound scenes; gone for the cosmos.
+# near field under the camp + the moon hung in the sky. All persist through the earthbound scenes;
+# the moon hands off to the BIG cosmic moon at the climax, mountains+ground dissolve for the cosmos.
 splat:mountains.ply @0,-0.55,-8.0   *5.5   ~fade  in intro  out climax  # FAR back + low → a distant ridge
 splat:terrain.ply   @0,-0.95,0      *2.8   ~fade  in intro  out climax  # a clearing UNDER the camp, not a vast field
+splat:moon.ply      @1.7,1.4,-3.0   *0.55  spin 0,3,0  ~fade  in intro  out climax  # moonlit camp — hangs over the whole site
 
 # SCENE 1 — lone camp (intro → build)
 splat:tent.ply      @-0.5,-0.6,0.2  *0.8   sway 0,7,0  ~explode  in intro  out build
