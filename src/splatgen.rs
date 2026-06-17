@@ -448,9 +448,9 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
             }
         }
         "mountains" => {
-            // A distant ridge silhouette: a WIDE, THIN, filled jagged skyline — meant to sit far
-            // BEHIND a scene (place it back + wide) so it reads as background mountains, not ground.
-            // Hazy desaturated blue (atmospheric distance), a touch lighter toward the peaks.
+            // A distant ridge that BOWS into a CRESCENT — the ends curve forward so it wraps the back
+            // of a scene like surrounding peaks, not a flat wall. Place it back + wide; the per-axis
+            // scale's Z controls how far the ends come forward. Hazy blue (atmospheric distance).
             for _ in 0..N {
                 let x = rng.uniform(-1.0, 1.0);
                 let h = (7.0 * x).sin().abs() * 0.5
@@ -460,7 +460,9 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
                 pos.push([
                     x,
                     0.7 - h * fill * 1.4, // -Y: peaks point UP after martin's base flip (else upside-down)
-                    rng.uniform(-0.08, 0.08), // a thin ridge (depth)
+                    // -Z bow: the load flip negates Z, so a NEGATIVE parabola here renders as ends
+                    // curving FORWARD (toward the camera) → a crescent wrapping the back.
+                    -0.85 * x * x + rng.uniform(-0.04, 0.04),
                 ]);
                 rgb.push(hsv(0.62, 0.3, 0.26 + 0.22 * fill)); // hazy blue-grey, lighter near the peaks
             }

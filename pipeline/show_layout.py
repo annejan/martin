@@ -136,6 +136,18 @@ def draw(path, cam_idx, hfov, out):
     field = field_of(props)
     cam = cams[cam_idx] if cams and cam_idx < len(cams) else None
 
+    # footprint radius (XZ) per prop + pairwise OVERLAP detection (props sitting in each other's area)
+    fld = [o for o in props if o["cat"] not in ("terrain", "moon", "mountains")]
+    for o in fld:
+        o["r"] = FOOTPRINT.get(o["cat"], 0.4) * max(o["scale"])
+    overlaps = []
+    for i in range(len(fld)):
+        for j in range(i + 1, len(fld)):
+            a, b = fld[i], fld[j]
+            d = math.hypot(a["pos"][0] - b["pos"][0], a["pos"][2] - b["pos"][2])
+            if d < (a["r"] + b["r"]) * 0.9:  # 0.9 → allow a slight touch
+                overlaps.append((a, b, d))
+
     fig, (axt, axs) = plt.subplots(1, 2, figsize=(15, 7))
     fig.suptitle(f"{path}  —  camera #{cam_idx}" + (f" (t={cam['t']})" if cam else ""), fontsize=11)
 
@@ -161,6 +173,8 @@ def draw(path, cam_idx, hfov, out):
                                  ec="black" if inside else "red", lw=2, alpha=0.85, zorder=3))
         axt.annotate(o["cat"] + ("" if inside else " ⚠OFF-FIELD"), (x, z),
                      ha="center", va="center", fontsize=7, zorder=4)
+    for a, b, _ in overlaps:  # red bar between props sitting in each other's area
+        axt.plot([a["pos"][0], b["pos"][0]], [a["pos"][2], b["pos"][2]], "r-", lw=3, alpha=0.8, zorder=6)
     if cam:
         cw = cam_world(cam)
         axt.plot(cw[0], cw[2], "k^", ms=12, zorder=5)
@@ -233,13 +247,16 @@ def draw(path, cam_idx, hfov, out):
         flag = "" if inside else " OFF-FIELD"
         flag += " FLOAT" if base > fy + 0.15 else (" SINK" if base < fy - 0.40 else "")
         print(f"  {o['cat']:9} @({x:+.2f},{o['pos'][1]:+.2f},{z:+.2f}) base Y={base:+.2f}{flag}")
+    for a, b, d in overlaps:
+        print(f"  ⚠ OVERLAP: {a['cat']} & {b['cat']} (gap {d:.2f} < radii {a['r'] + b['r']:.2f})")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("show")
     ap.add_argument("--cam", type=int, default=0, help="camera waypoint index")
-    ap.add_argument("--hfov", type=float, default=50.0, help="horizontal FOV (deg) for the wedge")
+    ap.add_argument("--hfov", type=float, default=73.0,
+                    help="horizontal FOV (deg); engine default π/4 vertical ≈ 73° horiz @16:9")
     ap.add_argument("-o", "--out", default="/tmp/layout.png")
     a = ap.parse_args()
     draw(a.show, a.cam, a.hfov, a.out)
