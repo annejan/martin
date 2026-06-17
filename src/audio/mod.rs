@@ -288,3 +288,89 @@ mod voice_demo {
         write_wav(&track, "/tmp/woozbass.wav").expect("write demo wav");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pan_gains_are_equal_power() {
+        // centre = -3 dB on both legs (cos = sin = 1/√2), so lg² + rg² == 1 at every pan.
+        for &pan in &[-1.0, -0.5, 0.0, 0.37, 1.0, 2.0, -9.0] {
+            let (l, r) = pan_gains(pan);
+            assert!((l * l + r * r - 1.0).abs() < 1e-5, "pan {pan}: {l},{r}");
+        }
+        let (l, r) = pan_gains(-1.0);
+        assert!(l > 0.999 && r < 1e-5); // hard left
+        let (l, r) = pan_gains(1.0);
+        assert!(l < 1e-5 && r > 0.999); // hard right
+        let (l, r) = pan_gains(0.0);
+        assert!((l - r).abs() < 1e-6); // centred
+    }
+
+    #[test]
+    fn vel_clamps_accents_downbeats_and_is_deterministic() {
+        let beat = 1.0; // 16th slot = 0.25 s
+        // range invariant across a bar of 16ths
+        for k in 0..16 {
+            let v = vel(k as f32 * 0.25, beat, 0x55);
+            assert!((0.25..=1.0).contains(&v), "slot {k}: {v}");
+        }
+        // metric weighting dominates the ±jitter: a downbeat always beats a weak 16th, whatever the
+        // hash rolls (min downbeat 0.85 > max weak-16th 0.598).
+        assert!(vel(0.0, beat, 0x55) > vel(0.25, beat, 0x55));
+        // pure fn of (t, beat, seed) — the determinism guarantee the recorder relies on.
+        assert_eq!(vel(0.5, beat, 0x77), vel(0.5, beat, 0x77));
+    }
+
+    #[test]
+    fn sub_and_bass_freq_fold_to_their_windows() {
+        // octave-related roots (what the score actually feeds — pitch classes off octave 3) fold into
+        // the deep-sub window; bass sits exactly an octave above. (The fold isn't closed for arbitrary
+        // off-octave inputs — sequential halve-then-double can bounce — but real roots are powers of
+        // two apart, so the lower clamp + power-of-two pitch class are the invariants that hold.)
+        for &root in &[27.5f32, 55.0, 110.0, 220.0, 440.0] {
+            let s = sub_freq(root);
+            assert!((24.0..38.0).contains(&s), "root {root} → sub {s}");
+            assert_eq!(bass_freq(root), s * 2.0);
+            let ratio = (root / s).log2(); // same pitch class: ratio is a power of two
+            assert!((ratio - ratio.round()).abs() < 1e-4, "root {root} sub {s}");
+        }
+        // lower-clamp invariant holds for any positive input, even the bouncing ones.
+        for &root in &[41.2f32, 30.0, 1000.0, 19.0] {
+            assert!(sub_freq(root) >= 24.0, "root {root}");
+        }
+    }
+
+    #[test]
+    fn pseudo_noise_stays_in_unit_range() {
+        for i in [0usize, 1, 7, 1000, 44_100, usize::MAX / 2] {
+            let n = pseudo_noise(i);
+            assert!((-1.0..=1.0).contains(&n), "i {i}: {n}");
+            assert_eq!(n, pseudo_noise(i)); // deterministic
+        }
+    }
+
+    #[test]
+    fn encode_wav_writes_a_valid_riff_header() {
+        // one stereo frame (L=full-scale, R=clamped-from-overrange)
+        let track = Track {
+            samples: Arc::new(vec![1.0, 2.0]),
+        };
+        let w = encode_wav(&track);
+        assert_eq!(w.len(), 44 + 4); // header + 2 samples × 2 bytes
+        assert_eq!(&w[0..4], b"RIFF");
+        assert_eq!(&w[8..12], b"WAVE");
+        assert_eq!(&w[12..16], b"fmt ");
+        assert_eq!(&w[36..40], b"data");
+        assert_eq!(u16::from_le_bytes([w[22], w[23]]), 2); // stereo
+        assert_eq!(
+            u32::from_le_bytes([w[24], w[25], w[26], w[27]]),
+            SAMPLE_RATE
+        );
+        assert_eq!(u32::from_le_bytes([w[40], w[41], w[42], w[43]]), 4); // data bytes
+        // both samples clamp to +full-scale (1.0 and the over-range 2.0)
+        assert_eq!(i16::from_le_bytes([w[44], w[45]]), 32767);
+        assert_eq!(i16::from_le_bytes([w[46], w[47]]), 32767);
+    }
+}
