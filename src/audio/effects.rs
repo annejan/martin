@@ -127,6 +127,27 @@ pub(super) fn render_reverse(buf: &mut [f32], start_t: f32, dur: f32, amp: f32, 
     }
 }
 
+/// Festival / tropical-house KICK: a clean, punchy "boom" — a fast pitch-swept sine body (~140 → 55 Hz
+/// over ~18 ms) with a tight attack click and gentle saturation for weight. NO gabber zaag / pitched
+/// "piep" tail (that's `render_hardkick`) and NO long 808 sub (that's `render_kick_sw`): a dry, round,
+/// un-pitched four-on-floor thump — the centre of a festival/house groove. Deterministic.
+pub(super) fn render_kick_house(buf: &mut [f32], t: f32, _root: f32, amp: f32) {
+    use std::f32::consts::TAU;
+    let sr = SAMPLE_RATE as f32;
+    let start = (t.max(0.0) * sr) as usize;
+    let n = (0.42 * sr) as usize;
+    let mut ph = 0.0f32;
+    for i in 0..n {
+        let tt = i as f32 / sr;
+        let frame = start + i;
+        let hz = 55.0 + 85.0 * (-tt * 55.0).exp(); // fast punch drop 140 → 55 Hz, then a clean low body
+        ph = (ph + TAU * hz / sr) % TAU;
+        let body = (ph.sin() * 1.3).tanh() * (-tt * 7.0).exp(); // gentle saturation, medium decay
+        let click = pseudo_noise(i + start * 11) * (-tt * 350.0).exp() * 0.4; // tight attack click
+        add_stereo(buf, frame, (body * 0.95 + click) * amp, 0.0);
+    }
+}
+
 /// Modern hardstyle / rawstyle KICK, tuned per hit to the chord root: a tight click transient → a
 /// heavily DISTORTED pitch-swept body (sine + a saw partial driven through tanh then hard-clipped =
 /// the "zaag"/gabber grit) → a pitched tonal TAIL on the root pitch-class (the "piep" — the kick is

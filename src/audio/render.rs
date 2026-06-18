@@ -150,17 +150,25 @@ fn choir_pick(n: i32, f: f32) -> Unit {
         _ => choir(f),
     }
 }
-fn snare_pick(sw: bool) -> Unit {
-    if sw { snare_sw() } else { snare() }
+// drumkits: drumsw = 0 gabber/bounce (hardkick + clap-snare + bright hat) · 1 analog/808 (kick_sw +
+// tight snare_sw + crisp hat_sw) · 2 festival/house (clean house kick + clap-snare + crisp hat).
+fn snare_pick(n: i32) -> Unit {
+    match n {
+        1 => snare_sw(),
+        _ => snare(), // gabber(0) + house(2) keep the clappy default snare
+    }
 }
-fn hat_pick(sw: bool) -> Unit {
-    if sw { hat_sw() } else { hat() }
+fn hat_pick(n: i32) -> Unit {
+    match n {
+        0 => hat(),
+        _ => hat_sw(), // analog(1) + house(2) = the crisp hat
+    }
 }
-fn kick_pick(sw: bool, buf: &mut [f32], t: f32, root: f32, amp: f32) {
-    if sw {
-        render_kick_sw(buf, t, root, amp)
-    } else {
-        render_hardkick(buf, t, root, amp)
+fn kick_pick(n: i32, buf: &mut [f32], t: f32, root: f32, amp: f32) {
+    match n {
+        1 => render_kick_sw(buf, t, root, amp),
+        2 => render_kick_house(buf, t, root, amp),
+        _ => render_hardkick(buf, t, root, amp),
     }
 }
 
@@ -173,7 +181,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     // a harder finale, …). `set leadsw=N` at the top still sets the whole-track default. Each loop
     // computes its selector at the note time below and captures the (Copy) value into the closure.
     let isw = |t: f32, key: &str| score.param_at(t, key, 0.0).round() as i32; // int selector @ t
-    let dsw = |t: f32| score.param_at(t, "drumsw", 0.0) > 0.5; // drum bool @ t
+    let dsw = |t: f32| score.param_at(t, "drumsw", 0.0).round() as i32; // drumkit @ t (0 gabber·1 analog·2 house)
 
     // ---- DRUMS (kick → kickbuf; bass-body/intro-perc/snare/hat/stab → bed) ----
     let hats_amp = score.param("hats", 0.3);

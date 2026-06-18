@@ -127,7 +127,8 @@ it. It is unchanged by this doc — only named consistently.
   - `leadsw` — `1` vocal-saw · `2` breathy "sung" (The Midnight) · `3` brass-cut (Carpenter Brut) · `4` FM bell (DX7)
   - `basssw` — `1` clean-split Reese · `2` Kavinsky clean sub · `3` Brut Reese growl · `4` acid/303 squelch (held notes use the matching `woozbass`)
   - `padsw` — `1` `*_sw` pair · `2` warm Juno poly · `3` PWM string-machine (Solina) · `4` dark cinematic wash
-  - `drumsw` — `1` analog/808 kit (clean swept-sine kick + tight snare/hat) instead of the bounce/rawstyle kit
+  - `drumsw` — `1` analog/808 kit (clean swept-sine kick + tight snare/hat) · `2` festival/house kit
+    (clean punchy "boom" kick — no gabber zaag/piep tail — + clappy snare + crisp hat); `0` = the bounce/rawstyle kit
   The nocturnal cities/alles demo runs `drumsw=1 padsw=2 leadsw=2 basssw=2`; the Camping track keeps
   its bounce kit + a Brut lead, then `breakdown.set` softens the interlude and `climax/outro.set`
   sharpens the finale. Voices live in `src/audio/voices.rs` (+ the analog kick in `effects.rs`);

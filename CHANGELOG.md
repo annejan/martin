@@ -137,7 +137,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 - **Additive instrument palette** (`leadsw` / `basssw` / `padsw` / `drumsw` knobs): alternate voice
   CHARACTERS swapped in per voice — e.g. `leadsw` 2 breathy-sung / 3 Carpenter-Brut / 4 FM-bell;
   `basssw` 2 Kavinsky-sub / 3 Brut-Reese / 4 acid-303; `padsw` 2 Juno / 3 PWM-string / 4 dark-wash;
-  `drumsw` 1 analog/808 kit. Knob `0` (default) keeps the original voices, so existing tracks are
+  `drumsw` 1 analog/808 kit · 2 festival/house kit (clean punchy boom kick, no gabber tail). Knob `0` (default) keeps the original voices, so existing tracks are
   byte-identical. Resolved **per note via `param_at`**, so a `<section>.set …sw=N` line changes the
   instruments for THAT section only (softer interlude, harder crescendo). Voices in `voices.rs` (+ the
   analog kick in `effects.rs`); `*_pick` selectors in `render.rs`. The nocturnal demo runs the full

@@ -4,9 +4,9 @@
 bpm 124
 chords C Am F G
 
-# sunnier + bouncier than the 102 cut: more donk/house bite + shimmer, brighter lead, drier (less
-# reverb wash so the groove pops), louder makeup, lighter noise floor. woozbass OFF, no dark.
-set lead=0.85 sub=0.42 supersaw=0.06 choir=0.4 donk=0.2 house=0.14 reverb=0.36 sidechain=0.62 widen=1.7 makeup=1.18 ceiling=0.94 woozbass=0 shimmer=0.2 reverbauto=1 hats=0.4 snares=0.46 atmosphere=0.2
+# sunny but BIGGER (festival energy): same bright C-major identity, more impact — a present supersaw
+# WALL, brighter/louder lead, more shimmer + atmosphere, wider stereo. woozbass OFF, no dark.
+set lead=0.92 sub=0.46 supersaw=0.16 choir=0.5 donk=0.2 house=0.14 reverb=0.38 sidechain=0.66 widen=1.85 makeup=1.18 ceiling=0.94 woozbass=0 shimmer=0.3 reverbauto=1 hats=0.42 snares=0.48 atmosphere=0.26 drumsw=2
 
 # ~46 bars: intro 4 · build 6 · drop 12 · breakdown 4 · climax 12 · outro 8
 section intro 4 4
@@ -16,8 +16,15 @@ section breakdown 4 3 fill
 section climax 12 8,3 fill
 section outro 8 7 fill
 
-# a beach, not a battle: party layers + riser sweeps, but no demoscene jets / impacts / final bang.
-drop.fx: wall donk house riser
+# BIGGER per-section: fat supersaw walls in the drop/climax peaks (per-section supersaw level), and the
+# 80s GATED-REVERB snare on the euphoric climax for festival impact. Sunny voices kept (default palette).
+drop.set supersaw=0.30 drumsw=1          # house kit overall, but the 808 kick (sub-tail) hits the DROP — more low-end weight
+climax.set supersaw=0.34 gatesnare=1
+
+# festival transitions: a riser lifts out of the build, a REVERSE-swell + riser SUCK into the drop, a
+# shimmer-riser lifts the climax. Still sunny (no demoscene jets/impacts/bang) — just bigger drama.
+build.fx: riser shimmer
+drop.fx: wall donk house riser reverse
 climax.fx: wall donk house shimmer riser
 outro.fx: wall house casio shimmer
 
@@ -77,6 +84,6 @@ climax.bass p0: C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   A1 . . .  A2 . A1 .  .
 outro.bass p0: C2 . . .  C3 . C2 .  . . C3 .  C2 . . .   A1 . . .  A2 . A1 .  . . A2 .  A1 . . .   F2 . . .  F3 . F2 .  . . F3 .  F2 . . .   G2 . . .  G3 . G2 .  . . G3 .  G2 . . .
 
 # dynamics: sunny + bouncy, gentle wind-down (no explosive ending — it's a beach, not a battle).
-gain intro 0.35>0.55 build 0.5>0.9 drop 1.0 breakdown 0.5 climax 0.75>1.05 outro 0.9>0.0
-sub intro 0.2 build 0.3>0.55 drop 0.7 breakdown 0.4 climax 0.7 outro 0.5>0.2
-mids intro 0.25>0.45 build 0.45>0.75 drop 0.95 breakdown 0.55 climax 0.95 outro 0.7>0.3
+gain intro 0.35>0.55 build 0.5>0.92 drop 1.0 breakdown 0.5 climax 0.8>1.1 outro 0.9>0.0
+sub intro 0.2 build 0.3>0.7 drop 0.85 breakdown 0.4 climax 0.85 outro 0.5>0.2
+mids intro 0.25>0.45 build 0.45>0.8 drop 0.98 breakdown 0.55 climax 1.0 outro 0.7>0.3
