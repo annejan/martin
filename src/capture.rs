@@ -34,12 +34,12 @@ pub(crate) fn render_size() -> (u32, u32) {
     match parsed {
         Some((w, h)) if w >= 16 && h >= 16 => {
             if (w as f32 / h as f32 - 16.0 / 9.0).abs() > 0.02 {
-                eprintln!("MARTIN_RES={spec}: not 16:9 — quads/framing assume 16:9, expect bars");
+                warn!("MARTIN_RES={spec}: not 16:9 — quads/framing assume 16:9, expect bars");
             }
             (w, h)
         }
         _ => {
-            eprintln!("MARTIN_RES={spec}: expected WxH (e.g. 1920x1080) — using 1280x720");
+            warn!("MARTIN_RES={spec}: expected WxH (e.g. 1920x1080) — using 1280x720");
             (1280, 720)
         }
     }

@@ -138,40 +138,14 @@ pub(crate) fn part_gaussians(
     match content {
         PartContent::Text(s) => build_text_gaussians(s, TEXT_RGB, 3.0, 2, 0.012),
         PartContent::Image(name) => match std::fs::read(root.join(name)) {
-            Ok(bytes) => {
-                // MARTIN_IMG_STRIDE (pixel subsample) / MARTIN_IMG_SPLAT (gaussian size) tune crispness.
-                let stride = std::env::var("MARTIN_IMG_STRIDE")
-                    .ok()
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or(2);
-                let splat = std::env::var("MARTIN_IMG_SPLAT")
-                    .ok()
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or(0.012);
-                build_image_gaussians(&bytes, 3.0, stride, splat, 0.5, 0.85)
-            }
+            Ok(bytes) => build_image_gaussians(&bytes, 3.0, 0.5, 0.85),
             Err(e) => {
                 warn!("image {name}: {e}");
                 Vec::new()
             }
         },
         PartContent::Svg(name) => match std::fs::read(root.join(name)) {
-            Ok(bytes) => {
-                // shares the image knobs (MARTIN_IMG_STRIDE/_SPLAT); MARTIN_SVG_PX = raster width.
-                let stride = std::env::var("MARTIN_IMG_STRIDE")
-                    .ok()
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or(2);
-                let splat = std::env::var("MARTIN_IMG_SPLAT")
-                    .ok()
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or(0.012);
-                let px = std::env::var("MARTIN_SVG_PX")
-                    .ok()
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or(512);
-                build_svg_gaussians(&bytes, px, 3.0, stride, splat, 0.5, 0.85)
-            }
+            Ok(bytes) => build_svg_gaussians(&bytes, 3.0, 0.5, 0.85),
             Err(e) => {
                 warn!("svg {name}: {e}");
                 Vec::new()

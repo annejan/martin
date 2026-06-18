@@ -10,16 +10,16 @@ fn dc(c: f32) -> f32 {
     (c - 0.5) / 0.282_094_79
 }
 
-/// Sample the opaque pixels of a PNG/JPEG (every `stride`-th pixel) into colored gaussians. See
-/// `sample_rgba` for the parameters.
+/// Sample the opaque pixels of a PNG/JPEG (every `stride`-th pixel) into colored gaussians. Reads
+/// `MARTIN_IMG_STRIDE` and `MARTIN_IMG_SPLAT` from the env.
 pub fn build_image_gaussians(
     png: &[u8],
     world_width: f32,
-    stride: usize,
-    splat: f32,
     alpha_thresh: f32,
     gain: f32,
 ) -> Vec<Gaussian3d> {
+    let stride = crate::envvar::or("MARTIN_IMG_STRIDE", 2);
+    let splat = crate::envvar::or("MARTIN_IMG_SPLAT", 0.012);
     let img = match image::load_from_memory(png) {
         Ok(i) => i.to_rgba8(),
         Err(_) => return Vec::new(),
@@ -27,18 +27,18 @@ pub fn build_image_gaussians(
     sample_rgba(&img, world_width, stride, splat, alpha_thresh, gain)
 }
 
-/// Rasterize an SVG to `px` wide (height by aspect) and sample it into gaussians, exactly like a
-/// PNG logo — so any vector art is a morph source. Pure-Rust raster (usvg + tiny-skia). Text in the
-/// SVG needs fonts; plain path/shape logos (the common case) render with no extra setup.
+/// Rasterize an SVG to a raster and sample it into gaussians, exactly like a PNG logo — so any
+/// vector art is a morph source. Reads `MARTIN_IMG_STRIDE`, `MARTIN_IMG_SPLAT`, and `MARTIN_SVG_PX`
+/// from the env.
 pub fn build_svg_gaussians(
     svg: &[u8],
-    px: u32,
     world_width: f32,
-    stride: usize,
-    splat: f32,
     alpha_thresh: f32,
     gain: f32,
 ) -> Vec<Gaussian3d> {
+    let stride = crate::envvar::or("MARTIN_IMG_STRIDE", 2);
+    let splat = crate::envvar::or("MARTIN_IMG_SPLAT", 0.012);
+    let px = crate::envvar::or("MARTIN_SVG_PX", 512_u32);
     let Some(img) = rasterize_svg(svg, px) else {
         return Vec::new();
     };
