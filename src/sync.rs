@@ -93,7 +93,10 @@ impl SyncTrack {
     #[allow(dead_code)]
     pub fn push(&mut self, knob: impl Into<String>, time: f32, value: f32) {
         let name = knob.into();
-        self.data.entry(name.clone()).or_default().push((time, value));
+        self.data
+            .entry(name.clone())
+            .or_default()
+            .push((time, value));
         // keep sorted (lists are tiny — this is fine per-insert).
         if let Some(v) = self.data.get_mut(&name) {
             v.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -101,7 +104,10 @@ impl SyncTrack {
     }
 
     fn insert(&mut self, knob: &str, time: f32, value: f32) {
-        self.data.entry(knob.to_string()).or_default().push((time, value));
+        self.data
+            .entry(knob.to_string())
+            .or_default()
+            .push((time, value));
     }
 
     fn sort_all(&mut self) {
