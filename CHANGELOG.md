@@ -16,6 +16,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   camera track. Composed via `MARTIN_*` env vars or a single unified `.show` file (`MARTIN_SHOW`).
 - mesh→splat sampling: density-adaptive disk size + R2 low-discrepancy distribution, per-splat
   translucency (`MARTIN_MESH_OPACITY`), and a glTF (`.glb`) loader.
+- **Particle KINDS** (`MARTIN_PARTICLES=embers|confetti|sparks|fireworks`): the value now picks the
+  effect — confetti (tumbling coloured flakes falling), sparks (hot specks bursting from a core),
+  fireworks (rise-then-bloom shells), plus the original embers. All **beat-reactive** (the kick
+  scatters/pops them; embers stay calm so legacy bakes are byte-identical). Deterministic CPU billboards
+  (`src/particles.rs`), one shared mesh + a small palette of additive materials, RADV-safe.
 - **Textured glTF → coloured splats**: the `.glb` sampler now reads each primitive's `baseColorTexture`
   + `TEXCOORD_0` and colours every splat by sampling that texture at its surface UV (`sample_texture`
   in `mesh.rs`) — so a textured model (`paard.glb` chestnut horse, `bier.glb` amber beer) keeps its

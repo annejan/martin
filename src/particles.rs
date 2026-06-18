@@ -1,16 +1,19 @@
-//! Additive **particle layer** (`MARTIN_PARTICLES=embers`): glowing warm embers drifting up through
-//! the scene, in front of / among the splats — a second, independent motion layer that reads as
-//! instant "demo energy". The HDR `Bloom` makes the additive points glow.
+//! Additive **particle layer** (`MARTIN_PARTICLES=embers|confetti|sparks|fireworks`): glowing points
+//! drifting through the scene, in front of / among the splats — a second, independent motion layer
+//! that reads as instant "demo energy". The HDR `Bloom` makes the additive points glow. The KIND is
+//! the env value: `embers` (warm sparks rising, the default), `confetti` (tumbling coloured flakes
+//! falling), `sparks` (fast hot specks bursting from a core), `fireworks` (rise-then-bloom shells).
+//! All beat-reactive — the kick scatters/pops them (embers stay calm to keep legacy bakes identical).
 //!
 //! RADV-safe by construction: a transparent/Blend/Add **custom-shader** material crashes the splat
-//! render pipeline on RADV (see `scene::shader_part`), so this uses a plain `StandardMaterial`
+//! render pipeline on RADV (see `scene::shader_part`), so this uses plain `StandardMaterial`
 //! (`AlphaMode::Add`, unlit, emissive) on real quad geometry — the same class `gl_dissolve` blends
 //! over the splats successfully — with the motion done CPU-side per entity. Soft round glow comes
 //! from a generated radial-gradient texture (no shader needed).
 //!
-//! Deterministic / record-safe: each ember's position is a pure function of its fixed seed + the show
-//! clock (`SeqClock.t`), and the screen-facing billboard copies the (frame-deterministic) camera
-//! rotation. No RNG per frame, no wall-clock — a recording bakes identically.
+//! Deterministic / record-safe: each particle's transform is a pure function of its fixed seed + the
+//! show clock (`SeqClock.t`) + the clock-driven beat envelope, and the billboard copies the
+//! (frame-deterministic) camera rotation. No RNG per frame, no wall-clock — a recording bakes identically.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::image::{Image, ImageSampler};
@@ -18,31 +21,73 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use crate::scene::SeqClock;
+use crate::scene::beat::Beat;
 
-/// One ember — its fixed per-particle seed (3 pseudo-random scalars baked once).
-#[derive(Component)]
-struct Ember {
-    s: [f32; 3],
+/// Which particle effect. Parsed from the `MARTIN_PARTICLES` VALUE; anything unrecognised (incl. the
+/// legacy `MARTIN_PARTICLES=1`/`embers`) is `Embers`, so old shows are unchanged.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Kind {
+    Embers,
+    Confetti,
+    Sparks,
+    Fireworks,
 }
 
-/// Half-extent of the box the embers drift within (around the normalized content at the origin).
+impl Kind {
+    fn parse(v: &str) -> Self {
+        match v.trim().to_ascii_lowercase().as_str() {
+            "confetti" => Kind::Confetti,
+            "sparks" => Kind::Sparks,
+            "fireworks" => Kind::Fireworks,
+            _ => Kind::Embers,
+        }
+    }
+}
+
+/// One particle — its fixed per-particle seed (3 pseudo-random scalars baked once) + the effect kind.
+#[derive(Component)]
+struct Particle {
+    s: [f32; 3],
+    kind: Kind,
+}
+
+/// Half-extent of the box the particles live within (around the normalized content at the origin).
 const FIELD: f32 = 2.6;
+const PARTICLE_FADE: f32 = 1.5; // glow ramp-in duration (s)
 
-/// The ember material's full warm colour + HDR glow (`fade_particles` ramps these in by a factor).
-const EMB_BASE: [f32; 3] = [1.0, 0.55, 0.2];
-const EMB_EMIT: [f32; 3] = [2.5, 1.1, 0.35];
-const EMBER_FADE: f32 = 1.5; // glow ramp-in duration (s)
-
-/// `MARTIN_PARTICLE_AT=<secs|@@anchor>`: ramp the embers in starting at this show-time, so a campfire's
-/// sparks appear WITH the fire instead of hanging in the air before it's lit. `start <= 0` = on from t0.
+/// `MARTIN_PARTICLE_AT=<secs|@@anchor>`: ramp the glow in starting at this show-time (a campfire's
+/// sparks appear WITH the fire). Holds every material's full base/emissive so the ramp scales them.
 #[derive(Resource)]
-struct EmberFade {
-    mat: Handle<StandardMaterial>,
+struct ParticleFade {
+    mats: Vec<(Handle<StandardMaterial>, [f32; 3], [f32; 3])>, // (handle, base rgb, emissive rgb)
     start: f32,
 }
 
-/// Spawn the ember field once, at startup, when `MARTIN_PARTICLES` is set. `MARTIN_PARTICLE_COUNT`
-/// sets the number (default 200); they share one mesh + one material + one gradient texture.
+/// The colour palette (base rgb, emissive rgb) for a kind. Embers = one warm spark; sparks = one hot
+/// white-gold; fireworks = a few hot hues; confetti = a bright multi-hue palette (one per flake).
+fn palette(kind: Kind) -> Vec<([f32; 3], [f32; 3])> {
+    match kind {
+        Kind::Embers => vec![([1.0, 0.55, 0.2], [2.5, 1.1, 0.35])],
+        Kind::Sparks => vec![([1.0, 0.9, 0.55], [3.0, 2.4, 1.0])],
+        Kind::Fireworks => vec![
+            ([1.0, 0.3, 0.3], [3.0, 0.6, 0.6]),
+            ([0.4, 0.6, 1.0], [0.8, 1.4, 3.0]),
+            ([1.0, 0.9, 0.4], [3.0, 2.4, 0.8]),
+            ([0.6, 1.0, 0.6], [1.2, 3.0, 1.2]),
+        ],
+        Kind::Confetti => vec![
+            ([1.0, 0.25, 0.35], [1.6, 0.4, 0.55]),
+            ([0.3, 0.7, 1.0], [0.5, 1.1, 1.6]),
+            ([1.0, 0.85, 0.3], [1.6, 1.35, 0.5]),
+            ([0.5, 1.0, 0.5], [0.8, 1.6, 0.8]),
+            ([0.85, 0.4, 1.0], [1.35, 0.6, 1.6]),
+            ([1.0, 0.6, 0.85], [1.6, 0.95, 1.35]),
+        ],
+    }
+}
+
+/// Spawn the particle field once at startup when `MARTIN_PARTICLES` is set. `MARTIN_PARTICLE_COUNT`
+/// sets the number (default 200); they share one mesh + one gradient texture + the kind's material(s).
 fn spawn_particles(
     mut commands: Commands,
     score: Res<crate::music::ScoreRes>,
@@ -50,32 +95,40 @@ fn spawn_particles(
     mut mats: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    if std::env::var_os("MARTIN_PARTICLES").is_none() {
-        return;
-    }
+    let kind = match std::env::var("MARTIN_PARTICLES") {
+        Ok(v) if !v.is_empty() => Kind::parse(&v),
+        _ => return, // unset → no particle layer (off by default)
+    };
     let count = crate::envvar::or("MARTIN_PARTICLE_COUNT", 200usize).clamp(1, 5000);
 
-    // Soft round glow: a small radial-gradient texture (white centre → black edge). Sampled by the
-    // quad's UVs; black edges add nothing under AlphaMode::Add, so a square quad reads as a round dot.
+    // Soft round glow: a small radial-gradient texture (white centre → black edge). Black edges add
+    // nothing under AlphaMode::Add, so a square quad reads as a round dot.
     let gradient = images.add(radial_glow(32));
     let quad = meshes.add(Rectangle::new(0.12, 0.12));
-    let mat = mats.add(StandardMaterial {
-        base_color: Color::srgb(EMB_BASE[0], EMB_BASE[1], EMB_BASE[2]), // warm ember
-        base_color_texture: Some(gradient),
-        emissive: LinearRgba::rgb(EMB_EMIT[0], EMB_EMIT[1], EMB_EMIT[2]), // HDR → blooms
-        unlit: true,
-        alpha_mode: AlphaMode::Add, // additive (StandardMaterial → RADV-safe, unlike a custom material)
-        ..default()
-    });
-    // When does the glow ramp in? `MARTIN_PARTICLE_AT` (seconds or `@@anchor`, resolved by the score);
-    // unset → 0 (on from the start, the previous behaviour).
+    let pal = palette(kind);
+    let handles: Vec<(Handle<StandardMaterial>, [f32; 3], [f32; 3])> = pal
+        .iter()
+        .map(|&(base, emit)| {
+            let h = mats.add(StandardMaterial {
+                base_color: Color::srgb(base[0], base[1], base[2]),
+                base_color_texture: Some(gradient.clone()),
+                emissive: LinearRgba::rgb(emit[0], emit[1], emit[2]), // HDR → blooms
+                unlit: true,
+                alpha_mode: AlphaMode::Add, // additive (StandardMaterial → RADV-safe)
+                ..default()
+            });
+            (h, base, emit)
+        })
+        .collect();
+
+    // When does the glow ramp in? `MARTIN_PARTICLE_AT` (seconds or `@@anchor`); unset → 0 (on from t0).
     let start = std::env::var("MARTIN_PARTICLE_AT")
         .ok()
         .filter(|s| !s.is_empty())
         .and_then(|s| score.0.anchor_seconds(s.trim_start_matches("@@")))
         .unwrap_or(0.0);
-    commands.insert_resource(EmberFade {
-        mat: mat.clone(),
+    commands.insert_resource(ParticleFade {
+        mats: handles.clone(),
         start,
     });
 
@@ -85,41 +138,103 @@ fn spawn_particles(
             hash01(i as u32 * 3 + 1),
             hash01(i as u32 * 3 + 2),
         ];
+        let mat = handles[i % handles.len()].0.clone(); // confetti spreads across its palette
         commands.spawn((
             Mesh3d(quad.clone()),
-            MeshMaterial3d(mat.clone()),
-            Transform::from_translation(ember_pos(s, 0.0)),
-            Ember { s },
+            MeshMaterial3d(mat),
+            Transform::from_translation(particle_xform(kind, s, 0.0, 0.0).0),
+            Particle { s, kind },
         ));
     }
-    info!("particles: {count} additive embers (MARTIN_PARTICLES)");
+    let name = match kind {
+        Kind::Embers => "embers",
+        Kind::Confetti => "confetti",
+        Kind::Sparks => "sparks",
+        Kind::Fireworks => "fireworks",
+    };
+    info!("particles: {count} additive {name} (MARTIN_PARTICLES)");
 }
 
-/// Each frame: place every ember from its seed + the clock, and billboard it to face the camera.
+/// Each frame: place + billboard every particle from its seed, the clock, and the beat. `burst` =
+/// the clock-driven kick envelope (record-safe) — the kick scatters/pops the lively kinds.
 fn animate_particles(
     clock: Res<SeqClock>,
-    cam: Query<&Transform, (With<Camera3d>, Without<Ember>)>,
-    mut q: Query<(&Ember, &mut Transform), Without<Camera3d>>,
+    beat: Option<Res<Beat>>,
+    cam: Query<&Transform, (With<Camera3d>, Without<Particle>)>,
+    mut q: Query<(&Particle, &mut Transform), Without<Camera3d>>,
 ) {
     let Ok(cam) = cam.single() else { return };
     let face = cam.rotation; // screen-aligned billboard (deterministic: camera pose is clock-driven)
     let t = clock.t;
-    for (e, mut tf) in &mut q {
-        tf.translation = ember_pos(e.s, t);
-        tf.rotation = face;
+    let burst = beat.map(|b| b.kick * b.intensity).unwrap_or(0.0);
+    for (p, mut tf) in &mut q {
+        let (pos, spin, scale) = particle_xform(p.kind, p.s, t, burst);
+        tf.translation = pos;
+        tf.rotation = face * spin;
+        tf.scale = Vec3::splat(scale);
     }
 }
 
-/// An ember's position from its seed `s` and clock `t`: rises in +Y (wrapping through the box) with a
-/// per-particle speed, and sways gently in x/z. Pure — no RNG, no wall-clock.
-fn ember_pos(s: [f32; 3], t: f32) -> Vec3 {
+/// A particle's (position, extra-rotation, scale) from its seed `s`, clock `t` and kick `burst`. Pure
+/// (no RNG, no wall-clock). Embers ignore `burst` so legacy embers bakes are byte-identical.
+fn particle_xform(kind: Kind, s: [f32; 3], t: f32, burst: f32) -> (Vec3, Quat, f32) {
     use std::f32::consts::TAU;
     let span = 2.0 * FIELD;
-    let speed = 0.25 + 0.6 * s[0];
-    let y = (s[1] * span + t * speed).rem_euclid(span) - FIELD;
-    let x = (s[2] * span - FIELD) + (t * 0.5 + s[0] * TAU).sin() * 0.25;
-    let z = (s[0] * span - FIELD) + (t * 0.4 + s[1] * TAU).cos() * 0.25;
-    Vec3::new(x, y, z)
+    match kind {
+        // rises in +Y (wrapping through the box) with a per-particle speed, sways in x/z — unchanged.
+        Kind::Embers => {
+            let speed = 0.25 + 0.6 * s[0];
+            let y = (s[1] * span + t * speed).rem_euclid(span) - FIELD;
+            let x = (s[2] * span - FIELD) + (t * 0.5 + s[0] * TAU).sin() * 0.25;
+            let z = (s[0] * span - FIELD) + (t * 0.4 + s[1] * TAU).cos() * 0.25;
+            (Vec3::new(x, y, z), Quat::IDENTITY, 1.0)
+        }
+        // tumbling coloured flakes FALLING (top→bottom, wraps); flutter widens + a kick-shove on the beat.
+        Kind::Confetti => {
+            let fall = 0.4 + 0.5 * s[0];
+            let y = FIELD - (s[1] * span + t * fall).rem_euclid(span);
+            let flut = 0.35 * (1.0 + burst);
+            let x = (s[2] * span - FIELD) + (t * 1.3 + s[0] * TAU).sin() * flut;
+            let z = (s[0] * span - FIELD) + (t * 1.1 + s[1] * TAU).cos() * flut;
+            let axis = Vec3::new(s[0] - 0.5, s[1] - 0.5, s[2] - 0.5).normalize_or_zero();
+            let axis = if axis == Vec3::ZERO { Vec3::Y } else { axis };
+            let spin = Quat::from_axis_angle(axis, t * (2.0 + 4.0 * s[2]) + s[0] * TAU);
+            (Vec3::new(x, y + burst * 0.4, z), spin, 1.0)
+        }
+        // fast hot specks: a short life loop, radial outward from a low core; fades + shrinks as it flies.
+        Kind::Sparks => {
+            let life = (t * (1.5 + s[0]) + s[1]).fract();
+            let reach = (1.2 + 1.2 * s[2]) * (1.0 + burst);
+            let dir =
+                Vec3::new((s[0] * TAU).cos(), 0.3 + s[1], (s[2] * TAU).sin()).normalize_or_zero();
+            let pos = Vec3::new(0.0, -FIELD * 0.5, 0.0) + dir * (life * reach);
+            (pos, Quat::IDENTITY, (1.0 - life).max(0.0))
+        }
+        // rise-then-burst shells: launch up, then explode radially with a gravity droop; pops on the kick.
+        Kind::Fireworks => {
+            let phase = (t * (0.35 + 0.3 * s[0]) + s[1]).fract();
+            let lx = (s[2] * 2.0 - 1.0) * FIELD * 0.7;
+            let lz = (s[0] * 2.0 - 1.0) * FIELD * 0.7;
+            let apex = Vec3::new(lx, -FIELD + FIELD * 1.2, lz);
+            if phase < 0.4 {
+                let rise = phase / 0.4;
+                (
+                    Vec3::new(lx, -FIELD + rise * FIELD * 1.2, lz),
+                    Quat::IDENTITY,
+                    0.5,
+                )
+            } else {
+                let e = (phase - 0.4) / 0.6;
+                let dir = Vec3::new(
+                    (s[0] * TAU).cos() * (s[1] * std::f32::consts::PI).sin(),
+                    (s[1] * std::f32::consts::PI).cos(),
+                    (s[2] * TAU).sin() * (s[1] * std::f32::consts::PI).sin(),
+                );
+                let pos = apex + dir * (e * 2.2 * (1.0 + burst)) + Vec3::Y * (-2.0 * e * e);
+                (pos, Quat::IDENTITY, (1.0 - e).max(0.0) * 1.3)
+            }
+        }
+    }
 }
 
 /// Deterministic 0..1 hash (integer → scalar) — the per-particle seed source.
@@ -160,15 +275,15 @@ fn radial_glow(size: u32) -> Image {
     img
 }
 
-/// The additive ember layer — spawns when `MARTIN_PARTICLES` is set, drifts deterministically.
+/// The additive particle layer — spawns when `MARTIN_PARTICLES` is set, animates deterministically.
 pub(crate) struct ParticlesPlugin;
 
-/// Ramp the shared ember glow 0 → full over `EMBER_FADE`, starting at `EmberFade.start` — so the
-/// sparks fade in WITH the fire. No-op (embers full from t0) when `start <= 0`; stops touching the
-/// material once fully in. Deterministic: a pure function of the show clock.
+/// Ramp the glow 0 → full over `PARTICLE_FADE`, starting at `ParticleFade.start` — so the sparks fade
+/// in WITH the fire. No-op (full from t0) when `start <= 0`; stops once fully in. Ramps EVERY material
+/// (confetti's palette too). Deterministic: a pure function of the show clock.
 fn fade_particles(
     clock: Res<SeqClock>,
-    ctl: Option<Res<EmberFade>>,
+    ctl: Option<Res<ParticleFade>>,
     mut mats: ResMut<Assets<StandardMaterial>>,
     mut done: Local<bool>,
 ) {
@@ -176,11 +291,13 @@ fn fade_particles(
     if *done || ctl.start <= 0.0 {
         return;
     }
-    let x = ((clock.t - ctl.start) / EMBER_FADE).clamp(0.0, 1.0);
+    let x = ((clock.t - ctl.start) / PARTICLE_FADE).clamp(0.0, 1.0);
     let f = x * x * (3.0 - 2.0 * x); // smoothstep
-    if let Some(m) = mats.get_mut(&ctl.mat) {
-        m.base_color = Color::srgb(EMB_BASE[0] * f, EMB_BASE[1] * f, EMB_BASE[2] * f);
-        m.emissive = LinearRgba::rgb(EMB_EMIT[0] * f, EMB_EMIT[1] * f, EMB_EMIT[2] * f);
+    for (h, base, emit) in &ctl.mats {
+        if let Some(m) = mats.get_mut(h) {
+            m.base_color = Color::srgb(base[0] * f, base[1] * f, base[2] * f);
+            m.emissive = LinearRgba::rgb(emit[0] * f, emit[1] * f, emit[2] * f);
+        }
     }
     if x >= 1.0 {
         *done = true;
