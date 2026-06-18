@@ -51,7 +51,7 @@ mesh:bitterbal.glb  @ 2.6,-0.4,1.6  *0.26  field:8  spin 43,13,29  path:liss:3.4
 # --- THE BRAND: AEgg easter-egg tumbling through, then the punchline + the logo crown the climax.
 mesh:aegg.glb       @ 2.0,1.4,0.5   *0.5   spin 22,38,14  path:liss:1.6,1.2,1.4,2,5,3,0.16   ~morph  in build   out climax                              # 🥚 the AEgg cameo whirls past
 text:de wereld is een bitterbal  @-0.9,0.9,1.6  *0.85  ~pen-write  tint:brand  bob 0.06  in drop   out outro    # THE PUNCHLINE handwrites in upper-left on the drop
-mesh:defeest.glb    @ 0.0,-0.2,0.0  *1.5   rot 180,0,0  spin 0,20,0  ~ball  flash:0.6  in climax  out outro                                              # the deFEEST logo crowns the peak (mesh: = sampled, renders reliably in [stage])
+mesh:defeest.glb    @ 0.0,-0.2,0.0  *1.5   rot 180,0,0  bob 0.08  sway 0,6,0  ~ball  flash:0.6  in climax  out outro                                              # the deFEEST logo crowns the peak (mesh: = sampled, renders reliably in [stage])
 
 # Camera: LOW + OFF-centre (rule of thirds), orbiting the storm. CUT-punch on the drop (the reveal),
 # switch sides for the breakdown, swing grand for the climax, settle on the logo. cam_pump lunges per beat.

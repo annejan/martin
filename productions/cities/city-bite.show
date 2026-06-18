@@ -54,7 +54,7 @@ mesh:bitterbal.glb  @0.7,0.5,2.2  *0.70  spin 0,26,0  tint:fry  ~shockwave  flas
 text:de wereld is een bitterbal  @1.3,1.6,2.4  *0.85  bob 0.08  tint:brand  ~pen-write  in climax
 
 # ---- THE LOGO · the brand mark lands the outro ----
-mesh:defeest.glb  @0,0.6,2.6  *1.1  rot:180,0,0  spin 0,14,0  ~morph  in outro   # mesh: = sampled gaussians, renders reliably in [stage] (glb:/GlMesh is reel-only)
+mesh:defeest.glb  @0,0.6,2.6  *1.1  rot:180,0,0  bob 0.10  sway 0,6,0  ~morph  in outro   # mesh: = sampled gaussians, renders reliably in [stage] (glb:/GlMesh is reel-only)
 
 # Camera: establish the LOW skyline (horizon bottom third, sky full of falling snacks) → push in as the
 # rain builds → SLAM to a tight kill-shot on the drop (cut) → switch sides, orbit the storm → settle

@@ -28,7 +28,7 @@ bg_dim       = 0.5
 #     disc — dropped; the starfield reads cleaner and the swarm is pure mesh = no phantom-sphere risk)
 
 # --- THE CORE: slow-spinning deFEEST logo, the hub of the system, lifted off the rule-of-thirds centre
-mesh:defeest.glb   @0,0.3,0      *1.1   rot 180,0,0   spin 0,14,0   bob 0.06                     in intro      # the brand at the heart, turning slow
+mesh:defeest.glb   @0,0.3,0      *1.1   rot 180,0,0   bob 0.06   sway 0,7,0                     in intro      # the brand at the heart, turning slow
 
 # --- INNER ORBITAL: two snacks on a tight near-circular lissajous (3:2) — the close dance
 mesh:bitterbal.glb @0,0,0        *0.30  spin 21,33,11  path:liss:1.7,0.9,1.5,3,2,2,0.42   tint:fry   ~morph  in build      # close lissajous, fries-hot

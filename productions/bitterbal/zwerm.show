@@ -17,7 +17,7 @@ bg_dim   = 0.45
 
 [stage]
 # the central brand the swarm dances around (PBR mesh = z-buffered)
-mesh:defeest.glb   @0,0,0   *1.1   rot 180,0,0   spin 0,14,0   ~fade   in intro
+mesh:defeest.glb   @0,0,0   *1.1   rot 180,0,0   bob 0.10   sway 0,7,0   ~fade   in intro   # gentle bob + small sway — a FLAT logo spinning round Y goes edge-on (invisible sliver); keep it facing camera
 # the swarm — each bitterbal its own lissajous + spin (coprime freqs → never repeats)
 mesh:bitterbal.glb @-3.2,-1.6,-2.2 *0.11  spin 13,29,17  path:liss:0.7,0.6,0.7,1,2,3,0.28  tint:fry  ~explode  in intro
 mesh:bitterbal.glb @-1.48,-0.98,0.52 *0.185  spin 20,34,28  path:liss:1.57,1.35,1.9,2,3,1,0.43  tint:fry  ~explode  in intro
