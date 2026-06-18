@@ -56,7 +56,8 @@ mesh:bier.glb       @1.6,-0.55,0.9  *0.45  alpha:0.28  bob 0.04  sway 0,6,0  ~fa
 mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  spin 19,37,13  bob 0.14  ^pulse:0.6  tint:fry  ~fade  in climax   # 🟤 bouncing snack
 mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  spin 23,29,17  bob 0.16  ^pulse:0.6  tint:fry  ~fade  in climax
 mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  spin 31,13,41  bob 0.18  ^pulse:0.6  tint:fry  ~fade  in climax
-mesh:paard.glb      @-1.5,-0.45,1.2 *0.7   rot 0,0,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax   # 🐴 a 2nd (smaller) pony joins for the party — on-theme + git-tracked so CI can bundle it (was the dog/doggo.ply, a gitignored capture)
+mesh:paard.glb      @-1.5,-0.45,1.2 *0.7   rot 0,0,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax   # 🐴 a 2nd (smaller) pony joins for the party — on-theme PonyCamp
+splat:doggo.ply     @0.9,-0.52,1.5  *0.5   sway 0,7,0  bob 0.04  ~fade  in climax   # 🐕 the dog joins too (doggo.ply — PD, now git-tracked so it bundles in CI)
 text:PonyCamp 2026  @1.4,1.5,1.0   *0.5   ~pen-write  tint:brand  bob 0.06  in climax   # the festival banner, upper-right third
 
 # FLOWING camera: now the terrain sorts behind the props (Z-safe at any angle), the camera can FLOW

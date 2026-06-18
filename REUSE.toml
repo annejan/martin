@@ -174,3 +174,9 @@ SPDX-License-Identifier = "CC-BY-4.0"
 path = "assets/bier.glb"
 SPDX-FileCopyrightText = "NONE"
 SPDX-License-Identifier = "CC0-1.0"
+
+# doggo.ply — public-domain splat (from a low-res PD stock photo). The party dog.
+[[annotations]]
+path = "assets/doggo.ply"
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "CC0-1.0"

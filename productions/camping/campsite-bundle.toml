@@ -6,9 +6,9 @@
 #   MARTIN_BUNDLE=productions/camping/campsite-bundle.toml cargo build --release --features bundle
 #   ./target/release/martin            # plays PonyCamp 2026
 #
-# CI-buildable from a clean checkout: campsite.show references only git-tracked meshes (paard/bier/
-# bitterbal) + procedural splats (flame/moon/mountains/pine/tent/terrain — regenerated at startup by
-# splatgen, not baked). No captures (the party dog became a 2nd pony so nothing gitignored is needed).
+# CI-buildable from a clean checkout: campsite.show references git-tracked meshes (paard/bier/bitterbal)
+# + the PD doggo.ply (now committed) + procedural splats (flame/moon/mountains/pine/tent/terrain —
+# regenerated at startup by splatgen, not baked). All baked assets are in git, so this builds on CI.
 # .github/workflows/ponycamp.yml builds this on ubuntu/windows/macos → downloadable artifacts.
 show = "productions/camping/campsite.show"   # the PonyCamp 2026 storyboard (horse walks in → party)
 score = "productions/camping/score.txt"      # Op de Camping — Brut lead + per-section soft→hard
