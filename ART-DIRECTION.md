@@ -137,4 +137,35 @@ contrast is what sells the `cut` / `~shockwave` / `chroma`. (Verified on the kil
 close-up — keep the drop's backdrop dark and let the bloom + screen-tear be the show.) Worked example:
 `assets/examples/killshot.show`.
 
+## Scene design language — composing a `.show` that reads (hard-won 2026-06)
+
+Splats are **not real 3D when they render**: each cloud sorts per-cloud by its *centre* depth and
+alpha-blends with **no z-buffer between clouds**. Everything below follows from that. Vet every scene
+in **`pipeline/show_layout.py`** (GPU-free, <1 s) BEFORE rendering; martin renders are spot-checks ONE
+at a time (`MARTIN_BUDGET≈6000 MARTIN_RES=640x360`) — never batches (concurrent martins wedge the box).
+
+1. **No object overlap.** Props in each other's footprint clip/fight. The tool flags it from the real
+   `.ply` extent (the tent is *wide* — eyeballing under-sizes it).
+2. **Mind the Z — the backdrop sorts BEHIND the foreground.** A backdrop cloud whose centre is nearer
+   than a prop draws *over* it and the prop **vanishes** (worst near top-down). Fix: push the backdrop
+   ENTITY centre far back while the disc still reaches forward — camping terrain `@0,-1.5,-7 *13,4.5,11`
+   renders props at *any* angle. (Or make the foreground a `mesh:` = z-buffered; or just keep splat
+   foreground nearer than the backdrop — cities: the city is the backdrop, the bitterbal goes in front.)
+3. **Ground props to the field** (base on the surface, no float/sink). Per-shape Y differs (a flat tent
+   floats at the same Y a cone sits) — use the tool's real-`.ply` grounding readout.
+4. **Soft density, per object.** 140k @ opacity 0.92 was ~10× wasteful + plastic; 10–30k looks identical.
+   Opacity alone doesn't soften (overlap re-saturates) — drop the COUNT too. Defaults baked per shape
+   (`splatgen` `size_of`/`opacity_of`: fire = big wispy glow, tree = fluffy foliage + crisp trunk, tent
+   = solid); `count:N` per object in the show overrides density (tent denser than tree than fire). Same
+   for text/font splats — don't over-pack.
+5. **Cameras: low angles are the splat sweet spot;** with the backdrop pushed back you can flow/orbit
+   freely, else curate clean angles and `cut` between them (bare `cut` token = MTV snap).
+6. **Camera CRAFT — rule of thirds, never dead-centre.** Straight-on-middle is unimaginative. Aim OFF
+   the focal point so the fire/subject lands on a third; moon on an upper third; horizon on the lower
+   third (sky breathes); switch sides shot-to-shot; off-centre the `text:`/logos. The tool prints each
+   subject's normalized screen position (−1..1; ±0.33 = thirds, 0 = "DEAD-CENTRE (boring)").
+7. **Iterate cheap.** Stills in the python tool (<1 s) → a low-res `MARTIN_PREVIEW_FPS=8 MARTIN_RES=480x270`
+   `record.sh` for the full video (~35 s) → full quality only when it's locked. SEND renders (don't just
+   inspect them). Worked reference: `productions/camping/campsite.show`.
+
 *— code: annejan · greetings to everyone still rendering on the metal*

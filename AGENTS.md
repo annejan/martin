@@ -86,12 +86,23 @@ Transform the "Op de Camping" (Ome Henk, 1995) demoscene track from a basic plac
 - Show file controls camera position/movement and text overlay sequence.
 - Camera was changed from static `pos=0,0,0` to 3D movement: arcs, flybys, push-ins, blast-back on finale.
 - Camera responds to kick beat-pump (slight scale/position pulse).
+- **SCENE DESIGN LANGUAGE — read `ART-DIRECTION.md` § "Scene design language" before composing any scene.**
+  The hard rules: no object overlap · mind the Z (backdrop sorts BEHIND props or they vanish — push its
+  centre back) · ground props · soft per-object density (size/opacity baked per shape, `count:` override) ·
+  rule-of-thirds (never dead-centre). Vet EVERY scene in `pipeline/show_layout.py` (GPU-free, <1 s:
+  overlap/grounding/rim/occlusion/3D/screen-thirds) BEFORE rendering. Iterate: python tool → low-res
+  `record.sh` preview → full quality last. SEND renders to the user (don't just inspect).
 
 ## Testing
 - `cargo test` — 54 tests pass.
 - `MARTIN_SCORE_DUMP=<path>` writes normalized score dump for debugging.
 
 ## Common Pitfalls
+- **Props vanish at steep/top-down angles** = the backdrop splat cloud sorts over them (per-cloud depth sort,
+  no cross-cloud z-buffer). Push the backdrop centre back so it sorts behind everything (see ART-DIRECTION § Z).
+- **Everything dead-centre** = no craft. Frame for the thirds (`show_layout.py` prints screen position).
+- **Plastic/dense props** = too many opaque splats; drop `count:` + the per-shape opacity, don't just lower alpha.
+- **Spawning multiple martin renders at once** wedges the GPU — render ONE at a time, tiny budget; use the python tool for iteration.
 - Changing phase bars (`8,8` → `4,4,8`) without adding corresponding p0/p1/p2 drum patterns = missing patterns = silence.
 - Changing hat patterns from swung to straight kills the DnB groove.
 - Breaking the fill bar count (phases sum + 1 fill must equal section bars).
