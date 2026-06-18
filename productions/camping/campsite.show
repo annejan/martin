@@ -12,11 +12,13 @@ kind           = demo
 score          = productions/camping/score.txt   # Op de camping — 140 BPM, intro→…→outro
 budget         = 120000
 morph_count    = 12000          # ~12k splats/prop = the SOFT density sweet spot (140k was ~10x wasteful)
-bg             = stars
+bg             = aurora         # northern-lights night sky (was the lame grey-squares starfield)
+post           = chroma         # RGB-split screen-tear on the kick — drive/energy
+cam_pump       = 0.22           # the kick LUNGES the camera in a touch — physical, on-beat
 particles      = embers
-particle_count = 220
+particle_count = 260
 particle_at    = @@drop          # sparks fade in WITH the campfire, not before it's lit
-bg_dim         = 0.55
+bg_dim         = 0.6
 
 [stage]
 # BACKDROP (from the first frame): one distant ridge low on the horizon, the moon high above it, and
@@ -45,7 +47,7 @@ text:deFEEST        @0,0.45,1.0   *0.5   ~pen-write  tint:brand  in build  out c
 # around the camp instead of cutting between safe stills. A slow orbit (yaw drifts ~1.0→2.0) + a crane
 # up for the climax, with ONE hard cut punching onto the fire on the drop. Low-ish pitch throughout.
 [camera]
-t=@@intro      pos=0,-0.30,0.3    dist=8.5   yaw=1.05   pitch=0.34            # wide establishing, from the left
+t=@@intro      pos=0,-0.10,0.3    dist=8.5   yaw=1.05   pitch=0.14            # wide establishing, low + level → feature the aurora sky
 t=@@build      pos=0,-0.35,0.3    dist=6.8   yaw=1.30   pitch=0.26            # drift IN + orbit right as it builds
 t=@@drop       pos=0.0,-0.50,0.4  dist=3.4   yaw=1.55   pitch=0.15   cut      # CUT: punch low onto the fire (ignition)
 t=@@breakdown  pos=0,-0.42,0.3    dist=6.2   yaw=1.75   pitch=0.24            # pull back, keep orbiting around
@@ -53,8 +55,9 @@ t=@@climax     pos=0,-0.45,0.3    dist=7.8   yaw=2.05   pitch=0.40            # 
 t=@@outro      pos=0,-0.40,0.3    dist=8.5   yaw=1.85   pitch=0.30            # ease back, settle
 
 [sync]
-t=@@intro      flash=0.1   bg_dim=0.6   beat=0.4
-t=@@build      flash=0.15  bg_dim=0.5   beat=0.7
-t=@@drop       flash=0.4   bg_dim=0.4   beat=1.4      # fire + energy
-t=@@climax     flash=0.3   bg_dim=0.4   beat=1.2
-t=@@outro      flash=0.15  bg_dim=0.55  beat=0.6  bg=fractal   # the night sky dissolves into fractals
+t=@@intro      flash=0.08  bg_dim=0.80  beat=0.25                # calm: aurora breathes, barely any beat
+t=@@build      flash=0.15  bg_dim=0.6   beat=0.7                 # energy creeps in
+t=@@drop       flash=0.7   bg_dim=0.5   beat=1.8                 # DROP: fire erupts, aurora pulses, full kick
+t=@@breakdown  flash=0.2   bg_dim=0.62  beat=0.7                 # pull back, hushed
+t=@@climax     flash=0.6   bg_dim=0.5   beat=1.6                 # peak
+t=@@outro      flash=0.2   bg_dim=0.6   beat=0.6  bg=fractal     # the night sky dissolves into fractals

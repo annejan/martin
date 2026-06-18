@@ -112,6 +112,28 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         }
         let d = smoothstep(0.15, 0.9, f);
         col = mix(vec3<f32>(0.02, 0.03, 0.06), vec3<f32>(0.45, 0.5, 0.68), d) * 0.6;
+    } else if (bg.mode == 10u) {
+        // AURORA — northern-lights curtains drifting across the night sky + a few faint twinkles.
+        // fbm-warped vertical bands, green→teal→violet, brightest mid-sky, fading up. iGPU-cheap.
+        var q = vec2<f32>(p.x * 0.7, uv.y * 1.6 - t * 0.04);
+        var n = 0.0;
+        var amp = 0.6;
+        for (var i = 0; i < 4; i = i + 1) {
+            n += amp * vnoise(q + vec2<f32>(t * 0.06, 0.0));
+            q = q * 2.03;
+            amp *= 0.5;
+        }
+        let band = 0.5 + 0.5 * sin(p.x * 2.2 + n * 5.0 + t * 0.25); // flowing vertical curtains
+        let height = smoothstep(0.30, 0.72, uv.y) * smoothstep(1.15, 0.68, uv.y); // upper sky (visible at low cam)
+        let aur = pow(band, 1.6) * n * height;
+        let green = vec3<f32>(0.10, 1.00, 0.55);
+        let violet = vec3<f32>(0.55, 0.30, 1.00);
+        col = mix(green, violet, clamp(n + uv.y * 0.3, 0.0, 1.0)) * aur * 1.9;
+        // a sprinkle of faint stars above the aurora
+        let cell = uv * vec2<f32>(80.0, 46.0);
+        let h = hash21(floor(cell));
+        let star = smoothstep(0.07, 0.0, length(fract(cell) - 0.5)) * step(0.97, h);
+        col += vec3<f32>(0.7, 0.8, 1.0) * star * (0.4 + 0.6 * sin(t * 2.0 + h * 50.0)) * smoothstep(0.4, 1.0, uv.y);
     } else {
         // WARP — radial colour swirl (mode 3)
         let r = length(p);

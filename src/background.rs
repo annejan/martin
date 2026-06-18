@@ -98,8 +98,9 @@ pub(crate) fn mode_index(name: &str) -> u32 {
         "bolt" | "lightning" => 7,
         "fractal" | "kali" => 8,
         "clouds" | "cloud" | "fog" => 9,
+        "aurora" | "borealis" | "northern" => 10,
         other => other.parse().unwrap_or_else(|_| {
-            warn!("shader effect '{other}' unknown — using plasma (try plasma/tunnel/stars/warp/rings/grid/kaleido/bolt/fractal/clouds)");
+            warn!("shader effect '{other}' unknown — using plasma (try plasma/tunnel/stars/warp/rings/grid/kaleido/bolt/fractal/clouds/aurora)");
             0
         }),
     }
