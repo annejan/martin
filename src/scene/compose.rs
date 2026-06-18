@@ -23,6 +23,50 @@ use crate::score;
 const COMPOSE_MORPH: f32 = 3.6; // how long a `~entrance` compose object takes to assemble in (s) —
 // long enough that a pen-write breathes as the letters are drawn in stroke by stroke
 
+/// A per-object motion PATH — independent travel layered on top of `@pos + drift`, so each object can
+/// "do its own thing" (orbit, or weave a Lissajous figure) instead of holding still + only beat-pulsing.
+/// `path:orbit:r,speed` / `path:orbit:rx,rz,speed` / `path:liss:ax,ay,az,fx,fy,fz[,speed]`.
+#[derive(Clone, Copy)]
+pub(crate) enum PathMotion {
+    Orbit { rx: f32, rz: f32, speed: f32 },          // ellipse in the XZ plane around @pos
+    Lissajous { amp: Vec3, freq: Vec3, speed: f32 }, // 3D Lissajous figure around @pos
+}
+
+impl PathMotion {
+    /// Position offset from `@pos` at show-time `t` (seconds). Phase-shifts Z by π/2 so a Lissajous
+    /// with equal x/z is a circle, not a diagonal line.
+    fn offset(self, t: f32) -> Vec3 {
+        match self {
+            PathMotion::Orbit { rx, rz, speed } => {
+                Vec3::new(rx * (speed * t).cos(), 0.0, rz * (speed * t).sin())
+            }
+            PathMotion::Lissajous { amp, freq, speed } => Vec3::new(
+                amp.x * (freq.x * speed * t).sin(),
+                amp.y * (freq.y * speed * t).sin(),
+                amp.z * (freq.z * speed * t + std::f32::consts::FRAC_PI_2).sin(),
+            ),
+        }
+    }
+
+    fn parse(s: &str) -> Option<Self> {
+        let (kind, rest) = s.split_once(':')?;
+        let n: Vec<f32> = rest.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+        match kind {
+            "orbit" | "circle" => match n.len() {
+                2 => Some(PathMotion::Orbit { rx: n[0], rz: n[0], speed: n[1] }),
+                3 => Some(PathMotion::Orbit { rx: n[0], rz: n[1], speed: n[2] }),
+                _ => None,
+            },
+            "liss" | "lissajous" => (n.len() >= 6).then(|| PathMotion::Lissajous {
+                amp: Vec3::new(n[0], n[1], n[2]),
+                freq: Vec3::new(n[3], n[4], n[5]),
+                speed: *n.get(6).unwrap_or(&1.0),
+            }),
+            _ => None,
+        }
+    }
+}
+
 /// One object placed on the composition stage: a source + where it sits + how it moves.
 #[derive(Clone)]
 pub(crate) struct Prop {
@@ -44,6 +88,7 @@ pub(crate) struct Prop {
     ease: Ease, // `ease:name`: shapes the assemble curve (default Smoothstep = unchanged)
     field: Option<usize>, // `field:N`: scatter into N seeded copies (a swarm/field of this object)
     count: Option<usize>, // `count:N`: per-object splat count (density), overrides the scene MORPH_COUNT
+    path: Option<PathMotion>, // `path:orbit/liss:…`: independent travel path (each object does its own thing)
 }
 
 impl Prop {
@@ -104,6 +149,7 @@ impl Prop {
             }),
             reveal: self.entrance.and_then(|t| t.shader_uniforms()),
             ease: self.ease,
+            path: self.path,
         }
     }
 }
@@ -149,6 +195,7 @@ pub(crate) struct ComposeAnim {
     reveal: Option<(u32, f32, u32)>, // the entrance's per-particle reveal shader (mode/softness/axis) —
     // pen-write traces the letters in as it assembles (only while assembling, then off)
     ease: Ease, // shapes the assemble curve (`ease:`)
+    path: Option<PathMotion>, // independent travel path (`path:orbit/liss:…`)
 }
 
 /// Parse `MARTIN_COMPOSE` (a file path or inline string). Each line: a `<source>` head (text/splat/
@@ -178,6 +225,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let mut ease = Ease::Smoothstep;
         let mut field = None;
         let mut count_override = None;
+        let mut path = None;
         let toks: Vec<&str> = s
             .split_whitespace()
             .filter(|t| {
@@ -197,6 +245,15 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     match n.parse() {
                         Ok(c) => count_override = Some(c),
                         Err(_) => eprintln!("compose: bad 'count:{n}' (need an integer) — ignored"),
+                    }
+                    return false;
+                }
+                // `path:orbit:…` / `path:liss:…` — an independent motion path (each object does its own
+                // thing: orbits, weaves a Lissajous figure) layered on @pos + drift.
+                if let Some(p) = t.strip_prefix("path:") {
+                    match PathMotion::parse(p) {
+                        Some(pm) => path = Some(pm),
+                        None => eprintln!("compose: bad 'path:{p}' (orbit:r,speed | liss:ax,ay,az,fx,fy,fz[,s]) — ignored"),
                     }
                     return false;
                 }
@@ -285,6 +342,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             ease,
             field,
             count: count_override,
+            path,
         });
     }
     out
@@ -505,7 +563,8 @@ pub(crate) fn animate_composition(
         } else {
             0.0
         };
-        tf.translation = a.base_pos + a.drift * t + Vec3::Y * bob;
+        let path_off = a.path.map(|p| p.offset(t)).unwrap_or(Vec3::ZERO);
+        tf.translation = a.base_pos + a.drift * t + Vec3::Y * bob + path_off;
         // in/out visibility (0..1): splats fade it via opacity; mesh props (no CloudSettings) have
         // no opacity, so they DISSOLVE by SCALE instead — grow in, shrink out. That gives a clean
         // mesh→splat cross-dissolve (a mesh shrinks away as a splat fades/grows in at the same spot).
