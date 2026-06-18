@@ -756,11 +756,14 @@ mesh:bornhack2026-hardware.dae @0,-1.6,.3  *.7   spin 20,40,0   in climax
 | token | meaning |
 |---|---|
 | `@x,y,z` | position on the stage |
-| `*s` | scale |
+| `*s` | scale (per-axis `*sx,sy,sz` too) |
+| `alpha:0..1` | per-object **translucency** baked into the splat opacity (`alpha:0.16` = a faint glass mug); composes with everything else |
 | `rot a,b,c` | static orientation (euler degrees) |
-| `spin a,b,c` | auto-rotation, **degrees/sec** |
+| `spin a,b,c` | auto-rotation, **degrees/sec** (e.g. `spin 0,45,0` turns on Y, ~8 s/rev) |
 | `bob amp` | vertical bob amplitude |
-| `drift dx,dy,dz` | translation velocity, units/sec |
+| `drift dx,dy,dz` | translation velocity, units/sec — **constant, never stops** (accumulates from t=0; for a walk-in-and-stop use `travel:` instead) |
+| `travel:x,y,z[@anchor[,dur]]` | one-shot **eased move** from `@pos` to a fixed target over a window, then **HOLD** — the proper "walk in and stop". Default start = the object's `in` cue, default `dur` = one bar; reuses `ease:`, composes with `bob`/`spin`/`drift`/`path:`. |
+| `path:orbit:rx[,rz],speed` / `path:liss:ax,ay,az,fx,fy,fz[,speed]` | an independent **travel path** layered on `@pos` (a circular orbit, or a Lissajous weave) — each object does its own thing; coprime liss freqs → a swarm that never syncs |
 | `sway a,b,c` | oscillating rotation amplitude (deg) — swings front-on, so a hollow-back splat never shows its empty side |
 | `in <anchor>` / `out <anchor>` | fade in / out at an `@@`-style time (section / `bar:N` / `beat:N` / seconds) |
 | `~transition` | each object **assembles in** via its own arrival (`~ball`/`~rain`/`~funnel`/`~shatter`/…) instead of a plain fade — the same vocabulary as the morph timeline. **`text:~pen-write` handwrites the letters in** (single-stroke font, traced stroke-by-stroke — same as the reel). |

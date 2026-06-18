@@ -35,6 +35,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 - **Per-object translucency** for the composition stage: an `alpha:<0..1>` token bakes a translucency
   into that object's splat opacity (`compose.rs`) — a glass beer mug, a ghost, a haze — independent of
   the global `MARTIN_MESH_OPACITY`. The scene-wide fade-in animates on top.
+- **`travel:` one-shot eased move** for stage objects: `travel:x,y,z[@anchor[,dur]]` eases an object
+  from its `@pos` to a fixed target over a window then **HOLDS** — the proper "walk in and stop", unlike
+  `drift` (constant, never stops) or `path:` (oscillatory). Default start = the object's `in` cue,
+  default `dur` = one bar; reuses `ease:`, composes with `bob`/`spin`/`drift`/`path:` (`compose.rs`).
 - **Per-shot morph easing** (`ease:<curve>`): shapes the blend curve so an entrance can LAND on the
   beat instead of always drifting in — `smooth` (default, unchanged), `snap`, `hold-snap`, `anticipate`,
   `stutter`. Pure scalar, deterministic; the single source of the morph curve now (the reel director and
@@ -196,5 +200,8 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   carries vertex colours; the shows sample it instead of the .obj.
 
 ### Tooling / CI
+- `pipeline/show_layout.py`: GPU-free layout preview now handles `mesh:`/`glb:` props (falls back to a
+  name-based footprint instead of crashing on the missing sh0 header) and plots a `travel:` object where
+  it comes to REST (its target), not its off-screen `@pos` start.
 - CI: rustfmt, clippy (`-D warnings`), cross-platform build+test, REUSE, advanced CodeQL, cargo-audit.
 - Dependabot (weekly) with auto-merge of green patch/minor bumps; `main` branch protection.
