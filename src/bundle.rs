@@ -82,7 +82,7 @@ fn extract() -> std::io::Result<PathBuf> {
                 "bundle: truncated archive",
             )
         })?;
-        let v = u32::from_le_bytes(tail.try_into().unwrap());
+        let v = u32::from_le_bytes(tail.try_into().expect("4 bytes already bounds-checked"));
         *p += 4;
         Ok(v)
     };
