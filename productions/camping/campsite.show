@@ -23,20 +23,20 @@ bg_dim         = 0.55
 # ONE wide flat field for the camp to sit on. The ridge sits FAR back + low so it reads as horizon,
 # never as ground; the moon is higher + nearer the camera than the ridge (no "mountains in front of
 # the moon"); the field is big + low so its far edge meets the ridge base, not the sky (no blanket).
-splat:mountains.ply @0,-1.2,-12.0  *11,3,9  ~fade  in intro               # distant ridge — stretched WIDE (X) so it spans the whole horizon; base hidden, only serrated tops show
-splat:moon.ply      @0.8,3.0,-50.0 *7.0   spin 0,3,0   ~fade  in intro    # the moon — REALLY far, CENTERED behind the camp so it stacks above it at any angle
-splat:terrain.ply   @0,-1.5,-7     *13,4.5,11   ~fade  in intro         # field — CENTER pushed back (z-7) so this backdrop cloud SORTS BEHIND all props (Gaussian per-cloud sort, no z-buffer). Don't move to z0.
+splat:mountains.ply @0,-1.2,-12.0  *11,3,9  ~fade  in intro  count:14000  # distant ridge — stretched WIDE (X) so it spans the whole horizon; base hidden, only serrated tops show
+splat:moon.ply      @0.8,3.0,-50.0 *7.0   spin 0,3,0   ~fade  in intro  count:5000  # the moon — REALLY far, CENTERED behind the camp so it stacks above it at any angle
+splat:terrain.ply   @0,-1.5,-7     *13,4.5,11   ~fade  in intro  count:28000  # field — CENTER pushed back (z-7) so this backdrop cloud SORTS BEHIND all props (Gaussian per-cloud sort, no z-buffer). Don't move to z0.
 
 # THE CAMP assembles on the field — props stand UP out of the ground, and kept WELL CLEAR of the fire
 # (no flammable tent/tree right next to the flames). Fire centre, tent + grove spaced out around it.
 # ROOMIER spread (the field has the space; all props well in front of the terrain centre @z-7 -> Z-safe)
-splat:tent.ply      @-2.8,-1.11,0.7  *0.85  sway 0,7,0   ~fade  in build  # the tent pitches (stage left, out wide)
-splat:flame.ply     @0.0,-0.44,0.3   *0.7   bob 0.05  ^turbulence:0.35  ~fade  in drop  # the campfire (centre)
-splat:pine.ply      @3.0,-0.31,0.5   *0.9   sway 0,6,0   ~fade  in build  # the grove... (stage right)
-splat:pine.ply      @3.8,-0.56,-0.6  *0.7   sway 0,6,0   ~fade  in build
-splat:pine.ply      @1.7,-0.44,-1.7  *0.8   sway 0,6,0   ~fade  in climax  # centre-right-back
-splat:pine.ply      @-1.5,-0.38,-1.9 *0.85  sway 0,6,0   ~fade  in climax  # centre-left-back
-splat:pine.ply      @-3.5,-0.31,-0.9 *0.9   sway 0,6,0   ~fade  in climax  # far-left
+splat:tent.ply      @-2.8,-1.11,0.7  *0.85  sway 0,7,0   ~fade  in build  count:9000  # the tent pitches (stage left, out wide)
+splat:flame.ply     @0.0,-0.44,0.3   *0.7   bob 0.05  ^turbulence:0.35  ~fade  in drop  count:3000  # the campfire (centre)
+splat:pine.ply      @3.0,-0.31,0.5   *0.9   sway 0,6,0   ~fade  in build  count:6000  # the grove... (stage right)
+splat:pine.ply      @3.8,-0.56,-0.6  *0.7   sway 0,6,0   ~fade  in build  count:6000
+splat:pine.ply      @1.7,-0.44,-1.7  *0.8   sway 0,6,0   ~fade  in climax  count:6000  # centre-right-back
+splat:pine.ply      @-1.5,-0.38,-1.9 *0.85  sway 0,6,0   ~fade  in climax  count:6000  # centre-left-back
+splat:pine.ply      @-3.5,-0.31,-0.9 *0.9   sway 0,6,0   ~fade  in climax  count:6000  # far-left
 
 # FLOWING camera: now the terrain sorts behind the props (Z-safe at any angle), the camera can FLOW
 # around the camp instead of cutting between safe stills. A slow orbit (yaw drifts ~1.0→2.0) + a crane

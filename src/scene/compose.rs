@@ -43,6 +43,7 @@ pub(crate) struct Prop {
     tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow|brand`: recolour the sampled splats
     ease: Ease, // `ease:name`: shapes the assemble curve (default Smoothstep = unchanged)
     field: Option<usize>, // `field:N`: scatter into N seeded copies (a swarm/field of this object)
+    count: Option<usize>, // `count:N`: per-object splat count (density), overrides the scene MORPH_COUNT
 }
 
 impl Prop {
@@ -176,6 +177,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let mut tint = None;
         let mut ease = Ease::Smoothstep;
         let mut field = None;
+        let mut count_override = None;
         let toks: Vec<&str> = s
             .split_whitespace()
             .filter(|t| {
@@ -185,6 +187,16 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     match n.parse() {
                         Ok(c) => field = Some(c),
                         Err(_) => eprintln!("compose: bad 'field:{n}' (need an integer) — ignored"),
+                    }
+                    return false;
+                }
+                // `count:N` — per-object splat COUNT (density), overriding the scene-wide MORPH_COUNT.
+                // Density is a property of the object: a tent is denser than a tree, a tree denser than
+                // fire. (Translucency = the baked per-shape opacity; this is the other half.)
+                if let Some(n) = t.strip_prefix("count:") {
+                    match n.parse() {
+                        Ok(c) => count_override = Some(c),
+                        Err(_) => eprintln!("compose: bad 'count:{n}' (need an integer) — ignored"),
                     }
                     return false;
                 }
@@ -272,6 +284,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             tint,
             ease,
             field,
+            count: count_override,
         });
     }
     out
@@ -354,12 +367,14 @@ pub(crate) fn build_composition(
         crate::morph::normalize_to(&mut raw, NORMALIZE_EXTENT); // centre + ~2 units across
         // `field:N` scatters the object into N seeded copies (a swarm), sized to frame as one — the
         // reel's `flock:` for the stage. Downsample per copy to keep the total near the budget.
+        // `count:N` overrides the scene-wide density for THIS object (a tent is denser than a tree than fire).
+        let obj_count = obj.count.unwrap_or(count);
         let mut shaped = match obj.field {
             Some(n) => {
-                let per = (count / n.max(1)).max(2_000);
+                let per = (obj_count / n.max(1)).max(2_000);
                 crate::morph::cluster_of(&resample_morton(raw, per), n)
             }
-            None => resample_morton(raw, count),
+            None => resample_morton(raw, obj_count),
         };
         // `tint:` recolours the sampled cloud (e.g. a deep-fried bitterbal) before it's frozen into
         // the shape + its entrance source — so both the held look and the assemble-in are tinted.

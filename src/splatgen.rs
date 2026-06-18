@@ -659,10 +659,54 @@ fn turtle_plant(rng: &mut Rng, s: &str, ang_deg: f32, roll_deg: f32) -> Cloud {
     (pos_out, rgb_out)
 }
 
+/// Per-object (and per-point) opacity — translucency is a property of WHAT it is, not one global value.
+/// Fire glows (very translucent, wispy at the cool tips); tree FOLIAGE is airy but the TRUNK is solid;
+/// distant mountains are hazy; tent canvas + moon are near-solid. Keyed by shape name + the point's
+/// colour (so trunk-vs-foliage / hot-vs-cool splits fall out of the colour the generators already set).
+fn opacity_of(name: &str, rgb: &[f32; 3]) -> f32 {
+    match name {
+        // fire: translucent glow, MORE see-through at the cooler (less-green) tips than the hot core.
+        "flame" => 0.14 + 0.44 * ((rgb[1] - 0.3) / 0.7).clamp(0.0, 1.0),
+        // pine: green foliage = airy translucent needles; brown trunk (r≥g) = solid.
+        "pine" => {
+            if rgb[1] > rgb[0] {
+                0.42
+            } else {
+                0.85
+            }
+        }
+        "tent" => 0.82,      // canvas (near-solid)
+        "moon" => 0.92,      // solid rock
+        "terrain" => 0.60,   // the ground reads, but a touch translucent helps it sit behind props
+        "mountains" => 0.40, // hazy, distant
+        _ => ALPHA,          // everything else: the soft default
+    }
+}
+
+/// Per-object (and per-point) splat SIZE — the splat radius is part of the look, not one global value:
+/// fire = big soft glow, tree FOLIAGE = fluffy (vs a crisp small TRUNK), distant mountains = big hazy
+/// blobs, tent canvas / moon = small crisp. Keyed by shape name + the point's colour (same trunk/foliage
+/// + hot/cool splits as the opacity).
+fn size_of(name: &str, rgb: &[f32; 3]) -> f32 {
+    match name {
+        "flame" => 0.045 + 0.030 * ((rgb[1] - 0.3) / 0.7).clamp(0.0, 1.0), // big, biggest at the hot core
+        "pine" => {
+            if rgb[1] > rgb[0] {
+                0.034 // fluffy needles
+            } else {
+                0.014 // crisp trunk
+            }
+        }
+        "mountains" => 0.060, // big hazy blobs (distant)
+        "terrain" => 0.030,   // soft ground
+        "tent" => 0.020,      // crisp canvas
+        "moon" => 0.022,
+        _ => SPLAT, // the default
+    }
+}
+
 /// Write a cloud as martin's sh0 binary `.ply`.
 pub fn write_ply(path: &Path, name: &str, pos: &[[f32; 3]], rgb: &[[f32; 3]]) {
-    let scale = SPLAT.ln();
-    let opacity = (ALPHA / (1.0 - ALPHA)).ln();
     let header = format!(
         "ply\nformat binary_little_endian 1.0\ncomment martin demo splat: {name}\n\
          element vertex {}\n\
@@ -677,13 +721,15 @@ pub fn write_ply(path: &Path, name: &str, pos: &[[f32; 3]], rgb: &[[f32; 3]]) {
     buf.extend_from_slice(header.as_bytes());
     let mut put = |v: f32| buf.extend_from_slice(&v.to_le_bytes());
     for (p, c) in pos.iter().zip(rgb) {
+        let scale = size_of(name, c).ln(); // per-point splat radius (size is part of the look)
+        let op = opacity_of(name, c); // per-point opacity (translucency is part of the look)
         put(p[0]);
         put(p[1]);
         put(p[2]);
         put(scale);
         put(scale);
         put(scale);
-        put(opacity);
+        put((op / (1.0 - op)).ln()); // opacity → logit
         put(1.0);
         put(0.0);
         put(0.0);
