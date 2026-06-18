@@ -45,14 +45,14 @@ text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build   # wo
 
 # ── STORYBOARD: PonyCamp 2026 ──────────────────────────────────────────────────────────────────
 # THE HORSE walks into the party during the slow breakdown: fades in far-left (the open field the
-# breakdown camera frames), ambles rightward toward the fire (drift +x — it never stops, so it keeps
-# milling at the party), faces its travel direction (rot 0,180,0), bounces on the beat (^pulse) once
-# the climax ramps the beat up. Textured chestnut now that the glTF sampler reads baseColorTexture.
-mesh:paard.glb  @-6.0,-0.5,1.2  *1.1  rot 0,180,0  drift 0.09,0,0  sway 0,4,0  bob 0.05  ^pulse:0.4  ~fade  in breakdown   # 🐴 komt naar de party
+# breakdown camera frames), then travel: EASES it in toward the camp over ~16s and HOLDS there (a real
+# walk-in-and-stop — drift used to slide it off-screen-right). Faces its travel direction (rot 0,180,0),
+# bounces on the beat (^pulse) once the climax ramps the beat up. Textured chestnut (glTF sampler reads baseColorTexture).
+mesh:paard.glb  @-7.0,-0.5,1.5  *0.9  rot 0,180,0  travel:-3.6,-0.52,1.5@breakdown,16  sway 0,4,0  bob 0.05  ^pulse:0.4  ~fade  in breakdown   # 🐴 walks IN from far-left over the breakdown (eases @-7→-3.6 in ~16s, then HOLDS & bops). FORWARD of the tent (z1.5 > tent z0.7) so the mesh cleanly OCCLUDES it (no feet-through-floor), x-3.6 keeps it fully framed at the outro cam (was half off-left at -4.2). travel: not drift (drift accumulated from t=0, slid it off-screen-right).
 
 # THE CELEBRATION when the music picks up (climax→end): a translucent beer by the fire, bouncing
 # bitterbal snacks, the dog joins, and the PonyCamp 2026 banner. (Beat ramps up in [sync] → all bounce.)
-mesh:bier.glb       @1.6,-0.55,0.9  *0.45  alpha:0.28  bob 0.04  sway 0,6,0  ~fade  in climax   # 🍺 translucent glass mug by the fire
+mesh:bier.glb       @1.6,-0.55,0.9  *0.45  alpha:0.16  bob 0.04  spin 0,45,0  ~fade  in climax   # 🍺 very translucent glass mug by the fire, turning slowly on its Y axis (~8s/rev)
 mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  spin 19,37,13  bob 0.14  ^pulse:0.6  tint:fry  ~fade  in climax   # 🟤 bouncing snack
 mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  spin 23,29,17  bob 0.16  ^pulse:0.6  tint:fry  ~fade  in climax
 mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  spin 31,13,41  bob 0.18  ^pulse:0.6  tint:fry  ~fade  in climax
