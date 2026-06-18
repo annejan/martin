@@ -10,6 +10,7 @@
 kind           = demo
 score          = productions/camping/score.txt
 budget         = 120000
+morph_count    = 12000          # ~12k splats/prop = the SOFT density sweet spot (140k was ~10x wasteful)
 bg             = stars
 particles      = embers
 particle_count = 240

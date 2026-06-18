@@ -11,6 +11,7 @@
 kind           = demo
 score          = productions/camping/score.txt   # Op de camping — 140 BPM, intro→…→outro
 budget         = 120000
+morph_count    = 12000          # ~12k splats/prop = the SOFT density sweet spot (140k was ~10x wasteful)
 bg             = stars
 particles      = embers
 particle_count = 220
@@ -37,16 +38,16 @@ splat:pine.ply      @1.7,-0.44,-1.7  *0.8   sway 0,6,0   ~fade  in climax  # cen
 splat:pine.ply      @-1.5,-0.38,-1.9 *0.85  sway 0,6,0   ~fade  in climax  # centre-left-back
 splat:pine.ply      @-3.5,-0.31,-0.9 *0.9   sway 0,6,0   ~fade  in climax  # far-left
 
-# CURATED CUT-SEQUENCE: a handful of vetted shots, all at LOW pitch (~0.15-0.30 = the splat sweet spot
-# where props stand clear of the ground cloud), CUT between on the section hits (no panning through the
-# top-down angles where the terrain eats the props). Glides only within a clean range.
+# FLOWING camera: now the terrain sorts behind the props (Z-safe at any angle), the camera can FLOW
+# around the camp instead of cutting between safe stills. A slow orbit (yaw drifts ~1.0→2.0) + a crane
+# up for the climax, with ONE hard cut punching onto the fire on the drop. Low-ish pitch throughout.
 [camera]
-t=@@intro      pos=0,-0.30,0.3    dist=7.0   yaw=1.40   pitch=0.30            # wide establishing, low
-t=@@build      pos=0,-0.35,0.4    dist=6.2   yaw=1.50   pitch=0.24            # ease in as the tent pitches
-t=@@drop       pos=0.3,-0.50,0.8  dist=3.6   yaw=1.52   pitch=0.16   cut      # CUT → fire hero (ignition)
-t=@@breakdown  pos=0,-0.40,0.3    dist=5.0   yaw=1.00   pitch=0.22   cut      # CUT → side-on the grove
-t=@@climax     pos=0,-0.45,0.3    dist=6.6   yaw=1.34   pitch=0.20   cut      # CUT → grand low wide (moon+ridge+camp)
-t=@@outro      pos=0,-0.40,0.3    dist=7.0   yaw=1.46   pitch=0.26            # settle, glide
+t=@@intro      pos=0,-0.30,0.3    dist=8.5   yaw=1.05   pitch=0.34            # wide establishing, from the left
+t=@@build      pos=0,-0.35,0.3    dist=6.8   yaw=1.30   pitch=0.26            # drift IN + orbit right as it builds
+t=@@drop       pos=0.0,-0.50,0.4  dist=3.4   yaw=1.55   pitch=0.15   cut      # CUT: punch low onto the fire (ignition)
+t=@@breakdown  pos=0,-0.42,0.3    dist=6.2   yaw=1.75   pitch=0.24            # pull back, keep orbiting around
+t=@@climax     pos=0,-0.45,0.3    dist=7.8   yaw=2.05   pitch=0.40            # CRANE up as it peaks (moon+ridge+forest)
+t=@@outro      pos=0,-0.40,0.3    dist=8.5   yaw=1.85   pitch=0.30            # ease back, settle
 
 [sync]
 t=@@intro      flash=0.1   bg_dim=0.6   beat=0.4

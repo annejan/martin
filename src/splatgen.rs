@@ -15,7 +15,9 @@ use std::path::Path;
 
 const N: usize = 140_000;
 const SPLAT: f32 = 0.02; // splat radius (shapes span ~±1)
-const ALPHA: f32 = 0.92; // opacity
+const ALPHA: f32 = 0.60; // per-splat opacity — soft. At high counts overlap still reads solid; at low
+// counts (e.g. camp props ~12k via morph_count) it gives the airy, translucent splat look. See
+// memory martin-diorama-safe-z / the density "diminishing returns" finding (140k was ~10x wasteful).
 
 /// Every shape `gen_shape` knows how to synthesize (for the `splatgen` CLI's `list` + validation).
 /// `allow(dead_code)`: used by the `splatgen` bin, unreferenced when this file is included by `build.rs`.
