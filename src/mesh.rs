@@ -330,6 +330,38 @@ fn sample_tex(img: &image::RgbaImage, u: f32, v: f32) -> [f32; 3] {
 /// MARTIN_MESH_RGB. Single source of truth for the .obj/.dae and glTF paths.
 pub const MESH_FALLBACK_RGB: [f32; 3] = [0.80, 0.85, 0.95];
 
+/// Sample a decoded glTF `baseColorTexture` at UV `(u,v)` → an RGB triple (0..1). Nearest-texel, UV
+/// wrapped to [0,1) (glTF tiling default), V measured from the top. Fed raw (the splat DC encodes the
+/// value directly, like the flat baseColorFactor path), so a textured mesh keeps its painted colour.
+/// 16/32-bit texture formats (rare for a base-colour map) fall back to the pale default.
+fn sample_texture(img: &gltf::image::Data, u: f32, v: f32) -> [f32; 3] {
+    use gltf::image::Format;
+    let w = (img.width as usize).max(1);
+    let h = (img.height as usize).max(1);
+    let x = (((u - u.floor()) * w as f32) as usize).min(w - 1);
+    let y = (((v - v.floor()) * h as f32) as usize).min(h - 1);
+    let px = &img.pixels;
+    let rgb3 = |stride: usize| {
+        let i = (y * w + x) * stride;
+        [
+            *px.get(i).unwrap_or(&204) as f32 / 255.0,
+            *px.get(i + 1).unwrap_or(&204) as f32 / 255.0,
+            *px.get(i + 2).unwrap_or(&204) as f32 / 255.0,
+        ]
+    };
+    let gray = |stride: usize| {
+        let g = *px.get((y * w + x) * stride).unwrap_or(&204) as f32 / 255.0;
+        [g, g, g]
+    };
+    match img.format {
+        Format::R8G8B8 => rgb3(3),
+        Format::R8G8B8A8 => rgb3(4),
+        Format::R8G8 => gray(2),
+        Format::R8 => gray(1),
+        _ => MESH_FALLBACK_RGB, // 16/32-bit base-colour maps are rare; safe fallback
+    }
+}
+
 fn build_gltf_gaussians(
     path: &Path,
     target_count: usize,
@@ -338,7 +370,7 @@ fn build_gltf_gaussians(
     alpha: f32,
     rgb: Option<[f32; 3]>,
 ) -> Vec<Gaussian3d> {
-    let (doc, buffers, _) = match gltf::import(path) {
+    let (doc, buffers, images) = match gltf::import(path) {
         Ok(x) => x,
         Err(e) => {
             eprintln!("mesh {}: {e}", path.display());
@@ -379,6 +411,11 @@ fn build_gltf_gaussians(
     // own material `baseColorFactor` — so a multi-material glb keeps each part's colour (e.g.
     // defeest.glb's blue body + yellow text). Explicit MARTIN_MESH_RGB (`rgb`) overrides it.
     let mut tri_base: Vec<[f32; 3]> = Vec::new();
+    // per-triangle UVs + the primitive's baseColorTexture image index, so a TEXTURED glTF (paard.glb,
+    // bier.glb — their colour lives in the texture, not vertex colours/baseColorFactor) is coloured per
+    // splat by sampling that texture at the sample point's interpolated UV (see the colour closure).
+    let mut tri_uv: Vec<Option<[[f32; 2]; 3]>> = Vec::new();
+    let mut tri_tex: Vec<Option<usize>> = Vec::new();
     let id: M = [
         [1., 0., 0., 0.],
         [0., 1., 0., 0.],
@@ -402,6 +439,11 @@ fn build_gltf_gaussians(
                     [b[0], b[1], b[2]]
                 });
                 let base = rgb.or(mat_col).unwrap_or(MESH_FALLBACK_RGB);
+                // the primitive's diffuse texture (an index into the decoded `images`), if any.
+                let tex_idx = mat
+                    .pbr_metallic_roughness()
+                    .base_color_texture()
+                    .map(|t| t.texture().source().index());
                 let reader = prim.reader(|b| buffers.get(b.index()).map(|d| &d.0[..]));
                 let Some(pos) = reader.read_positions() else {
                     continue;
@@ -410,6 +452,8 @@ fn build_gltf_gaussians(
                 let normals: Option<Vec<[f32; 3]>> = reader.read_normals().map(|n| n.collect());
                 let colors: Option<Vec<[f32; 3]>> =
                     reader.read_colors(0).map(|c| c.into_rgb_f32().collect());
+                let uvs: Option<Vec<[f32; 2]>> =
+                    reader.read_tex_coords(0).map(|t| t.into_f32().collect());
                 let indices: Vec<u32> = reader
                     .read_indices()
                     .map(|i| i.into_u32().collect())
@@ -431,6 +475,8 @@ fn build_gltf_gaussians(
                     }));
                     tri_cols.push(colors.as_ref().map(|cc| [cc[a], cc[b], cc[c]]));
                     tri_base.push(base);
+                    tri_uv.push(uvs.as_ref().map(|uu| [uu[a], uu[b], uu[c]]));
+                    tri_tex.push(tex_idx);
                 }
             }
         }
@@ -448,13 +494,26 @@ fn build_gltf_gaussians(
         thin,
         alpha,
         true,
-        |ti, bw, bu, bv| match tri_cols[ti] {
-            Some(c) => sh_of([
-                c[0][0] * bw + c[1][0] * bu + c[2][0] * bv,
-                c[0][1] * bw + c[1][1] * bu + c[2][1] * bv,
-                c[0][2] * bw + c[1][2] * bu + c[2][2] * bv,
-            ]),
-            None => sh_of(tri_base[ti]),
+        |ti, bw, bu, bv| {
+            // vertex colours win; then the diffuse TEXTURE (unless MARTIN_MESH_RGB forces a flat
+            // override); then the flat material/base colour.
+            if let Some(c) = tri_cols[ti] {
+                return sh_of([
+                    c[0][0] * bw + c[1][0] * bu + c[2][0] * bv,
+                    c[0][1] * bw + c[1][1] * bu + c[2][1] * bv,
+                    c[0][2] * bw + c[1][2] * bu + c[2][2] * bv,
+                ]);
+            }
+            if rgb.is_none() {
+                if let (Some(uv), Some(idx)) = (tri_uv[ti], tri_tex[ti]) {
+                    if let Some(img) = images.get(idx) {
+                        let u = uv[0][0] * bw + uv[1][0] * bu + uv[2][0] * bv;
+                        let v = uv[0][1] * bw + uv[1][1] * bu + uv[2][1] * bv;
+                        return sh_of(sample_texture(img, u, v));
+                    }
+                }
+            }
+            sh_of(tri_base[ti])
         },
     )
 }

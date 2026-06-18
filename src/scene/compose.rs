@@ -100,6 +100,7 @@ pub(crate) struct Prop {
     field: Option<usize>, // `field:N`: scatter into N seeded copies (a swarm/field of this object)
     count: Option<usize>, // `count:N`: per-object splat count (density), overrides the scene MORPH_COUNT
     path: Option<PathMotion>, // `path:orbit/liss:…`: independent travel path (each object does its own thing)
+    alpha: Option<f32>, // `alpha:V`: per-object translucency (0..1) baked into the cloud's splat opacity
 }
 
 impl Prop {
@@ -237,6 +238,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let mut field = None;
         let mut count_override = None;
         let mut path = None;
+        let mut alpha = None;
         let toks: Vec<&str> = s
             .split_whitespace()
             .filter(|t| {
@@ -256,6 +258,15 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     match n.parse() {
                         Ok(c) => count_override = Some(c),
                         Err(_) => eprintln!("compose: bad 'count:{n}' (need an integer) — ignored"),
+                    }
+                    return false;
+                }
+                // `alpha:V` — per-object translucency (0..1), baked into the cloud's splat opacity at
+                // build (a glass beer mug, a ghost, a haze). The scene-wide fade-in animates on top.
+                if let Some(n) = t.strip_prefix("alpha:") {
+                    match n.parse::<f32>() {
+                        Ok(a) => alpha = Some(a.clamp(0.0, 1.0)),
+                        Err(_) => eprintln!("compose: bad 'alpha:{n}' (need 0..1) — ignored"),
                     }
                     return false;
                 }
@@ -368,6 +379,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             field,
             count: count_override,
             path,
+            alpha,
         });
     }
     out
@@ -463,6 +475,14 @@ pub(crate) fn build_composition(
         // the shape + its entrance source — so both the held look and the assemble-in are tinted.
         if let Some(tint) = obj.tint {
             crate::scene::colorize::apply(&mut shaped, tint);
+        }
+        // `alpha:V` — bake per-object translucency into the splat opacity (a glass beer mug, a ghost).
+        if let Some(a) = obj.alpha {
+            for g in &mut shaped {
+                let sc = g.scale_opacity.scale;
+                let op = g.scale_opacity.opacity;
+                g.scale_opacity = [sc[0], sc[1], sc[2], op * a].into();
+            }
         }
         let rot = Quat::from_euler(
             EulerRot::XYZ,

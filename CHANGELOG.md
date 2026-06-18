@@ -16,6 +16,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   camera track. Composed via `MARTIN_*` env vars or a single unified `.show` file (`MARTIN_SHOW`).
 - mesh→splat sampling: density-adaptive disk size + R2 low-discrepancy distribution, per-splat
   translucency (`MARTIN_MESH_OPACITY`), and a glTF (`.glb`) loader.
+- **Textured glTF → coloured splats**: the `.glb` sampler now reads each primitive's `baseColorTexture`
+  + `TEXCOORD_0` and colours every splat by sampling that texture at its surface UV (`sample_texture`
+  in `mesh.rs`) — so a textured model (`paard.glb` chestnut horse, `bier.glb` amber beer) keeps its
+  painted colour instead of rendering flat white. Falls back to vertex colours → `baseColorFactor` →
+  `MARTIN_MESH_RGB` → a pale default, as before.
+- **Per-object translucency** for the composition stage: an `alpha:<0..1>` token bakes a translucency
+  into that object's splat opacity (`compose.rs`) — a glass beer mug, a ghost, a haze — independent of
+  the global `MARTIN_MESH_OPACITY`. The scene-wide fade-in animates on top.
 - **Per-shot morph easing** (`ease:<curve>`): shapes the blend curve so an entrance can LAND on the
   beat instead of always drifting in — `smooth` (default, unchanged), `snap`, `hold-snap`, `anticipate`,
   `stutter`. Pure scalar, deterministic; the single source of the morph curve now (the reel director and
