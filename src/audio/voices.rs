@@ -1320,3 +1320,26 @@ pub(super) fn woozbass_sw4(freq: f32) -> Box<dyn AudioUnit> {
             * 0.5,
     )
 }
+
+/// Gated-reverb SNARE (the 80s Phil-Collins/Linn sound): the snare crack + a big bright diffuse
+/// "reverb" burst held near-flat then CUT hard at ~150 ms — the GATE. The abrupt stop IS the sound.
+/// Selected per section by `set gatesnare=1` (see render.rs); else the normal snare plays.
+pub(super) fn snare_gated() -> Box<dyn AudioUnit> {
+    Box::new(
+        ((noise() >> highpass_hz(1400.0, 0.7)) * envelope(|t: f32| (-t * 30.0).exp())
+            + sine_hz(185.0) * envelope(|t: f32| (-t * 26.0).exp()) * 0.4
+            + (noise() >> highpass_hz(2200.0, 0.5) >> lowpass_hz(7000.0, 0.7))
+                * envelope(|t: f32| {
+                    let a = 0.004;
+                    if t < a {
+                        t / a // tiny attack ramp — no click on the front
+                    } else if t < 0.15 {
+                        0.85 - 0.25 * (t / 0.15) // a near-flat gated reverb body...
+                    } else {
+                        0.0 // ...CUT hard at ~150 ms — the GATE
+                    }
+                })
+                * 0.6)
+            * 0.72,
+    )
+}

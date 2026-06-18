@@ -29,14 +29,14 @@ section outro 8 7 fill
 intro.set padsw=4                 # dark cinematic wash — neon haze, atmospheric open
 drop.set padsw=3 basssw=4         # glassy PWM wall + acid-303 drive — the hit moves
 breakdown.set padsw=4 basssw=2    # dark wash + clean sub — intimate, brooding hush
-climax.set padsw=3 basssw=4       # glassy PWM + acid — euphoric, animated peak
+climax.set padsw=3 basssw=4 gatesnare=1   # glassy PWM + acid + 80s GATED-REVERB snare — euphoric peak
 outro.set padsw=4                 # dark wash — settle into the loop seam
 
-# night-drive FX: noise riser lifts into the DROP; a falling DOWNLIFT deflates into the hushed
-# breakdown; a melodic TONALRISER (pitched, tuned to the chord) lifts into the euphoric CLIMAX —
-# three different transition flavours instead of one noise sweep everywhere. Shimmer = neon air.
+# night-drive FX: a REVERSE-swell + noise riser suck into the DROP; a falling DOWNLIFT deflates into
+# the hushed breakdown; a melodic TONALRISER (pitched) lifts into the euphoric CLIMAX (which also gets
+# the 80s gated-reverb snare via climax.set) — four transition flavours instead of one. Shimmer = air.
 build.fx: riser shimmer
-drop.fx: wall house riser shimmer
+drop.fx: wall house riser reverse shimmer
 breakdown.fx: shimmer downlift
 climax.fx: wall house tonalriser shimmer casio
 outro.fx: wall casio shimmer

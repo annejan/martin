@@ -104,6 +104,29 @@ pub(super) fn render_tonalriser(
     }
 }
 
+/// Reverse-swell: an 80s REVERSE-reverb/cymbal — a bright diffuse noise wash that swells SMOOTHLY up
+/// then CUTS hard at the boundary (the abrupt stop right on the downbeat is the signature "sucked-in"
+/// sound). No pitch sweep (unlike a riser); just a smoothstep swell + a hard gate at the end. The
+/// `bright` sparkle is one-pole-smoothed so it reads as diffuse reverb tail, not raw hiss. Deterministic.
+pub(super) fn render_reverse(buf: &mut [f32], start_t: f32, dur: f32, amp: f32, pan: f32) {
+    let sr = SAMPLE_RATE as f32;
+    let start = (start_t.max(0.0) * sr) as usize;
+    let n = (dur.max(0.0) * sr) as usize;
+    let denom = std::cmp::max(n, 1) as f32;
+    let (mut hp, mut sm) = (0.0f32, 0.0f32);
+    for i in 0..n {
+        let p = i as f32 / denom;
+        let frame = start + i;
+        let noise = pseudo_noise(i + start * 13);
+        hp += 0.05 * (noise - hp);
+        let bright = noise - hp; // high-passed sparkle
+        sm += 0.4 * (bright - sm); // smoothed → diffuse reverb-tail wash
+        let swell = p * p * (3.0 - 2.0 * p); // smoothstep swell up
+        let gate = if p > 0.992 { 0.0 } else { 1.0 }; // HARD cut at the boundary (the reverse snap)
+        add_stereo(buf, frame, sm * swell * gate * amp, pan);
+    }
+}
+
 /// Modern hardstyle / rawstyle KICK, tuned per hit to the chord root: a tight click transient → a
 /// heavily DISTORTED pitch-swept body (sine + a saw partial driven through tanh then hard-clipped =
 /// the "zaag"/gabber grit) → a pitched tonal TAIL on the root pitch-class (the "piep" — the kick is

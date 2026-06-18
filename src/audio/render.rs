@@ -235,9 +235,14 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         };
         let gt = groove(t, beat, 0x55, 0.003, 0.004);
         let drumsw = dsw(gt);
+        let gated = score.param_at(gt, "gatesnare", 0.0) > 0.5; // 80s gated-reverb snare per section
         let amp = snare_amp * vel(t, beat, 0x55);
         ev(&mut lanes[L_DRUMS], gt, move |b, _| {
-            render_into(b, gt, 0.4, amp, pan, snare_pick(drumsw))
+            if gated {
+                render_into(b, gt, 0.5, amp, pan, snare_gated())
+            } else {
+                render_into(b, gt, 0.4, amp, pan, snare_pick(drumsw))
+            }
         });
     }
     for (i, t) in score.hits(Inst::Hat).into_iter().enumerate() {
@@ -531,6 +536,12 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
                 render_impact(bd, t, 1.6, 0.62)
             });
         }
+        if score.fx_on("drop", "reverse") {
+            let s = t - 2.0 * bar;
+            ev(&mut lanes[L_FX], s, move |bd, _| {
+                render_reverse(bd, s, 2.0 * bar, 0.22, 0.0)
+            });
+        }
     }
     if let Some(t) = section_time(score, "breakdown") {
         if score.fx_on("breakdown", "impact") {
@@ -557,6 +568,12 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             let root = score.chord_at(t).root;
             ev(&mut lanes[L_FX], s, move |bd, _| {
                 render_tonalriser(bd, s, 4.0 * bar, root, 0.26, -0.1)
+            });
+        }
+        if score.fx_on("climax", "reverse") {
+            let s = t - 2.0 * bar;
+            ev(&mut lanes[L_FX], s, move |bd, _| {
+                render_reverse(bd, s, 2.0 * bar, 0.24, 0.0)
             });
         }
         if score.fx_on("climax", "jet") {

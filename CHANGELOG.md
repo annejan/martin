@@ -142,12 +142,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   instruments for THAT section only (softer interlude, harder crescendo). Voices in `voices.rs` (+ the
   analog kick in `effects.rs`); `*_pick` selectors in `render.rs`. The nocturnal demo runs the full
   synthwave palette; Camping keeps its bounce kit but softens the breakdown + sharpens the climax/outro.
-- **Riser flavours** beyond the noise uplifter (`riser`): `downlift` (a falling whoosh that deflates
-  INTO a calm section — the synthwave "suck-down"), and `tonalriser` (a pitched, musical riser — a
-  detuned saw gliding up an octave from the chord root through an opening filter, into a climax).
-  Both are `<section>.fx:` tokens (`render_downlift` / `render_tonalriser` in `effects.rs`). The
-  nocturnal demo uses all three for varied transitions (noise into the drop, downlift into the
-  breakdown, tonalriser into the climax) plus a per-section pad/bass timbre arc.
+- **Riser/transition flavours** beyond the noise uplifter (`riser`): `downlift` (a falling whoosh that
+  deflates INTO a calm section — the synthwave "suck-down"), `tonalriser` (a pitched, musical riser — a
+  detuned saw gliding up an octave from the chord root through an opening filter, into a climax), and
+  `reverse` (an 80s reverse-reverb/cymbal swell that cuts hard on the downbeat). `<section>.fx:` tokens
+  (`render_downlift`/`render_tonalriser`/`render_reverse` in `effects.rs`). Plus the 80s **gated-reverb
+  snare** (`set gatesnare=1` → `snare_gated`, a big bright reverb burst cut hard at ~150 ms). The
+  nocturnal demo uses them for varied transitions (reverse+noise into the drop, downlift into the
+  breakdown, tonalriser + gated snare into the climax) plus a per-section pad/bass timbre arc.
 - Structural lint of the score with `MARTIN_SCORE_STRICT=1` to make warnings fatal.
 - Example scores showing the range: `assets/tropical.txt`, `assets/rain.txt`.
 - Score split: the engine ships a **neutral** tropical-house builtin (`assets/score.txt`); each
