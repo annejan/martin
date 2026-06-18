@@ -110,11 +110,25 @@ fn lead_pick(n: i32, f: f32, v: f32) -> Unit {
         _ => lead(f, v),
     }
 }
-fn bass_pick(sw: bool, f: f32, v: f32) -> Unit {
-    if sw { bass_sw(f, v) } else { bass(f, v) }
+// bass also has CHARACTERS: basssw = 0 orig · 1 *_sw clean-split Reese · 2 Kavinsky clean sub ·
+// 3 Brut Reese growl · 4 acid/303 squelch. (held-note variant = the matching woozbass.)
+fn bass_pick(n: i32, f: f32, v: f32) -> Unit {
+    match n {
+        1 => bass_sw(f, v),
+        2 => bass_sw2(f, v),
+        3 => bass_sw3(f, v),
+        4 => bass_sw4(f, v),
+        _ => bass(f, v),
+    }
 }
-fn woozbass_pick(sw: bool, f: f32) -> Unit {
-    if sw { woozbass_sw(f) } else { woozbass(f) }
+fn woozbass_pick(n: i32, f: f32) -> Unit {
+    match n {
+        1 => woozbass_sw(f),
+        2 => woozbass_sw2(f),
+        3 => woozbass_sw3(f),
+        4 => woozbass_sw4(f),
+        _ => woozbass(f),
+    }
 }
 // pads have several CHARACTERS to audition: padsw = 0 orig · 1 the *_sw pair · 2 Juno poly ·
 // 3 PWM string-machine · 4 dark cinematic wash.
@@ -157,7 +171,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     // palette selectors (default 0 = the original voices; a score `set leadsw=1` etc. opts into the
     // nocturnal-synthwave alternates). Resolved once, captured into the per-event closures below.
     let leadsw = score.param("leadsw", 0.0).round() as i32;
-    let basssw = score.param("basssw", 0.0) > 0.5;
+    let basssw = score.param("basssw", 0.0).round() as i32;
     let padsw = score.param("padsw", 0.0).round() as i32;
     let drumsw = score.param("drumsw", 0.0) > 0.5;
 

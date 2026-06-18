@@ -1001,3 +1001,322 @@ pub(super) fn lead_sw4(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
         Box::new(mk())
     }
 }
+
+// ============================================================================================
+// BASS VARIANTS (basssw=2/3/4): alternate nocturnal bass CHARACTERS, each a moving-bass + held
+// (woozbass) pair (1 = bass_sw/woozbass_sw). Selected by the integer `basssw` knob in render.rs.
+// ============================================================================================
+
+/// Bass — clean deep pulsing sub (the Kavinsky "Nightcall" engine). A round, sine-dominant
+/// sub with only a whisper of grit, built to PUMP under the sidechain. How each trait is built:
+///   • deep & clean — an OCTAVE-DOWN sine carries the weight + the fundamental sine for body;
+///     this spine gets only a gentle HP at ~26 Hz (clears DC/rumble) and NO drive, so the
+///     low end stays pure and never muddy.
+///   • whisper of definition — a faint saw+triangle layer gives the note an edge so it reads
+///     as pitched, not a pure test tone. It is QUARANTINED above ~120 Hz with a high-pass and
+///     fed only a gentle tanh, so its grit can't smear down into the sub band.
+///   • dark pulse — the grit-layer cutoff is parked LOW (~240 Hz, a tight 520 Hz click on the
+///     attack) with a small ~4 Hz breathe, so it punches and pulses but never opens bright.
+///   • sidechain-friendly — the amp decays to a HIGH floor (~0.22) over a soft tail instead of
+///     plucking, so the duck carves a clean pump and the sub swells back between kicks.
+/// Velocity nudges the (still gentle) drive; ends in the oversample wrapper since it has drive.
+pub(super) fn bass_sw2(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // clean sub spine: octave-down sine for the deep weight + the fundamental for body.
+        let sub = sine_hz(freq * 0.5) * 1.0 + sine_hz(freq) * 0.32;
+        // a whisper of saw+triangle for note definition — kept tiny so it never dominates.
+        let def = saw_hz(freq) * 0.16 + triangle_hz(freq) * 0.12;
+        // dark, breathing cutoff: a tight click on the attack settling LOW, a small ~4 Hz pulse.
+        let cut = envelope(|t: f32| {
+            let breathe = 1.0 + 0.06 * (t * 4.0 * TAU).sin();
+            (240.0 + 520.0 * (-t * 6.0).exp()) * breathe
+        });
+        let drive = 1.15 + 0.45 * vel; // harder notes get a touch more edge — still gentle
+        // the definition layer is HP'd above 120 Hz so its (light) grit can't smear the sub.
+        let grit = ((def | cut) >> lowpass_q(0.9) >> highpass_hz(120.0, 0.6))
+            >> shape_fn(move |x| (x * drive).tanh());
+        // sub stays clean (just a gentle HP to clear DC); the grit rides quietly on top.
+        ((sub >> highpass_hz(26.0, 0.5)) * 0.9 + grit * 0.5)
+            * envelope(|t: f32| {
+                let a = 0.004;
+                if t < a {
+                    t / a
+                } else {
+                    // soft tail to a HIGH floor → breathes under the pump, doesn't pluck.
+                    0.22 + 0.78 * (-(t - a) * 2.6).exp()
+                }
+            })
+            * 0.46
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Wooz-bass: the HELD Kavinsky sub — a long, near-pure sustained sub pillow that sits under the
+/// chords. Where the moving bass pulses, this one just holds, deep and almost clean. How each
+/// trait is built:
+///   • deep pillow body — an OCTAVE-DOWN sine carries the weight + the fundamental sine for body,
+///     plus a faint triangle for a hair of edge; everything runs through a low-pass parked VERY
+///     low (~180–270 Hz, gentle Q 0.8) so it stays a dark cushion and never gets bright.
+///   • barely-there motion — instead of a wobble/growl this uses only a tiny (±0.15–0.18 %) slow
+///     drift per sine + a ~2 Hz cutoff sway, so it shimmers faintly and feels alive without ever
+///     becoming a Reese. The pitch stays essentially stable (it's a pillow, not a creature).
+///   • clean & deep-not-muddy — a high-pass at ~24 Hz clears DC/rumble; no drive at all, so the
+///     sub band is pure. The cushion opens a touch over ~0.6 s so it settles in under the chords.
+///   • sidechain-friendly — a long sustain to a HIGH floor (0.7) so it breathes under the pump and
+///     fills the gaps between kicks. Best on HELD notes. (`set woozbass=1` swaps it into the bass
+///     note-lane; audition it alone with the `woozbass_demo` test.)
+pub(super) fn woozbass_sw2(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    // octave-down sub spine with a barely-there slow drift — deep weight, gently alive.
+    let f_oct = lfo(move |t: f32| freq * 0.5 * (1.0 + 0.0015 * (t * 0.4 * TAU).sin()));
+    // fundamental with its own slow drift (different rate/phase) so it shimmers, never wobbles.
+    let f_fun = lfo(move |t: f32| freq * (1.0 + 0.0018 * (t * 0.33 * TAU + 1.0).sin()));
+    let oscs = (f_oct >> sine()) * 1.0 + (f_fun >> sine()) * 0.4 + triangle_hz(freq) * 0.08;
+    // a dark cushion that opens a hair over ~0.6 s, with a slow ~2 Hz sway (no growl).
+    let cut = lfo(move |t: f32| {
+        let open = (t / 0.6).min(1.0);
+        180.0 + open * 90.0 + 35.0 * (t * 2.0 * TAU).sin()
+    });
+    Box::new(
+        (((oscs | cut | constant(0.8)) >> lowpass()) >> highpass_hz(24.0, 0.5))
+            * envelope(|t: f32| {
+                let a = 0.012;
+                if t < a {
+                    t / a // gentle, clean attack...
+                } else {
+                    0.7 + 0.3 * (-(t - a) * 0.5).exp() // ...then a long, high-floor sustain
+                }
+            })
+            * 0.5,
+    )
+}
+
+/// Dirty Reese growl — the moving low-end ENGINE (Carpenter Brut darkwave menace). A clean SUB
+/// spine (octave-down sine + fundamental) carries the deep weight and is kept entirely apart from
+/// the dirt. On top, a wide, hard-beating detuned-saw Reese (with a square edge for extra teeth)
+/// runs through a RESONANT moving low-pass and per-VOICE Tanh drive, so it snarls and cuts. How the
+/// character is built — and how it stays DEEP but never muddy / sidechain-friendly:
+///   • clean tight sub — `sine(freq*0.5)+sine(freq)*0.5`, only a DC-clearing HP30; the bottom octave
+///     is a pure sine and never sees the drive, so the low stays tight.
+///   • quarantined grit — the Reese band is HIGH-PASSED at 120 Hz *before* the Tanh, so all the
+///     saturation harmonics live ABOVE the sub and can't smear it.
+///   • the GROWL moves — a 3-input resonant lowpass whose cutoff drops ~2.3 kHz → 560 Hz per note
+///     AND breathes on a ~4.5 Hz wobble, while Q climbs from 2.4 into the fangs and the detune slowly
+///     WIDENS, so the Reese snarls and opens up instead of droning.
+///   • sidechain-friendly — no pluck: the amp falls to a high sustain floor (0.2) with a slow time
+///     constant, giving a soft, long tail with no transient of its own that breathes under the pump.
+/// Ends in the oversample wrapper because it carries drive.
+pub(super) fn bass_sw3(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // clean sub spine: octave-down sine for deep weight + the fundamental for body.
+        let sub = sine_hz(freq * 0.5) + sine_hz(freq) * 0.5;
+        // the Reese growl: a wide detune that slowly WIDENS so the beating opens as the note holds;
+        // each oscillator also gets a tiny slow drift so the voices never lock into a static phase.
+        let det = move |sign: f32, ph: f32| {
+            lfo(move |t: f32| {
+                let spread = 0.014 + 0.006 * (t * 1.0).min(1.0); // detune creeps wider over the note
+                freq * (1.0 + sign * spread) * (1.0 + 0.002 * (t * 0.6 * TAU + ph).sin())
+            })
+        };
+        // two wide saws beating hard + a square for extra teeth + the fundamental saw for body.
+        let saws = (det(1.0, 0.0) >> saw()) * 0.6
+            + (det(-1.0, 2.1) >> saw()) * 0.6
+            + (det(1.0, 4.0) >> square()) * 0.25
+            + saw_hz(freq) * 0.4;
+        // moving cutoff: a per-note drop (2.3 kHz → 560 Hz) that also breathes on a ~4.5 Hz wobble.
+        let cut = envelope(|t: f32| {
+            let wob = 1.0 + 0.22 * (t * 4.5 * TAU).sin();
+            (560.0 + 1700.0 * (-t * 4.0).exp()) * wob
+        });
+        // resonance climbs into the fangs over the first ~0.5 s → the filter grows teeth as it moves.
+        let q = envelope(|t: f32| 2.4 + 1.2 * (t * 2.0).min(1.0));
+        let drive = 2.6 + 1.6 * vel; // harder notes growl harder
+        // GRIT QUARANTINE: HP120 the growl band *before* the Tanh so the saturation can't smear the sub.
+        let growl = ((saws | cut | q) >> lowpass())
+            >> highpass_hz(120.0, 0.7)
+            >> shape(Tanh(1.0))
+            >> shape_fn(move |x| (x * drive).tanh());
+        // sub stays clean (just a DC-clearing HP); the growl band carries all the dirt.
+        ((sub >> highpass_hz(30.0, 0.5)) * 0.62 + growl * 0.6)
+            * envelope(|t: f32| {
+                let a = 0.005;
+                if t < a {
+                    t / a
+                } else {
+                    // soft, long tail to a high floor → no pluck transient; breathes under the pump.
+                    0.2 + 0.8 * (-(t - a) * 3.4).exp()
+                }
+            })
+            * 0.46
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Dirty Reese growl — the HELD/sustained variant: a long, evolving menacing growl that OPENS UP as
+/// it sustains. Same darkwave engine as the moving voice, but recast for long notes — instead of a
+/// per-note drop-and-pluck, the filter (cutoff AND resonance) slowly BLOOMS open over ~1.2 s, so the
+/// note lands relatively dark and grows fangs the longer it is held. How each trait is built — and
+/// how it stays DEEP but never muddy / sidechain-friendly:
+///   • deep tight sub — a separate clean spine (octave-down sine + fundamental), only an HP26 to clear
+///     DC; it never touches the drive, so the bottom octave stays a pure, tight sine.
+///   • quarantined grit — the wide detuned-saw + square Reese band is HIGH-PASSED at 120 Hz *before*
+///     the Tanh, so the menace lives above the sub and can never smear the low.
+///   • opens up as it sustains — cutoff eases 300 Hz → ~1 kHz over ~1.2 s with a slow ~0.7 Hz sweep
+///     and a faster ~3.6 Hz wobble, while Q ramps 1.6 → 4.0; the growl blooms and broods.
+///   • woozy menace — each oscillator rides its own vibrato (different rates/phases) on top of
+///     ±1.3-cent detune so the voices beat and the pitch never quite settles.
+///   • sidechain-friendly — a very long, high sustain (floor 0.62, slow decay) with no transient of
+///     its own, so it sits and breathes under the pump. A palette voice for the brooding held moments.
+pub(super) fn woozbass_sw3(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    // a true sub an octave down for deep weight — only barely woozy so the spine stays solid.
+    let f_oct = lfo(move |t: f32| freq * 0.5 * (1.0 + 0.003 * (t * 3.0 * TAU).sin()));
+    // independent vibrato per oscillator → they never lock, so the growl shimmers and feels unstable.
+    let det = move |mult: f32, rate: f32, ph: f32| {
+        lfo(move |t: f32| freq * mult * (1.0 + 0.005 * (t * rate * TAU + ph).sin()))
+    };
+    // the Reese: octave-down body + a wide detuned-saw pair + a square edge for darkwave teeth.
+    let oscs = (f_oct >> sine()) * 0.85
+        + (det(1.0, 3.5, 0.0) >> saw()) * 0.5
+        + (det(1.013, 3.1, 1.0) >> saw()) * 0.5
+        + (det(0.987, 2.7, 2.0) >> saw()) * 0.5
+        + (det(1.013, 2.3, 3.0) >> square()) * 0.22;
+    // BLOOM: cutoff opens 300 → ~1 kHz over ~1.2 s with a slow sweep + a faster wobble → grows fangs.
+    let cut = lfo(move |t: f32| {
+        let grow = (t / 1.2).min(1.0);
+        300.0
+            + grow * (700.0 + 600.0 * ((t * 0.7 * TAU).sin() * 0.5 + 0.5))
+            + grow * 180.0 * (t * 3.6 * TAU).sin()
+    });
+    // resonance ramps in (soft → fanged) over ~0.8 s so the menace builds as the note sustains.
+    let q = lfo(move |t: f32| 1.6 + 2.4 * (t / 0.8).min(1.0));
+    // GRIT QUARANTINE: HP120 the growl band *before* the Tanh so the dirt can't smear the sub.
+    let growl = (((oscs | cut | q) >> lowpass()) >> highpass_hz(120.0, 0.7)) >> shape(Tanh(2.2));
+    // a separate CLEAN sub spine for tight deep weight — never sees the drive (just a DC-clearing HP).
+    let subspine = (sine_hz(freq * 0.5) + sine_hz(freq) * 0.4) >> highpass_hz(26.0, 0.5);
+    Box::new(
+        (subspine * 0.55 + growl * 0.6)
+            * envelope(|t: f32| {
+                let a = 0.01;
+                if t < a {
+                    t / a // quick, clean attack...
+                } else {
+                    // ...then a very long, high sustain so the growl can bloom + breathe under the pump.
+                    0.62 + 0.38 * (-(t - a) * 0.5).exp()
+                }
+            })
+            * 0.5,
+    )
+}
+
+/// Acid bass: a 303-style squelch — saw+pulse through a RESONANT low-pass whose cutoff is swept by a
+/// fast per-note env AND a slow ~3 Hz wobble (the "talking" filter), with a soft slide into pitch and
+/// tanh drive for that rubbery acid bark. The sub spine (octave-down sine) is kept CLEAN and parallel
+/// so all the resonant grit lives only in a band high-passed above 120 Hz — deep but never muddy.
+/// Sidechain-friendly: a soft, long amp tail so the low end breathes back in under the pump.
+pub(super) fn bass_sw4(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // SLIDE: the pitch glides up into the target over ~40 ms → the portamento "303 slide" feel.
+        let glide = lfo(move |t: f32| {
+            let p = (t / 0.04).min(1.0);
+            freq * (0.945 + 0.055 * p)
+        });
+        // 303 osc: a saw with a hair of pulse for the hollow squelch; both ride the same slide.
+        let glide2 = glide.clone();
+        let osc = (glide >> saw()) * 0.8 + ((glide2 | constant(0.32)) >> pulse()) * 0.35;
+
+        // clean sub spine, octave down — carries the weight, never touched by the acid filter.
+        let sub = sine_hz(freq * 0.5) * 0.9;
+
+        // the TALKING filter: a fast per-note sweep (high→low) that also breathes on a ~3 Hz wobble;
+        // accent (vel) opens it brighter & adds more resonance — that's the squelch "wow".
+        let top = 2600.0 + 2600.0 * vel;
+        let cut = lfo(move |t: f32| {
+            let env = 380.0 + top * (-t * 9.0).exp(); // the squelch sweep
+            let wob = 1.0 + 0.18 * (t * 3.0 * TAU).sin(); // slow breathing on top
+            (env * wob).clamp(90.0, 7000.0)
+        });
+        // resonance blooms in over the first ~80 ms (lands clean, then squelches); accent adds fang.
+        let q = lfo(move |t: f32| (2.6 + 3.4 * vel) * (0.55 + 0.45 * (t / 0.08).min(1.0)));
+        let drive = 2.2 + 1.4 * vel; // harder notes bark harder
+
+        // all the grit stays ABOVE 120 Hz so it can never smear the clean sub underneath.
+        let squelch = ((osc | cut | q) >> lowpass())
+            >> highpass_hz(120.0, 0.7)
+            >> shape_fn(move |x: f32| (x * drive).tanh());
+
+        ((sub >> highpass_hz(28.0, 0.5)) * 0.7 + squelch * 0.6)
+            * envelope(|t: f32| {
+                let a = 0.004;
+                if t < a {
+                    t / a
+                } else {
+                    // a softer, longer tail so the acid breathes under the sidechain pump.
+                    0.16 + 0.84 * (-(t - a) * 4.5).exp()
+                }
+            })
+            * 0.46
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Held acid bass: keeps the 303 squelch ALIVE over a long note — instead of a one-shot pluck the
+/// filter slowly CYCLES (a ~0.45 Hz LFO sweeping cutoff + a faster ~3.3 Hz wobble) and the resonance
+/// blooms in, so a sustained note keeps "talking" the whole way through. Clean octave-down sub spine
+/// runs in parallel for the weight; all the resonant grit is quarantined above 120 Hz so the sub
+/// stays deep but never muddy. Long sustain → breathes under the sidechain pump. Best on HELD notes.
+pub(super) fn woozbass_sw4(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    // a gentle slide into the note; the same glide feeds both oscillators (real portamento).
+    let glide = lfo(move |t: f32| {
+        let p = (t / 0.05).min(1.0);
+        freq * (0.94 + 0.06 * p)
+    });
+    let glide2 = glide.clone();
+    let osc = (glide >> saw()) * 0.8 + ((glide2 | constant(0.3)) >> pulse()) * 0.35;
+
+    // clean sub spine, octave down — the deep weight, untouched by the acid filter.
+    let sub = sine_hz(freq * 0.5) * 0.95;
+
+    // a slow filter CYCLE (the held note keeps opening & closing) + a faster wobble on top.
+    let cut = lfo(move |t: f32| {
+        let cycle = (t * 0.45 * TAU).sin() * 0.5 + 0.5; // 0..1 slow open/close
+        let wob = (t * 3.3 * TAU).sin() * 0.5 + 0.5;
+        (300.0 + 1700.0 * cycle + 320.0 * wob).clamp(90.0, 5000.0)
+    });
+    // resonance ramps soft→fanged over ~0.5 s so it lands clean then grows teeth as it holds.
+    let q = lfo(move |t: f32| 3.2 + 3.0 * (t / 0.5).min(1.0));
+
+    // grit lives only above 120 Hz; the clean sub below stays out of the dirt.
+    let squelch = ((osc | cut | q) >> lowpass())
+        >> highpass_hz(120.0, 0.7)
+        >> shape_fn(|x: f32| (x * 2.4).tanh());
+
+    Box::new(
+        ((sub >> highpass_hz(26.0, 0.5)) * 0.75 + squelch * 0.6)
+            * envelope(|t: f32| {
+                let a = 0.008;
+                if t < a {
+                    t / a // quick, clean attack...
+                } else {
+                    0.6 + 0.4 * (-(t - a) * 0.6).exp() // ...then a long sustain so the squelch can cycle
+                }
+            })
+            * 0.5,
+    )
+}
