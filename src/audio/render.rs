@@ -95,10 +95,63 @@ fn ev(lane: &mut Vec<Event>, t: f32, r: impl FnOnce(&mut [f32], &mut [f32]) + Se
     });
 }
 
+// --- PALETTE PICKERS: each `*sw` score knob (>0.5) swaps the nocturnal SYNTHWAVE voice in; default 0
+// keeps the original bouncy/hard voices, so e.g. the Camping show is byte-for-byte unchanged. The
+// selected bool is captured (Copy) into the per-event render closures.
+type Unit = Box<dyn fundsp::prelude32::AudioUnit>;
+fn lead_pick(sw: bool, f: f32, v: f32) -> Unit {
+    if sw { lead_sw(f, v) } else { lead(f, v) }
+}
+fn bass_pick(sw: bool, f: f32, v: f32) -> Unit {
+    if sw { bass_sw(f, v) } else { bass(f, v) }
+}
+fn woozbass_pick(sw: bool, f: f32) -> Unit {
+    if sw { woozbass_sw(f) } else { woozbass(f) }
+}
+// pads have several CHARACTERS to audition: padsw = 0 orig · 1 the *_sw pair · 2 Juno poly ·
+// 3 PWM string-machine · 4 dark cinematic wash.
+fn supersaw_pick(n: i32, f: f32) -> Unit {
+    match n {
+        1 => supersaw_sw(f),
+        2 => supersaw_sw2(f),
+        3 => supersaw_sw3(f),
+        4 => supersaw_sw4(f),
+        _ => supersaw(f),
+    }
+}
+fn choir_pick(n: i32, f: f32) -> Unit {
+    match n {
+        1 => choir_sw(f),
+        2 => choir_sw2(f),
+        3 => choir_sw3(f),
+        4 => choir_sw4(f),
+        _ => choir(f),
+    }
+}
+fn snare_pick(sw: bool) -> Unit {
+    if sw { snare_sw() } else { snare() }
+}
+fn hat_pick(sw: bool) -> Unit {
+    if sw { hat_sw() } else { hat() }
+}
+fn kick_pick(sw: bool, buf: &mut [f32], t: f32, root: f32, amp: f32) {
+    if sw {
+        render_kick_sw(buf, t, root, amp)
+    } else {
+        render_hardkick(buf, t, root, amp)
+    }
+}
+
 pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     let mut lanes: [Vec<Event>; LANES] = std::array::from_fn(|_| Vec::new());
     let beat = score.beat();
     let bar = score.bar();
+    // palette selectors (default 0 = the original voices; a score `set leadsw=1` etc. opts into the
+    // nocturnal-synthwave alternates). Resolved once, captured into the per-event closures below.
+    let leadsw = score.param("leadsw", 0.0) > 0.5;
+    let basssw = score.param("basssw", 0.0) > 0.5;
+    let padsw = score.param("padsw", 0.0).round() as i32;
+    let drumsw = score.param("drumsw", 0.0) > 0.5;
 
     // ---- DRUMS (kick → kickbuf; bass-body/intro-perc/snare/hat/stab → bed) ----
     let hats_amp = score.param("hats", 0.3);
@@ -107,12 +160,12 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let root = score.chord_at(kt).root;
         let kamp = 0.92 * (0.9 + 0.1 * vel(kt, beat, 0));
         ev(&mut lanes[L_DRUMS], kt, move |_b, k| {
-            render_hardkick(k, kt, root, kamp)
+            kick_pick(drumsw, k, kt, root, kamp)
         });
         let v = vel(kt, beat, 0x88);
         let bf = bass_freq(score.chord_at(kt).root);
         ev(&mut lanes[L_DRUMS], kt, move |b, _| {
-            render_into(b, kt, 0.25, 0.18 * v, 0.0, bass(bf, v))
+            render_into(b, kt, 0.25, 0.18 * v, 0.0, bass_pick(basssw, bf, v))
         });
     }
     // intro percussion (hardkick → kickbuf, hats → bed), bars 2..build
@@ -123,19 +176,19 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             let k_amp = if b < 4 { 0.30 } else { 0.55 };
             let root = score.chord_at(base).root;
             ev(&mut lanes[L_DRUMS], base, move |_b, k| {
-                render_hardkick(k, base, root, k_amp)
+                kick_pick(drumsw, k, base, root, k_amp)
             });
             if b >= 4 {
                 ev(&mut lanes[L_DRUMS], base + 2.0 * beat, move |_b, k| {
-                    render_hardkick(k, base + 2.0 * beat, root, k_amp * 0.55)
+                    kick_pick(drumsw, k, base + 2.0 * beat, root, k_amp * 0.55)
                 });
             }
             if b >= 5 {
                 ev(&mut lanes[L_DRUMS], base + beat, move |b2, _| {
-                    render_into(b2, base + beat, 0.10, 0.12, -0.35, hat())
+                    render_into(b2, base + beat, 0.10, 0.12, -0.35, hat_pick(drumsw))
                 });
                 ev(&mut lanes[L_DRUMS], base + 3.0 * beat, move |b2, _| {
-                    render_into(b2, base + 3.0 * beat, 0.10, 0.12, 0.35, hat())
+                    render_into(b2, base + 3.0 * beat, 0.10, 0.12, 0.35, hat_pick(drumsw))
                 });
             }
             if b >= 6 {
@@ -143,7 +196,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
                     let st = base + s as f32 * beat * 0.5;
                     let pan = if s % 2 == 0 { -0.45 } else { 0.45 };
                     ev(&mut lanes[L_DRUMS], st, move |b2, _| {
-                        render_into(b2, st, 0.07, 0.07, pan, hat())
+                        render_into(b2, st, 0.07, 0.07, pan, hat_pick(drumsw))
                     });
                 }
             }
@@ -158,7 +211,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let gt = groove(t, beat, 0x55, 0.003, 0.004);
         let amp = snare_amp * vel(t, beat, 0x55);
         ev(&mut lanes[L_DRUMS], gt, move |b, _| {
-            render_into(b, gt, 0.4, amp, pan, snare())
+            render_into(b, gt, 0.4, amp, pan, snare_pick(drumsw))
         });
     }
     for (i, t) in score.hits(Inst::Hat).into_iter().enumerate() {
@@ -166,7 +219,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let gt = groove(t, beat, 0x77, 0.006, 0.0);
         let amp = hats_amp * vel(t, beat, 0x77);
         ev(&mut lanes[L_DRUMS], gt, move |b, _| {
-            render_into(b, gt, 0.12, amp, pan, hat())
+            render_into(b, gt, 0.12, amp, pan, hat_pick(drumsw))
         });
     }
     for t in score.hits(Inst::Stab) {
@@ -187,18 +240,25 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             let root = bass_freq(score.chord_at(t).root);
             let amp = if b < 6 { 0.18 } else { 0.26 };
             ev(&mut lanes[L_LEAD], t, move |bd, _| {
-                render_into(bd, t, 0.7, amp, 0.0, bass(root, 0.85))
+                render_into(bd, t, 0.7, amp, 0.0, bass_pick(basssw, root, 0.85))
             });
             if b >= 5 {
                 let t2 = t + 2.0 * beat;
                 ev(&mut lanes[L_LEAD], t2, move |bd, _| {
-                    render_into(bd, t2, 0.45, amp * 0.75, 0.0, bass(root, 0.7))
+                    render_into(bd, t2, 0.45, amp * 0.75, 0.0, bass_pick(basssw, root, 0.7))
                 });
             }
             if b >= 7 {
                 let t3 = t + 3.0 * beat;
                 ev(&mut lanes[L_LEAD], t3, move |bd, _| {
-                    render_into(bd, t3, 0.35, amp * 0.55, 0.0, bass(root * 1.5, 0.6))
+                    render_into(
+                        bd,
+                        t3,
+                        0.35,
+                        amp * 0.55,
+                        0.0,
+                        bass_pick(basssw, root * 1.5, 0.6),
+                    )
                 });
             }
         }
@@ -213,10 +273,10 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             .map(|(s0, s1)| (s0..s1).contains(&t))
             .unwrap_or(false);
         ev(&mut lanes[L_LEAD], gt, move |bd, _| {
-            render_into(bd, gt, dur, lamp, 0.0, lead(f, v));
-            render_into(bd, gt, dur, 0.20 * v, 0.0, lead(f * 2.0, v));
+            render_into(bd, gt, dur, lamp, 0.0, lead_pick(leadsw, f, v));
+            render_into(bd, gt, dur, 0.20 * v, 0.0, lead_pick(leadsw, f * 2.0, v));
             if in_climax {
-                render_into(bd, gt, dur, 0.18 * v, 0.0, lead(f * 2.0, v));
+                render_into(bd, gt, dur, 0.18 * v, 0.0, lead_pick(leadsw, f * 2.0, v));
             }
         });
     }
@@ -229,7 +289,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let lv = (v * 0.7).max(0.25);
         let dur = 0.5 + hold;
         ev(&mut lanes[L_ECHO], gt, move |bd, _| {
-            render_into(bd, gt, dur, amp, 0.0, lead(f, lv))
+            render_into(bd, gt, dur, amp, 0.0, lead_pick(leadsw, f, lv))
         });
     }
 
@@ -252,9 +312,9 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let gt = groove(t, beat, 0xB5, 0.003, 0.0);
         ev(&mut lanes[L_BASS], gt, move |bd, _| {
             let (dur, voice): (f32, Box<dyn fundsp::prelude32::AudioUnit>) = if wooz {
-                (0.6 + hold, woozbass(f))
+                (0.6 + hold, woozbass_pick(basssw, f))
             } else {
-                (0.42 + hold, bass(f, v))
+                (0.42 + hold, bass_pick(basssw, f, v))
             };
             render_into(bd, gt, dur, amp, 0.0, voice)
         });
@@ -289,10 +349,17 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
                 let tri = score.chord_at(t).triad();
                 ev(&mut lanes[L_WALL], t, move |bd, _| {
                     for &f in tri.iter() {
-                        render_into(bd, t, bar, amp * 0.7, -0.95, supersaw(f));
-                        render_into(bd, t, bar, amp * 0.7, 0.95, supersaw(f * 1.004));
-                        render_into(bd, t, bar, amp * ch, -0.6, choir(f * 0.5));
-                        render_into(bd, t, bar, amp * ch, 0.6, choir(f * 0.5 * 1.003));
+                        render_into(bd, t, bar, amp * 0.7, -0.95, supersaw_pick(padsw, f));
+                        render_into(bd, t, bar, amp * 0.7, 0.95, supersaw_pick(padsw, f * 1.004));
+                        render_into(bd, t, bar, amp * ch, -0.6, choir_pick(padsw, f * 0.5));
+                        render_into(
+                            bd,
+                            t,
+                            bar,
+                            amp * ch,
+                            0.6,
+                            choir_pick(padsw, f * 0.5 * 1.003),
+                        );
                     }
                 });
                 b += 1;
@@ -315,8 +382,22 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
                     let tri = score.chord_at(t).triad();
                     ev(&mut lanes[L_SHIM], t, move |bd, _| {
                         for &f in tri.iter() {
-                            render_into(bd, t, bar, shimmer * ramp, -0.85, choir(f * 2.0));
-                            render_into(bd, t, bar, shimmer * ramp, 0.85, choir(f * 2.0 * 1.004));
+                            render_into(
+                                bd,
+                                t,
+                                bar,
+                                shimmer * ramp,
+                                -0.85,
+                                choir_pick(padsw, f * 2.0),
+                            );
+                            render_into(
+                                bd,
+                                t,
+                                bar,
+                                shimmer * ramp,
+                                0.85,
+                                choir_pick(padsw, f * 2.0 * 1.004),
+                            );
                         }
                     });
                     b += 1;

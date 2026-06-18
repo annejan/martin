@@ -144,3 +144,44 @@ pub(super) fn render_snare_roll(buf: &mut [f32], start: f32, dur: f32, beat: f32
         t += step;
     }
 }
+
+/// 808/analog-style night-drive KICK (procedural, NOT FunDSP): a punchy but CLEAN thump for the
+/// nocturnal-synthwave bed — no longer the rawstyle/gabber unit it was. Layers: a sine BODY that
+/// pitch-sweeps fast from ~220 Hz down to the chord-root pitch (the punch), gentle soft-knee
+/// SATURATION for analog warmth instead of the old tanh+hard-clip grit, a tight high-passed CLICK for
+/// the attack snap, and a long pure-sine SUB tail (~0.6 s) for the deep weight that sidechains so well
+/// against the bass. Still tuned to the root pitch-class (folded into a 45-90 Hz octave window so every
+/// root has a representative), still dead-on for the sidechain pump.
+pub(super) fn render_kick_sw(buf: &mut [f32], t: f32, root: f32, amp: f32) {
+    use std::f32::consts::TAU;
+    let sr = SAMPLE_RATE as f32;
+    let start = (t.max(0.0) * sr) as usize;
+    let n = (0.65 * sr) as usize;
+    // Tune the kick to the root pitch-class, folded into a punchy 45-90 Hz window. The bounds span
+    // exactly one octave (90/45 = 2), so EVERY pitch class has a representative inside.
+    let mut tail_hz = root;
+    while tail_hz > 90.0 {
+        tail_hz *= 0.5;
+    }
+    while tail_hz < 45.0 {
+        tail_hz *= 2.0;
+    }
+    let (mut ph_b, mut ph_s) = (0.0f32, 0.0f32);
+    for i in 0..n {
+        let tt = i as f32 / sr;
+        let frame = start + i;
+        // BODY: a fast pitch sweep from ~220 Hz down to the tuned pitch over ~12 ms — the punch. Pure
+        // sine (no saw partial), so it reads round and analog, not as gabber buzz.
+        let body_hz = tail_hz + (220.0 - tail_hz) * (-tt * 80.0).exp();
+        ph_b = (ph_b + TAU * body_hz / sr) % TAU;
+        // soft-knee saturation: tanh at a GENTLE drive warms + glues the transient without the old
+        // hard-clip edge (analog warmth, not distortion).
+        let body = (ph_b.sin() * 1.5).tanh() * (-tt * 11.0).exp();
+        // SUB tail: a clean sine on the tuned pitch with a long decay — the deep night-drive weight.
+        ph_s = (ph_s + TAU * tail_hz / sr) % TAU;
+        let sub = ph_s.sin() * (-tt * 4.2).exp();
+        // CLICK: a tight noise transient for the attack snap (very fast decay so it stays a tick).
+        let click = pseudo_noise(i + start * 11) * (-tt * 420.0).exp() * 0.35;
+        add_stereo(buf, frame, (body * 0.9 + sub * 0.55 + click) * amp, 0.0);
+    }
+}

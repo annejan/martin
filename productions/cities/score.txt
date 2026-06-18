@@ -12,7 +12,7 @@ chords Am F C G
 
 # darker, wider, wetter than the sunny intro: woozbass ON for the night-drive low end, more reverb
 # wash + shimmer for the neon air, restrained donk/house bite, atmosphere up for the skyline haze.
-set lead=0.82 sub=0.5 supersaw=0.18 choir=0.5 donk=0.12 house=0.1 reverb=0.52 sidechain=0.7 widen=1.9 makeup=1.12 ceiling=0.93 woozbass=0.55 shimmer=0.3 reverbauto=1 hats=0.34 snares=0.42 atmosphere=0.42
+set lead=0.82 sub=0.5 supersaw=0.18 choir=0.5 donk=0.12 house=0.1 reverb=0.52 sidechain=0.7 widen=1.9 makeup=1.12 ceiling=0.93 woozbass=0.55 shimmer=0.3 reverbauto=1 hats=0.34 snares=0.42 atmosphere=0.42 drumsw=1 padsw=2
 
 # ~46 bars: intro 4 · build 6 · drop 12 · breakdown 4 · climax 12 · outro 8
 section intro 4 4

@@ -294,3 +294,539 @@ pub(super) fn casio(freq: f32) -> Box<dyn AudioUnit> {
             * 0.5,
     )
 }
+
+// ============================================================================================
+// PAD VARIANTS (padsw=2/3/4): alternate nocturnal pad CHARACTERS to audition (1 = the *_sw pair).
+// Each = a wall-role (top) + a bed-role (body). Selected by the integer `padsw` knob in render.rs.
+// ============================================================================================
+
+/// Warm analog poly-pad — the WALL (Juno/OB-style bright-but-warm top).
+/// The neon-air chord bed's upper layer, panned wide over the BED. Built to read UNMISTAKABLY as a
+/// held analog pad with audible MOVEMENT (the old one was a faint wash):
+///   • FIVE detuned saws, each on its own decorrelated drift LFO (no two rates match) so the chorus
+///     never phase-locks — the chord keeps slowly beating/breathing for the whole held bar.
+///   • TWO PWM `pulse()` oscillators whose duty slowly wobbles — the classic string-machine / OB
+///     "animate" shimmer. This is a SECOND, independent motion layered on the saw drift, so the pad
+///     has two different living movements instead of one static wash.
+///   • the low-pass BLOOMS open 700→2900 Hz with a hair of resonance (lowpass_q 0.9) AND a slow
+///     ~0.27 Hz cutoff tremolo riding on top, so the brightness gently undulates the whole note —
+///     each chord swells in like a Juno volume pedal (attack curve powf 1.4), not a snap.
+///   • Softsign(0.6) rounds the saw+pulse stack into warm analog thickness (warm, not buzzy); HP140
+///     keeps it out of the bass; a whisper of octave sine adds glassy top. A touch hotter (*0.42) so
+///     it actually registers, but still mix-safe under the lead.
+pub(super) fn supersaw_sw2(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // each saw drifts slowly around its detune offset on its own (rate, depth, phase) so the
+        // ensemble chorus never locks — that slow beating is the "analog" life of the pad.
+        let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
+            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+        };
+        // string-machine PWM voice: a pulse whose DUTY slowly wobbles 0.32..0.68 → animated shimmer
+        // that moves differently from the saw drift (a distinct second motion layer).
+        let pwm = move |mult: f32, drate: f32, ddepth: f32, dph: f32, prate: f32, pph: f32| {
+            ((lfo(move |t: f32| mult * freq * (1.0 + ddepth * (t * drate * TAU + dph).sin())))
+                | (lfo(move |t: f32| 0.5 + 0.18 * (t * prate * TAU + pph).sin())))
+                >> pulse()
+        };
+        let saws = (drift(1.000, 0.18, 0.0012, 0.0) >> saw())
+            + (drift(1.007, 0.23, 0.0016, 1.3) >> saw())
+            + (drift(0.993, 0.20, 0.0016, 2.6) >> saw())
+            + (drift(1.011, 0.27, 0.0020, 3.9) >> saw())
+            + (drift(0.989, 0.16, 0.0020, 5.2) >> saw());
+        let pulses =
+            pwm(1.004, 0.13, 0.0013, 0.7, 0.07, 0.0) + pwm(0.996, 0.15, 0.0013, 4.4, 0.05, 2.1);
+        // saws carry the warm body, the PWM pulses add the moving string-machine shimmer on top.
+        let osc = saws * 0.115 + pulses * 0.085 + sine_hz(freq * 2.0) * 0.02;
+        // filter blooms open to a WARM peak (not a screech) with a slow tremolo so the brightness
+        // keeps undulating for the whole held chord.
+        let cut = envelope(|t: f32| {
+            let bloom = 700.0 + 2200.0 * (1.0 - (-t / 0.9).exp());
+            bloom * (1.0 + 0.10 * (t * 0.27 * TAU).sin())
+        });
+        ((osc | cut) >> lowpass_q(0.9) >> highpass_hz(140.0, 0.7) >> shape(Softsign(0.6)))
+            * envelope(|t: f32| (t / 0.7).min(1.0).powf(1.4))
+            * 0.42
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Warm analog poly-pad — the BED (rounder/darker body UNDER the wall).
+/// The warm bottom of the neon-air chord pad, panned wide opposite the WALL. Carries weight + warmth
+/// so the pad has real body (the old bed was too subtle to register):
+///   • FOUR detuned saws on slow decorrelated drift LFOs (~0.11–0.16 Hz) — a touch slower/deeper than
+///     the wall so the bed breathes underneath rather than sparkling; the slow beating keeps it alive
+///     for the whole held bar instead of sitting flat.
+///   • a TRIANGLE at the fundamental for a soft, hollow Juno roundness, plus a sub-octave sine AND a
+///     sub-SUB-octave sine for genuine low weight — this is the "size" you feel under the wall.
+///   • a GENTLE low bloom 600→1700 Hz with a slow ~0.19 Hz cutoff wobble, under a long amp swell
+///     (1.5 s, powf 1.3) → each chord blooms in like a deep breath, dark and warm, never bright.
+///   • Softsign(0.35) for round analog thickness without honk; HP40 trims sub-rumble so the double
+///     sub stays clean. Kept modest (*0.32) so it supports the wall and the lead, never masks them.
+pub(super) fn choir_sw2(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
+            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+        };
+        let saws = (drift(1.000, 0.11, 0.0013, 0.0) >> saw())
+            + (drift(1.005, 0.14, 0.0017, 1.9) >> saw())
+            + (drift(0.995, 0.12, 0.0017, 3.3) >> saw())
+            + (drift(1.009, 0.16, 0.0021, 4.7) >> saw());
+        // saws for warmth, triangle for hollow Juno round, two sub-octave sines for real low weight.
+        let body = saws * 0.13
+            + (triangle_hz(freq) * 0.10)
+            + (sine_hz(freq * 0.5) * 0.55)
+            + (sine_hz(freq * 0.25) * 0.20);
+        // gentle, dark bloom with a slow cutoff wobble → the bed breathes in under the wall.
+        let cut = envelope(|t: f32| {
+            let bloom = 600.0 + 1100.0 * (1.0 - (-t / 1.3).exp());
+            bloom * (1.0 + 0.08 * (t * 0.19 * TAU + 1.1).sin())
+        });
+        ((body | cut) >> lowpass_q(0.7) >> highpass_hz(40.0, 0.6) >> shape(Softsign(0.35)))
+            * envelope(|t: f32| (t / 1.5).min(1.0).powf(1.3))
+            * 0.32
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Neon-glass WALL — a vintage Solina / string-machine PWM pad (the bright, wide top of the bed).
+/// Seven `pulse()` oscillators whose DUTY is swept by per-voice LFOs at ~0.43–0.67 Hz: that is the
+/// classic PWM "string shimmer", a continuous animation of harmonic content the ear reads instantly
+/// as a lush string pad (not a faint wash). Built to BE noticed:
+///   • each voice also pitch-drifts on a decorrelated LFO so the ensemble never phase-locks — the slow
+///     beating is the width + the "human" string warmth;
+///   • a +octave saw adds glassy top air;
+///   • the low-pass BLOOMS open 1100→3700 Hz over ~1.6 s so every held bar swells in like headlights;
+///   • a slow ~0.31 Hz amplitude-tilt LFO gives the long undulating "neon air" pulse across the bar;
+///   • HP170 keeps it clear of the bass, Softsign(0.6) glues the ensemble.
+/// Held a full bar; panned wide against the warm BED beneath it. Mix-safe (*0.42).
+pub(super) fn supersaw_sw3(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // one PWM string voice: pitch drifts (drate/ddepth/dph) and duty sweeps (prate/pph), all
+        // decorrelated so the ensemble keeps shimmering for the whole held chord.
+        let pwm_saw = move |mult: f32, drate: f32, ddepth: f32, dph: f32, prate: f32, pph: f32| {
+            let f = lfo(move |t: f32| mult * freq * (1.0 + ddepth * (t * drate * TAU + dph).sin()));
+            let duty = lfo(move |t: f32| 0.5 + 0.42 * (t * prate * TAU + pph).sin());
+            (f | duty) >> pulse()
+        };
+        let ens = ((pwm_saw(1.000, 0.17, 0.0010, 0.0, 0.45, 0.0)
+            + pwm_saw(1.007, 0.21, 0.0012, 1.1, 0.53, 1.3)
+            + pwm_saw(0.993, 0.19, 0.0012, 2.3, 0.49, 2.6)
+            + pwm_saw(1.014, 0.25, 0.0014, 3.4, 0.61, 3.9)
+            + pwm_saw(0.986, 0.23, 0.0014, 4.6, 0.57, 5.1)
+            + pwm_saw(1.021, 0.27, 0.0016, 5.7, 0.67, 0.7)
+            + pwm_saw(0.979, 0.15, 0.0016, 0.6, 0.43, 2.0))
+            * 0.085)
+            + (saw_hz(freq * 2.0) * 0.05); // glassy octave air on top
+        // filter BLOOMS open slowly to a bright-but-warm glass peak — swell, not screech.
+        let cut = envelope(|t: f32| 1100.0 + 2600.0 * (t / 1.6).min(1.0));
+        // slow amplitude tilt = the undulating "neon air" pulse across the held bar.
+        let tilt = lfo(|t: f32| 1.0 + 0.14 * (t * 0.31 * TAU).sin());
+        ((ens | cut) >> lowpass_q(0.85) >> highpass_hz(170.0, 0.7) >> shape(Softsign(0.6)))
+            * tilt
+            * envelope(|t: f32| (t / 0.7).min(1.0))
+            * 0.42
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Neon-glass BED — the warm body UNDER the PWM string WALL so the pad never sounds thin.
+/// A slow-drifting detuned-saw ensemble + one extra `pulse()` PWM string voice for matching shimmer +
+/// a sub-octave sine for size, through a gently blooming low-pass. Recast so it breathes:
+///   • five saws ride slow (~0.13–0.19 Hz) on decorrelated LFOs around their detune — the ensemble
+///     keeps beating/shimmering (a real string section is never perfectly in tune);
+///   • a single PWM `pulse()` voice (duty swept ~0.27 Hz) ties the bed to the wall's Solina character;
+///   • the low-pass opens gently ~1.3→2.6 kHz over ~2 s under a long ~1.4 s amp swell, so each held
+///     chord blooms in like a deep breath rather than snapping to full brightness;
+///   • the sub-octave sine + Softsign(0.5) give round, glassy warmth and body without honk.
+/// Kept under the wall (modest *0.32). Diffuse reverb downstream makes it bloom further.
+pub(super) fn choir_sw3(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
+            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+        };
+        // one PWM string voice to share the wall's Solina shimmer down in the body.
+        let pwm_body = {
+            let f = lfo(move |t: f32| freq * (1.0 + 0.0010 * (t * 0.14 * TAU).sin()));
+            let duty = lfo(|t: f32| 0.5 + 0.30 * (t * 0.27 * TAU).sin());
+            (f | duty) >> pulse()
+        };
+        let body = ((drift(1.000, 0.13, 0.0010, 0.0) >> saw())
+            + (drift(1.005, 0.17, 0.0012, 1.7) >> saw())
+            + (drift(0.995, 0.15, 0.0012, 3.0) >> saw())
+            + (drift(1.010, 0.19, 0.0014, 4.2) >> saw())
+            + (drift(0.990, 0.16, 0.0014, 5.5) >> saw())
+            + pwm_body * 0.5
+            + sine_hz(freq * 0.5) * 0.7) // sub-octave body
+            * 0.14;
+        // soft filter blooms open slowly under a long swell → the bed breathes in.
+        let cut = envelope(|t: f32| 1300.0 + 1300.0 * (t / 2.0).min(1.0));
+        ((body | cut) >> lowpass_q(0.7) >> shape(Softsign(0.5)))
+            * envelope(|t: f32| (t / 1.4).min(1.0))
+            * 0.32
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Pad WALL — dark wide cinematic wash (the bright-ish top, kept dark): 7 low detuned saws fused into
+/// one thick driven sheet, with the headline MOVEMENT being a filter that audibly OPENS and CLOSES over
+/// the held bar instead of a one-shot bloom that settles and vanishes. Recast for unmistakable presence:
+///   • the resonant cutoff breathes on a slow ~0.55 Hz LFO — a full open→close cycle per bar — between a
+///     dark floor (~700 Hz) and a warm peak (~2600 Hz), so you HEAR the chord inhale and exhale (this is
+///     why it reads as a pad, not a wash). Deliberately never reaches bright/screech: brooding, not neon.
+///   • a second, decorrelated ~0.31 Hz tremolo gently swells the amplitude so the sheet is never static.
+///   • each saw drifts around its own detune on its own slow LFO (rate/depth/phase all different) so the
+///     ensemble keeps beating like a real string machine and never locks for the whole held chord.
+///   • Softsign(0.8) glues the saws into one warm, slightly-driven body; HP150 keeps it off the bass.
+/// Blooms in over a long swell so each full-bar chord arrives like a deep breath. Reverb-hungry by design.
+pub(super) fn supersaw_sw4(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // each saw drifts slowly around its detune offset (rate, depth, phase all different) so the
+        // wall keeps shimmering for the whole held chord — wide detune for a fat cinematic spread.
+        let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
+            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+        };
+        let saws = ((drift(1.000, 0.17, 0.0010, 0.0) >> saw())
+            + (drift(1.007, 0.21, 0.0013, 1.1) >> saw())
+            + (drift(0.993, 0.19, 0.0013, 2.3) >> saw())
+            + (drift(1.014, 0.25, 0.0015, 3.4) >> saw())
+            + (drift(0.986, 0.23, 0.0015, 4.6) >> saw())
+            + (drift(1.022, 0.27, 0.0017, 5.7) >> saw())
+            + (drift(0.978, 0.15, 0.0017, 0.6) >> saw()))
+            * 0.12;
+        // the MOVE: cutoff breathes a full open→close cycle (~0.55 Hz ≈ one per bar @124 BPM) between a
+        // dark floor and a warm (not bright) peak — the pad audibly inhales and exhales. cos starts low.
+        let cut = lfo(move |t: f32| {
+            let breathe = 0.5 - 0.5 * (t * 0.55 * TAU).cos(); // 0→1→0 over the bar
+            700.0 + 1900.0 * breathe
+        });
+        // slow decorrelated amplitude tremolo so the texture never sits still under the sweep.
+        let trem = lfo(|t: f32| 0.85 + 0.15 * (t * 0.31 * TAU).sin());
+        ((saws | cut) >> lowpass_q(0.8) >> highpass_hz(150.0, 0.7) >> shape(Softsign(0.8)))
+            * trem
+            * envelope(|t: f32| (t / 0.8).min(1.0)) // long bloom-in swell
+            * 0.42
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Pad BED — the deep sub/body layer under the dark cinematic wall. Where the wall carries the breathing
+/// top, this carries the WEIGHT: a sub-octave + sub-sub sine give real low end, three slow-beating low
+/// saws fill the warm midrange, and its own filter breathes too — slower and darker than the wall, so the
+/// two layers phase against each other and the whole pad reads as a living, present thing (not a wash).
+///   • sub-octave sine (freq*0.5) + sub-sub sine (freq*0.25) = the brooding cinematic floor / body.
+///   • three saws ride slow (~0.13–0.17 Hz) with decorrelated detune LFOs so the ensemble keeps beating
+///     (that slow phasing is the "human"/string-machine warmth — never perfectly in tune).
+///   • the low-pass breathes on a slow ~0.41 Hz LFO between ~500 Hz and ~1500 Hz — it stays DARK and sits
+///     UNDER the wall, and because its rate differs from the wall's the two never lock for the held bar.
+///   • Softsign(0.5) rounds the body into glassy warmth without honk. Blooms in over a long amp swell.
+/// Reverb makes it bloom further. Kept under the wall (modest gain) but deliberately PRESENT.
+pub(super) fn choir_sw4(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
+            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+        };
+        let body = ((drift(1.000, 0.13, 0.0011, 0.0) >> saw())
+            + (drift(1.006, 0.17, 0.0014, 1.7) >> saw())
+            + (drift(0.994, 0.15, 0.0014, 3.0) >> saw())
+            + sine_hz(freq * 0.5) * 0.85      // sub-octave = the warm body
+            + sine_hz(freq * 0.25) * 0.5)     // sub-sub octave = the deep cinematic floor
+            * 0.14;
+        // dark filter breathes slower than the wall (~0.41 Hz) so the layers phase apart — stays UNDER.
+        let cut = lfo(move |t: f32| {
+            let breathe = 0.5 - 0.5 * (t * 0.41 * TAU).cos();
+            500.0 + 1000.0 * breathe
+        });
+        ((body | cut) >> lowpass_q(0.7) >> shape(Softsign(0.5)))
+            * envelope(|t: f32| (t / 1.4).min(1.0)) // slow deep-breath swell
+            * 0.34
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+// ============================================================================================
+// SYNTHWAVE PALETTE (`*_sw`): nocturnal Kavinsky/Midnight-flavoured alternates of the core voices,
+// selected per-score by the `leadsw`/`basssw`/`padsw`/`drumsw` knobs (see render.rs). The default
+// (knob 0) keeps the original bouncy/hard voices — e.g. the Camping show — unchanged.
+// ============================================================================================
+
+/// Lead: the signature nocturnal-synthwave HOOK. A sweet 3-saw core (unison + ±6 cents) for an
+/// expressive, vocal detune instead of a 5-saw wall, a sine at the fundamental for rounded
+/// breathy body (analog warmth, not an organ), and a quiet OCTAVE-UP saw shimmer so it floats
+/// high and SINGS over the chord wall. A vibrato that SWELLS IN like a singer leaning into the
+/// note (~5 Hz, slow, wistful). The per-note FILTER ENVELOPE opens bright then SETTLES to a warm,
+/// present sustain (cinematic, not a static-cutoff organ, not a thin closing whisper) — the sweep
+/// peak tracks velocity. A gentle ~190 Hz HIGH-PASS lifts it off the low-mids so it sits ON the
+/// neon glass above the chords, and Atan drive (vel-scaled) gives round analog warmth + just
+/// enough bite. Optional 2× oversample; modest gain, mix-safe.
+pub(super) fn lead_sw(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // a gentle vibrato that SWELLS IN over the note — the lead leans into the note like a singer
+        // instead of one static tone. Slow (~5 Hz) + a touch deep so it reads wistful, not nervous.
+        // Each oscillator gets its own phase (lush, decorrelated).
+        let vib = move |mult: f32, ph: f32| {
+            lfo(move |t: f32| {
+                let depth = 0.006 * (t * 1.2).min(1.0);
+                freq * mult * (1.0 + depth * (t * 5.0 * TAU + ph).sin())
+            })
+        };
+        // a sweet 3-saw core (unison + ±6 cents) — expressive detune, not a 5-saw smear. A sine at the
+        // fundamental adds rounded, breathy VOCAL body; a quiet octave-up saw adds shimmer so the
+        // hook floats high and SINGS over the chord wall without going thin.
+        let oscs =
+            ((vib(1.0, 0.0) >> saw()) + (vib(1.006, 1.3) >> saw()) + (vib(0.994, 2.6) >> saw()))
+                * 0.20
+                + (vib(1.0, 0.7) >> sine()) * 0.16
+                + (vib(2.0, 3.1) >> saw()) * 0.06;
+        // open bright then SETTLE to a warm, present sustain (cinematic, not a static organ, not a
+        // thin closing whisper). The sweep PEAK still tracks velocity.
+        let top = 2200.0 + 2400.0 * vel;
+        let cut = envelope(move |t: f32| 1600.0 + top * (-t * 3.0).exp());
+        ((oscs | cut) >> lowpass_q(0.8) >> highpass_hz(190.0, 0.7) >> shape(Atan(0.5 + 0.4 * vel)))
+            * envelope(|t: f32| {
+                let a = 0.025;
+                if t < a {
+                    t / a // a soft glide-in so the note leans in, vocal, not a click
+                } else {
+                    0.58 + 0.42 * (-(t - a) * 0.8).exp() // high sustain floor → the note holds + SINGS
+                }
+            })
+            * 0.8
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Bass: the night-drive ENGINE — a moving Reese split into two bands so it goes DEEP without going
+/// muddy. A clean SUB (sine an octave down + the fundamental) carries the weight; a separate
+/// detuned-saw "growl" band (±9 cent, slowly creeping wider) is high-passed off the low end and
+/// driven, so the grit sits ON TOP of an unmuddied sub. The growl's resonant cutoff drops
+/// ~1.5 kHz → ~520 Hz AND breathes on a slow ~3 Hz wobble, so the Reese *moves* under the wheel
+/// instead of droning. Per-VOICE tanh drive keeps the dirt on the bass, not the bus; a softer,
+/// longer tail down to a low floor lets it sit under the sidechain pump and breathe.
+pub(super) fn bass_sw(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // clean sub spine: octave-down sine for the deep weight + the fundamental for body.
+        let sub = sine_hz(freq * 0.5) + sine_hz(freq) * 0.55;
+        // the Reese growl: a tight detune that slowly WIDENS so the beating opens up as the note holds.
+        let det = move |sign: f32, ph: f32| {
+            lfo(move |t: f32| {
+                let spread = 0.009 + 0.004 * (t * 0.8).min(1.0); // detune creeps wider over the note
+                freq * (1.0 + sign * spread) * (1.0 + 0.0015 * (t * 0.5 * TAU + ph).sin())
+            })
+        };
+        let saws = (det(1.0, 0.0) >> saw()) * 0.55
+            + (det(-1.0, 1.7) >> saw()) * 0.55
+            + saw_hz(freq) * 0.35;
+        // moving cutoff: a per-note drop that also gently breathes (~3 Hz) → the Reese never sits still.
+        let cut = envelope(|t: f32| {
+            let mv = 1.0 + 0.10 * (t * 3.0 * TAU).sin();
+            (520.0 + 980.0 * (-t * 3.0).exp()) * mv
+        });
+        let drive = 2.0 + 1.0 * vel; // harder notes growl harder
+        let growl = ((saws | cut) >> lowpass_q(1.5) >> highpass_hz(120.0, 0.6))
+            >> shape_fn(move |x| (x * drive).tanh());
+        // sub stays clean (just a gentle HP to clear DC); the growl band carries all the dirt.
+        ((sub >> highpass_hz(28.0, 0.5)) * 0.7 + growl * 0.55)
+            * envelope(|t: f32| {
+                let a = 0.006;
+                if t < a {
+                    t / a
+                } else {
+                    // softer/longer decay to a low floor → breathes under the pump, doesn't pluck.
+                    0.18 + 0.82 * (-(t - a) * 3.2).exp()
+                }
+            })
+            * 0.46
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Wooz-bass: a darker, deeper held-note GROWL for the brooding moments — neon under wet glass.
+/// Thick + dark in the low-mids, a slow growl that blooms AFTER the hit, and a woozy pitch that
+/// never quite settles. Recast for the nocturnal brief: a true SUB an octave down for real weight,
+/// a SLOWER (~3.3 Hz) wobble so it broods rather than wibbles, and a resonance that EASES IN with
+/// the wobble so the note lands clean and only grows teeth as it sustains. How each trait is built:
+///   • deep dark body — a sub sine an OCTAVE down + the fundamental sine for weight, plus two
+///     detuned saws, all through a RESONANT low-pass parked low (~210 Hz) so it stays in the
+///     low-mids and never gets bright; a high-pass clears DC/rumble below ~26 Hz.
+///   • growl-after-the-hit — the LPF cutoff is wobbled by a ~3.3 Hz LFO AND its resonance ramps from
+///     soft (Q≈1.4) to fanged (Q≈3.4) over ~0.5 s, so the note lands clean and the growl blooms in.
+///   • woozy/unstable pitch — a ~3.5 Hz vibrato + a slower ~0.55 Hz drift on EACH oscillator (at
+///     different rates/phases) on top of ±9-cent detuning, so the voices beat against each other and
+///     the pitch drifts. Best on HELD notes (it needs time to develop). A palette voice — wire it
+///     into the score where a sustained woozy sub fits (`set woozbass=1` swaps it into the bass
+///     note-lane; audition the voice alone with the `woozbass_demo` test).
+pub(super) fn woozbass_sw(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    // a true sub an octave down for deep, dark weight — gently woozy so even the spine drifts.
+    let f_oct = lfo(move |t: f32| {
+        freq * 0.5 * (1.0 + 0.004 * (t * 3.5 * TAU).sin() + 0.003 * (t * 0.55 * TAU).sin())
+    });
+    // independent vibrato + slow drift per oscillator → they never lock, so the pitch feels unstable.
+    let f_sub = lfo(move |t: f32| {
+        freq * (1.0 + 0.005 * (t * 3.5 * TAU).sin() + 0.003 * (t * 0.55 * TAU).sin())
+    });
+    let f_up = lfo(move |t: f32| freq * 1.009 * (1.0 + 0.005 * (t * 3.3 * TAU + 1.0).sin()));
+    let f_dn = lfo(move |t: f32| freq * 0.991 * (1.0 + 0.004 * (t * 2.9 * TAU + 2.0).sin()));
+    let oscs = (f_oct >> sine()) * 0.9
+        + (f_sub >> sine()) * 0.45
+        + (f_up >> saw()) * 0.4
+        + (f_dn >> saw()) * 0.4;
+    // the developing growl: a SLOW resonant-LPF cutoff wobble whose depth eases in over ~0.5 s.
+    let cut = lfo(move |t: f32| {
+        let grow = (t / 0.5).min(1.0);
+        210.0 + grow * 220.0 * ((t * 3.3 * TAU).sin() * 0.5 + 0.5)
+    });
+    // resonance also ramps in (soft → fanged) so the note lands clean and grows teeth as it holds.
+    let q = lfo(move |t: f32| 1.4 + 2.0 * (t / 0.5).min(1.0));
+    Box::new(
+        (((oscs | cut | q) >> lowpass()) >> highpass_hz(26.0, 0.5))
+            * envelope(|t: f32| {
+                let a = 0.008;
+                if t < a {
+                    t / a // quick, clean attack...
+                } else {
+                    0.6 + 0.4 * (-(t - a) * 0.6).exp() // ...then a long sustain so the growl can bloom
+                }
+            })
+            * 0.5,
+    )
+}
+
+/// Supersaw: 7 saws whose detuning slowly DRIFTS (each saw rides its own slow LFO) so the wall
+/// shimmers and breathes like neon on wet glass instead of sitting at fixed, static offsets — the
+/// wide chord wall for the drop/climax, recast nocturnal. How the night-drive character is built:
+///   • blooming, not slamming — the filter eases from ~900 Hz up to a WARM ~3.3 kHz over ~1.6 s and
+///     the amp swells in over ~0.6 s, so each chord opens like headlights coming on, not a hard hit.
+///   • alive width — every saw's pitch wobbles on a slow (~0.15–0.27 Hz), decorrelated LFO around its
+///     detune offset, so the seven voices keep beating against each other (glassy, evolving chorus).
+///   • warm edge, not screech — Softsign drive (gentle saturation) replaces the rawstyle Tanh, HP at
+///     150 Hz keeps the sub clean under the bass. Held a full bar per chord note (panned by spread).
+pub(super) fn supersaw_sw(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // each saw drifts slowly around its detune offset (rate, depth, phase all different) so the
+        // chorus never locks — the wall keeps shimmering for the whole held chord.
+        let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
+            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+        };
+        let saws = ((drift(1.000, 0.17, 0.0009, 0.0) >> saw())
+            + (drift(1.006, 0.21, 0.0011, 1.1) >> saw())
+            + (drift(0.994, 0.19, 0.0011, 2.3) >> saw())
+            + (drift(1.013, 0.25, 0.0013, 3.4) >> saw())
+            + (drift(0.987, 0.23, 0.0013, 4.6) >> saw())
+            + (drift(1.020, 0.27, 0.0015, 5.7) >> saw())
+            + (drift(0.980, 0.15, 0.0015, 0.6) >> saw()))
+            * 0.13;
+        // filter BLOOMS open slowly to a warm peak (not a screech) — headlights, not a slam.
+        let cut = envelope(|t: f32| 900.0 + 2400.0 * (t / 1.6).min(1.0));
+        ((saws | cut) >> lowpass_q(0.7) >> highpass_hz(150.0, 0.7) >> shape(Softsign(0.7)))
+            * envelope(|t: f32| (t / 0.6).min(1.0))
+            * 0.4
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Choir / ensemble pad: a slow-drifting detuned-saw ensemble + a sub-octave sine body through a soft,
+/// slowly-BLOOMING low-pass — the warm pad bed layered UNDER the supersaw wall (it carries warmth/size
+/// while the supersaw carries the bright edge). Recast nocturnal so it breathes instead of sitting flat:
+///   • the saws ride slow (~0.13–0.19 Hz), decorrelated LFOs around their detune so the ensemble keeps
+///     shimmering (a real choir is never perfectly in tune — that slow beating is the "human" warmth).
+///   • the low-pass opens gently from ~1.4 kHz to ~2.4 kHz over ~2 s under a long amp swell, so each
+///     held chord blooms in like a deep breath rather than snapping to full brightness.
+///   • a sub-octave sine + a touch of Softsign give body and round, glassy warmth without honk.
+/// The diffuse reverb makes it bloom further. Kept under the wall (modest gain).
+pub(super) fn choir_sw(freq: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
+            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+        };
+        let saws = ((drift(1.000, 0.13, 0.0010, 0.0) >> saw())
+            + (drift(1.004, 0.17, 0.0012, 1.7) >> saw())
+            + (drift(0.996, 0.15, 0.0012, 3.0) >> saw())
+            + (drift(1.009, 0.19, 0.0014, 4.2) >> saw())
+            + (drift(0.991, 0.16, 0.0014, 5.5) >> saw())
+            + sine_hz(freq * 0.5) * 0.6)
+            * 0.15;
+        // soft filter blooms open slowly under a long swell → the pad breathes in.
+        let cut = envelope(|t: f32| 1400.0 + 1000.0 * (t / 2.0).min(1.0));
+        ((saws | cut) >> lowpass_q(0.7) >> shape(Softsign(0.4)))
+            * envelope(|t: f32| (t / 1.4).min(1.0))
+            * 0.3
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Snare: a tight, dry GATED-analog snare for the night-drive — a short bright noise CRACK, a 180 Hz
+/// tuned TONE body (the drum's pitch), a softer high-mid CLAP layer for fullness, and a hair of top
+/// AIR so it snaps without washing. Drier + shorter than the old demoscene crack so it sits under the
+/// lead instead of fighting it.
+pub(super) fn snare_sw() -> Box<dyn AudioUnit> {
+    Box::new(
+        ((noise() >> highpass_hz(1500.0, 0.7)) * envelope(|t: f32| (-t * 34.0).exp())
+            + sine_hz(180.0) * envelope(|t: f32| (-t * 30.0).exp()) * 0.45
+            + (noise() >> highpass_hz(900.0, 0.6)) * envelope(|t: f32| (-t * 20.0).exp()) * 0.3
+            + (noise() >> highpass_hz(8000.0, 0.6)) * envelope(|t: f32| (-t * 60.0).exp()) * 0.18)
+            * 0.68,
+    )
+}
+
+/// Hat: a crisp, metallic CLOSED-hat for the neon groove — three high-passed noise bands (a bright
+/// sizzle, a metallic mid, and a low "tick" body) with a fast decay so it shimmers tight like neon on
+/// wet glass instead of washing. Tighter + brighter than the old two-band wisp.
+pub(super) fn hat_sw() -> Box<dyn AudioUnit> {
+    Box::new(
+        ((noise() >> highpass_hz(9000.0, 0.8)) * envelope(|t: f32| (-t * 95.0).exp()) * 0.5
+            + (noise() >> highpass_hz(6000.0, 0.6)) * envelope(|t: f32| (-t * 70.0).exp()) * 0.32
+            + (noise() >> highpass_hz(3800.0, 0.5)) * envelope(|t: f32| (-t * 55.0).exp()) * 0.22)
+            * 0.85,
+    )
+}
