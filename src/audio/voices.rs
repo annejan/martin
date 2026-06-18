@@ -830,3 +830,174 @@ pub(super) fn hat_sw() -> Box<dyn AudioUnit> {
             * 0.85,
     )
 }
+
+// ============================================================================================
+// LEAD VARIANTS (leadsw=2/3/4): alternate nocturnal lead CHARACTERS (1 = lead_sw). Selected by the
+// integer `leadsw` knob in render.rs.
+// ============================================================================================
+
+/// Lead (breathy "sung"): a soft, intimate VOCAL topline — like a breathy sung melody. Built round
+/// and throat-y from a SINE at the fundamental + a TRIANGLE doubling it (the two carry the body; no
+/// saw wall), with only a HAIR of detuned saw for "air"/edge and a gentle BREATH-NOISE whisper
+/// (band-passed noise that's loud on the consonant-like onset then fades back). An expressive
+/// vibrato SWELLS IN over the note (~5.2 Hz, slow, a touch deep) so it leans into the phrase like a
+/// singer. The filter stays MELLOW (low-Q lowpass parked ~1.4 kHz with a soft per-note open that
+/// settles — never bright/buzzy) and a gentle ~150 Hz high-pass clears the low mud so it reads as a
+/// throat, not a chest. A soft Atan rounds it; it sits a touch BACK in the mix (modest gain, no
+/// oversample needed — there's almost no distortion to alias). Tender, wistful, almost human.
+pub(super) fn lead_sw2(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    // an expressive vibrato that SWELLS IN — the voice leans into the note. Slow (~5.2 Hz) + a touch
+    // deep so it reads sung and wistful, not a nervous trill. Each oscillator gets its own phase.
+    let vib = move |mult: f32, ph: f32| {
+        lfo(move |t: f32| {
+            let depth = 0.007 * (t * 0.9).min(1.0); // eases in over ~1.1 s like a held vocal note
+            freq * mult * (1.0 + depth * (t * 5.2 * TAU + ph).sin())
+        })
+    };
+    // round, throat-y BODY: a sine at the fundamental + a triangle doubling it (triangle's quiet odd
+    // harmonics give a vowel-like body without the buzz of a saw). Only a HAIR of ±5-cent detuned
+    // saw on top for "air"/edge so it isn't a pure flute — barely there.
+    let body = (vib(1.0, 0.0) >> sine()) * 0.42
+        + (vib(1.0, 1.7) >> triangle()) * 0.30
+        + ((vib(1.005, 0.6) >> saw()) + (vib(0.995, 2.3) >> saw())) * 0.05;
+    // a BREATH whisper: band-passed noise (a vocal-ish formant band) that's loud on the onset like a
+    // consonant/aspiration, then fades back so it colours the attack and lingers faintly underneath.
+    let breath =
+        (noise() >> bandpass_hz(1800.0, 1.5)) * envelope(|t: f32| 0.10 + 0.22 * (-t * 9.0).exp());
+    // MELLOW filter: parked low (~1.4 kHz) with a soft per-note open that SETTLES — never bright or
+    // buzzy. Low Q so there's no resonant whistle; the sweep peak tracks velocity a little.
+    let top = 700.0 + 900.0 * vel;
+    let cut = envelope(move |t: f32| 1400.0 + top * (-t * 2.6).exp());
+    let voice = ((body + breath) | cut) >> lowpass_q(0.6) >> highpass_hz(150.0, 0.6);
+    Box::new(
+        (voice >> shape(Atan(0.45)))
+            * envelope(|t: f32| {
+                let a = 0.045; // a soft breathy glide-in (longer than the saw lead) → no click, sung
+                if t < a {
+                    (t / a).powf(0.7)
+                } else {
+                    0.62 + 0.38 * (-(t - a) * 0.7).exp() // high sustain floor → it holds and SINGS
+                }
+            })
+            * 0.62, // sits a touch BACK in the mix — intimate, not forward
+    )
+}
+
+/// Lead: a bright, cutting, IN-YOUR-FACE BRASS-SAW hero (Carpenter-Brut / darkwave). A hard-detuned
+/// 5-saw stack (WIDE ±1.1c / ±2.2c — a metal wall, not a sweet vocal shimmer) + an octave-up saw and
+/// a hint of square for the brassy odd-harmonic edge that slices through a dense drop. Where the
+/// nocturnal lead *leans in* like a singer, this one PUNCHES: a near-instant ~4 ms attack and a fast,
+/// deep filter-PLUCK (cutoff slams ~1.7 kHz → up to ~9.4 kHz at full velocity, then collapses in
+/// ~60 ms) so every note opens with a snappy bright bite and a hard plucky transient. Hefty velocity-
+/// scaled Tanh drive (2.4–4.0) fed by a resonant low-pass gives the brassy grit + saturation that
+/// reads as confident and edgy (Tanh's harder clip vs. a polite Atan/Softsign). A 240 Hz high-pass
+/// keeps it lean and FORWARD so it sits on top of the mix. It still SINGS as a hook: the pluck settles
+/// to a high 0.62 sustain floor (holds + rings, never a thin click), a slow detune LFO keeps living
+/// motion under the held tone, and the played pitch carries clean across the whole stack. Optional
+/// 2× oversample (the drive earns it); gain trimmed for the extra perceived loudness, mix-safe.
+pub(super) fn lead_sw3(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // each saw rides a slow detune LFO (own phase) — the WIDTH opens a touch over the note so the
+        // brass wall keeps a living, aggressive beat instead of a static, frozen chord-of-one.
+        let det = move |mult: f32, ph: f32| {
+            lfo(move |t: f32| {
+                let depth = 0.004 + 0.006 * (t * 0.9).min(1.0);
+                freq * mult * (1.0 + depth * (t * 6.2 * TAU + ph).sin())
+            })
+        };
+        // HARD 5-saw stack (±1.1c / ±2.2c — a thick metal wall) + octave-up saw shimmer + a touch of
+        // square for the brassy odd-harmonic bite that cuts. Wider/harder than the sweet 3-saw lead.
+        let oscs = ((det(1.0, 0.0) >> saw())
+            + (det(1.011, 0.6) >> saw())
+            + (det(0.989, 1.3) >> saw())
+            + (det(1.022, 2.1) >> saw())
+            + (det(0.978, 3.0) >> saw()))
+            * 0.15
+            + (det(2.0, 1.9) >> saw()) * 0.07
+            + square_hz(freq) * 0.05;
+        // a snappy bright filter-PLUCK that opens FAST and slams shut: cutoff peak tracks velocity hard
+        // (~1.7 kHz → up to ~9.4 kHz), the steep -16 decay gives the hard transient snap (vs. the
+        // nocturnal lead's slow cinematic settle). This is the aggressive Carpenter-Brut attack.
+        let top = 5200.0 + 4200.0 * vel;
+        let cut = envelope(move |t: f32| 1700.0 + top * (-t * 16.0).exp());
+        // resonant low-pass (Q 1.3) feeding a hefty velocity-scaled Tanh = brassy grit + bite; the
+        // 240 Hz high-pass keeps it lean and forward so it CUTS THROUGH the mix instead of muddying it.
+        let drive = 2.4 + 1.6 * vel;
+        ((oscs | cut) >> lowpass_q(1.3) >> highpass_hz(240.0, 0.7) >> shape(Tanh(drive)))
+            * envelope(|t: f32| {
+                let a = 0.004; // near-instant snap — the note hits HARD (not a vocal lean-in)
+                if t < a {
+                    t / a
+                } else {
+                    0.62 + 0.38 * (-(t - a) * 5.0).exp() // high sustain floor → holds + SINGS as a hook
+                }
+            })
+            * 0.62 // trimmed for the drive's extra perceived loudness; mix-safe
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Lead: a digital FM BELL-PLUCK — glassy, metallic 80s DX7 chime (think "E.PIANO"/"TUB BELLS").
+/// Built from TRUE Chowning FM, not the saw wall: each operator is a CARRIER sine whose
+/// instantaneous frequency is bent at audio rate by a MODULATOR sine summed straight into its
+/// frequency INPUT (fundsp's `sine` integrates that to phase per-sample → real phase modulation,
+/// NOT a control-rate `lfo` approximation). The LOW pair uses an inharmonic 1:3.5 ratio for the
+/// clangorous struck-metal attack; its modulation index (peak deviation, in Hz) DECAYS fast — the
+/// signature DX7 bell evolution where the metallic clang melts into a pure ringing sine. A HIGH
+/// octave-up, near-inharmonic 1:1.41 pair adds crystalline glint, and a clean fundamental sine
+/// seals a glassy ring body. The amplitude is a near-instant PLUCK strike with a long exponential
+/// ring tail down to a small sustain floor (0.08) so the hook RINGS and SINGS between notes; a slow
+/// vibrato (~5 Hz, swells in) leans into that tail like a singer so it reads as a melody, not a
+/// bleep. A ~200 Hz HIGH-PASS lifts the chime off the low-mids onto the neon glass and a vel-scaled
+/// Atan rounds the edges. Optional 2× oversample; modest gain, mix-safe.
+pub(super) fn lead_sw4(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        // one FM operator pair: a CARRIER sine whose freq input is bent by a MODULATOR sine summed
+        // in at audio rate (true Chowning FM — integrated to phase inside `sine`). The modulation
+        // index (peak deviation in Hz = idx * mod_freq) DECAYS fast → metallic clang → pure ring.
+        // `ratio` sets harmonicity (inharmonic ratios = bell, not buzz). `vph` decorrelates vibrato.
+        let op = move |cf: f32, ratio: f32, idx0: f32, dec: f32, vph: f32| {
+            let mf = cf * ratio;
+            // modulator amplitude (the index, smooth/sub-20 Hz so a control-rate envelope is fine);
+            // scaled by mf to express it as a Hz deviation, decaying over the note.
+            let modu = sine_hz(mf) * envelope(move |t: f32| mf * idx0 * (-t * dec).exp());
+            // a faint vibrato that SWELLS IN leans the carrier into the ring tail (singer, not bleep).
+            let carrier = lfo(move |t: f32| {
+                let v = 0.004 * (t * 0.6).min(1.0) * (t * 5.0 * TAU + vph).sin();
+                cf * (1.0 + v)
+            });
+            (modu + carrier) >> sine()
+        };
+        // LOW pair: fundamental carrier + inharmonic 1:3.5 modulator → the struck-bell clang.
+        let lo = op(freq, 3.5, 1.5 + 1.3 * vel, 8.5, 0.0);
+        // HIGH pair: an octave up, near-inharmonic 1:1.41 → crystalline glint over the top.
+        let hi = op(freq * 2.0, 1.41, 0.7 + 0.5 * vel, 13.0, 1.7);
+        // a clean sine at the fundamental seals the ring tail with a pure, glassy body.
+        let body = sine_hz(freq) * 0.10;
+        let voice = lo * 0.5 + hi * 0.2 + body;
+        // PLUCK amplitude: a near-instant strike, then a long exponential ring tail to a small
+        // sustain floor so the hook HOLDS + SINGS between notes instead of dying to nothing.
+        let amp = envelope(|t: f32| {
+            let a = 0.003;
+            if t < a {
+                t / a
+            } else {
+                0.08 + 0.92 * (-(t - a) * 2.6).exp()
+            }
+        });
+        // HP lifts the chime off the low-mids onto the neon glass; gentle vel-scaled Atan rounds it.
+        (voice * amp >> highpass_hz(200.0, 0.7) >> shape(Atan(0.35 + 0.3 * vel))) * 0.8
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}

@@ -29,7 +29,7 @@ chords G Am G D  G Am G D  Em C G D  Em C D D
 # that section only (for the per-onset knobs: lead/supersaw/choir/donk/house). E.g. `drop.set house=0.18`
 # for a louder organ in the drop without touching the climax. (Master-bus knobs stay global; reverb
 # DEPTH is already section-automated via `reverbauto`.)
-set lead=0.88 sub=0.46 supersaw=0.07 choir=0.6 donk=0.035 house=0.12 reverb=0.35 sidechain=0.78 widen=1.6 makeup=1.18 ceiling=0.93 woozbass=1 shimmer=0.09 reverbauto=1 hats=0.3 snares=0.58
+set lead=0.88 sub=0.46 supersaw=0.07 choir=0.6 donk=0.035 house=0.12 reverb=0.35 sidechain=0.78 widen=1.6 makeup=1.18 ceiling=0.93 woozbass=1 shimmer=0.09 reverbauto=1 hats=0.3 snares=0.58 leadsw=3
 
 # section <name> <bars> <phase-bars,csv> [fill]. Phase bars drive the DRUM energy only; the melody
 # runs underneath as one continuous loop. build/breakdown = 2x the 8-bar verse, drop/climax = 2x the

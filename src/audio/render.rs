@@ -99,8 +99,16 @@ fn ev(lane: &mut Vec<Event>, t: f32, r: impl FnOnce(&mut [f32], &mut [f32]) + Se
 // keeps the original bouncy/hard voices, so e.g. the Camping show is byte-for-byte unchanged. The
 // selected bool is captured (Copy) into the per-event render closures.
 type Unit = Box<dyn fundsp::prelude32::AudioUnit>;
-fn lead_pick(sw: bool, f: f32, v: f32) -> Unit {
-    if sw { lead_sw(f, v) } else { lead(f, v) }
+// leads also have several CHARACTERS: leadsw = 0 orig · 1 *_sw vocal-saw · 2 breathy sung ·
+// 3 brass-cut (Carpenter Brut) · 4 FM bell (DX7).
+fn lead_pick(n: i32, f: f32, v: f32) -> Unit {
+    match n {
+        1 => lead_sw(f, v),
+        2 => lead_sw2(f, v),
+        3 => lead_sw3(f, v),
+        4 => lead_sw4(f, v),
+        _ => lead(f, v),
+    }
 }
 fn bass_pick(sw: bool, f: f32, v: f32) -> Unit {
     if sw { bass_sw(f, v) } else { bass(f, v) }
@@ -148,7 +156,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     let bar = score.bar();
     // palette selectors (default 0 = the original voices; a score `set leadsw=1` etc. opts into the
     // nocturnal-synthwave alternates). Resolved once, captured into the per-event closures below.
-    let leadsw = score.param("leadsw", 0.0) > 0.5;
+    let leadsw = score.param("leadsw", 0.0).round() as i32;
     let basssw = score.param("basssw", 0.0) > 0.5;
     let padsw = score.param("padsw", 0.0).round() as i32;
     let drumsw = score.param("drumsw", 0.0) > 0.5;
