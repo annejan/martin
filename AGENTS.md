@@ -111,10 +111,12 @@ Blender → read it back → write `[stage]`/`[camera]` → render. **Calibrated
 - **Camera** (martin orbit = target+dist+yaw+pitch): from Blender cam world `P` and its look target `T`
   (both →martin): `dist=|P−T|`, `d=(P−T)/dist`, `yaw=atan2(d.z, d.x)`, `pitch=asin(d.y)`, `pos=T`. Give the
   Blender cam a Track-To an empty at the city centroid so `T` is stable.
-- **Text orientation**: a Blender text placeholder needs `rotation_euler=(90°, 0, 180°)` to read upright +
-  un-mirrored matching martin's default `text:` render (Rx90 alone faces the cam but is mirrored = back face).
-  CAVEAT: it's a flat single-faced object — it reads correct only from `CAM.martin`'s side (Numpad 0 =
-  martin's truth). Free-orbiting to the far side shows the mirrored BACK; that's Blender, not a bug.
+- **Text orientation**: a Blender text placeholder needs `rotation_euler=(90°,0,0)` **plus a mirror on X**
+  (`scale.x = -|scale.x|`) to read upright + correct from `CAM.martin` matching martin's `text:` render —
+  VERIFIED against the engine (Numpad 0 = martin's truth). Matching martin's glyph face needs a reflection,
+  which is improper, so it's a negative scale, not a pure rotation. (`(90,0,180)` was WRONG — it mirrors.)
+  Positions/camera are NOT affected: the world↔Blender map is a proper rotation (det +1), so left/right and
+  drag direction are faithful — only the flat glyph face needs the X-mirror.
 - **Deliver renders**: `DISPLAY=:0 xdg-open <png>` (SendUserFile isn't always available). Renders stay
   low-Q (see Common Pitfalls / quota); splat **budget** can go high for a crisp still (it's frame *count*,
   not splat count, that fills the disk).
