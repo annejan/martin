@@ -16,7 +16,7 @@ bg             = aurora         # northern-lights night sky (was the lame grey-s
 post           = chroma         # RGB-split screen-tear on the kick — drive/energy
 cam_pump       = 0.22           # the kick LUNGES the camera in a touch — physical, on-beat
 particles      = embers
-particle_count = 260
+particle_count = 420            # roaring fire for the PonyCamp party (was 260)
 particle_at    = @@drop          # sparks fade in WITH the campfire, not before it's lit
 bg_dim         = 0.6
 
@@ -40,8 +40,24 @@ splat:pine.ply      @1.7,-0.44,-1.7  *0.8   sway 0,5,0  bob 0.05   ~fade  in cli
 splat:pine.ply      @-1.5,-0.38,-1.9 *0.85  sway 0,9,0   ~fade  in climax  count:6000  # centre-left-back
 splat:pine.ply      @-3.5,-0.31,-0.9 *0.9   sway 0,7,0  bob 0.03   ~fade  in climax  count:6000  # far-left
 
-# logos + text (Z-safe: kept in FRONT of the backdrop). Checking how they read before the city render.
-text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build  out climax   # wordmark, OFF-CENTRE upper-left (not dead-centre)
+# logos + text (Z-safe: kept in FRONT of the backdrop). deFEEST STAYS the whole show (no `out`).
+text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build   # wordmark, OFF-CENTRE upper-left (not dead-centre), stays for the party
+
+# ── STORYBOARD: PonyCamp 2026 ──────────────────────────────────────────────────────────────────
+# THE HORSE walks into the party during the slow breakdown: fades in far-left (the open field the
+# breakdown camera frames), ambles rightward toward the fire (drift +x — it never stops, so it keeps
+# milling at the party), faces its travel direction (rot 0,180,0), bounces on the beat (^pulse) once
+# the climax ramps the beat up. Textured chestnut now that the glTF sampler reads baseColorTexture.
+mesh:paard.glb  @-6.0,-0.5,1.2  *1.1  rot 0,180,0  drift 0.09,0,0  sway 0,4,0  bob 0.05  ^pulse:0.4  ~fade  in breakdown   # 🐴 komt naar de party
+
+# THE CELEBRATION when the music picks up (climax→end): a translucent beer by the fire, bouncing
+# bitterbal snacks, the dog joins, and the PonyCamp 2026 banner. (Beat ramps up in [sync] → all bounce.)
+mesh:bier.glb       @1.6,-0.55,0.9  *0.45  alpha:0.28  bob 0.04  sway 0,6,0  ~fade  in climax   # 🍺 translucent glass mug by the fire
+mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  spin 19,37,13  bob 0.14  ^pulse:0.6  tint:fry  ~fade  in climax   # 🟤 bouncing snack
+mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  spin 23,29,17  bob 0.16  ^pulse:0.6  tint:fry  ~fade  in climax
+mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  spin 31,13,41  bob 0.18  ^pulse:0.6  tint:fry  ~fade  in climax
+splat:doggo.ply     @-1.5,-0.50,1.2 *0.55  sway 0,7,0  bob 0.04  ~fade  in climax   # 🐕 the dog joins the horse at the party
+text:PonyCamp 2026  @1.4,1.5,1.0   *0.5   ~pen-write  tint:brand  bob 0.06  in climax   # the festival banner, upper-right third
 
 # FLOWING camera: now the terrain sorts behind the props (Z-safe at any angle), the camera can FLOW
 # around the camp instead of cutting between safe stills. A slow orbit (yaw drifts ~1.0→2.0) + a crane
@@ -62,5 +78,5 @@ t=@@intro      flash=0.08  bg_dim=0.80  beat=0.25                # calm: aurora 
 t=@@build      flash=0.15  bg_dim=0.6   beat=0.7                 # energy creeps in
 t=@@drop       flash=0.7   bg_dim=0.5   beat=1.8                 # DROP: fire erupts, aurora pulses, full kick
 t=@@breakdown  flash=0.2   bg_dim=0.62  beat=0.7                 # pull back, hushed
-t=@@climax     flash=0.6   bg_dim=0.5   beat=1.6                 # peak
-t=@@outro      flash=0.2   bg_dim=0.6   beat=0.6  bg=fractal     # the night sky dissolves into fractals
+t=@@climax     flash=0.7   bg_dim=0.45  beat=1.9                 # PARTY: beat up → camp + horse + snacks all bounce harder, brighter night
+t=@@outro      flash=0.35  bg_dim=0.55  beat=1.3  bg=fractal     # keep the celebration going as the sky dissolves into fractals
