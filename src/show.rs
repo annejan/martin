@@ -17,6 +17,7 @@
 pub struct Show {
     pub camera: Vec<String>,
     pub sync: Vec<String>,
+    pub caption: Vec<String>,
 }
 
 /// Expand `MARTIN_SHOW` into the env and return its `[camera]` track. A no-op (empty `Show`) when
@@ -40,6 +41,7 @@ enum Section {
     Compose,
     Camera,
     Sync,
+    Caption,
 }
 
 impl From<&str> for Section {
@@ -50,6 +52,7 @@ impl From<&str> for Section {
             "stage" | "compose" => Section::Compose,
             "camera" | "cam" => Section::Camera,
             "sync" | "automation" | "look" => Section::Sync,
+            "caption" | "captions" | "titles" => Section::Caption,
             _ => Section::Settings, // `[settings]`, or anything unknown → top-level knobs
         }
     }
@@ -160,6 +163,7 @@ fn parse_and_apply(text: &str) -> Show {
     let mut scenes = String::new();
     let mut camera = Vec::new();
     let mut sync = Vec::new();
+    let mut caption = Vec::new();
     for raw in text.lines() {
         let line = raw.trim();
         if let Some(name) = line.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
@@ -203,6 +207,13 @@ fn parse_and_apply(text: &str) -> Show {
                     sync.push(s.to_string());
                 }
             }
+            // `[caption]` screen-anchored text lines (raw, comment-stripped); parsed after the score.
+            Section::Caption => {
+                let s = line.split('#').next().unwrap_or("").trim();
+                if !s.is_empty() {
+                    caption.push(s.to_string());
+                }
+            }
         }
     }
     // `[scenes]` flattens into the reel. If a show has both, the explicit `[reel]` wins (don't double).
@@ -225,7 +236,11 @@ fn parse_and_apply(text: &str) -> Show {
         // SAFETY: the show is parsed at startup, single-threaded, before the Bevy app spawns threads.
         unsafe { std::env::set_var("MARTIN_FLY", "1") };
     }
-    Show { camera, sync }
+    Show {
+        camera,
+        sync,
+        caption,
+    }
 }
 
 /// Canonicalise a settings key: the DOMAIN.md domain spelling → the env var the engine reads. Keeps

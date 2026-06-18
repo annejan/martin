@@ -169,6 +169,8 @@ fn main() {
     // The `[sync]` look-track: keyframed global knobs (flash/bg_dim/beat) over the music clock —
     // parsed now the score exists so its keyframes can anchor to sections (`t=@@drop`).
     let sync_track = sync::parse_sync(&show.sync, &score);
+    // The `[caption]` track: screen-anchored titles/credits, parsed now the score exists.
+    let captions = scene::caption::parse_captions(&show.caption, &score);
 
     // MARTIN_VALIDATE=1: a dry run — print the parsed timeline (with the parse diagnostics already
     // on stderr) and exit, no window/render. A fast authoring check.
@@ -257,6 +259,7 @@ fn main() {
         .insert_resource(ScoreRes(Arc::new(score)))
         .insert_resource(waypoints)
         .insert_resource(sync_track)
+        .insert_resource(scene::caption::Captions(captions))
         .add_plugins((
             CameraPlugin,
             ScenePlugin,
@@ -270,6 +273,7 @@ fn main() {
             crate::serve::ServePlugin,
             crate::post::PostPlugin,
             crate::particles::ParticlesPlugin,
+            crate::scene::caption::CaptionPlugin,
         ))
         .run();
 }

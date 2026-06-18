@@ -16,6 +16,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   camera track. Composed via `MARTIN_*` env vars or a single unified `.show` file (`MARTIN_SHOW`).
 - mesh→splat sampling: density-adaptive disk size + R2 low-discrepancy distribution, per-splat
   translucency (`MARTIN_MESH_OPACITY`), and a glTF (`.glb`) loader.
+- **Screen-anchored captions** (`[caption]` track): `screentext:HELLO  in @@drop out @@drop+4bar  at
+  0.5,0.08  size 64` pins a title/credit to SCREEN space (a fixed screen fraction) that stays put while
+  the splat camera flies — unlike `text:` (world-space gaussians). bevy_ui `Text` with
+  `UiTargetCamera(orbit_cam)` so it composites into the splat camera and DOES bake into headless
+  recordings (the loader screen, lacking this, doesn't). Alpha is a pure fn of the show clock
+  (deterministic). `src/scene/caption.rs`.
 - **Particle KINDS** (`MARTIN_PARTICLES=embers|confetti|sparks|fireworks`): the value now picks the
   effect — confetti (tumbling coloured flakes falling), sparks (hot specks bursting from a core),
   fireworks (rise-then-bloom shells), plus the original embers. All **beat-reactive** (the kick
