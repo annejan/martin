@@ -1,0 +1,15 @@
+# productions/camping/campsite-bundle.toml — "PonyCamp 2026" (the campsite storyboard) as ONE
+# self-contained executable. build.rs auto-collects the assets the show references, lz4-compresses
+# them into the binary; src/bundle.rs self-extracts to a temp dir at startup and plays it — no
+# external files, no env vars. The synth STREAMS at startup (the loader covers the ~1 s lead).
+#
+#   MARTIN_BUNDLE=productions/camping/campsite-bundle.toml cargo build --release --features bundle
+#   ./target/release/martin            # plays PonyCamp 2026
+#
+# LOCAL build: campsite.show references doggo.ply (a gitignored capture), baked from the local file —
+# so this builds on a machine that has it, not on a clean CI checkout. The procedural splats
+# (flame/moon/mountains/pine/tent/terrain) are regenerated at startup (splatgen), not baked; the
+# meshes (paard/bier/bitterbal) + doggo.ply are baked in.
+show = "productions/camping/campsite.show"   # the PonyCamp 2026 storyboard (horse walks in → party)
+score = "productions/camping/score.txt"      # Op de Camping — Brut lead + per-section soft→hard
+logo = "defeest-logo.png"                    # the loader screen while it decompresses
