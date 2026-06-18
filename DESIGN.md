@@ -545,7 +545,7 @@ reproducible bit-for-bit. (→ OQ#6 confirms offline-mux vs any live capture.)
 audio playback (new); new `MusicClock` resource; new `src/cues.rs`; `parse_seq`
 `#cues:` directive + `@@cue` anchors; `resolve_cues` + `start_secs: Vec<f32>` in
 `SeqState`; `advance_seq_clock` swap; `record_driver` `dur` extension + offline mux;
-`MARTIN_AV_OFFSET` env. **Deferred:** a live socket editor; multi-track float tracks.
+`MARTIN_AV_OFFSET` env. **Dropped:** live socket editor and float tracks not pursued — the offline mux is bit-perfect, live preview sync is acceptable without it.
 
 ---
 

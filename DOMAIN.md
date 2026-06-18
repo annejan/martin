@@ -307,10 +307,11 @@ Aliasing is idiomatic in martin's parsers, so every DSL rename is additive and b
     now per-Shot `flash:<strength>` (cut-bloom override of `MARTIN_FLASH`), `^name:<amp>` (deform
     strength scale over `MARTIN_DEFORM_AMP`), and `beat:<scale>` (beat-bounce reaction, `0` = still) —
     so the kick reaction rides only on chosen Shots, not the whole show.
-  - **SyncTrack / Automation ✅ LANDED.** The Rocket step: a `[sync]` look-track keyframes the global
-    knobs (`flash`, `bg_dim`, `beat`) over the score clock, smoothstep-interpolated, same `t=`/`@@anchor`
-    grammar as `[camera]` (`src/sync.rs`; each consumer reads its own knob, no system-ordering). So the
-    bloom swells into the drop, the backdrop dims through the climax, etc. Extensible to more knobs.
+  - **SyncTrack / Automation ✅ LANDED.** The Rocket step: a `[sync]` look-track keyframes any knob
+    over the score clock, smoothstep-interpolated, same `t=`/`@@anchor` grammar as `[camera]`
+    (`src/sync.rs`; generic `HashMap` storage — known knobs have typed accessors, arbitrary knobs
+    work via `sync.at(name, t)`). The bloom swells into the drop, the backdrop dims through the
+    climax, etc. No extension needed — any float-valued knob name is accepted.
   - **Still deferred:** per-Shot `density` (hard — the morph needs a shared splat count, so it means
     render-time opacity/subsampling, not budget). Sequenced by which Showbook engine-vraag needs it.
 
@@ -336,11 +337,14 @@ is what flushes out the Stage-4 concepts before they're built.
 
 ## 11. Open questions
 
-- **SyncTrack scope** — how general should Automation be (any `MARTIN_*` knob? a fixed set?), and what
-  triggers building it.
+- **SyncTrack scope ✅ RESOLVED.** `SyncTrack` is now a generic `HashMap<String, Vec<(f32, f32)>>` —
+  any knob name is accepted; known names (`flash`, `beat`, `bg_dim`, …) keep typed convenience
+  accessors, but arbitrary knobs work via `sync.at(name, t)`. No trigger needed — just use any name.
 - **Film's third tier** — martin's `[reel]` already *is* the sequence; is a Showbook "sequence" tier
   (above Scene) ever needed, or do Scene → Shots suffice?
-- **Per-knob automation vs per-Section overrides** — the camping Showbook wants scene-scoped looks;
-  does that land as Stage-4 Automation or as cheaper per-Section settings first?
+- **Per-knob automation vs per-Section overrides ✅ RESOLVED.** Both exist side-by-side: `[sync]`
+  (generic keyframe track) handles automation across the show timeline, per-Shot modifiers
+  (`flash:`, `^name:`, `beat:`) handle scene-scoped overrides. Per-Section visual knobs in the
+  score DSL were considered but rejected — the score stays music-only, the show stays visual-only.
 - **The names** — §8 stays UNDECIDED until the author picks (optionally via `/adhd` on the engine +
   language shortlists).

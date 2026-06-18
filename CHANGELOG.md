@@ -144,7 +144,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   instead of waiting for the whole render — no more dead black screen, and `@@` anchors stay
   sample-locked. The streaming engine matches the batch render within ~1 LSB (verified). The loader
   covers the brief lead-in. `MARTIN_MUSIC=<wav>` (pre-rendered, what the bundle ships) skips the
-  render; `MARTIN_STREAM_WAV` dumps the streamed render for A/B debugging.
+  render.
 - Multi-core batch synth render (~2× faster, deterministic) for recordings + the bundle WAV.
 - Tracker DSL: sections/phases, per-section chords, multi-bar melody/arp/bass note-lanes, drum
   patterns, dynamics ramps, and free-form mix/fx `set` knobs.
