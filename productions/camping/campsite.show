@@ -41,18 +41,21 @@ splat:pine.ply      @-1.5,-0.38,-1.9 *0.85  sway 0,6,0   ~fade  in climax  count
 splat:pine.ply      @-3.5,-0.31,-0.9 *0.9   sway 0,6,0   ~fade  in climax  count:6000  # far-left
 
 # logos + text (Z-safe: kept in FRONT of the backdrop). Checking how they read before the city render.
-text:deFEEST        @0,0.45,1.0   *0.5   ~pen-write  tint:brand  in build  out climax   # wordmark handwrites, front
+text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build  out climax   # wordmark, OFF-CENTRE upper-left (not dead-centre)
 
 # FLOWING camera: now the terrain sorts behind the props (Z-safe at any angle), the camera can FLOW
 # around the camp instead of cutting between safe stills. A slow orbit (yaw drifts ~1.0→2.0) + a crane
 # up for the climax, with ONE hard cut punching onto the fire on the drop. Low-ish pitch throughout.
+# RULE-OF-THIRDS framing: aim OFF the focal point so it lands on a third (not dead-centre), switch
+# sides shot-to-shot for variety, keep the horizon low so the aurora sky breathes. (Verified via
+# show_layout.py's screen-position report: subjects toward ±0.33, fire never at 0,0.)
 [camera]
-t=@@intro      pos=0,-0.10,0.3    dist=8.5   yaw=1.05   pitch=0.14            # wide establishing, low + level → feature the aurora sky
-t=@@build      pos=0,-0.35,0.3    dist=6.8   yaw=1.30   pitch=0.26            # drift IN + orbit right as it builds
-t=@@drop       pos=0.0,-0.50,0.4  dist=3.4   yaw=1.55   pitch=0.15   cut      # CUT: punch low onto the fire (ignition)
-t=@@breakdown  pos=0,-0.42,0.3    dist=6.2   yaw=1.75   pitch=0.24            # pull back, keep orbiting around
-t=@@climax     pos=0,-0.45,0.3    dist=7.8   yaw=2.05   pitch=0.40            # CRANE up as it peaks (moon+ridge+forest)
-t=@@outro      pos=0,-0.40,0.3    dist=8.5   yaw=1.85   pitch=0.30            # ease back, settle
+t=@@intro      pos=1.2,0.05,0.3   dist=9.0   yaw=1.05   pitch=0.12            # establish: camp LEFT third, moon+aurora upper-right, horizon low
+t=@@build      pos=0.9,-0.25,0.3  dist=6.6   yaw=1.32   pitch=0.22            # in on the camp, kept left of centre
+t=@@drop       pos=0.45,-0.55,0.5 dist=3.6   yaw=1.52   pitch=0.15   cut      # CUT: punch on the fire, framed lower-left (not centred)
+t=@@breakdown  pos=-0.9,-0.30,0.3 dist=6.4   yaw=1.92   pitch=0.22            # SWITCH sides: camp right third, open field left
+t=@@climax     pos=0.7,-0.10,0.3  dist=8.0   yaw=1.92   pitch=0.30            # grand: camp left third, moon+aurora upper-right, sky-heavy
+t=@@outro      pos=0.6,-0.20,0.3  dist=8.4   yaw=1.72   pitch=0.26            # settle, still off-centre
 
 [sync]
 t=@@intro      flash=0.08  bg_dim=0.80  beat=0.25                # calm: aurora breathes, barely any beat

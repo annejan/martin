@@ -397,20 +397,29 @@ def draw(path, cam_idx, hfov, out, asset_dir="assets", az_off=0.0):
         tup = np.cross(right, fwd)
         vfov = math.pi / 4
         hfov = 2 * math.atan(math.tan(vfov / 2) * 16 / 9)
-        print(f"in-shot (cam #{cam_idx}, FOV {math.degrees(hfov):.0f}°×{math.degrees(vfov):.0f}°):")
+        # screen position normalized to -1..1 (0 = dead centre = boring; ±0.33 = rule-of-thirds line;
+        # ±1 = frame edge). Compose subjects toward ±0.33, NOT 0. Terrain skipped (it's the floor).
+        print(f"composition (cam #{cam_idx}, FOV {math.degrees(hfov):.0f}°×{math.degrees(vfov):.0f}°)  [screen x,y in -1..1; ±0.33=thirds]:")
+        hh, vh = math.degrees(hfov / 2), math.degrees(vfov / 2)
         for o in props:
-            if o["cat"] == "moon":
+            if o["cat"] == "terrain":
                 continue
             v = np.array(o["pos"], float) - cw
             depth = float(np.dot(v, fwd))
             if depth <= 0.05:
                 print(f"  {o['cat']:9} BEHIND camera")
                 continue
-            ah = math.degrees(math.atan2(float(np.dot(v, right)), depth))
-            av = math.degrees(math.atan2(float(np.dot(v, tup)), depth))
-            inh, inv = abs(ah) < math.degrees(hfov / 2), abs(av) < math.degrees(vfov / 2)
-            tag = "in shot" if (inh and inv) else f"OUT ({'h' if not inh else ''}{'v' if not inv else ''})"
-            print(f"  {o['cat']:9} h={ah:+5.1f}° v={av:+5.1f}° depth={depth:4.1f}  {tag}")
+            sx = math.degrees(math.atan2(float(np.dot(v, right)), depth)) / hh
+            sy = math.degrees(math.atan2(float(np.dot(v, tup)), depth)) / vh
+            if abs(sx) > 1 or abs(sy) > 1:
+                note = "OUT of frame"
+            elif abs(sx) < 0.14 and abs(sy) < 0.14:
+                note = "⚠ DEAD-CENTRE (boring)"
+            elif (0.22 <= abs(sx) <= 0.45) or (0.22 <= abs(sy) <= 0.45):
+                note = "✓ near a third"
+            else:
+                note = ""
+            print(f"  {o['cat']:9} screen=({sx:+.2f},{sy:+.2f})  {note}")
     # GROUNDING from the REAL .ply geometry: each prop's true base Y vs the field surface, and the
     # @y that would sit it exactly on the field (so it neither floats nor clips through the ground).
     terr = next((o for o in props if o["cat"] == "terrain"), None)
