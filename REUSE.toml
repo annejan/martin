@@ -156,6 +156,7 @@ path = [
     ".cargo/config.toml",
     ".github/dependabot.yml",
     ".github/workflows/build.yml",
+    ".github/workflows/ponycamp.yml",
     ".github/workflows/codeql.yml",
     ".github/workflows/dependabot-automerge.yml",
     ".github/codeql/codeql-config.yml",

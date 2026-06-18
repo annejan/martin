@@ -1,0 +1,66 @@
+name: ponycamp
+
+# Build the "PonyCamp 2026" camping demo (productions/camping/campsite.show) as ONE self-contained
+# single binary on Linux / Windows / macOS and upload each as a downloadable artifact. Triggered by
+# pushing the `ponycamp` branch (or run manually via the Actions tab) — keeps these heavier 3-OS
+# bundle builds off every main push. campsite.show references only git-tracked meshes + procedural
+# splats (regenerated at startup), so it builds from a clean checkout.
+
+on:
+  push:
+    branches: [ponycamp]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    name: PonyCamp single binary (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libudev-dev libasound2-dev libwayland-dev libxkbcommon-dev
+
+      - name: Install nightly Rust
+        uses: dtolnay/rust-toolchain@5b842231ba77f5c045dba54ac5560fed2db780e2 # nightly
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      # Lint the score (a phase/bar typo fails the build): MARTIN_VALIDATE dumps the resolved timeline
+      # + exits headless; MARTIN_SCORE_STRICT makes any warning fatal.
+      - name: Validate the score (strict)
+        shell: bash
+        env:
+          MARTIN_SCORE: productions/camping/score.txt
+          MARTIN_SCORE_STRICT: "1"
+          MARTIN_VALIDATE: "1"
+        run: cargo run --release
+
+      - name: Build PonyCamp single binary (--features bundle)
+        shell: bash
+        run: MARTIN_BUNDLE=productions/camping/campsite-bundle.toml cargo build --release --features bundle
+
+      - name: Report binary size
+        shell: bash
+        run: ls -lh target/release/martin* 2>/dev/null || true
+
+      - name: Upload PonyCamp binary
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: PonyCamp2026-${{ matrix.os }}
+          path: |
+            target/release/martin
+            target/release/martin.exe
+          if-no-files-found: ignore
