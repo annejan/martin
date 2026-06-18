@@ -111,12 +111,13 @@ Blender → read it back → write `[stage]`/`[camera]` → render. **Calibrated
 - **Camera** (martin orbit = target+dist+yaw+pitch): from Blender cam world `P` and its look target `T`
   (both →martin): `dist=|P−T|`, `d=(P−T)/dist`, `yaw=atan2(d.z, d.x)`, `pitch=asin(d.y)`, `pos=T`. Give the
   Blender cam a Track-To an empty at the city centroid so `T` is stable.
-- **Text orientation**: a Blender text placeholder needs `rotation_euler=(90°,0,0)` **plus a mirror on X**
-  (`scale.x = -|scale.x|`) to read upright + correct from `CAM.martin` matching martin's `text:` render —
-  VERIFIED against the engine (Numpad 0 = martin's truth). Matching martin's glyph face needs a reflection,
-  which is improper, so it's a negative scale, not a pure rotation. (`(90,0,180)` was WRONG — it mirrors.)
-  Positions/camera are NOT affected: the world↔Blender map is a proper rotation (det +1), so left/right and
-  drag direction are faithful — only the flat glyph face needs the X-mirror.
+- **Text orientation**: a Blender text placeholder needs just `rotation_euler=(90°,0,0)`, **positive scale,
+  NO mirror** — it then lands in the world XY (z=0) plane exactly like martin builds `text:` (`text.rs`:
+  +X right, +Y up, Y-down→base-flip), so Blender camera-view = martin. VERIFIED (hi-res Blender shot +
+  martin render agree: "deFEEST" reads d-left, no flip). Earlier `(90,0,180)`/X-mirror notes were WRONG —
+  an artifact of misreading low-res chunky-font screenshots; the map is a proper rotation (det +1) so
+  nothing needs reflecting. Real props (`splat:`/`mesh:` `.ply`/`.glb`) loaded through the same point-map
+  come out correct automatically — no per-prop orientation fixes.
 - **Deliver renders**: `DISPLAY=:0 xdg-open <png>` (SendUserFile isn't always available). Renders stay
   low-Q (see Common Pitfalls / quota); splat **budget** can go high for a crisp still (it's frame *count*,
   not splat count, that fills the disk).
