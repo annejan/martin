@@ -82,6 +82,7 @@ fn advance_seq_clock(
     seq: Option<Res<crate::scene::sequence::Sequence>>,
     gate: Option<Res<crate::music::AudioGate>>,
     paused: Option<Res<crate::serve::Paused>>,
+    shot: Option<Res<crate::capture::ShotConfig>>,
     mut clock: ResMut<SeqClock>,
     // MARTIN_LOOP=1 wraps the clock at show-end → the reel plays forever (a live kiosk loop). Read
     // once; `None` = not looping, `Some(len)` = wrap modulo len (only when a reel/Score gives a length).
@@ -92,6 +93,11 @@ fn advance_seq_clock(
     }
     // the live control bridge can freeze the clock to inspect a moment (seek sets it directly).
     if paused.map(|p| p.0).unwrap_or(false) {
+        return;
+    }
+    // MARTIN_SHOT mode SEEKS the clock to the shot time (shot_driver) — don't tick it forward here,
+    // or a late shot would slowly sim its way there instead of jumping.
+    if shot.map(|s| s.path.is_some()).unwrap_or(false) {
         return;
     }
     // hold for the live synth render (when audio is wanted): picture + music must leave together

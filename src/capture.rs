@@ -217,23 +217,36 @@ pub(crate) struct ShotConfig {
 }
 
 fn shot_driver(
-    time: Res<Time>,
     mut shot: ResMut<ShotConfig>,
+    mut clock: ResMut<SeqClock>,
+    state: Option<Res<SeqState>>,
+    comp: Option<Res<crate::scene::compose::Composition>>,
     mut commands: Commands,
     mut exit: MessageWriter<AppExit>,
+    mut frames: Local<u32>,
 ) {
     let Some(path) = shot.path.clone() else {
         return;
     };
-    let el = time.elapsed_secs();
-    if !shot.done && el >= shot.at {
+    // SEEK straight to the shot time (don't simulate the whole timeline to get there — a late
+    // MARTIN_SHOT_AT used to take ~that-many seconds). advance_seq_clock is gated off in shot mode,
+    // so setting the clock here holds the scene + camera at `at`.
+    clock.t = shot.at;
+    // wait until the show is actually built (assets loaded → composition/sequence assembled), then a
+    // few more frames so the held pose + sort settle before grabbing the frame.
+    let built = state.map(|s| s.built).unwrap_or(false) || comp.map(|c| c.built).unwrap_or(false);
+    if !built {
+        return;
+    }
+    *frames += 1;
+    if !shot.done && *frames >= 6 {
         commands
             .spawn(Screenshot::primary_window())
             .observe(save_to_disk(path.clone()));
         shot.done = true;
-        info!("auto-screenshot -> {path}");
+        info!("auto-screenshot @ t={:.1} -> {path}", shot.at);
     }
-    if shot.done && el >= shot.at + 2.0 {
+    if shot.done && *frames >= 10 {
         exit.write(AppExit::Success);
     }
 }
