@@ -114,7 +114,9 @@ it. It is unchanged by this doc — only named consistently.
   `lead / arp / bass` (16-step grids that loop). *Chords*: a per-bar cycle.
 - **Dynamics** — `gain / sub / mids` automation curves, with `a>b` linear **ramps** per Section.
 - **FX layer** — demoscene accents (`wall / house / donk / shimmer / riser / jet / impact / bang`),
-  default-by-section or overridden via `<section>.fx:`.
+  default-by-section or overridden via `<section>.fx:`. Riser **flavours**: `riser` (noise uplifter),
+  `downlift` (falling whoosh that deflates INTO a calm section), `tonalriser` (a pitched/musical
+  lift, detuned saw gliding up an octave from the chord root, into a climax).
 - **`set` knobs** — arbitrary synth parameters (`set key=value`, `<section>.set` to override).
 - **Instrument palette** — each core voice has alternate CHARACTERS, swapped in by a `*sw` knob
   (resolved per note via `param_at`, so a `<section>.set …sw=N` line changes the sound for THAT

@@ -532,18 +532,31 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             });
         }
     }
-    if let Some(t) = section_time(score, "breakdown")
-        && score.fx_on("breakdown", "impact")
-    {
-        ev(&mut lanes[L_FX], t, move |bd, _| {
-            render_impact(bd, t, 2.2, 0.38)
-        });
+    if let Some(t) = section_time(score, "breakdown") {
+        if score.fx_on("breakdown", "impact") {
+            ev(&mut lanes[L_FX], t, move |bd, _| {
+                render_impact(bd, t, 2.2, 0.38)
+            });
+        }
+        if score.fx_on("breakdown", "downlift") {
+            let s = t - 2.0 * bar;
+            ev(&mut lanes[L_FX], s, move |bd, _| {
+                render_downlift(bd, s, 2.0 * bar, 0.22, 0.0)
+            });
+        }
     }
     if let Some(t) = section_time(score, "climax") {
         if score.fx_on("climax", "riser") {
             let s = t - 4.0 * bar;
             ev(&mut lanes[L_FX], s, move |bd, _| {
                 render_riser(bd, s, 4.0 * bar, 0.34, -0.15)
+            });
+        }
+        if score.fx_on("climax", "tonalriser") {
+            let s = t - 4.0 * bar;
+            let root = score.chord_at(t).root;
+            ev(&mut lanes[L_FX], s, move |bd, _| {
+                render_tonalriser(bd, s, 4.0 * bar, root, 0.26, -0.1)
             });
         }
         if score.fx_on("climax", "jet") {

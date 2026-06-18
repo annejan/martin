@@ -36,6 +36,74 @@ pub(super) fn render_riser(buf: &mut [f32], start_t: f32, dur: f32, amp: f32, pa
     }
 }
 
+/// Down-lifter: the INVERSE of `render_riser` — a falling pitch + deflating noise wash, the synthwave
+/// "suck-down" as energy drops OUT of a big section into a calm one (drop → breakdown). The pitch
+/// sweeps ~2400 → 120 Hz and the wash starts present then fades to nothing. Deterministic.
+pub(super) fn render_downlift(buf: &mut [f32], start_t: f32, dur: f32, amp: f32, pan: f32) {
+    use std::f32::consts::TAU;
+    let sr = SAMPLE_RATE as f32;
+    let start = (start_t.max(0.0) * sr) as usize;
+    let n = (dur.max(0.0) * sr) as usize;
+    let denom = std::cmp::max(n, 1) as f32;
+    let mut phase = 0.0f32;
+    let mut hp = 0.0f32;
+    for i in 0..n {
+        let p = i as f32 / denom;
+        let frame = start + i;
+        let q = 1.0 - p; // falls 1 → 0
+        let hz = 120.0 + 2300.0 * q * q; // pitch sweeps DOWN
+        phase = (phase + TAU * hz / sr) % TAU;
+        let noise = pseudo_noise(i + start);
+        hp += 0.08 * (noise - hp);
+        let bright = noise - hp;
+        let env = (p * 30.0).min(1.0) * q * q; // soft start (no click), long deflating fade
+        add_stereo(
+            buf,
+            frame,
+            (phase.sin() * 0.4 + bright * 0.6) * env * amp,
+            pan,
+        );
+    }
+}
+
+/// Tonal riser: a MUSICAL lift instead of pure noise — a detuned saw pair glides UP ~an octave from
+/// the chord `root` (folded into a low-mid octave) through a one-pole low-pass that opens as it rises,
+/// amp swelling in. Harmonic into the boundary — a melodic build into a climax. Deterministic.
+pub(super) fn render_tonalriser(
+    buf: &mut [f32],
+    start_t: f32,
+    dur: f32,
+    root: f32,
+    amp: f32,
+    pan: f32,
+) {
+    use std::f32::consts::TAU;
+    let sr = SAMPLE_RATE as f32;
+    let start = (start_t.max(0.0) * sr) as usize;
+    let n = (dur.max(0.0) * sr) as usize;
+    let denom = std::cmp::max(n, 1) as f32;
+    let mut base = root.max(1.0); // fold into a musical low-mid octave (110–220 Hz)
+    while base > 220.0 {
+        base *= 0.5;
+    }
+    while base < 110.0 {
+        base *= 2.0;
+    }
+    let (mut ph1, mut ph2) = (0.0f32, 0.0f32);
+    let mut lp = 0.0f32;
+    for i in 0..n {
+        let p = i as f32 / denom;
+        let frame = start + i;
+        let hz = base * (1.0 + p); // glide up ~an octave over the riser
+        ph1 = (ph1 + TAU * hz / sr) % TAU;
+        ph2 = (ph2 + TAU * hz * 1.005 / sr) % TAU; // a detuned twin for width
+        let saw = ((ph1 / TAU) * 2.0 - 1.0) + ((ph2 / TAU) * 2.0 - 1.0);
+        let k = 0.02 + 0.5 * p; // low-pass opens as the riser rises
+        lp += k * (saw * 0.5 - lp);
+        add_stereo(buf, frame, lp * (p * p) * amp, pan); // p² swell-in
+    }
+}
+
 /// Modern hardstyle / rawstyle KICK, tuned per hit to the chord root: a tight click transient → a
 /// heavily DISTORTED pitch-swept body (sine + a saw partial driven through tanh then hard-clipped =
 /// the "zaag"/gabber grit) → a pitched tonal TAIL on the root pitch-class (the "piep" — the kick is

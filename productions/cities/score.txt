@@ -22,11 +22,23 @@ section breakdown 4 3 fill
 section climax 12 8,3 fill
 section outro 8 7 fill
 
-# night-drive FX: wide walls + risers for lift, shimmer for neon air; no jets/impacts (it glides).
+# PER-SECTION INSTRUMENT ARC — the sung lead (leadsw=2) carries the hook throughout; the PADS and
+# BASS shift character section to section for movement (padsw 2=Juno-warm 3=PWM-glassy 4=dark-wash;
+# basssw 2=Kavinsky-sub 4=acid-303). Atmospheric dark-wash open → warm build → glassy+acid drop →
+# brooding hush → glassy+acid peak → dark-wash settle. (Global default below = Juno pad + Kavinsky sub.)
+intro.set padsw=4                 # dark cinematic wash — neon haze, atmospheric open
+drop.set padsw=3 basssw=4         # glassy PWM wall + acid-303 drive — the hit moves
+breakdown.set padsw=4 basssw=2    # dark wash + clean sub — intimate, brooding hush
+climax.set padsw=3 basssw=4       # glassy PWM + acid — euphoric, animated peak
+outro.set padsw=4                 # dark wash — settle into the loop seam
+
+# night-drive FX: noise riser lifts into the DROP; a falling DOWNLIFT deflates into the hushed
+# breakdown; a melodic TONALRISER (pitched, tuned to the chord) lifts into the euphoric CLIMAX —
+# three different transition flavours instead of one noise sweep everywhere. Shimmer = neon air.
 build.fx: riser shimmer
 drop.fx: wall house riser shimmer
-breakdown.fx: shimmer
-climax.fx: wall house riser shimmer casio
+breakdown.fx: shimmer downlift
+climax.fx: wall house tonalriser shimmer casio
 outro.fx: wall casio shimmer
 
 # --- drums: driving four-on-floor with a backbeat clap; offbeat hats; sparse skank stabs ---
