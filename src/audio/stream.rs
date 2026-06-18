@@ -512,7 +512,10 @@ impl StreamBuf {
         }
     }
     pub(crate) fn push(&self, chunk: &[f32]) {
-        self.segments.lock().expect("stream lock poisoned").push(Arc::new(chunk.to_vec()));
+        self.segments
+            .lock()
+            .expect("stream lock poisoned")
+            .push(Arc::new(chunk.to_vec()));
         self.finalized.fetch_add(chunk.len() / 2, Ordering::Release);
     }
     pub(crate) fn finalized_frames(&self) -> usize {
@@ -522,7 +525,11 @@ impl StreamBuf {
         self.total
     }
     fn segment(&self, idx: usize) -> Option<Arc<Vec<f32>>> {
-        self.segments.lock().expect("stream lock poisoned").get(idx).cloned()
+        self.segments
+            .lock()
+            .expect("stream lock poisoned")
+            .get(idx)
+            .cloned()
     }
 }
 

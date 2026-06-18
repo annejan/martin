@@ -56,7 +56,7 @@ pub(crate) fn settings_from_env() -> Option<PostSettings> {
         "chroma" | "rgb" | "rgb-split" | "rgbsplit" | "split" => 1u32,
         "off" | "" => return None,
         other => {
-            eprintln!("MARTIN_POST: unknown effect '{other}' — try chroma (or chroma:<strength>)");
+            warn!("MARTIN_POST: unknown effect '{other}' — try chroma (or chroma:<strength>)");
             return None;
         }
     };

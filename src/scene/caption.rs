@@ -61,7 +61,7 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
             h.strip_prefix("screentext:")
                 .or_else(|| h.strip_prefix("title:"))
         }) else {
-            eprintln!("caption: line must start with screentext:/title: — skipped: {line}");
+            warn!("caption: line must start with screentext:/title: — skipped: {line}");
             continue;
         };
         // text = the head's first word + any following non-keyword tokens (so multi-word captions work).
