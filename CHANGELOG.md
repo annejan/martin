@@ -134,6 +134,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 - Synth voices incl. a hardstyle kick, Reese/woozy bass, singing 5-saw lead, supersaw+choir wall,
   classic M1 "house organ", donk, casio; 2-band master, glue comp, diffuse reverb (+ section depth
   automation), Haas widening, sidechain, atmosphere bed; optional 2× oversampling (`set oversample=1`).
+- **Additive instrument palette** (`leadsw` / `basssw` / `padsw` / `drumsw` knobs): alternate voice
+  CHARACTERS swapped in per voice — e.g. `leadsw` 2 breathy-sung / 3 Carpenter-Brut / 4 FM-bell;
+  `basssw` 2 Kavinsky-sub / 3 Brut-Reese / 4 acid-303; `padsw` 2 Juno / 3 PWM-string / 4 dark-wash;
+  `drumsw` 1 analog/808 kit. Knob `0` (default) keeps the original voices, so existing tracks are
+  byte-identical. Resolved **per note via `param_at`**, so a `<section>.set …sw=N` line changes the
+  instruments for THAT section only (softer interlude, harder crescendo). Voices in `voices.rs` (+ the
+  analog kick in `effects.rs`); `*_pick` selectors in `render.rs`. The nocturnal demo runs the full
+  synthwave palette; Camping keeps its bounce kit but softens the breakdown + sharpens the climax/outro.
 - Structural lint of the score with `MARTIN_SCORE_STRICT=1` to make warnings fatal.
 - Example scores showing the range: `assets/tropical.txt`, `assets/rain.txt`.
 - Score split: the engine ships a **neutral** tropical-house builtin (`assets/score.txt`); each

@@ -46,6 +46,15 @@ section breakdown 17 8,8 fill
 section climax 33 8,8,8,8 fill
 section outro 25 8,8,8 fill
 
+# PER-SECTION INSTRUMENT PALETTE (the `<section>.set <knob>=N` overrides param_at inside that section
+# only; the global `set …` line is the default). The body rides the Carpenter-Brut lead (global
+# leadsw=3); the BREAKDOWN drops to softer voices for the calm interlude, and the CLIMAX/OUTRO bite
+# back harder for the triumphant crescendo. Knobs: leadsw 2=breathy-sung 3=brut · basssw 2=clean-sub
+# 3=brut-reese · drumsw 1=analog kit (else the bounce/gabber kit).
+breakdown.set leadsw=2 drumsw=1 basssw=2   # rustiger interlude → sung lead, analog drums, clean sub
+climax.set basssw=3                          # triomfantelijk crescendo → brut-reese growl under the brut lead
+outro.set basssw=3                           # keep the finale sharp to the end
+
 # The chorus (drop/climax/outro) is G-MAJOR — the recognizable hook. The COUPLET (build/breakdown) is
 # the minor verse: per-section `chords:` lines flip those sections to G-minor for contrast. The roots
 # track the disco bassline so the sub/pad/stab agree with the bass note-lane.

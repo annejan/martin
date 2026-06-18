@@ -152,7 +152,7 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 | `MARTIN_FLASH=0.6` | Over-bright bloom flash on each part cut (0 = off). |
 | `MARTIN_SYNTH_WAV=/x.wav` | Render the bundled deFEEST synth to a WAV and exit (mux onto a recording). |
 | `MARTIN_MUTE=1` | Silence the live synth (it plays in the window by default; recordings still mux the WAV). |
-| `MARTIN_SCORE=score.txt` | Load a tracker-DSL **score file** (tempo / sections / drum patterns / dynamics) — drives the synth *and* the `@@anchor`s. Editable default ships at `assets/score.txt`. |
+| `MARTIN_SCORE=score.txt` | Load a tracker-DSL **score file** (tempo / sections / drum patterns / dynamics) — drives the synth *and* the `@@anchor`s. Editable default ships at `assets/score.txt`. A score can also pick each voice's CHARACTER via the **instrument-palette** knobs (`leadsw`/`basssw`/`padsw`/`drumsw`, even per-section) — see [`DOMAIN.md`](DOMAIN.md). |
 | `MARTIN_SCORE_DUMP=score.txt` | Export the built-in score as an editable file and exit. |
 
 **`MARTIN_SEQ`** is a `;`-separated list of *parts* (or a path to a file of them, one per line;

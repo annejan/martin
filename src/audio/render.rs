@@ -168,18 +168,20 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     let mut lanes: [Vec<Event>; LANES] = std::array::from_fn(|_| Vec::new());
     let beat = score.beat();
     let bar = score.bar();
-    // palette selectors (default 0 = the original voices; a score `set leadsw=1` etc. opts into the
-    // nocturnal-synthwave alternates). Resolved once, captured into the per-event closures below.
-    let leadsw = score.param("leadsw", 0.0).round() as i32;
-    let basssw = score.param("basssw", 0.0).round() as i32;
-    let padsw = score.param("padsw", 0.0).round() as i32;
-    let drumsw = score.param("drumsw", 0.0) > 0.5;
+    // palette selectors are resolved PER EVENT at the note's time via `param_at`, so a
+    // `<section>.set leadsw=N` override swaps the voice for THAT SECTION only (a softer interlude,
+    // a harder finale, …). `set leadsw=N` at the top still sets the whole-track default. Each loop
+    // computes its selector at the note time below and captures the (Copy) value into the closure.
+    let isw = |t: f32, key: &str| score.param_at(t, key, 0.0).round() as i32; // int selector @ t
+    let dsw = |t: f32| score.param_at(t, "drumsw", 0.0) > 0.5; // drum bool @ t
 
     // ---- DRUMS (kick → kickbuf; bass-body/intro-perc/snare/hat/stab → bed) ----
     let hats_amp = score.param("hats", 0.3);
     let snare_amp = score.param("snares", 0.58);
     for kt in score.hits(Inst::Kick) {
         let root = score.chord_at(kt).root;
+        let drumsw = dsw(kt);
+        let basssw = isw(kt, "basssw");
         let kamp = 0.92 * (0.9 + 0.1 * vel(kt, beat, 0));
         ev(&mut lanes[L_DRUMS], kt, move |_b, k| {
             kick_pick(drumsw, k, kt, root, kamp)
@@ -197,6 +199,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             let base = b as f32 * bar;
             let k_amp = if b < 4 { 0.30 } else { 0.55 };
             let root = score.chord_at(base).root;
+            let drumsw = dsw(base);
             ev(&mut lanes[L_DRUMS], base, move |_b, k| {
                 kick_pick(drumsw, k, base, root, k_amp)
             });
@@ -231,6 +234,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             _ => -0.05,
         };
         let gt = groove(t, beat, 0x55, 0.003, 0.004);
+        let drumsw = dsw(gt);
         let amp = snare_amp * vel(t, beat, 0x55);
         ev(&mut lanes[L_DRUMS], gt, move |b, _| {
             render_into(b, gt, 0.4, amp, pan, snare_pick(drumsw))
@@ -239,6 +243,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     for (i, t) in score.hits(Inst::Hat).into_iter().enumerate() {
         let pan = if i % 2 == 0 { 0.65 } else { -0.65 };
         let gt = groove(t, beat, 0x77, 0.006, 0.0);
+        let drumsw = dsw(gt);
         let amp = hats_amp * vel(t, beat, 0x77);
         ev(&mut lanes[L_DRUMS], gt, move |b, _| {
             render_into(b, gt, 0.12, amp, pan, hat_pick(drumsw))
@@ -261,6 +266,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             let t = b as f32 * bar;
             let root = bass_freq(score.chord_at(t).root);
             let amp = if b < 6 { 0.18 } else { 0.26 };
+            let basssw = isw(t, "basssw");
             ev(&mut lanes[L_LEAD], t, move |bd, _| {
                 render_into(bd, t, 0.7, amp, 0.0, bass_pick(basssw, root, 0.85))
             });
@@ -294,6 +300,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let in_climax = climax
             .map(|(s0, s1)| (s0..s1).contains(&t))
             .unwrap_or(false);
+        let leadsw = isw(gt, "leadsw");
         ev(&mut lanes[L_LEAD], gt, move |bd, _| {
             render_into(bd, gt, dur, lamp, 0.0, lead_pick(leadsw, f, v));
             render_into(bd, gt, dur, 0.20 * v, 0.0, lead_pick(leadsw, f * 2.0, v));
@@ -310,6 +317,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let amp = 0.30 * v;
         let lv = (v * 0.7).max(0.25);
         let dur = 0.5 + hold;
+        let leadsw = isw(gt, "leadsw");
         ev(&mut lanes[L_ECHO], gt, move |bd, _| {
             render_into(bd, gt, dur, amp, 0.0, lead_pick(leadsw, f, lv))
         });
@@ -332,6 +340,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let v = vel(t, beat, 0xB5);
         let amp = (0.20 + 0.18 * score.levels(t).sub_bass) * v;
         let gt = groove(t, beat, 0xB5, 0.003, 0.0);
+        let basssw = isw(gt, "basssw");
         ev(&mut lanes[L_BASS], gt, move |bd, _| {
             let (dur, voice): (f32, Box<dyn fundsp::prelude32::AudioUnit>) = if wooz {
                 (0.6 + hold, woozbass_pick(basssw, f))
@@ -368,6 +377,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
                 let m = score.levels(t).mids;
                 let amp = score.param_at(t, "supersaw", 0.07) + 0.07 * m;
                 let ch = score.param_at(t, "choir", 0.5);
+                let padsw = isw(t, "padsw");
                 let tri = score.chord_at(t).triad();
                 ev(&mut lanes[L_WALL], t, move |bd, _| {
                     for &f in tri.iter() {
@@ -401,6 +411,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
                 while (b as f32) * bar < s1 {
                     let t = b as f32 * bar;
                     let ramp = ((t - s0) / ((s1 - s0) * 0.6)).clamp(0.0, 1.0);
+                    let padsw = isw(t, "padsw");
                     let tri = score.chord_at(t).triad();
                     ev(&mut lanes[L_SHIM], t, move |bd, _| {
                         for &f in tri.iter() {

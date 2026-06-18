@@ -914,8 +914,17 @@ mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
 - A section's `<bars>` is its total length; `<phase-bars>` is how the kit pattern changes *within*
   it (plus a trailing fill bar when `fill`). Section **names** are what `@@anchor` matches — so a
   custom score with custom section names re-anchors the show to them.
-- The *instrument* (how a kick/stab actually sounds — the synth DSP) stays in code; the file is the
-  **composition**. **`assets/score.txt` is loaded by default** — just edit it and run (no recompile,
+- **`set` knobs + instrument palette.** `set key=value` sets a free-form synth parameter (mix levels
+  like `lead=0.82`, fx depths, etc.); `<section>.set key=value` overrides it for one section. Among
+  these are the **palette knobs** that swap a voice's CHARACTER without touching code — `leadsw`
+  (1 vocal-saw · 2 breathy-sung · 3 brass-cut/Brut · 4 FM-bell), `basssw` (2 Kavinsky-sub · 3 Brut-Reese
+  · 4 acid-303), `padsw` (2 Juno · 3 PWM-string · 4 dark-wash), `drumsw` (1 analog/808 kit). `0` (default)
+  = the original voices, so existing tracks are unchanged. They resolve **per note**, so a
+  `breakdown.set leadsw=2` gives a section its own instruments — e.g. softer voices in a calm interlude,
+  harder ones in the crescendo. (See `productions/camping/score.txt` for a worked example.)
+- The voices themselves (the synth DSP for each `kick/lead/bass/…` + its palette variants) live in code
+  (`src/audio/voices.rs`); the score is the **composition** and now also *picks which voice* via the
+  knobs above. **`assets/score.txt` is loaded by default** — just edit it and run (no recompile,
   no env var; the visuals re-anchor to the new section times). `MARTIN_SCORE=<other>` overrides it,
   and the file is also embedded in the binary as the fallback, so the music isn't duplicated in code.
 
