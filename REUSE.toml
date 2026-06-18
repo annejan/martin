@@ -162,3 +162,14 @@ path = [
 ]
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
+
+# PonyCamp assets (added 2026-06-18). Horse model by Marlina Nurma (CC-BY-4.0); beer mug is CC0/PD.
+[[annotations]]
+path = "assets/paard.glb"
+SPDX-FileCopyrightText = "Marlina Nurma"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = "assets/bier.glb"
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "CC0-1.0"
