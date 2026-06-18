@@ -27,22 +27,29 @@ bg_dim       = 0.5
 # whirls past inside the build before the drop interrupts.
 [reel]
 splat:galaxy.ply    @@intro     @5,2       ~fade                                backdrop:fractal   # THE WORLD — a spiral cosmos drifts up
-splat:doggo.ply     @@build     @0.9,0.5,0.15  ~morph  beat:0.8                   backdrop:stars     # the world is full of… a hondje 🐕
-splat:train.ply                 @0.9,0.5,0.15  ~morph                             backdrop:grid      # …a train 🚂
-splat:truck.ply                 @0.9,0.5,0.15  ~morph                             backdrop:grid      # …a truck 🚚
-splat:martin.ply                @0.9,0.5,0.15  ~morph                             backdrop:stars     # …martin
-splat:austin_tight.ply          @0.9,0.5,0.15  ~morph                             backdrop:stars     # …a whole city 🌃
-splat:nyc_tight.ply             @0.9,0.5,0.15  ~morph                             backdrop:grid      # …NEW YORK 🗽
-splat:aegg.ply                  @0.9,0.5,0.15  ~morph                             backdrop:rings     # …the AEgg 🥚
-splat:helix.ply                 @0.9,0.5,0.15  ~morph  ^spiral:0.2                backdrop:tunnel    # …a helix 🧬
+splat:doggo.ply     @@build     @1.5,0.4,0.1  ~morph  beat:0.8                   backdrop:stars     # the world is full of… a hondje 🐕
+splat:train.ply                 @0.6,0.45,0.2  ~morph                             backdrop:grid      # …a train 🚂
+splat:truck.ply                 @0.6,0.45,0.2  ~morph                             backdrop:grid      # …a truck 🚚
+splat:martin.ply                @1.1,0.5,0.15  ~morph                             backdrop:stars     # …martin
+splat:austin_tight.ply          @0.7,0.4,0.2  ~morph                             backdrop:stars     # …a whole city 🌃
+splat:nyc_tight.ply             @0.7,0.4,0.2  ~morph                             backdrop:grid      # …NEW YORK 🗽
+splat:aegg.ply                  @1.3,0.4,0.1  ~morph                             backdrop:rings     # …the AEgg 🥚
+splat:helix.ply                 @1.4,0.6,0.15  ~morph  ^spiral:0.2                backdrop:tunnel    # …a helix 🧬
 mesh:bitterbal.glb  @@drop      @4,1.5     ~shockwave  ease:snap  tint:fry  flash:0.9  beat:1.8  backdrop:stars   # …IT'S ALL A BITTERBAL 🟤 (kill-shot reveal)
 mesh:bitterbal.glb  @@breakdown @3,2       ~morph  ^turbulence:0.3  tint:fry     backdrop:stars     # it hovers, glistening, hot
-mesh:bitterbal.glb  @@climax    @4,2       ~ball  tint:fry  flash:0.6  beat:1.9  ^turbulence:0.45  backdrop:fractal   # the peak — balls up glorious
+mesh:bitterbal.glb  @@climax    @4,2       ~ball  flock:12  tint:fry  flash:0.6  beat:1.9  ^turbulence:0.4  backdrop:fractal   # the peak — balls up glorious
 mesh:defeest.glb    rot:180,0,0 @4,2       ~morph                                backdrop:stars     # → the deFEEST logo → loops
 
 # the punchline caption — handwrites in AS the bitterbal is revealed, off-centre (rule of thirds).
 [stage]
-text:de wereld is een bitterbal   @-1.3,0.95,0.7  *0.2  ~pen-write  tint:brand  in drop  out climax   # the reveal line, upper-left third
+# ASYNC LAYER in front of the reel — words + the snack motif drift in/out at STAGGERED bars, varied
+# tempo + opposite corners (not lockstep ABC-123). Sized big for the far reel camera (~dist 5-6).
+text:de wereld     @-2.4,1.3,1.8  *2.2   ~pen-write  tint:brand  in bar:2   out bar:7              # upper-left, early
+mesh:bitterbal.glb @2.2,0.7,2.3   *0.42  spin 19,37,13  drift -0.02,0,0.006   ~morph  tint:fry  in bar:6   out bar:11   # the snack hints during the whirlwind, front-right
+text:is een?       @2.0,-1.0,1.8  *1.8   ~fade       tint:brand  in bar:8   out bar:11             # lower-right, the question
+text:BITTERBAL     @0,0.3,2.0     *2.8   ~explode    tint:brand  in bar:11  out bar:16             # THE REVEAL word — punches in on the drop
+mesh:bitterbal.glb @-2.6,0.6,2.5  *0.38  spin 23,29,17  drift 0.018,0.008,0   ~morph  tint:fry  in bar:23  out bar:39   # motif returns, left, through breakdown→climax
+text:deFEEST       @2.0,-1.1,1.9  *2.0   ~pen-write  tint:brand  in bar:39  out bar:46             # brand, outro, lower-right
 
 # camera: orbit the hero OFF-centre (rule of thirds), punch in on the drop (cut), switch sides, settle
 # front-on for the brand. dist ~5 frames the @5-6 morph cloud with cosmos around it.
