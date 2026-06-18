@@ -93,6 +93,32 @@ Transform the "Op de Camping" (Ome Henk, 1995) demoscene track from a basic plac
   overlap/grounding/rim/occlusion/3D/screen-thirds) BEFORE rendering. Iterate: python tool → low-res
   `record.sh` preview → full quality last. SEND renders to the user (don't just inspect).
 
+## Blender ↔ martin bridge (MCP scene-making)
+Author/inspect a scene visually in Blender via the `blender-mcp` MCP server (`uvx blender-mcp` + the
+Blender add-on, port 9876; `blender` is symlinked to `blender-5.1`). Round-trip: drag a prop/camera in
+Blender → read it back → write `[stage]`/`[camera]` → render. **Calibrated, exact:**
+
+- **Engine normalize** (`morph::normalize_to`, every part): centre = **centroid mean**; scale =
+  `NORMALIZE_EXTENT*0.5 / p90` = **1/p90** (90th-pct distance from centroid). Match this in Blender or
+  positions won't line up.
+- **Coord map** martin world (Y-up) ↔ Blender (Z-up): `blender = (wx, -wz, wy)`; inverse
+  `world = (bx, bz, -by)`. A `[stage]` `@pos` IS a world position (the normalized cloud's centroid sits at
+  the world origin), so **export prop**: `@(bx, bz, -by)`, `*scale = blender_max_dim / 2`.
+- **Display a splat `.ply` in Blender**: parse the Brush SH-3 header (count `property float` lines → stride),
+  cols `x,y,z` + `f_dc_0..2`; `rgb = clip(f_dc*0.2820948 + 0.5, 0, 1)`. Build a `bpy.data.pointclouds`
+  (`pc.resize(n)`; set `position`/`radius`/`color` FLOAT_COLOR attrs), emission material reading the
+  `color` attr, viewport `shading.type='MATERIAL'`. City point n shows at `blender = (nx, nz, -ny)`.
+- **Camera** (martin orbit = target+dist+yaw+pitch): from Blender cam world `P` and its look target `T`
+  (both →martin): `dist=|P−T|`, `d=(P−T)/dist`, `yaw=atan2(d.z, d.x)`, `pitch=asin(d.y)`, `pos=T`. Give the
+  Blender cam a Track-To an empty at the city centroid so `T` is stable.
+- **Text orientation**: a Blender text placeholder needs `rotation_euler=(90°, 0, 180°)` to read upright +
+  un-mirrored matching martin's default `text:` render (Rx90 alone faces the cam but is mirrored = back face).
+  CAVEAT: it's a flat single-faced object — it reads correct only from `CAM.martin`'s side (Numpad 0 =
+  martin's truth). Free-orbiting to the far side shows the mirrored BACK; that's Blender, not a bug.
+- **Deliver renders**: `DISPLAY=:0 xdg-open <png>` (SendUserFile isn't always available). Renders stay
+  low-Q (see Common Pitfalls / quota); splat **budget** can go high for a crisp still (it's frame *count*,
+  not splat count, that fills the disk).
+
 ## Testing
 - `cargo test` — 54 tests pass.
 - `MARTIN_SCORE_DUMP=<path>` writes normalized score dump for debugging.
