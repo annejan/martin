@@ -51,10 +51,15 @@ PROP_HALF_H = 0.95
 
 # Rough footprint radius (XZ) per shape category, as a fraction of scale — for the
 # top-down circles + the side bars. Trees/fire are slim; tent is a box; ridge is wide.
-FOOTPRINT = {"pine": 0.45, "flame": 0.4, "tent": 0.7, "moon": 1.0, "mountains": 1.0}
+FOOTPRINT = {
+    "pine": 0.45, "flame": 0.4, "tent": 0.7, "moon": 1.0, "mountains": 1.0,
+    # mesh:.glb props (no .ply to measure → name-based footprint, fraction of scale):
+    "paard": 1.0, "bier": 0.4, "bitterbal": 0.55, "doggo": 0.65,
+}
 COLOR = {
     "pine": "#2e8b32", "flame": "#ff6a1a", "tent": "#9a6cd0", "moon": "#cfcfcf",
     "mountains": "#6f7fa6", "terrain": "#5aa54a",
+    "paard": "#8a5a3c", "bier": "#e0a52a", "bitterbal": "#b5651d", "doggo": "#dcdcdc",
 }
 
 
@@ -102,13 +107,17 @@ def parse_show(path):
                 i += 1
             name = " ".join(head)
             name = re.sub(r"^\w+:", "", name)  # strip splat:/mesh:/glb:/...
-            pos, scale = [0.0, 0.0, 0.0], [1.0, 1.0, 1.0]
+            pos, scale, travel = [0.0, 0.0, 0.0], [1.0, 1.0, 1.0], None
             for t in toks[i:]:
                 if t.startswith("@"):
                     pos = vec3(t[1:])
                 elif t.startswith("*"):
                     scale = vec3(t[1:], (1.0, 1.0, 1.0))
-            stage.append({"name": name, "cat": category(name), "pos": pos, "scale": scale})
+                elif t.startswith("travel:"):
+                    travel = vec3(t[len("travel:"):].split("@", 1)[0])  # eased RESTING target
+            # plot a travel: prop where it COMES TO REST (target), not its off-screen @pos start.
+            stage.append({"name": name, "cat": category(name),
+                          "pos": travel if travel else pos, "scale": scale})
         elif section == "camera":
             d = dict(re.findall(r"(\w+)=([-\d.,]+|@@\w+)", line))
             if "yaw" in d:
@@ -155,8 +164,8 @@ def parse_ply(path, n=2500):
 def load_ply_world(obj, asset_dir, n=2500):
     """Load a splat .ply and apply the engine pipeline: normalize → base-flip(Y,Z) → *scale → +pos."""
     path = os.path.join(asset_dir, obj["name"])
-    if not os.path.exists(path):
-        return None, None
+    if not os.path.exists(path) or not path.endswith(".ply"):
+        return None, None  # mesh:.glb props have no sh0 .ply to sample → fall back to name footprint
     pos, col = parse_ply(path, n)
     c = pos.mean(axis=0)
     d = np.linalg.norm(pos - c, axis=1)
