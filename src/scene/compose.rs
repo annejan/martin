@@ -28,7 +28,7 @@ const COMPOSE_MORPH: f32 = 3.6; // how long a `~entrance` compose object takes t
 /// `path:orbit:r,speed` / `path:orbit:rx,rz,speed` / `path:liss:ax,ay,az,fx,fy,fz[,speed]`.
 #[derive(Clone, Copy)]
 pub(crate) enum PathMotion {
-    Orbit { rx: f32, rz: f32, speed: f32 },          // ellipse in the XZ plane around @pos
+    Orbit { rx: f32, rz: f32, speed: f32 }, // ellipse in the XZ plane around @pos
     Lissajous { amp: Vec3, freq: Vec3, speed: f32 }, // 3D Lissajous figure around @pos
 }
 
@@ -50,11 +50,22 @@ impl PathMotion {
 
     fn parse(s: &str) -> Option<Self> {
         let (kind, rest) = s.split_once(':')?;
-        let n: Vec<f32> = rest.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+        let n: Vec<f32> = rest
+            .split(',')
+            .filter_map(|x| x.trim().parse().ok())
+            .collect();
         match kind {
             "orbit" | "circle" => match n.len() {
-                2 => Some(PathMotion::Orbit { rx: n[0], rz: n[0], speed: n[1] }),
-                3 => Some(PathMotion::Orbit { rx: n[0], rz: n[1], speed: n[2] }),
+                2 => Some(PathMotion::Orbit {
+                    rx: n[0],
+                    rz: n[0],
+                    speed: n[1],
+                }),
+                3 => Some(PathMotion::Orbit {
+                    rx: n[0],
+                    rz: n[1],
+                    speed: n[2],
+                }),
                 _ => None,
             },
             "liss" | "lissajous" => (n.len() >= 6).then(|| PathMotion::Lissajous {
@@ -194,7 +205,7 @@ pub(crate) struct ComposeAnim {
     deform: Option<(u32, f32, f32)>, // `^name` deform uniforms (mode, amp, freq)
     reveal: Option<(u32, f32, u32)>, // the entrance's per-particle reveal shader (mode/softness/axis) —
     // pen-write traces the letters in as it assembles (only while assembling, then off)
-    ease: Ease, // shapes the assemble curve (`ease:`)
+    ease: Ease,               // shapes the assemble curve (`ease:`)
     path: Option<PathMotion>, // independent travel path (`path:orbit/liss:…`)
 }
 

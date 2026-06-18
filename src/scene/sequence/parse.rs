@@ -272,6 +272,24 @@ pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<Strin
         );
     }
 
+    // A composition-only show (`[stage]`/`[compose]` with NO `[reel]`/`[seq]`): the `ply=` setting is
+    // just the asset ROOT (so `splat:` basenames resolve) — NOT a reel shape. Don't synthesize the
+    // fallback sphere reel below; it would render as a giant cloud at the origin behind the stage (the
+    // "rainbow ball" bug). Empty sequence → `build_sequence` is a no-op and the composition stands alone.
+    if std::env::var("MARTIN_COMPOSE")
+        .map(|s| !s.trim().is_empty())
+        .unwrap_or(false)
+    {
+        let root = std::env::var("MARTIN_PLY").ok().and_then(parent_dir);
+        return (
+            Sequence {
+                parts: Vec::new(),
+                budget,
+            },
+            root,
+        );
+    }
+
     // splat shorthand: PLY (+ PLY2) as part 0; REFORM (if any) as part 1.
     let primary = std::env::var("MARTIN_PLY").ok();
     let root = primary.as_deref().and_then(|p| parent_dir(p.to_string()));
