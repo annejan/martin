@@ -309,16 +309,30 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         while i < rest.len() {
             let t = rest[i];
             if let Some(v) = t.strip_prefix('@') {
+                // `@x,y,z` (tight) OR a stray-space `@ x,y,z` — be forgiving: a bare `@` token used to
+                // strip to "" → pos silently collapsed to the ORIGIN (and ate the next token), stacking
+                // every object dead-centre. Treat the following token as the coords instead.
+                let (v, step) = if v.is_empty() {
+                    (rest.get(i + 1).copied().unwrap_or(""), 2)
+                } else {
+                    (v, 1)
+                };
                 pos = vec3_csv(v);
-                i += 1;
+                i += step;
             } else if let Some(v) = t.strip_prefix('*') {
                 // `*s` = uniform; `*sx,sy,sz` = per-axis stretch (e.g. a wide, low mountain ridge).
+                // Forgiving of a stray-space `* s` the same way `@` is.
+                let (v, step) = if v.is_empty() {
+                    (rest.get(i + 1).copied().unwrap_or(""), 2)
+                } else {
+                    (v, 1)
+                };
                 scale = if v.contains(',') {
                     vec3_csv(v)
                 } else {
                     Vec3::splat(v.parse().unwrap_or(1.0))
                 };
-                i += 1;
+                i += step;
             } else {
                 let val = rest.get(i + 1).copied().unwrap_or("");
                 match t {
@@ -680,6 +694,30 @@ mod tests {
         assert!(s.contains("@(1.5,-0.3,0.0)"), "{s}");
         assert!(s.contains("*0.50"), "{s}");
         assert!(s.contains("~Drop"), "{s}");
+    }
+
+    #[test]
+    fn parse_compose_forgives_a_stray_space_after_at_and_star() {
+        // `@ x,y,z` / `* s` (a stray space, e.g. from column-aligned authoring) used to silently
+        // collapse the object to the ORIGIN at default scale (and eat the next token). Now forgiven.
+        let o = objs("mesh:bitterbal.glb @ 1.5,-0.3,0.4 * 0.5 spin 0,40,0 ~ball");
+        assert_eq!(o.len(), 1);
+        let s = o[0].summary();
+        assert!(
+            s.contains("@(1.5,-0.3,0.4)"),
+            "pos not parsed past the space: {s}"
+        );
+        assert!(s.contains("*0.50"), "scale not parsed past the space: {s}");
+        assert!(
+            s.contains("~Ball"),
+            "the following token must not be eaten: {s}"
+        );
+        // tight form still works identically.
+        assert!(
+            objs("mesh:bitterbal.glb @1.5,-0.3,0.4 *0.5")[0]
+                .summary()
+                .contains("@(1.5,-0.3,0.4)")
+        );
     }
 
     #[test]

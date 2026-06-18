@@ -30,18 +30,18 @@ splat:austin_tight.ply  @0,-1.4,-7   *2.4   sway 0,8,0   bob 0.05   in intro
 #      + own spin + own entry bar → no two ever sync, every bal doet wat ie wil. All in FRONT of the
 #      city (positive z, near camera). The weave dominates (the bal lingers + swirls), the slow -y drift
 #      makes it descend; staggered entries (bars 2..13) overlap into a continuous, living downpour.
-mesh:bitterbal.glb  @ -3.2,1.60,1.30  *0.300  spin 11,13,9  drift 0,-0.090,0  path:liss:1.00,0.50,0.80,3,2,5,0.110  tint:fry  ~morph  in bar:3
-mesh:bitterbal.glb  @ -2.2,2.00,1.75  *0.345  spin 18,24,14  drift 0,-0.110,0  path:liss:1.35,0.80,1.05,2,5,3,0.128  tint:fry  ~morph  in bar:4
-mesh:bitterbal.glb  @ -1.2,2.40,2.20  *0.390  spin 25,35,19  drift 0,-0.130,0  path:liss:1.70,1.10,1.30,5,3,2,0.146  tint:fry  ~morph  in bar:5
-mesh:bitterbal.glb  @ -0.3,2.80,2.65  *0.435  spin 32,46,24  drift 0,-0.150,0  path:liss:2.05,0.50,1.55,3,5,7,0.164  tint:fry  ~morph  in bar:6
-mesh:bitterbal.glb  @  0.6,3.20,1.30  *0.480  spin 39,13,29  drift 0,-0.170,0  path:liss:1.00,0.80,0.80,7,2,3,0.182  tint:fry  ~morph  in bar:7
-mesh:bitterbal.glb  @  1.5,1.60,1.75  *0.300  spin 46,24,34  drift 0,-0.190,0  path:liss:1.35,1.10,1.05,2,7,5,0.200  tint:fry  ~morph  in bar:8
-mesh:bitterbal.glb  @  2.4,2.00,2.20  *0.345  spin 13,35,39  drift 0,-0.090,0  path:liss:1.70,0.50,1.30,5,7,2,0.110  tint:fry  ~morph  in bar:9
-mesh:bitterbal.glb  @  3.2,2.40,2.65  *0.390  spin 20,46,44  drift 0,-0.110,0  path:liss:2.05,0.80,1.55,3,7,5,0.128  tint:fry  ~morph  in bar:10
-mesh:bitterbal.glb  @ -2.6,2.80,1.30  *0.435  spin 27,13,11  drift 0,-0.130,0  path:liss:1.00,1.10,0.80,7,3,2,0.146  tint:fry  ~morph  in bar:4
-mesh:bitterbal.glb  @ -0.8,3.20,1.75  *0.480  spin 34,24,16  drift 0,-0.150,0  path:liss:1.35,0.50,1.05,2,3,7,0.164  tint:fry  ~morph  in bar:6
-mesh:bitterbal.glb  @  1.0,1.60,2.20  *0.300  spin 41,35,21  drift 0,-0.170,0  path:liss:1.70,0.80,1.30,5,2,7,0.182  tint:fry  ~morph  in bar:8
-mesh:bitterbal.glb  @  2.0,2.00,2.65  *0.345  spin 48,46,26  drift 0,-0.190,0  path:liss:2.05,1.10,1.55,7,5,3,0.200  tint:fry  ~morph  in bar:10
+mesh:bitterbal.glb  @-3.2,1.60,1.30  *0.300  spin 11,13,9  drift 0,-0.090,0  path:liss:1.00,0.50,0.80,3,2,5,0.110  tint:fry  ~morph  in bar:3
+mesh:bitterbal.glb  @-2.2,2.00,1.75  *0.345  spin 18,24,14  drift 0,-0.110,0  path:liss:1.35,0.80,1.05,2,5,3,0.128  tint:fry  ~morph  in bar:4
+mesh:bitterbal.glb  @-1.2,2.40,2.20  *0.390  spin 25,35,19  drift 0,-0.130,0  path:liss:1.70,1.10,1.30,5,3,2,0.146  tint:fry  ~morph  in bar:5
+mesh:bitterbal.glb  @-0.3,2.80,2.65  *0.435  spin 32,46,24  drift 0,-0.150,0  path:liss:2.05,0.50,1.55,3,5,7,0.164  tint:fry  ~morph  in bar:6
+mesh:bitterbal.glb  @0.6,3.20,1.30  *0.480  spin 39,13,29  drift 0,-0.170,0  path:liss:1.00,0.80,0.80,7,2,3,0.182  tint:fry  ~morph  in bar:7
+mesh:bitterbal.glb  @1.5,1.60,1.75  *0.300  spin 46,24,34  drift 0,-0.190,0  path:liss:1.35,1.10,1.05,2,7,5,0.200  tint:fry  ~morph  in bar:8
+mesh:bitterbal.glb  @2.4,2.00,2.20  *0.345  spin 13,35,39  drift 0,-0.090,0  path:liss:1.70,0.50,1.30,5,7,2,0.110  tint:fry  ~morph  in bar:9
+mesh:bitterbal.glb  @3.2,2.40,2.65  *0.390  spin 20,46,44  drift 0,-0.110,0  path:liss:2.05,0.80,1.55,3,7,5,0.128  tint:fry  ~morph  in bar:10
+mesh:bitterbal.glb  @-2.6,2.80,1.30  *0.435  spin 27,13,11  drift 0,-0.130,0  path:liss:1.00,1.10,0.80,7,3,2,0.146  tint:fry  ~morph  in bar:4
+mesh:bitterbal.glb  @-0.8,3.20,1.75  *0.480  spin 34,24,16  drift 0,-0.150,0  path:liss:1.35,0.50,1.05,2,3,7,0.164  tint:fry  ~morph  in bar:6
+mesh:bitterbal.glb  @1.0,1.60,2.20  *0.300  spin 41,35,21  drift 0,-0.170,0  path:liss:1.70,0.80,1.30,5,2,7,0.182  tint:fry  ~morph  in bar:8
+mesh:bitterbal.glb  @2.0,2.00,2.65  *0.345  spin 48,46,26  drift 0,-0.190,0  path:liss:2.05,1.10,1.55,7,5,3,0.200  tint:fry  ~morph  in bar:10
 
 # ---- THE BRAND · wordmark drifts in upper-left (rule of thirds), in front of the city ----
 text:deFEEST  @-1.6,1.4,2.2  *0.9  bob 0.1  tint:brand  ~pen-write  in build  out climax
@@ -54,7 +54,7 @@ mesh:bitterbal.glb  @0.7,0.5,2.2  *0.70  spin 0,26,0  tint:fry  ~shockwave  flas
 text:de wereld is een bitterbal  @1.3,1.6,2.4  *0.85  bob 0.08  tint:brand  ~pen-write  in climax
 
 # ---- THE LOGO · the brand mark lands the outro ----
-mesh:defeest.glb  @0,0.6,2.6  *1.1  rot:180,0,0  bob 0.10  sway 0,6,0  ~morph  in outro   # mesh: = sampled gaussians, renders reliably in [stage] (glb:/GlMesh is reel-only)
+mesh:defeest.glb  @0,0.6,2.6  *1.1  rot 180,0,0  bob 0.10  sway 0,6,0  ~morph  in outro   # mesh: = sampled gaussians, renders reliably in [stage] (glb:/GlMesh is reel-only)
 
 # Camera: establish the LOW skyline (horizon bottom third, sky full of falling snacks) → push in as the
 # rain builds → SLAM to a tight kill-shot on the drop (cut) → switch sides, orbit the storm → settle
