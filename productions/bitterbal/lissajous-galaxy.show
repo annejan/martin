@@ -1,0 +1,74 @@
+# martin — LISSAJOUS GALAXY 🟤🥚🌀: a slow-spinning deFEEST logo at the heart of a living orbital
+# system. Bitterballen and AEggs each weave their OWN lissajous / orbit path — coprime frequencies so
+# the pattern never repeats, every object independent (no beat-lockstep). Hypnotic, layered, cosmic.
+# Showcase of path:liss. mesh:.glb props are z-buffered → safe to crowd; ONE far-back splat backdrop.
+#
+#   live:    MARTIN_LOOP=1 MARTIN_SHOW=productions/bitterbal/lissajous-galaxy.show cargo +nightly run --release
+#   preview: TMPDIR=~/.cache/martin-render MARTIN_MUTE=1 MARTIN_RES=480x270 MARTIN_PREVIEW_FPS=8 \
+#            MARTIN_SHOW=productions/bitterbal/lissajous-galaxy.show ./record.sh /tmp/lissajous.mp4
+
+[settings]
+kind         = demo
+score        = productions/cities/score.txt   # epic A-minor synthwave (intro/build/drop/breakdown/climax/outro)
+ply          = assets/sphere.ply              # asset root = assets/
+budget       = 120000
+bg           = stars                            # calm starfield — kaleido drowned the swarm; the WEAVE is the show
+post         = chroma                           # RGB-split on the kick
+cam_pump     = 0.22
+flash        = 0.22
+bg_dim       = 0.5
+
+# THE STAGE — one slow-turning logo core + an orbital swarm. The galaxy splat sits FAR BACK (centre at
+# z=-9) as the only big splat backdrop, so every z-buffered mesh prop draws in front of it. The logo is
+# the hub. Each snack/egg rides its OWN path with COPRIME lissajous freqs (3:2, 5:3, 7:4, 4:5…) so two
+# objects are never in phase — the weave breathes forever. Objects fade in across the build so the
+# system assembles with the music; the climax adds a dense outer ring (field) and the AEgg moons.
+[stage]
+# --- the cosmos is the bg=stars shader (a placed galaxy.ply splat rendered as an ugly edge-on pink
+#     disc — dropped; the starfield reads cleaner and the swarm is pure mesh = no phantom-sphere risk)
+
+# --- THE CORE: slow-spinning deFEEST logo, the hub of the system, lifted off the rule-of-thirds centre
+mesh:defeest.glb   @0,0.3,0      *1.1   rot 180,0,0   spin 0,14,0   bob 0.06                     in intro      # the brand at the heart, turning slow
+
+# --- INNER ORBITAL: two snacks on a tight near-circular lissajous (3:2) — the close dance
+mesh:bitterbal.glb @0,0,0        *0.30  spin 21,33,11  path:liss:1.7,0.9,1.5,3,2,2,0.42   tint:fry   ~morph  in build      # close lissajous, fries-hot
+mesh:bitterbal.glb @0,0,0        *0.28  spin 17,40,23  path:liss:1.6,1.3,1.4,2,3,2,0.37   tint:fry   ~morph  in build      # its counter-weave (swapped fx/fy)
+
+# --- MID ORBITAL: the AEggs ride wide elliptical lissajous (5:3, 4:5) — slower, statelier
+mesh:aegg.glb      @0,0,0        *0.55  spin 9,19,7    path:liss:2.9,1.1,2.4,5,3,2,0.27           ~swirl  in build      # big slow egg, wide weave
+mesh:aegg.glb      @0,0,0        *0.50  spin 13,8,16   path:liss:2.6,1.6,2.7,4,5,3,0.23           ~swirl  in build      # second egg, taller weave
+
+# --- OUTER ORBITAL: more bitterballen on coprime lissajous (7:4, 5:7, 6:5) — the layered halo
+mesh:bitterbal.glb @0,0,0        *0.26  spin 29,12,19  path:liss:3.6,2.1,3.2,7,4,3,0.19   tint:fry   ~morph  in drop       # far weave, top of the halo
+mesh:bitterbal.glb @0,0,0        *0.24  spin 11,27,35  path:liss:3.4,2.6,3.5,5,7,4,0.17   tint:fry   ~morph  in drop       # far weave, deep figure-eight
+mesh:bitterbal.glb @0,0,0        *0.27  spin 33,18,9   path:liss:3.8,1.7,3.0,6,5,2,0.21   tint:fry   ~morph  in drop       # far weave, fast spinner
+
+# --- the AEgg moon: a single egg on a clean wide orbit, the steady satellite
+mesh:aegg.glb      @0,0,0        *0.34  spin 7,23,5    path:orbit:4.2,0.16                        ~ball   in drop       # the moon — a calm circular orbit
+
+# --- CLIMAX: a dense outer ring of identical snacks (field) each on the same big orbit, phase-spread,
+#     turning the halo into a full Saturn-ring of bitterballen for the peak
+mesh:bitterbal.glb @0,0,0        *0.18  spin 41,0,0    path:orbit:5.4,0.12   tint:fry   field:14   ~explode  in climax  out outro   # the ring of snacks — the galaxy fills out
+
+# --- CLIMAX caption: the brand line lands off-centre (upper-left third), handwriting in on the peak
+[stage]
+text:de wereld is een bitterbal  @-1.9,1.9,1.0  *0.7  ~pen-write  tint:brand  bob 0.05  in climax  out outro   # the punchline, upper-left
+
+# CAMERA — start wide and low looking UP into the system (horizon low, core on a third), slowly orbit
+# so the lissajous weave parallax-shifts, punch in on the drop, swing to a grand high-three-quarter for
+# the climax ring, settle front-on for the loop. The logo lives at @0,0.3,0; we aim OFF it (pos offset).
+[camera]
+t=@@intro      pos=-1.4,-0.4,0   dist=8.5   yaw=0.7   pitch=-0.28   # wide + low, looking UP, core on the right third
+t=@@build      pos=-1.0,-0.2,0   dist=7.0   yaw=1.05  pitch=-0.16   # ease in as snacks join, orbiting
+t=@@drop       pos=0.4,0.1,0     dist=4.6   yaw=1.35  pitch=0.05   cut   # CUT: punch into the heart of the weave
+t=@@breakdown  pos=-1.2,0.3,0    dist=6.4   yaw=1.85  pitch=0.10    # drift back, other side, the weave breathes
+t=@@climax     pos=1.2,0.5,0     dist=8.0   yaw=1.45  pitch=0.34    # high three-quarter, the full ring revealed
+t=@@outro      pos=0.0,0.2,0     dist=7.6   yaw=1.40  pitch=0.18    # settle front-on the logo core → loop
+
+[sync]
+t=@@intro      flash=0.10  bg_dim=0.50  beat=0.3   bg=stars        # cosmic calm, the hub turns alone
+t=@@build      flash=0.18  bg_dim=0.50  beat=0.8                   # snacks + eggs weave in
+t=@@drop       flash=0.85  bg_dim=0.36  beat=1.7   bg=fractal      # punch into the heart — full kick, the cosmos boils
+t=@@breakdown  flash=0.18  bg_dim=0.55  beat=0.6   bg=stars        # hush, the weave breathes
+t=@@climax     flash=0.7   bg_dim=0.36  beat=1.8   bg=fractal      # the ring fills out — peak
+t=@@outro      flash=0.22  bg_dim=0.50  beat=0.6                   # ease to the logo + loop

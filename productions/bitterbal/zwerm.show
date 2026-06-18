@@ -1,0 +1,60 @@
+# martin — BITTERBALZWERM 🟤🌀: a swarm of 26 deep-fried bitterballen, each weaving its OWN lissajous
+# path at its own speed + spin — every bitterbal doet wat ie wil. Hypnotic, layered, independent.
+# Showcases the per-object path: feature. mesh bitterballen = z-buffered (safe to swarm). 100% local.
+#
+#   live:    MARTIN_LOOP=1 MARTIN_SHOW=productions/bitterbal/zwerm.show cargo +nightly run --release
+#   preview: TMPDIR=~/.cache/martin-render MARTIN_MUTE=1 MARTIN_RES=480x270 MARTIN_PREVIEW_FPS=10 MARTIN_SHOW=productions/bitterbal/zwerm.show ./record.sh /tmp/zwerm.mp4
+
+[settings]
+kind     = demo
+score    = productions/cities/score.txt
+ply      = assets/sphere.ply
+budget   = 200000
+bg       = fractal
+post     = chroma
+cam_pump = 0.3
+bg_dim   = 0.45
+
+[stage]
+# the central brand the swarm dances around (PBR mesh = z-buffered)
+mesh:defeest.glb   @0,0,0   *1.1   rot 180,0,0   spin 0,14,0   ~fade   in intro
+# the swarm — each bitterbal its own lissajous + spin (coprime freqs → never repeats)
+mesh:bitterbal.glb @-3.2,-1.6,-2.2 *0.11  spin 13,29,17  path:liss:0.7,0.6,0.7,1,2,3,0.28  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-1.48,-0.98,0.52 *0.185  spin 20,34,28  path:liss:1.57,1.35,1.9,2,3,1,0.43  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @0.25,-0.37,-1.16 *0.135  spin 27,39,19  path:liss:0.92,0.85,1.66,3,1,2,0.57  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @1.97,0.25,1.56 *0.21  spin 34,44,30  path:liss:1.78,1.6,1.42,1,3,2,0.33  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-2.71,0.86,-0.12 *0.16  spin 41,49,21  path:liss:1.13,1.1,1.18,2,1,3,0.47  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-0.98,1.48,-1.8 *0.11  spin 18,29,32  path:liss:2.0,0.6,0.94,3,2,1,0.62  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @0.74,-1.11,0.92 *0.185  spin 25,34,23  path:liss:1.35,1.35,0.7,1,2,4,0.38  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @2.46,-0.49,-0.77 *0.135  spin 32,39,34  path:liss:0.7,0.85,1.9,3,4,2,0.52  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-2.22,0.12,1.95 *0.21  spin 39,44,25  path:liss:1.57,1.6,1.66,2,4,3,0.28  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-0.49,0.74,0.27 *0.16  spin 16,49,36  path:liss:0.92,1.1,1.42,4,1,3,0.43  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @1.23,1.35,-1.41 *0.11  spin 23,29,27  path:liss:1.78,0.6,1.18,1,4,2,0.57  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @2.95,-1.23,1.31 *0.185  spin 30,34,18  path:liss:1.13,1.35,0.94,4,3,1,0.33  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-1.72,-0.62,-0.37 *0.135  spin 37,39,29  path:liss:2.0,0.85,0.7,1,2,3,0.47  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @0.0,0.0,-2.05 *0.21  spin 14,44,20  path:liss:1.35,1.6,1.9,2,3,1,0.62  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @1.72,0.62,0.67 *0.16  spin 21,49,31  path:liss:0.7,1.1,1.66,3,1,2,0.38  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-2.95,1.23,-1.01 *0.11  spin 28,29,22  path:liss:1.57,0.6,1.42,1,3,2,0.52  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-1.23,-1.35,1.71 *0.185  spin 35,34,33  path:liss:0.92,1.35,1.18,2,1,3,0.28  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @0.49,-0.74,0.03 *0.135  spin 42,39,24  path:liss:1.78,0.85,0.94,3,2,1,0.43  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @2.22,-0.12,-1.65 *0.21  spin 19,44,35  path:liss:1.13,1.6,0.7,1,2,4,0.57  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-2.46,0.49,1.06 *0.16  spin 26,49,26  path:liss:2.0,1.1,1.9,3,4,2,0.33  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-0.74,1.11,-0.62 *0.11  spin 33,29,17  path:liss:1.35,0.6,1.66,2,4,3,0.47  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @0.98,-1.48,2.1 *0.185  spin 40,34,28  path:liss:0.7,1.35,1.42,4,1,3,0.62  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @2.71,-0.86,0.42 *0.135  spin 17,39,19  path:liss:1.57,0.85,1.18,1,4,2,0.38  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-1.97,-0.25,-1.26 *0.21  spin 24,44,30  path:liss:0.92,1.6,0.94,4,3,1,0.52  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @-0.25,0.37,1.46 *0.16  spin 31,49,21  path:liss:1.78,1.1,0.7,1,2,3,0.28  tint:fry  ~explode  in intro
+mesh:bitterbal.glb @1.48,0.98,-0.22 *0.11  spin 38,29,32  path:liss:1.13,0.6,1.9,2,3,1,0.43  tint:fry  ~explode  in intro
+
+[camera]
+t=@@intro      pos=0.6,0.2,0    dist=7.5  yaw=1.2   pitch=0.18    # the swarm wide, brand off-centre
+t=@@drop       pos=0.0,0.0,0    dist=5.5  yaw=1.5   pitch=0.10    # dive into the swarm on the drop
+t=@@breakdown  pos=-0.6,0.2,0   dist=7.0  yaw=1.95  pitch=0.16    # orbit the other way
+t=@@climax     pos=0.5,0.0,0    dist=6.0  yaw=1.5   pitch=0.20    # the peak whirl
+t=@@outro      pos=0.0,0.1,0    dist=8.0  yaw=1.45  pitch=0.24    # pull back
+
+[sync]
+t=@@intro      flash=0.1   bg_dim=0.4   beat=0.4
+t=@@drop       flash=0.7   bg_dim=0.3   beat=1.8
+t=@@climax     flash=0.6   bg_dim=0.3   beat=1.7
+t=@@outro      flash=0.2   bg_dim=0.45  beat=0.7

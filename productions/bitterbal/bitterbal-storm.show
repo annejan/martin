@@ -1,0 +1,72 @@
+# martin — BITTERBAL STORM 🟤🎆: pure maximalism. A dense swarm of deep-fried bitterballen (mesh:.glb,
+# so z-buffered = overlap-safe, the design-rule loophole that lets us go BIG) tumbles through a
+# fractal-aurora cosmos. Every ball rides its OWN coprime lissajous / orbit / drift path with its own
+# spin, so the cloud never repeats and always LIVES. The brand punchline — "de wereld is een bitterbal"
+# — handwrites in off-centre on the drop, the logo crowns the climax. No placed splat backdrop — the
+# bg=fractal/aurora shader IS the cosmos, so the storm stays pure z-buffered mesh. 100% local assets.
+#
+#   live:    MARTIN_LOOP=1 MARTIN_SHOW=productions/bitterbal/bitterbal-storm.show cargo +nightly run --release
+#   preview: TMPDIR=~/.cache/martin-render MARTIN_MUTE=1 MARTIN_RES=480x270 MARTIN_PREVIEW_FPS=8 \
+#            MARTIN_SHOW=productions/bitterbal/bitterbal-storm.show ./record.sh /tmp/storm.mp4
+
+[settings]
+kind         = demo
+score        = productions/cities/score.txt   # epic A-minor synthwave (intro/build/drop/breakdown/climax/outro)
+ply          = assets/sphere.ply              # asset root = assets/
+budget       = 200000
+bg           = fractal                         # the cosmos boils — swapped to aurora on the drop via [sync]
+post         = chroma                          # RGB-split shears on the kick
+fft          = 1.0                             # backdrop breathes with the spectrum
+cam_pump     = 0.30                            # camera lunges on the beat
+flash        = 0.20
+bg_dim       = 0.5
+
+# THE STORM — many objects at once (z-buffered meshes → overlap is SAFE here, so we go dense).
+# The swarm BUILDS in: a few balls drift through the intro, the full storm slams in on build→drop,
+# extra layers pile on through breakdown→climax, then the logo crowns it. Every ball has its OWN
+# path with COPRIME lissajous frequencies (2/3/5/7/11/13…) so no two ever sync — the cloud is alive.
+[stage]
+# --- the cosmos is the bg=fractal/aurora shader (a placed galaxy.ply splat rendered as an ugly
+#     edge-on pink streak — dropped; pure-mesh storm reads cleaner against the boiling shader sky).
+
+# --- INTRO seeds: a few lone bitterballen tumble in from the dark, easing the storm open.
+mesh:bitterbal.glb  @-2.0,0.8,1.0   *0.34  spin 23,41,17  path:liss:2.6,1.4,2.0,2,3,5,0.20   tint:fry  ~morph  in intro                 # first ball, wide left
+mesh:bitterbal.glb  @ 2.3,-0.6,0.4  *0.30  spin 31,19,43  path:liss:2.2,1.8,2.4,3,5,2,0.17   tint:fry  ~morph  in intro                 # second, low right
+mesh:bitterbal.glb  @ 0.4,1.6,-0.8  *0.28  spin 13,47,29  path:orbit:2.4,0.30                tint:fry  ~morph  in intro                 # high orbiter
+
+# --- BUILD: the swarm proper arrives — field:N scatters MANY balls per line, each on its own path.
+mesh:bitterbal.glb  @-1.2,0.2,0.6   *0.24  field:9  spin 37,23,11  path:liss:3.0,1.6,2.6,5,7,3,0.24  ^turbulence:0.25  tint:fry  ~swarm  in build   out outro   # the main cloud, left-biased
+mesh:bitterbal.glb  @ 1.4,0.4,-0.4  *0.22  field:9  spin 19,43,31  path:liss:2.6,2.0,3.0,7,5,11,0.27 ^turbulence:0.25  tint:fry  ~swarm  in build   out outro   # the main cloud, right-biased
+mesh:bitterbal.glb  @ 0.0,1.2,1.2   *0.20  field:7  spin 29,17,47  path:liss:2.0,2.6,2.2,11,3,7,0.31 ^turbulence:0.20  tint:fry  ~swarm  in build   out outro   # the high tier
+mesh:bitterbal.glb  @ 0.0,-1.0,-0.8 *0.20  field:7  spin 41,29,13  path:liss:2.8,1.4,2.8,3,11,5,0.22 ^turbulence:0.20  tint:fry  ~swarm  in build   out outro   # the low tier
+
+# --- DROP: the KILL-SHOT — a clutch of fat hero balls SLAMS in on the kick, snapped + flashed + fried.
+mesh:bitterbal.glb  @-0.8,0.3,0.2   *0.46  field:5  spin 53,37,23  path:liss:1.8,1.2,1.6,13,7,5,0.34 ^turbulence:0.40  tint:fry  ~morph      in drop   out outro   # hero cluster (the reveal), front-left third
+mesh:bitterbal.glb  @ 1.0,-0.2,-0.3 *0.42  field:5  spin 23,53,37  path:orbit:1.9,0.46              ^turbulence:0.40  tint:fry  ~morph      in drop   out outro   # hero orbiters, right
+
+# --- BREAKDOWN→CLIMAX: more layers pile on, deeper rings of balls — the storm thickens.
+mesh:bitterbal.glb  @-2.6,0.6,-1.4  *0.26  field:8  spin 17,31,43  path:orbit:3.2,0.21              ^turbulence:0.30  tint:fry  ~morph  in breakdown  out outro   # wide outer orbit ring
+mesh:bitterbal.glb  @ 2.6,-0.4,1.6  *0.26  field:8  spin 43,13,29  path:liss:3.4,2.2,3.0,5,13,7,0.19 ^turbulence:0.30  tint:fry  ~morph  in climax     out outro   # far counter-layer
+
+# --- THE BRAND: AEgg easter-egg tumbling through, then the punchline + the logo crown the climax.
+mesh:aegg.glb       @ 2.0,1.4,0.5   *0.5   spin 22,38,14  path:liss:1.6,1.2,1.4,2,5,3,0.16   ~morph  in build   out climax                              # 🥚 the AEgg cameo whirls past
+text:de wereld is een bitterbal  @-0.9,0.9,1.6  *0.85  ~pen-write  tint:brand  bob 0.06  in drop   out outro    # THE PUNCHLINE handwrites in upper-left on the drop
+mesh:defeest.glb    @ 0.0,-0.2,0.0  *1.5   rot 180,0,0  spin 0,20,0  ~ball  flash:0.6  in climax  out outro                                              # the deFEEST logo crowns the peak (mesh: = sampled, renders reliably in [stage])
+
+# Camera: LOW + OFF-centre (rule of thirds), orbiting the storm. CUT-punch on the drop (the reveal),
+# switch sides for the breakdown, swing grand for the climax, settle on the logo. cam_pump lunges per beat.
+[camera]
+t=@@intro      pos=1.4,0.10,0    dist=6.4   yaw=1.20   pitch=0.10    # storm seeding on the LEFT third, cosmos right, low horizon
+t=@@build      pos=0.9,0.05,0    dist=5.6   yaw=1.55   pitch=0.08    # orbit into the gathering swarm
+t=@@drop       pos=-0.2,0.00,0   dist=4.2   yaw=1.55   pitch=0.06   cut   # CUT: punch onto the kill-shot hero cluster
+t=@@breakdown  pos=-1.5,0.15,0   dist=6.0   yaw=2.05   pitch=0.12    # SWITCH sides: storm fills the right third
+t=@@climax     pos=1.1,0.00,0    dist=5.4   yaw=1.60   pitch=0.18    # grand low sweep through the thickest storm
+t=@@outro      pos=0.0,0.05,0    dist=6.6   yaw=1.50   pitch=0.22    # settle front-on the logo, pull back
+
+[sync]
+t=@@intro      flash=0.10  bg_dim=0.45  beat=0.4   exposure=1.0                          # cosmic calm, fractal boils
+t=@@build      flash=0.22  bg_dim=0.50  beat=1.1   exposure=1.05                         # the swarm gathers, energy rising
+t=@@drop       flash=0.90  bg_dim=0.35  beat=1.8   exposure=1.30  tint_music=0.9  bg=aurora   # THE REVEAL — full kick, bloom, chroma, sky flips to aurora
+t=@@breakdown  flash=0.25  bg_dim=0.55  beat=0.8   exposure=1.05                         # the storm churns
+t=@@climax     flash=0.70  bg_dim=0.35  beat=1.9   exposure=1.15  tint_music=-0.6  bg=fractal  # peak — densest storm, logo crowns
+t=@@outro      flash=0.20  bg_dim=0.50  beat=0.6   exposure=1.0                          # ease to the logo + loop

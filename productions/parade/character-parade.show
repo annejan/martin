@@ -1,0 +1,60 @@
+# martin — CHARACTER PARADE 🎭: the whole deFEEST cast struts past as ONE colour-matched morphing cloud.
+# A hondje becomes martin, becomes LUIGI, rides in as a train, hauls off as a truck, throws a peace sign —
+# then the whole parade collapses/erupts into the deep-fried BITTERBAL and resolves to the deFEEST logo.
+# pair=match keeps every landing CRISP (fur→fur, hat→hat; no disperse-to-ball mush). Varied tempo: some
+# cast members snap fast (montage), the heroes hold. ONE cloud = inherently Z-safe. 100% light local assets.
+#
+#   live:    MARTIN_LOOP=1 MARTIN_SHOW=productions/parade/character-parade.show cargo +nightly run --release
+#   preview: TMPDIR=~/.cache/martin-render MARTIN_MUTE=1 MARTIN_RES=480x270 MARTIN_PREVIEW_FPS=8 \
+#            MARTIN_SHOW=productions/parade/character-parade.show ./record.sh /tmp/parade.mp4
+
+[settings]
+kind         = demo
+pair         = match                         # nearest same-colour pairing → straight cast→cast morphs, crisp
+score        = productions/cities/score.txt  # epic synthwave (intro/build/drop/breakdown/climax/outro)
+ply          = assets/sphere.ply             # asset root = assets/
+budget       = 200000
+bg           = aurora                         # cosmic stage behind the parade
+post         = chroma                         # RGB-split shears on the kick
+cam_pump     = 0.3
+flash        = 0.25
+bg_dim       = 0.5
+
+# THE PARADE — one cloud, morphing through the cast. Un-anchored shots split a section evenly (a quick
+# montage of supporting cast); anchored shots LAND on the section hits and HOLD (the heroes).
+# @ params = @hold,morph,bulge (SECONDS). Varied tempo: doggo holds, mid-cast snaps fast, peace holds.
+[reel]
+splat:doggo.ply        @@intro     @4,1.2,0     ~fade    beat:0.6                          backdrop:stars   # the parade opens: a hondje 🐕 trots in
+splat:martin.ply       @@build     @1.6,0.5,0.1 ~morph   beat:0.9   ^wind:0.2              backdrop:grid    # …doggo → martin (our guy)
+splat:luigi.ply                    @0.8,0.45,0.2 ~morph  flash:0.4  ^spiral:0.15           backdrop:rings   # …→ LUIGI, mustache and all 🟢 (fast)
+splat:train.ply                    @0.7,0.5,0.25 ~morph  beat:1.0   ^wind:0.25             backdrop:grid    # …→ a train rolls through 🚂 (fast)
+splat:truck.ply                    @0.7,0.5,0.25 ~morph  beat:1.0   ^wind:0.25             backdrop:grid    # …→ a truck hauls off 🚚 (fast)
+splat:martin-peace.ply @@drop      @3.0,1.0,0.1 ~swarm   ease:snap  flash:0.7  beat:1.6    backdrop:stars   # …→ martin throws the PEACE SIGN ✌️ (the cast lands)
+mesh:bitterbal.glb     @@breakdown @3,2,0       ~morph   tint:fry   ^turbulence:0.3        backdrop:stars   # the whole parade balls up into a BITTERBAL 🟤, glistening
+mesh:bitterbal.glb     @@climax    @4,2,0       ~ball    tint:fry   flash:0.6  beat:1.9  ^turbulence:0.4   backdrop:fractal   # the peak — deep-fried glory, balls up grand
+mesh:defeest.glb       rot:180,0,0 @4,2,0       ~morph   beat:0.7                          backdrop:stars   # → resolves to the deFEEST logo → loops
+
+# ASYNC LAYER in front of the reel (Z-safe = meshes + foreground): the snack motif drifts in/out at
+# staggered bars + varied tempo (overlapping, not lockstep) and one caption lands the bit at the drop.
+[stage]
+mesh:bitterbal.glb @2.4,0.7,2.4   *0.40  spin 17,31,11  drift -0.018,0,0.006  ~morph  tint:fry  in bar:5   out bar:11   # the snack hints during the parade, front-right
+text:de hele cast is een bitterbal  @-0.8,0.9,1.5  *0.8  ~pen-write  tint:brand  in bar:11  out bar:18      # the punchline lands on the drop, upper-left
+mesh:bitterbal.glb @-2.7,0.6,2.5  *0.36  spin 23,29,19  drift 0.02,0.008,0   ~morph  tint:fry  in bar:23  out bar:39   # motif returns, left, through breakdown→climax
+
+# camera: low, OFF the subject (rule of thirds); orbit each cast member, CUT in on the peace-sign drop,
+# switch sides for the bitterbal, settle front-on for the logo. dist ~5 frames the @3-4 morph cloud.
+[camera]
+t=@@intro      pos=1.7,0.15,0    dist=6.0   yaw=1.10   pitch=0.16   # doggo on the LEFT third, cosmos right
+t=@@build      pos=1.0,0.08,0    dist=5.0   yaw=1.50   pitch=0.12   # the parade rolls, orbiting right + low
+t=@@drop       pos=0.0,0.00,0    dist=3.6   yaw=1.45   pitch=0.06   cut   # CUT: punch onto the peace sign
+t=@@breakdown  pos=-1.4,0.18,0   dist=5.4   yaw=1.95   pitch=0.14   # SWITCH sides: bitterbal on the right third
+t=@@climax     pos=1.1,0.00,0    dist=5.2   yaw=1.55   pitch=0.18   # grand orbit of the glorious snack
+t=@@outro      pos=0.0,0.10,0    dist=6.2   yaw=1.45   pitch=0.24   # settle front-on the logo + loop
+
+[sync]
+t=@@intro      flash=0.10  bg_dim=0.45  beat=0.4                # calm open
+t=@@build      flash=0.22  bg_dim=0.5   beat=1.0                # the parade — energy + per-shot beats
+t=@@drop       flash=0.8   bg_dim=0.35  beat=1.6                # PEACE SIGN lands — full kick, bloom, chroma
+t=@@breakdown  flash=0.2   bg_dim=0.55  beat=0.7                # hush, the bitterbal glistens
+t=@@climax     flash=0.7   bg_dim=0.35  beat=1.9                # peak
+t=@@outro      flash=0.25  bg_dim=0.5   beat=0.7                # ease to the logo + loop

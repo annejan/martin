@@ -1,0 +1,53 @@
+# martin — "deFEEST · TITLE BUILD": an elegant, abstract title-build for the brand mark. ONE morphing
+# cloud (a [reel], inherently Z-safe) journeys through pure geometry — a helix unwinds, swells to a
+# torus, blooms into a supershape, sharpens to a star — each shot weaving in on its OWN lissajous/orbit
+# path so the geometry LIVES rather than just sits. At the climax the shape converges and morphs into the
+# deFEEST logo (brand gold), then a wordmark settles under it. Cosmic, restrained, thirds-framed.
+#   live:   MARTIN_SHOW=productions/defeest/defeest-titlebuild.show cargo +nightly run --release
+#   record: MARTIN_SHOW=productions/defeest/defeest-titlebuild.show ./record.sh defeest-titlebuild.mp4
+# In-repo assets + the cities synthwave score, so it runs anywhere. ~46 bars, resolves on the mark.
+
+[settings]
+kind  = demo
+score = productions/cities/score.txt   # moody synthwave: intro/build/drop/breakdown/climax/outro anchors
+ply   = assets/helix.ply               # asset root + the opening cloud
+budget = 220000
+bg    = kaleido                         # slow geometric backdrop — echoes the converging shapes
+post  = chroma
+cam_pump = 0.25
+flash = 0.2
+bg_dim = 0.45
+
+# ONE cloud, geometry → logo. Each shot weaves in on its own path so the build never feels static;
+# everything rides brand gold so the colour reads as ONE evolving title element, not a slideshow.
+[reel]
+splat:helix.ply       @@intro  @5,4    ~fade        tint:brand  beat:0.4  ^spiral:0.25  path:liss:1.4,0.8,1.0,2,3,1,0.18  backdrop:stars   # a gold helix unwinds out of the dark, slow lissajous weave
+splat:torus.ply       @@build  @5,4    ~morph       tint:brand  beat:0.8  ^spiral:0.18  path:orbit:1.6,0.4  backdrop:stars                # helix swells & closes into a torus, orbiting
+splat:supershape.ply  @@drop   @5,4    ~swirl  ease:snap  tint:brand  beat:1.4  flash:0.5  ^turbulence:0.2  path:liss:1.2,1.4,1.0,3,2,4,0.30  backdrop:rings  # THE bloom — supershape petals snap open on the kick, fast weave
+splat:star.ply        @@breakdown  @5,4 ~morph      tint:brand  beat:0.6  ^spiral:0.12  path:liss:0.9,1.1,0.7,1,2,3,0.12  backdrop:stars   # petals sharpen to a single hovering star — hushed, slow
+mesh:defeest.glb      @@climax  rot:180,0,0  @5,4   ~morph  ease:snap  tint:brand  beat:1.6  flash:0.6  backdrop:kaleido                  # CONVERGE: the star morphs into the deFEEST LOGO (rot cancels base flip-X), peak
+mesh:defeest.glb      @@outro   rot:180,0,0  @5,4   tint:brand  beat:0.5  backdrop:stars                                                    # the mark settles and holds, gently breathing
+
+# wordmark resolves UNDER the logo at the climax (mesh:.glb is z-buffered → safe over the reel cloud).
+# It handwrites in, brand gold, and rides through the outro so the title reads clean.
+[stage]
+text:deFEEST  @0,-0.34,0  *0.42  ~pen-write  tint:brand  in climax  out outro   # wordmark handwrites in under the mark, lower-third (thirds)
+
+# camera: aim OFF the cloud (cloud at @5,4 but look-targets biased so the subject sits upper-thirds),
+# low raked angle, slow descent through the build, a snap-in on the drop, then pull to frame logo+wordmark.
+[camera]
+t=@@intro      pos=0.6,0.55,0   dist=5.8  yaw=1.30  pitch=0.30           # high & raked, shape in the upper-right third
+t=@@build      pos=0.4,0.40,0   dist=5.2  yaw=1.42  pitch=0.22           # ease down as the torus forms
+t=@@drop       pos=0.2,0.30,0   dist=4.4  yaw=1.50  pitch=0.16  cut      # snap close for the supershape bloom
+t=@@breakdown  pos=0.3,0.45,0   dist=5.0  yaw=1.38  pitch=0.26           # pull back, hushed, star floats upper-third
+t=@@climax     pos=0,0.18,0     dist=5.4  yaw=1.46  pitch=0.20           # head-on, centred-ish for the logo CONVERGE + write
+t=@@outro      pos=0,0.22,0     dist=5.9  yaw=1.46  pitch=0.28           # settle: logo above, wordmark in the lower third
+
+# [sync] — the LOOK track: bloom swells into the drop & climax, backdrop dims for the converge drama,
+# beat-reactivity ramps to the peak then eases out as the mark holds.
+[sync]
+t=@@intro      flash=0.15  bg_dim=0.5   beat=0.4
+t=@@drop       flash=0.55  bg_dim=0.35  beat=1.4
+t=@@breakdown  flash=0.1   bg_dim=0.55  beat=0.6
+t=@@climax     flash=0.7   bg_dim=0.2   beat=1.7
+t=@@outro      flash=0.2   bg_dim=0.45  beat=0.6
