@@ -993,7 +993,7 @@ pub(super) fn lead_sw4(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
             }
         });
         // HP lifts the chime off the low-mids onto the neon glass; gentle vel-scaled Atan rounds it.
-        (voice * amp >> highpass_hz(200.0, 0.7) >> shape(Atan(0.35 + 0.3 * vel))) * 0.8
+        ((voice * amp) >> highpass_hz(200.0, 0.7) >> shape(Atan(0.35 + 0.3 * vel))) * 0.8
     };
     if oversampling() {
         Box::new(oversample(mk()))
