@@ -1,0 +1,171 @@
+# martin score — BORN 2 deFEEST
+# Original hardstyle demo track, 145 BPM, ~220s
+# Concept: deFEEST arrives → builds → party erupts → quiet reflection → ultimate climax → credits
+bpm 145
+chords G D Em C  G D C G  Am C G D  Am C D D
+
+set lead=0.85 sub=0.42 supersaw=0.08 choir=0.5 donk=0.03 house=0.12 reverb=0.35 sidechain=0.75 widen=1.6 makeup=1.15 ceiling=0.93 shimmer=0.08 reverbauto=1 hats=0.3 snares=0.55
+
+# section <name> <bars> <phase-bars,csv> [fill]
+section intro 8 8
+section build 17 8,8 fill
+section drop 33 8,8,8,8 fill
+section breakdown 17 8,8 fill
+section climax 33 8,8,8,8 fill
+section outro 25 8,8,8 fill
+
+# per-section chords
+build.chords: Em C G D  Am C D D
+breakdown.chords: Em C G D  Am C D D
+drop.chords: G D Em C  G D C G  Am C G D  Am C D D
+climax.chords: G D Em C  G D C G  Am C G D  Am C D D
+outro.chords: G D Em C  G D C G  Am C G D  Am C D D
+
+# ======== DRUM PATTERNS ========
+# DnB two-step foundation: kick 1 + and-of-3 (step 11), snare 2 & 4 (steps 5 & 13)
+
+# --- INTRO (1 phase) ---
+intro.kick p0: x... .... .... ....
+intro.snare p0: .... x... .... x...
+intro.hat p0: x..x x..x x..x x..x
+intro.stab p0: .... ..x. .... ..x.
+
+# --- BUILD (phases p0, p1, fill) ---
+build.kick p0: x... .... .... ....
+build.kick p1: x... .... ..x. ....
+build.kick fill: x.xx x.x. xxxx x.xx
+build.snare p0: .... x... .... x...
+build.snare p1: .... x..x .... x..x
+build.snare fill: ..x. ..x. x.x. xxxx
+build.hat p0: x..x x..x x..x x..x
+build.hat p1: x.xx x.x. xx.x x.xx
+build.hat fill: xxxx xxxx xxxx xxxx
+build.stab p0: .... ..x. .... ..x.
+build.stab p1: .... ..x. .... ..x.
+build.stab fill: x.x. x.x. x.x. x.x.
+
+# --- DROP (phases p0-p3, fill) ---
+drop.kick p0: x... ..x. x... ..x.
+drop.kick p1: x..x ..x. x... .xx.
+drop.kick p2: x... ..x. x.x. .xx.
+drop.kick p3: x..x ..x. x.x. .xxx
+drop.kick fill: x.x. xxxx xxxx x.x.
+drop.snare p0: .... x... .... x...
+drop.snare p1: .... x..x ..x. x..x
+drop.snare p2: .... x..x x..x x..x
+drop.snare p3: x..x x..x x..x .xxx
+drop.snare fill: x..x x..x x.xx xxxx
+drop.hat p0: x.xx x.x. xx.x x.xx
+drop.hat p1: xxxx x.xx xx.x xxxx
+drop.hat p2: xxxx xxxx xxxx xxxx
+drop.hat p3: xxxx xxxx xxxx xxxx
+drop.hat fill: xxxx xxxx xxxx xxxx
+drop.stab p0: .... ..x. .... ..x.
+drop.stab p1: ..x. ...x ..x. ...x
+drop.stab p2: ..x. ..x. ..x. ..x.
+drop.stab p3: x.x. x.x. x.x. x.x.
+drop.stab fill: ..x. x..x ..x. x..x
+
+# --- BREAKDOWN (phases p0, p1, fill) ---
+breakdown.kick p0: x... .... .... ....
+breakdown.kick p1: x... .... ..x. ....
+breakdown.kick fill: x... .... .... ....
+breakdown.snare p0: .... .... .... ....
+breakdown.snare p1: .... x... .... x...
+breakdown.snare fill: .... .... x... ..xx
+breakdown.hat p0: x... ..x. .... ....
+breakdown.hat p1: x... ..x. x... ..x.
+breakdown.hat fill: x.x. x.x. xxxx ....
+breakdown.stab p0: .... .... x... ....
+
+# --- CLIMAX (phases p0-p3, fill) ---
+climax.kick p0: x... ..x. x... ..x.
+climax.kick p1: x..x ..x. x... .xx.
+climax.kick p2: x.x. ..x. x.x. xxxx
+climax.kick p3: x... ..x. x... ..x.
+climax.kick fill: x.x. xxxx xxxx x.xx
+climax.snare p0: .... x... .... x...
+climax.snare p1: .... x..x ..x. x..x
+climax.snare p2: .... x..x ..x. x.xx
+climax.snare p3: .... x..x ..x. x.xx
+climax.snare fill: xxxx xxxx xxxx xxxx
+climax.hat p0: x.xx x.x. xx.x x.xx
+climax.hat p1: xxxx x.xx xx.x xxxx
+climax.hat p2: xxxx xxxx xxxx xxxx
+climax.hat p3: xxxx xxxx xxxx xxxx
+climax.hat fill: xxxx xxxx xxxx xxxx
+climax.stab p0: .... ..x. .... ..x.
+climax.stab p1: ..x. ...x ..x. ...x
+climax.stab p2: x.x. x.x. x.x. x.x.
+climax.stab p3: x.x. x.x. x.x. x.x.
+climax.stab fill: x.x. x.x. x.x. x.x.
+
+# --- OUTRO (phases p0-p2, fill) ---
+outro.kick p0: x... ..x. x... ..x.
+outro.kick p1: x..x ..x. x.xx .xx.
+outro.kick p2: x.x. xxxx x.xx xxxx
+outro.kick fill: x.x. xxxx xxxx xxxx
+outro.snare p0: .... x... .... x...
+outro.snare p1: .... x..x ..x. x..x
+outro.snare p2: x.xx x.xx x.xx x.xx
+outro.snare fill: .... ..xx .xxx xxxx
+outro.hat p0: x.xx x.x. xx.x x.xx
+outro.hat p1: xxxx x.xx xxxx x.xx
+outro.hat p2: xxxx xxxx xxxx xxxx
+outro.hat fill: xxxx xxxx xxxx xxxx
+outro.stab p0: .... ..x. .... ..x.
+outro.stab p1: ..x. ...x ..x. ...x
+outro.stab p2: x.x. x.x. x.x. x.x.
+outro.stab fill: x.x. x.x. x.x. x.x.
+
+# ======== MELODIC LANES (p0 loops across all drum phases) ========
+
+# --- LEAD: main melody ---
+# VERSE (E minor, 8-bar phrase — used by build + breakdown)
+build.lead p0: E4 . . .  . . . .  G4 . . .  . . . .   C5 . B4 .  G4 . E4 .  . . . .  . . . .   D4 . E4 .  G4 . B4 .  . . . .  . . . .   A4 . B4 .  C5 . D5 .  . . . .  . . . .   C5 . . .  B4 . . .  A4 . . .  . . . .   C5 . D5 .  E5 . D5 .  C5 . B4 .  . . . .   F#4 . A4 .  B4 . D5 .  . . . .  . . . .   D5 . C5 .  B4 . A4 .  G4 . . .  . . . .
+breakdown.lead p0: E4 . . .  . . . .  G4 . . .  . . . .   C5 . B4 .  G4 . E4 .  . . . .  . . . .   D4 . E4 .  G4 . B4 .  . . . .  . . . .   A4 . B4 .  C5 . D5 .  . . . .  . . . .   C5 . . .  B4 . . .  A4 . . .  . . . .   C5 . D5 .  E5 . D5 .  C5 . B4 .  . . . .   F#4 . A4 .  B4 . D5 .  . . . .  . . . .   D5 . C5 .  B4 . A4 .  G4 . . .  . . . .
+
+# CHORUS (G major, 16-bar phrase — used by drop + climax + outro)
+# 4-bar motif repeated 4×: B-D-B-G | A-B-C-D-E | D-B-G-B | E-D-C-B-G
+drop.lead p0: B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .   B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .   B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .   B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .
+climax.lead p0: B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .   B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .   B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .   B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .
+outro.lead p0: B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .   B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .   B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .   B4 . . D5  . . . B4  . G4 . .  . . . .   A4 . B4 .  C5 . D5 .  E5 . . .  . . . .   D5 . . B4  . . G4 .  B4 . . .  . . . .   E5 . D5 .  C5 . B4 .  G4 . . .  . . . .
+
+# --- ARP: chord arpeggios (one octave below lead) ---
+build.arp p0: E3 . G3 .  B3 . G3 .  E3 . G3 .  B3 . G3 .   C4 . B3 .  G3 . E3 .  C4 . B3 .  G3 . E3 .   D3 . E3 .  G3 . B3 .  D3 . E3 .  G3 . B3 .   A3 . B3 .  C4 . D4 .  A3 . B3 .  C4 . D4 .   C4 . . B3  . A3 . G3  . . . .  . . . .   C4 . D4 .  E4 . D4 .  C4 . B3 .  . . . .   F#3 . A3 .  B3 . D4 .  F#3 . A3 .  B3 . D4 .   D4 . C4 .  B3 . A3 .  G3 . . .  . . . .
+breakdown.arp p0: E3 . G3 .  B3 . G3 .  E3 . G3 .  B3 . G3 .   C4 . B3 .  G3 . E3 .  C4 . B3 .  G3 . E3 .   D3 . E3 .  G3 . B3 .  D3 . E3 .  G3 . B3 .   A3 . B3 .  C4 . D4 .  A3 . B3 .  C4 . D4 .   C4 . . B3  . A3 . G3  . . . .  . . . .   C4 . D4 .  E4 . D4 .  C4 . B3 .  . . . .   F#3 . A3 .  B3 . D4 .  F#3 . A3 .  B3 . D4 .   D4 . C4 .  B3 . A3 .  G3 . . .  . . . .
+
+drop.arp p0: B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .   B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .   B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .   B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .
+climax.arp p0: B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .   B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .   B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .   B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .
+outro.arp p0: B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .   B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .   B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .   B3 . . D4  . . . B3  . G3 . .  . . . .   A3 . B3 .  C4 . D4 .  E4 . . .  . . . .   D4 . . B3  . . G3 .  B3 . . .  . . . .   E4 . D4 .  C4 . B3 .  G3 . . .  . . . .
+
+# --- BASS: root-fifth octave bounce ---
+build.bass p0: E2 . E3 .  E2 . E3 .  E2 . E3 .  E2 . E3 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   A1 . A2 .  A1 . A2 .  A1 . A2 .  A1 . A2 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .
+breakdown.bass p0: E2 . E3 .  E2 . E3 .  E2 . E3 .  E2 . E3 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   A1 . A2 .  A1 . A2 .  A1 . A2 .  A1 . A2 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .
+
+drop.bass p0: G1 . G2 .  G1 . G2 .  G1 . G2 .  B1 . B2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   E2 . E3 .  E2 . E3 .  E2 . E3 .  E2 . E3 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   A1 . A2 .  A1 . A2 .  A1 . A2 .  A1 . A2 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   A1 . A2 .  A1 . A2 .  A1 . A2 .  A1 . A2 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .
+climax.bass p0: G1 . G2 .  G1 . G2 .  G1 . G2 .  B1 . B2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   E2 . E3 .  E2 . E3 .  E2 . E3 .  E2 . E3 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   A1 . A2 .  A1 . A2 .  A1 . A2 .  A1 . A2 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   A1 . A2 .  A1 . A2 .  A1 . A2 .  A1 . A2 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .
+outro.bass p0: G1 . G2 .  G1 . G2 .  G1 . G2 .  B1 . B2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   E2 . E3 .  E2 . E3 .  E2 . E3 .  E2 . E3 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   A1 . A2 .  A1 . A2 .  A1 . A2 .  A1 . A2 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   G1 . G2 .  G1 . G2 .  G1 . G2 .  G1 . G2 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   A1 . A2 .  A1 . A2 .  A1 . A2 .  A1 . A2 .   C2 . C3 .  C2 . C3 .  C2 . C3 .  C2 . C3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .   D2 . D3 .  D2 . D3 .  D2 . D3 .  D2 . D3 .
+
+# ======== FILL BARS ========
+# Melodic lanes silent on fill bar (drums + fx own the fill)
+build.lead fill:  . . . .  . . . .  . . . .  . . . .
+build.arp fill:   . . . .  . . . .  . . . .  . . . .
+build.bass fill:  . . . .  . . . .  . . . .  . . . .
+drop.lead fill:   . . . .  . . . .  . . . .  . . . .
+drop.arp fill:    . . . .  . . . .  . . . .  . . . .
+drop.bass fill:   . . . .  . . . .  . . . .  . . . .
+breakdown.lead fill:  . . . .  . . . .  . . . .  . . . .
+breakdown.arp fill:   . . . .  . . . .  . . . .  . . . .
+breakdown.bass fill:  . . . .  . . . .  . . . .  . . . .
+climax.lead fill: . . . .  . . . .  . . . .  . . . .
+climax.arp fill:  . . . .  . . . .  . . . .  . . . .
+climax.bass fill: . . . .  . . . .  . . . .  . . . .
+outro.lead fill:  . . . .  . . . .  . . . .  . . . .
+outro.arp fill:   . . . .  . . . .  . . . .  . . . .
+outro.bass fill:  . . . .  . . . .  . . . .  . . . .
+
+# dynamics 0..1 per section (value or a>b ramp across the section)
+gain intro 0.12>0.35 build 0.2>0.9 drop 0.95 breakdown 0.35 climax 0.5>1.15 outro 0.85>1.3
+sub intro 0.1>0.3 build 0.15>0.9 drop 1.0 breakdown 0.5 climax 0.5>1.0 outro 0.8>1.0
+mids intro 0>0.15 build 0.15>0.9 drop 0.95 breakdown 0.4 climax 0.6>1.0 outro 0.8>1.0

@@ -1,0 +1,90 @@
+# martin — BORN 2 deFEEST
+# Original hardstyle demo, 145 BPM, ~220s.
+# Arc: deFEEST arrives → BornHack host camp builds → party erupts → quiet reflection →
+#       ultimate climax → credits fade to black.
+#
+#   MARTIN_SHOW=productions/born2defeest/born2defeest.show cargo +nightly run --release
+#   MARTIN_SHOW=productions/born2defeest/born2defeest.show ./record.sh born2defeest.mp4
+
+# --- settings ---
+kind = demo
+budget       = 160000
+ply = assets/aegg-baked.ply        # .ply root = assets/
+score = productions/born2defeest/score.txt
+bg_dim = 0.4
+flash = 0.4
+beat = 0.3
+pw_splat = 0.004
+
+# --- sequence ---
+[reel]
+# ==== SCENE 1 · INTRO (0–13s) · deFEEST logo materializes in darkness ====
+glb:defeest.glb               @@intro    @8,3       ~morph    ^wave     backdrop:off    # deFEEST logo flies in, dissolves to glowing splats
+
+# ==== SCENE 2 · BUILD (13–41s) · BornHack appears, the ægg hatches, dog arrives, title appears ====
+svg:bornhack-2026-square-dark.svg  @@build  @5,2     ~morph    ^twist    backdrop:stars   # host camp logo spins in
+splat:aegg.ply                        @5,2,1.2   ~morph    ^wind     backdrop:stars   # the ægg hatches (procedural)
+splat:doggo.ply                        @6,2       ~morph    ^wave     backdrop:grid    # the party dog bounds in
+text:BORN 2 deFEEST                    @6,2.5     ~typewriter ^wave   backdrop:grid    # title typed in, building hype
+
+# ==== SCENE 3 · DROP (41–96s) · party erupts: galaxy, title blast, supershape, bitterballen ====
+splat:galaxy.ply               @@drop     @14,1.4,1.5 ~morph    ^turbulence   backdrop:kaleido # galaxy spins into party nebula
+text:BORN 2 deFEEST                        @8,1.5     ~explode  ^wave         backdrop:plasma  # title BLASTS mid-drop
+splat:supershape.ply                       @12,1.4,1.5 ~morph    ^wave         backdrop:plasma  # supershape wobbles in plasma
+mesh:bitterbal.glb flock:8                @12,1.6     ~morph    ^wind   exit:evaporate backdrop:kaleido # bitterballen rain
+
+# ==== SCENE 4 · BREAKDOWN (96–124s) · calm night: "Wij zijn deFEEST" in stars, helix drifts ====
+text:Wij zijn deFEEST           @@breakdown @10,3    ~morph    ^ripple   backdrop:stars   # the statement in starfield
+text:ALTIJD FEEST                           @8,2     ~fade     ^wave     backdrop:stars   # affirmation fades in
+splat:helix.ply                             @6,2     ~morph    ^wind     backdrop:warp    # helix drifts through warp
+
+# ==== SCENE 5 · CLIMAX (124–179s) · maximum energy: peace sign, torus, title blast, credits ====
+splat:martin-peace.ply          @@climax   @14,1.4,1.6 ~morph   ^wave         backdrop:plasma # peace sign pulses with party power
+splat:torus.ply                              @10,2      ~morph   ^turbulence   backdrop:kaleido# torus spins in rainbow kaleido
+text:BORN 2 deFEEST                          @8,1.5     ~explode ^wave         backdrop:kaleido # euphoric title blast
+mesh:bitterbal.glb flock:10                 @8,1.6     ~morph   ^wind         backdrop:plasma  # bitterballen finale
+svg:claude.svg                               @5,2       ~morph   ^wave         backdrop:stars   # AI co-pilot credit
+
+# ==== SCENE 6 · OUTRO (179–220s) · credits roll, thank yous, fade to black ====
+wall:GREETINGS|BORNHACK 2026|SCENE & CAMP @@outro @6,2.5 ~morph ^wave backdrop:stars   # greetings wall
+svg:bornhack-2026-wide.svg                 @5,2   ~morph ^wave backdrop:stars           # host camp logo
+text:Powered by Bevy + Rust                @5,2   ~fade  ^wave backdrop:stars           # tech stack credit
+svg:ferris.svg                             @4,2   ~morph ^wave backdrop:stars           # Rust mascot
+text:BORN 2 deFEEST                        @7,3   ~explode ^wave backdrop:off           # final title, fade to black
+
+# --- camera track (timed to music section anchors) ---
+[camera]
+t=@@intro      pos=0,0,0   dist=3.0   yaw=1.45   pitch=0.12   # intro: logo materializes in darkness
+t=@@build      pos=0,0,0   dist=2.7   yaw=1.55   pitch=0.15   # build: orbit drift around assembling scene
+t=@@bar:12     pos=0,0,0   dist=2.4   yaw=1.30   pitch=0.18   # push toward the title as it types in
+t=@@drop       pos=0,0,0   dist=1.8   yaw=1.45   pitch=0.20   # DROP: hard push-in, head-on for impact
+t=@@bar:36     pos=0.3,0,0  dist=2.0   yaw=1.60   pitch=0.18  # arc right across the party
+t=@@bar:50     pos=-0.3,0,0 dist=2.0   yaw=1.28   pitch=0.20  # counter-arc left, ride the hook
+t=@@breakdown  pos=0,0,0   dist=3.2   yaw=1.40   pitch=0.08   # breakdown: pull back + sink for the quiet turn
+t=@@bar:70     pos=0,0,0   dist=3.3   yaw=1.45   pitch=0.06   # drift at lowest energy
+t=@@climax     pos=0,0,0   dist=1.8   yaw=1.50   pitch=0.22   # CLIMAX: slam in tight
+t=@@bar:95     pos=0.3,0.1,0 dist=2.0 yaw=1.62   pitch=0.22   # arc through the peak (frontal)
+t=@@bar:108    pos=-0.3,0,0 dist=2.0  yaw=1.28   pitch=0.20   # counter-arc, ride the high
+t=@@outro      pos=0,0,0   dist=3.0   yaw=1.42   pitch=0.06   # outro: pull back for credits
+t=@@bar:125    pos=0,0,0   dist=3.2   yaw=1.45   pitch=0.05   # hold frontal for the credits
+t=@@bar:132    pos=0,0,0   dist=3.8   yaw=1.45   pitch=0.05   # gentle pull-back into black
+
+# --- sync track (music-timed look automation) ---
+[sync]
+t=@@intro      flash=0.0  bg_dim=0.5  beat=0.2
+t=@@build      flash=0.3  bg_dim=0.3  beat=0.6
+t=@@drop       flash=0.7  bg_dim=0.15 beat=1.3   exposure=1.2
+t=@@breakdown  flash=0.1  bg_dim=0.6  beat=0.2
+t=@@climax     flash=0.9  bg_dim=0.08 beat=1.6   exposure=1.4
+t=@@outro      flash=0.4  bg_dim=0.4  beat=0.8
+t=@@bar:130    flash=0.0  bg_dim=0.0  beat=0.2   # final fade
+
+# --- caption track (screen-anchored titles) ---
+[caption]
+screentext:deFEEST presents          in @@intro  out @@build    at 0.5,0.85  size 24  fade 1.0
+screentext:BORN 2 deFEEST           in @@build  out @@drop     at 0.5,0.08  size 32  fade 1.0
+screentext:BORN 2 deFEEST           in @@drop   out @@breakdown at 0.5,0.10  size 40  fade 0.5
+screentext:Wij zijn deFEEST         in @@breakdown out @@climax at 0.5,0.45  size 48  fade 1.5
+screentext:BORN 2 deFEEST           in @@climax out @@outro    at 0.5,0.08  size 44  fade 0.5
+screentext:A deFEEST Production     in @@outro out @@bar:130   at 0.5,0.88  size 24  fade 1.0
+screentext:ALTIJD FEEST             in @@bar:62 out @@climax   at 0.5,0.50  size 36  fade 1.0

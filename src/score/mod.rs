@@ -333,9 +333,13 @@ impl AnchorKind {
     /// An optional arithmetic suffix `[+-]<amount>(bar|beat|b|s)` makes it relative — `drop+2bar`,
     /// `drop-1beat`, `bar:16-3s` — resolved against the base in [`Score::cue`].
     pub fn parse(s: &str) -> Option<Self> {
-        let s = s.trim().to_ascii_lowercase();
+        let mut s: String = s.trim().to_ascii_lowercase();
         if s.is_empty() {
             return None;
+        }
+        // Strip the `@@` sigil that show-file anchors carry (`@@intro`, `@@bar:16`).
+        if let Some(stripped) = s.strip_prefix("@@") {
+            s = stripped.to_string();
         }
         // Split off an arithmetic suffix at the first `+`/`-` whose prefix is itself a valid base
         // (so a section literally named `foo-bar` stays one name, not `foo` minus `bar`).

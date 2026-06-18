@@ -289,7 +289,7 @@ impl MasterChain {
             g_env: 0.0,
             split_k: 1.0 - (-TAU * 160.0 * dt).exp(),
             atk: 1.0 - (-1.0 / (0.0006 * sr)).exp(),
-            rel: 1.0 - (-1.0 / (0.12 * sr)).exp(),
+            rel: 1.0 - (-1.0 / (0.04 * sr)).exp(),
             g_atk: 1.0 - (-1.0 / (0.010 * sr)).exp(),
             g_rel: 1.0 - (-1.0 / (0.18 * sr)).exp(),
             reverb_amt: score.param("reverb", 0.35),
@@ -390,7 +390,9 @@ impl MasterChain {
                 self.gr += (target - self.gr) * self.rel;
             }
             for c in 0..2 {
-                out[2 * i + c] = (pre[c] * self.gr).clamp(-1.0, 1.0);
+                let x = pre[c] * self.gr;
+                // Soft-clip at ceiling output — tanh rounds the corner instead of hard clamp.
+                out[2 * i + c] = (x * 1.5).tanh() / 0.905;
             }
         }
     }
