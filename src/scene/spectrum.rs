@@ -66,7 +66,12 @@ fn setup_spectrum(score: Res<ScoreRes>, mut commands: Commands) {
             std::env::var("MARTIN_RECORD").is_ok() || std::env::var("MARTIN_SHOT").is_ok();
         if recording {
             // Must be ready before the first captured frame — bake on the spot (we're offline anyway).
-            let _ = rows.set(bake(&score.0));
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| bake(&score.0)));
+            if let Ok(baked) = result {
+                let _ = rows.set(baked);
+            } else {
+                warn!("spectrum bake panicked — continuing with zero spectrum");
+            }
         } else {
             // Live: bake off-thread (~7× realtime); the spectrum stays zero until it lands.
             let (rows, score) = (rows.clone(), score.0.clone());

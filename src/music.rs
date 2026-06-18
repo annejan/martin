@@ -117,7 +117,7 @@ fn music_director(
     let Some(mut music) = music else { return };
 
     // clock jumped backwards (Space restart) → despawn so it respawns from the top, resynced.
-    if clock.t + 0.05 < music.prev_t {
+    if clock.t.is_finite() && clock.t + 0.05 < music.prev_t {
         if let Some(e) = music.entity.take() {
             commands.entity(e).despawn();
         }

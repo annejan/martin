@@ -44,7 +44,14 @@ fn main() -> ExitCode {
                     eprintln!("splatgen: cannot create {}: {e}", dir.display());
                     return ExitCode::FAILURE;
                 }
-                splats::write_ply(Path::new(&out), shape, &pos, &rgb);
+                if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    splats::write_ply(Path::new(&out), shape, &pos, &rgb);
+                }))
+                .is_err()
+                {
+                    eprintln!("splatgen: write_ply panicked for {out}");
+                    return ExitCode::FAILURE;
+                }
                 println!("splatgen: wrote {out} ({} splats: {shape})", pos.len());
                 ExitCode::SUCCESS
             }

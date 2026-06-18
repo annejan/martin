@@ -59,6 +59,10 @@ pub(crate) fn shot_director(
     // the cue timeline — `@@anchor` or laid end-to-end). It morphs in over `morph`, then holds
     // until the next shot starts. Before shot 0's start, `factor` clamps to 0 (its source state).
     let t = clock.t;
+    if shots.is_empty() {
+        return;
+    }
+    debug_assert_eq!(shots.len(), starts.len());
     let idx = active_shot(starts, t);
     let s = &shots[idx];
     // Phase: ARRIVING (origin → shape), holding (shape), or DEPARTING (shape → its faded out-cloud
@@ -79,7 +83,10 @@ pub(crate) fn shot_director(
         // (the first frame where t >= start, already grid-aligned since clock.t = i*dt), no blend-in.
         let lhs = match &s.origin {
             Some(h) => h,
-            None => &shots[idx - 1].shape,
+            None => {
+                debug_assert!(idx > 0, "Cut shot 0 must have an origin");
+                &shots[idx.saturating_sub(1)].shape
+            }
         };
         (lhs, &s.shape, if t >= s.start { 1.0 } else { 0.0 }, false)
     } else {
@@ -88,7 +95,10 @@ pub(crate) fn shot_director(
         // lhs: the shot's origin cloud (ball/fade/explode/…), or — for a plain Morph — the prev shape.
         let lhs = match &s.origin {
             Some(h) => h,
-            None => &shots[idx - 1].shape,
+            None => {
+                debug_assert!(idx > 0, "Morph shot 0 must have an origin");
+                &shots[idx.saturating_sub(1)].shape
+            }
         };
         (lhs, &s.shape, f, dt < s.morph)
     };

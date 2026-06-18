@@ -387,7 +387,7 @@ impl MasterChain {
             if target < self.gr {
                 self.gr += (target - self.gr) * self.atk;
             } else {
-                self.gr += (1.0 - self.gr) * self.rel;
+                self.gr += (target - self.gr) * self.rel;
             }
             for c in 0..2 {
                 out[2 * i + c] = (pre[c] * self.gr).clamp(-1.0, 1.0);

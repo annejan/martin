@@ -196,8 +196,12 @@ impl Score {
             if let Some(f) = val(s)
                 && !f.is_nan()
             {
+                let onset_sec = self.section_index_at(s as f32 * sl);
                 let mut hold = 0i64;
-                while s + 1 + hold < slots && val(s + 1 + hold).is_some_and(|v| v.is_nan()) {
+                while s + 1 + hold < slots
+                    && val(s + 1 + hold).is_some_and(|v| v.is_nan())
+                    && self.section_index_at((s + 1 + hold) as f32 * sl) == onset_sec
+                {
                     hold += 1;
                 }
                 out.push((s as f32 * sl, f, hold as f32 * sl));

@@ -125,9 +125,17 @@ fn screenshot(args: &Value) -> Result<Value, String> {
         .unwrap_or("/tmp/martin_mcp_shot.png")
         .to_string();
     bridge(&json!({"cmd": "screenshot", "path": path}))?;
-    // the PNG lands a frame or two after the reply (GPU readback) — give it a moment.
-    std::thread::sleep(Duration::from_millis(600));
-    let bytes = std::fs::read(&path).map_err(|e| format!("read {path}: {e}"))?;
+    // the PNG lands a frame or two after the reply (GPU readback) — poll with backoff.
+    let bytes = (|| -> std::io::Result<Vec<u8>> {
+        for wait in [100, 200, 400, 800] {
+            std::thread::sleep(Duration::from_millis(wait));
+            if let Ok(b) = std::fs::read(&path) {
+                return Ok(b);
+            }
+        }
+        std::fs::read(&path)
+    })()
+    .map_err(|e| format!("read {path}: {e}"))?;
     let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
     Ok(json!([
         {"type": "image", "data": b64, "mimeType": "image/png"},

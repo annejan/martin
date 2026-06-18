@@ -183,7 +183,11 @@ pub(super) fn chord_spread(
 /// (38/19 = 2), so EVERY pitch class lands inside — a sub-octave window let D#/E/F escape above the
 /// top (E rang at ~41 Hz instead of a true sub). An added harmonic later aids small-speaker translation.
 pub(super) fn sub_freq(root: f32) -> f32 {
-    let mut f = root;
+    let mut f = if root.is_finite() {
+        root.abs().max(1e-6)
+    } else {
+        27.5
+    };
     while f > 38.0 {
         f *= 0.5;
     }

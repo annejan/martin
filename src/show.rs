@@ -90,7 +90,15 @@ fn flatten_scenes(body: &str) -> (String, Vec<String>, Vec<String>) {
         if line.is_empty() {
             continue;
         }
-        if let Some(rest) = line.strip_prefix("scene ").or(line.strip_prefix("scene\t")) {
+        if let Some(rest) = line
+            .strip_prefix("scene ")
+            .or(line.strip_prefix("scene\t"))
+            .or_else(|| {
+                // also handle multiple spaces or other whitespace after "scene"
+                let toks: Vec<&str> = line.splitn(2, char::is_whitespace).collect();
+                (toks.first() == Some(&"scene")).then(|| toks.get(1).copied().unwrap_or(""))
+            })
+        {
             // open a scene: pull its inherited-look tokens out of the header.
             (anchor, backdrop, deform) = (None, None, None);
             let (mut cam, mut look) = (None, None);

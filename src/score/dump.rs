@@ -176,6 +176,9 @@ const NOTE_NAMES: [&str; 12] = [
 ];
 
 fn freq_to_midi(freq: f32) -> i32 {
+    if freq <= 0.0 {
+        return 0;
+    }
     (69.0 + 12.0 * (freq / 440.0).log2()).round() as i32
 }
 

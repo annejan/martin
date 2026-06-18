@@ -77,6 +77,8 @@ pub(crate) fn build_sequence(
             if idx == 0 && matches!(tr, Entrance::Morph | Entrance::Swarm | Entrance::Cut) {
                 if tr == Entrance::Cut {
                     warn!("seq: shot 0 can't ~cut (nothing to cut from) — assembling from a ball");
+                } else if tr == Entrance::Swarm {
+                    warn!("seq: shot 0 can't ~swarm (no prev shape) — assembling from a ball");
                 }
                 Entrance::Ball
             } else {

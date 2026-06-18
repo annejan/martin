@@ -35,13 +35,10 @@ pub fn apply() {
         _ => set("MARTIN_SEQ", SHOW_SRC),
     }
     // MARTIN_PLY's parent dir is martin's asset root → point it at any extracted file in the dir.
-    let anchor = if ROOT_PLY.is_empty() {
-        "_root"
-    } else {
-        ROOT_PLY
-    };
-    if let Some(p) = dir.join(anchor).to_str() {
-        set("MARTIN_PLY", p);
+    if !ROOT_PLY.is_empty() {
+        if let Some(p) = dir.join(ROOT_PLY).to_str() {
+            set("MARTIN_PLY", p);
+        }
     }
     if !SCORE_NAME.is_empty() && dir.join(SCORE_NAME).exists() {
         if let Some(p) = dir.join(SCORE_NAME).to_str() {
@@ -78,20 +75,31 @@ fn extract() -> std::io::Result<PathBuf> {
     std::fs::create_dir_all(&dir)?;
 
     let mut p = 0usize;
-    let rd_u32 = |b: &[u8], p: &mut usize| -> u32 {
-        let v = u32::from_le_bytes([b[*p], b[*p + 1], b[*p + 2], b[*p + 3]]);
+    let rd_u32 = |b: &[u8], p: &mut usize| -> std::io::Result<u32> {
+        let tail = b.get(*p..*p + 4).ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "bundle: truncated archive",
+            )
+        })?;
+        let v = u32::from_le_bytes(tail.try_into().unwrap());
         *p += 4;
-        v
+        Ok(v)
     };
-    let count = rd_u32(ARCHIVE, &mut p);
+    let count = rd_u32(ARCHIVE, &mut p)?;
     for _ in 0..count {
-        let name_len = rd_u32(ARCHIVE, &mut p) as usize;
-        let name = std::str::from_utf8(&ARCHIVE[p..p + name_len])
+        let name_len = rd_u32(ARCHIVE, &mut p)? as usize;
+        let name_bytes = ARCHIVE.get(p..p + name_len).ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "bundle: truncated name")
+        })?;
+        let name = std::str::from_utf8(name_bytes)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?
             .to_string();
         p += name_len;
-        let data_len = rd_u32(ARCHIVE, &mut p) as usize;
-        let comp = &ARCHIVE[p..p + data_len];
+        let data_len = rd_u32(ARCHIVE, &mut p)? as usize;
+        let comp = ARCHIVE.get(p..p + data_len).ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "bundle: truncated data")
+        })?;
         p += data_len;
         let raw = lz4_flex::decompress_size_prepended(comp)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;

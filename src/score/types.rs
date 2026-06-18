@@ -229,7 +229,7 @@ impl Section {
     fn phase_and_offset(&self, into: u32) -> (u8, u32) {
         if self.fill {
             let total: u32 = self.phases.iter().sum::<u32>() + 1;
-            if into >= total.saturating_sub(1) {
+            if into + 1 == total {
                 return (255, 0);
             }
         }

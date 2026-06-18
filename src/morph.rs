@@ -230,6 +230,13 @@ pub fn match_reorder(
                 while fallback < n && used[fallback] {
                     fallback += 1;
                 }
+                if fallback >= n {
+                    // monotonic overshoot → wrap from 0
+                    fallback = 0;
+                    while fallback < n && used[fallback] {
+                        fallback += 1;
+                    }
+                }
                 fallback as u32
             }
         };

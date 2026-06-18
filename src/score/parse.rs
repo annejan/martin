@@ -217,7 +217,7 @@ impl Score {
                         .next()
                         .and_then(|x| x.parse().ok())
                         .ok_or_else(|| format!("line {ln}: section needs a bar count"))?;
-                    if bars > MAX_BARS {
+                    if bars == 0 || bars > MAX_BARS {
                         return Err(format!(
                             "line {ln}: section `{name}` has {bars} bars (max {MAX_BARS}) — the \
                              whole-track walks would hang/OOM"
@@ -296,10 +296,18 @@ impl Score {
 
 // ---- token parsers -------------------------------------------------------------------------
 
-/// Leading-dot-tolerant float parse (`.85` → 0.85).
+/// Leading-dot-tolerant float parse (`.85` → 0.85, `-.85` → -0.85).
 fn pf(s: &str) -> Option<f32> {
     let s = s.trim();
-    s.parse().ok().or_else(|| format!("0{s}").parse().ok())
+    s.parse().ok().or_else(|| {
+        if let Some(rest) = s.strip_prefix("-.") {
+            format!("-0.{rest}").parse().ok()
+        } else if s.starts_with('.') {
+            format!("0{s}").parse().ok()
+        } else {
+            None
+        }
+    })
 }
 
 fn parse_ramp(s: &str) -> Option<Ramp> {

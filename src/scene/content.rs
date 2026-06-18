@@ -213,6 +213,7 @@ pub(crate) fn part_gaussians(
             let mut out = Vec::new();
             for (name, off) in list {
                 let Some(idx) = state.load_names.iter().position(|x| x == name) else {
+                    warn!("splat '{name}' not in load — check spelling / MARTIN_PLY paths");
                     continue;
                 };
                 if let Some(cloud) = assets.get(&state.loads[idx]) {

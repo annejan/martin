@@ -124,6 +124,7 @@ impl SeqState {
 /// Index of the active shot at time `t`: the last shot whose absolute start (from the cue
 /// timeline — `@@anchor` or laid end-to-end) has arrived. Shared by `shot_director` and `flypath`.
 pub(crate) fn active_shot(starts: &[f32], t: f32) -> usize {
+    debug_assert!(!starts.is_empty(), "active_shot: empty timeline");
     let mut idx = 0;
     for (i, &start) in starts.iter().enumerate() {
         if t >= start {

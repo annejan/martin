@@ -71,6 +71,7 @@ pub fn analyze(mono: &[f32], sample_rate: u32, fps: f32, frames: usize) -> Vec<[
     let mut re = vec![0.0f32; WIN];
     let mut im = vec![0.0f32; WIN];
     let half = WIN as isize / 2;
+    let fps = fps.max(1.0); // guard against zero → INF overflow
     for (f, row) in raw.iter_mut().enumerate() {
         let center = (f as f32 / fps * sr).round() as isize;
         let start = center - half;

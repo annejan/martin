@@ -554,9 +554,9 @@ pub fn build_mesh_gaussians(
     let mut tri_uvs: Vec<Option<[[f32; 2]; 3]>> = Vec::new();
     let mut tri_mesh: Vec<usize> = Vec::new();
     for (mi, mesh) in scene.meshes.iter().enumerate() {
-        let cols = &mesh.colors[0]; // colour set 0; empty unless the mesh carries vertex colours
+        let cols = mesh.colors.first().map_or(&[][..], |c| c); // colour set 0; empty unless the mesh carries vertex colours
         let has_cols = !cols.is_empty() && cols.len() == mesh.vertices.len();
-        let uvs = &mesh.texcoords[0];
+        let uvs = mesh.texcoords.first().map_or(&[][..], |t| t);
         let has_uvs = !uvs.is_empty() && uvs.len() == mesh.vertices.len();
         let has_norms = mesh.normals.len() == mesh.vertices.len();
         for &[a, b, c] in &mesh.faces {

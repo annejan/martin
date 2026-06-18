@@ -231,9 +231,11 @@ fn pen_gaussians(
         for curve in &outline.curves {
             let mut cpts: Vec<(f32, f32, f32)> = Vec::new();
             sample_curve(curve, step_fu, &mut cpts);
-            for (fx, fy, seg) in cpts {
+            // skip shared junction point (adjacent curves share endpoint)
+            let start = if acc > 0.0 { 1 } else { 0 };
+            for &(fx, fy, seg) in &cpts[start..] {
                 acc += seg;
-                samples.push((gx0 + fx * s_f, gy0 - fy * s_f, acc)); // font y-up → screen y-down
+                samples.push((gx0 + fx * s_f, gy0 - fy * s_f, acc));
             }
         }
     }
