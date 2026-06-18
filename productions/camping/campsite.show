@@ -38,6 +38,9 @@ splat:pine.ply      @1.7,-0.44,-1.7  *0.8   sway 0,6,0   ~fade  in climax  count
 splat:pine.ply      @-1.5,-0.38,-1.9 *0.85  sway 0,6,0   ~fade  in climax  count:6000  # centre-left-back
 splat:pine.ply      @-3.5,-0.31,-0.9 *0.9   sway 0,6,0   ~fade  in climax  count:6000  # far-left
 
+# logos + text (Z-safe: kept in FRONT of the backdrop). Checking how they read before the city render.
+text:deFEEST        @0,0.45,1.0   *0.5   ~pen-write  tint:brand  in build  out climax   # wordmark handwrites, front
+
 # FLOWING camera: now the terrain sorts behind the props (Z-safe at any angle), the camera can FLOW
 # around the camp instead of cutting between safe stills. A slow orbit (yaw drifts ~1.0→2.0) + a crane
 # up for the climax, with ONE hard cut punching onto the fire on the drop. Low-ish pitch throughout.
