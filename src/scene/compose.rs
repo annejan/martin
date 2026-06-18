@@ -78,6 +78,25 @@ impl PathMotion {
     }
 }
 
+/// `travel:x,y,z[@anchor[,dur]]` — ease the object from its `@pos` to a fixed target over a window,
+/// then HOLD at the target. Unlike `drift` (linear, never stops) or `path:` (oscillatory), this is a
+/// one-shot A→B move (the horse walk-in). Start = its `in` cue (or a given anchor); over `dur` s.
+#[derive(Clone, Copy)]
+pub(crate) struct Travel {
+    target: Vec3,
+    start: f32, // show-clock seconds the move begins
+    dur: f32,   // move duration (s); > 0 guaranteed at construction
+}
+
+impl Travel {
+    /// Eased offset to ADD to `base_pos` at show-time `t`: 0 before `start`, eases base→target across
+    /// `[start, start+dur]`, then holds. `ease` shapes the curve (reuses the object's assemble Ease).
+    fn offset(self, base_pos: Vec3, ease: Ease, t: f32) -> Vec3 {
+        let f = ((t - self.start) / self.dur).clamp(0.0, 1.0);
+        (self.target - base_pos) * ease.apply(f)
+    }
+}
+
 /// One object placed on the composition stage: a source + where it sits + how it moves.
 #[derive(Clone)]
 pub(crate) struct Prop {
@@ -101,6 +120,7 @@ pub(crate) struct Prop {
     count: Option<usize>, // `count:N`: per-object splat count (density), overrides the scene MORPH_COUNT
     path: Option<PathMotion>, // `path:orbit/liss:…`: independent travel path (each object does its own thing)
     alpha: Option<f32>, // `alpha:V`: per-object translucency (0..1) baked into the cloud's splat opacity
+    travel: Option<Travel>, // `travel:x,y,z[@anchor[,dur]]`: ease @pos→target over a window, then hold
 }
 
 impl Prop {
@@ -162,6 +182,7 @@ impl Prop {
             reveal: self.entrance.and_then(|t| t.shader_uniforms()),
             ease: self.ease,
             path: self.path,
+            travel: self.travel,
         }
     }
 }
@@ -208,6 +229,7 @@ pub(crate) struct ComposeAnim {
     // pen-write traces the letters in as it assembles (only while assembling, then off)
     ease: Ease,               // shapes the assemble curve (`ease:`)
     path: Option<PathMotion>, // independent travel path (`path:orbit/liss:…`)
+    travel: Option<Travel>,   // one-shot eased A→B move, then hold (`travel:`)
 }
 
 /// Parse `MARTIN_COMPOSE` (a file path or inline string). Each line: a `<source>` head (text/splat/
@@ -239,6 +261,8 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let mut count_override = None;
         let mut path = None;
         let mut alpha = None;
+        // travel: parsed raw here (needs `score` + the object's `in` cue, both resolved after the loop)
+        let mut travel_raw: Option<(Vec3, Option<String>, Option<f32>)> = None;
         let toks: Vec<&str> = s
             .split_whitespace()
             .filter(|t| {
@@ -277,6 +301,23 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                         Some(pm) => path = Some(pm),
                         None => eprintln!("compose: bad 'path:{p}' (orbit:r,speed | liss:ax,ay,az,fx,fy,fz[,s]) — ignored"),
                     }
+                    return false;
+                }
+                // `travel:x,y,z[@anchor[,dur]]` — one-shot eased move from @pos to a target, then hold
+                // (the horse walk-in). Resolved to seconds after the loop (needs the `in` cue + score).
+                if let Some(v) = t.strip_prefix("travel:") {
+                    let (xyz, spec) = v.split_once('@').map_or((v, None), |(a, b)| (a, Some(b)));
+                    let (anchor, dur) = match spec {
+                        Some(s) => {
+                            let (a, d) = s.split_once(',').map_or((s, None), |(a, d)| (a, Some(d)));
+                            (
+                                (!a.is_empty()).then(|| a.to_string()),
+                                d.and_then(|d| d.trim().parse::<f32>().ok()),
+                            )
+                        }
+                        None => (None, None),
+                    };
+                    travel_raw = Some((vec3_csv(xyz), anchor, dur));
                     return false;
                 }
                 // the shared `~entrance` / `^deform[:amp]` / `tint:` modifiers (see effects.rs); a
@@ -359,6 +400,15 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                 i += 2;
             }
         }
+        // resolve `travel:` now that @pos (`pos`) and the `in` cue (`appear`) are final. Start = the
+        // given `@anchor`, else the object's `in` time, else 0. Duration defaults to one bar.
+        let travel = travel_raw.map(|(target, anchor, dur)| Travel {
+            target,
+            start: anchor
+                .and_then(|a| score.anchor_seconds(&a))
+                .unwrap_or_else(|| appear.max(0.0)),
+            dur: dur.filter(|d| *d > 0.0).unwrap_or_else(|| score.bar()),
+        });
         out.push(Prop {
             content,
             pos,
@@ -380,6 +430,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             count: count_override,
             path,
             alpha,
+            travel,
         });
     }
     out
@@ -432,8 +483,9 @@ pub(crate) fn build_composition(
     for obj in &comp.objects {
         // A real glTF mesh prop: rendered as PBR geometry alongside the splats (no flip — glTF is
         // Y-up native; the splats are flipped to match). It shares the camera + depth buffer, so it
-        // composites with the splat clouds. Spawned, not sampled to gaussians.
-        if let PartContent::Model(name) = &obj.content {
+        // composites with the splat clouds. Spawned, not sampled to gaussians. Both `model:` and `glb:`
+        // (GlMesh) render here as a rigid lit prop — the dissolve-into-own-splats path is reel-only.
+        if let PartContent::Model(name) | PartContent::GlMesh(name) = &obj.content {
             let rot = Quat::from_euler(
                 EulerRot::XYZ,
                 obj.rot.x.to_radians(),
@@ -609,7 +661,13 @@ pub(crate) fn animate_composition(
             0.0
         };
         let path_off = a.path.map(|p| p.offset(t)).unwrap_or(Vec3::ZERO);
-        tf.translation = a.base_pos + a.drift * t + Vec3::Y * bob + path_off;
+        // `travel:` eases @pos→target over its window then holds; additive with drift/path/bob so the
+        // object can still bob/spin while walking in (the horse). Uses the object's `ease:` curve.
+        let travel_off = a
+            .travel
+            .map(|tr| tr.offset(a.base_pos, a.ease, t))
+            .unwrap_or(Vec3::ZERO);
+        tf.translation = a.base_pos + a.drift * t + Vec3::Y * bob + path_off + travel_off;
         // in/out visibility (0..1): splats fade it via opacity; mesh props (no CloudSettings) have
         // no opacity, so they DISSOLVE by SCALE instead — grow in, shrink out. That gives a clean
         // mesh→splat cross-dissolve (a mesh shrinks away as a splat fades/grows in at the same spot).
@@ -738,6 +796,23 @@ mod tests {
                 .summary()
                 .contains("@(1.5,-0.3,0.4)")
         );
+    }
+
+    #[test]
+    fn parse_compose_reads_travel() {
+        // `travel:x,y,z@anchor,dur` → an eased one-shot move; fields resolve after the token loop.
+        let o = objs("mesh:bitterbal.glb @-3,0,0 *0.5 travel:1,2,3@drop,2.5");
+        assert_eq!(o.len(), 1);
+        let tr = o[0].travel.expect("travel parsed");
+        assert_eq!(tr.target, Vec3::new(1.0, 2.0, 3.0));
+        assert_eq!(tr.dur, 2.5);
+        // no @anchor + no dur → starts at the `in` cue (here none → 0) and lasts one bar.
+        let q = objs("mesh:bitterbal.glb @-3,0,0 *0.5 travel:2,0,0")[0]
+            .travel
+            .expect("travel parsed");
+        assert_eq!(q.target, Vec3::new(2.0, 0.0, 0.0));
+        assert_eq!(q.start, 0.0);
+        assert!(q.dur > 0.0); // defaults to score.bar()
     }
 
     #[test]
