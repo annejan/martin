@@ -1,0 +1,63 @@
+# martin — DE WERELD IS EEN BITTERBAL 🟤🎆: the punchline as a maximalist morph demo. The whole WORLD —
+# a dog, a train, a truck, martin, a city, the AEgg, a helix — whirls past, and on the drop it ALL
+# collapses/erupts into one giant deep-fried BITTERBAL (the reveal). It glistens, balls up glorious,
+# and becomes the deFEEST logo → loops. ONE morphing cloud (the [reel] = Z-safe), composed off-centre,
+# full energy. 100% local assets.
+#
+#   live:    MARTIN_LOOP=1 MARTIN_SHOW=productions/bitterbal/wereld.show cargo +nightly run --release
+#   preview: TMPDIR=~/.cache/martin-render MARTIN_MUTE=1 MARTIN_RES=480x270 MARTIN_PREVIEW_FPS=8 \
+#            MARTIN_SHOW=productions/bitterbal/wereld.show ./record.sh /tmp/wereld.mp4
+
+[settings]
+kind         = demo
+pair         = match
+score        = productions/cities/score.txt   # epic A-minor synthwave (intro/build/drop/breakdown/climax/outro)
+ply          = assets/sphere.ply              # asset root = assets/
+budget       = 200000
+bg           = aurora                          # cosmic sky
+post         = chroma                          # RGB-split on the kick
+cam_pump     = 0.28
+flash        = 0.25
+bg_dim       = 0.5
+
+# THE JOURNEY — one cloud, morphing. World → (build) a WHIRLWIND of the world's stuff → (drop) it all
+# becomes the BITTERBAL → glistens → glorious → deFEEST. Un-anchored shots split the section evenly
+# (a rapid montage), anchored shots land on the section hits.
+# @ params = @hold,morph,bulge (SECONDS) — the montage uses SHORT timing so all the world's stuff
+# whirls past inside the build before the drop interrupts.
+[reel]
+splat:galaxy.ply    @@intro     @5,2       ~fade                                backdrop:fractal   # THE WORLD — a spiral cosmos drifts up
+splat:doggo.ply     @@build     @0.9,0.5,0.15  ~morph  beat:0.8                   backdrop:stars     # the world is full of… a hondje 🐕
+splat:train.ply                 @0.9,0.5,0.15  ~morph                             backdrop:grid      # …a train 🚂
+splat:truck.ply                 @0.9,0.5,0.15  ~morph                             backdrop:grid      # …a truck 🚚
+splat:martin.ply                @0.9,0.5,0.15  ~morph                             backdrop:stars     # …martin
+splat:austin_tight.ply          @0.9,0.5,0.15  ~morph                             backdrop:stars     # …a whole city 🌃
+splat:nyc_tight.ply             @0.9,0.5,0.15  ~morph                             backdrop:grid      # …NEW YORK 🗽
+splat:aegg.ply                  @0.9,0.5,0.15  ~morph                             backdrop:rings     # …the AEgg 🥚
+splat:helix.ply                 @0.9,0.5,0.15  ~morph  ^spiral:0.2                backdrop:tunnel    # …a helix 🧬
+mesh:bitterbal.glb  @@drop      @4,1.5     ~shockwave  ease:snap  tint:fry  flash:0.9  beat:1.8  backdrop:stars   # …IT'S ALL A BITTERBAL 🟤 (kill-shot reveal)
+mesh:bitterbal.glb  @@breakdown @3,2       ~morph  ^turbulence:0.3  tint:fry     backdrop:stars     # it hovers, glistening, hot
+mesh:bitterbal.glb  @@climax    @4,2       ~ball  tint:fry  flash:0.6  beat:1.9  ^turbulence:0.45  backdrop:fractal   # the peak — balls up glorious
+mesh:defeest.glb    rot:180,0,0 @4,2       ~morph                                backdrop:stars     # → the deFEEST logo → loops
+
+# the punchline caption — handwrites in AS the bitterbal is revealed, off-centre (rule of thirds).
+[stage]
+text:de wereld is een bitterbal   @-1.3,0.95,0.7  *0.2  ~pen-write  tint:brand  in drop  out climax   # the reveal line, upper-left third
+
+# camera: orbit the hero OFF-centre (rule of thirds), punch in on the drop (cut), switch sides, settle
+# front-on for the brand. dist ~5 frames the @5-6 morph cloud with cosmos around it.
+[camera]
+t=@@intro      pos=1.6,0.20,0    dist=6.0   yaw=1.15   pitch=0.20   # world on the LEFT third, cosmos right
+t=@@build      pos=1.0,0.10,0    dist=5.2   yaw=1.45   pitch=0.14   # the whirlwind, orbiting right
+t=@@drop       pos=0.0,0.00,0    dist=3.8   yaw=1.45   pitch=0.08   cut   # CUT: punch onto the reveal (kill-shot)
+t=@@breakdown  pos=-1.4,0.20,0   dist=5.6   yaw=1.95   pitch=0.16   # SWITCH sides: bitterbal on the right third
+t=@@climax     pos=1.1,0.00,0    dist=5.2   yaw=1.55   pitch=0.20   # grand, the glorious spin
+t=@@outro      pos=0.0,0.10,0    dist=6.2   yaw=1.45   pitch=0.26   # settle front-on the logo
+
+[sync]
+t=@@intro      flash=0.10  bg_dim=0.45  beat=0.3                # cosmic calm
+t=@@build      flash=0.22  bg_dim=0.5   beat=1.0                # the whirlwind — energy + per-shot beats
+t=@@drop       flash=0.9   bg_dim=0.35  beat=1.8                # THE REVEAL — full kick, bloom, chroma
+t=@@breakdown  flash=0.2   bg_dim=0.55  beat=0.7                # hush, it glistens
+t=@@climax     flash=0.7   bg_dim=0.35  beat=1.9                # peak
+t=@@outro      flash=0.25  bg_dim=0.5   beat=0.7                # ease to the logo + loop
