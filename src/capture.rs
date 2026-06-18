@@ -209,11 +209,26 @@ fn record_driver(
 }
 
 /// MARTIN_SHOT=<path> [MARTIN_SHOT_AT=<s>]: one headless screenshot at time `s`, then exit.
+/// MARTIN_SHOTS=<s1,s2,…>: a whole CONTACT SHEET in ONE run — seek to each time, screenshot to
+/// `<path>_<t>.png`, then exit. Amortizes the cold start (one boot/load instead of N).
 #[derive(Resource)]
 pub(crate) struct ShotConfig {
     pub path: Option<String>,
-    pub at: f32,
-    pub done: bool,
+    pub ats: Vec<f32>, // shot times (MARTIN_SHOTS csv, else [MARTIN_SHOT_AT])
+    pub idx: usize,    // current shot index
+    pub done: bool,    // current frame captured
+}
+
+/// `/tmp/x.png` + t=8 → `/tmp/x_8.png` (only when shooting a multi-frame sheet; single shot keeps `path`).
+fn shot_path(path: &str, at: f32, multi: bool) -> String {
+    if !multi {
+        return path.to_string();
+    }
+    let tag = format!("_{}", (at * 10.0).round() / 10.0).replace(['.', '-'], "_");
+    match path.rsplit_once('.') {
+        Some((stem, ext)) => format!("{stem}{tag}.{ext}"),
+        None => format!("{path}{tag}"),
+    }
 }
 
 fn shot_driver(
@@ -228,10 +243,15 @@ fn shot_driver(
     let Some(path) = shot.path.clone() else {
         return;
     };
+    if shot.idx >= shot.ats.len() {
+        exit.write(AppExit::Success);
+        return;
+    }
+    let at = shot.ats[shot.idx];
     // SEEK straight to the shot time (don't simulate the whole timeline to get there — a late
     // MARTIN_SHOT_AT used to take ~that-many seconds). advance_seq_clock is gated off in shot mode,
     // so setting the clock here holds the scene + camera at `at`.
-    clock.t = shot.at;
+    clock.t = at;
     // wait until the show is actually built (assets loaded → composition/sequence assembled), then a
     // few more frames so the held pose + sort settle before grabbing the frame.
     let built = state.map(|s| s.built).unwrap_or(false) || comp.map(|c| c.built).unwrap_or(false);
@@ -239,15 +259,24 @@ fn shot_driver(
         return;
     }
     *frames += 1;
-    if !shot.done && *frames >= 6 {
+    if !shot.done && *frames >= 8 {
+        let out = shot_path(&path, at, shot.ats.len() > 1);
         commands
             .spawn(Screenshot::primary_window())
-            .observe(save_to_disk(path.clone()));
+            .observe(save_to_disk(out.clone()));
         shot.done = true;
-        info!("auto-screenshot @ t={:.1} -> {path}", shot.at);
+        info!("auto-screenshot @ t={at:.1} -> {out}");
     }
-    if shot.done && *frames >= 10 {
-        exit.write(AppExit::Success);
+    // hold extra frames so the async screenshot save finishes before we re-seek (else a sheet frame
+    // races the next shot and comes out blank).
+    if shot.done && *frames >= 16 {
+        // next frame in the sheet (re-seek), or exit after the last
+        shot.idx += 1;
+        shot.done = false;
+        *frames = 0;
+        if shot.idx >= shot.ats.len() {
+            exit.write(AppExit::Success);
+        }
     }
 }
 
@@ -343,10 +372,23 @@ impl Plugin for CapturePlugin {
         })
         .insert_resource(ShotConfig {
             path: std::env::var("MARTIN_SHOT").ok(),
-            at: std::env::var("MARTIN_SHOT_AT")
+            ats: std::env::var("MARTIN_SHOTS")
                 .ok()
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(6.0),
+                .map(|s| {
+                    s.split(',')
+                        .filter_map(|x| x.trim().parse::<f32>().ok())
+                        .collect::<Vec<_>>()
+                })
+                .filter(|v| !v.is_empty())
+                .unwrap_or_else(|| {
+                    vec![
+                        std::env::var("MARTIN_SHOT_AT")
+                            .ok()
+                            .and_then(|s| s.parse().ok())
+                            .unwrap_or(6.0),
+                    ]
+                }),
+            idx: 0,
             done: false,
         })
         .insert_resource(FpsLog {

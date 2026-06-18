@@ -46,12 +46,20 @@ def shot_times():
     return shots
 
 
-def capture_at(t, path):
+def shot_tag(at):
+    """Match the engine's shot_path() suffix (capture.rs): `_<t>` with the 1-dp value, `.`/`-`→`_`."""
+    return f"_{round(at * 10) / 10:g}".replace(".", "_").replace("-", "_")
+
+
+def capture_all(times, stem):
+    """Capture EVERY time in ONE engine run (MARTIN_SHOTS) — amortizes the cold start (~4x faster than
+    a run per shot). `stem` like <td>/f.png → returns the per-time output paths."""
     e = env_base()
-    e["MARTIN_SHOT"] = path
-    e["MARTIN_SHOT_AT"] = f"{t:.3f}"
-    subprocess.run([BIN], env=e, capture_output=True, text=True, timeout=180)
-    return os.path.exists(path)
+    e["MARTIN_SHOT"] = stem
+    e["MARTIN_SHOTS"] = ",".join(f"{t:.3f}" for t in times)
+    subprocess.run([BIN], env=e, capture_output=True, text=True, timeout=600)
+    base, ext = stem.rsplit(".", 1)
+    return [f"{base}{shot_tag(t)}.{ext}" for t in times]
 
 
 def main():
@@ -70,15 +78,17 @@ def main():
         sys.exit("no shots found in the MARTIN_VALIDATE dump")
     print(f"{len(shots)} shots — capturing thumbnails …")
 
-    # capture each shot at its mid-hold: halfway to the next shot's start (last shot + 2s).
+    # each shot's mid-hold: halfway to the next shot's start (last shot + 2s). ALL captured in ONE run.
     starts = [t for t, _ in shots]
+    ats = [
+        start + ((starts[i + 1] if i + 1 < len(starts) else start + 4.0) - start) * 0.5
+        for i, (start, _) in enumerate(shots)
+    ]
     frames = []
     with tempfile.TemporaryDirectory() as td:
-        for i, (start, label) in enumerate(shots):
-            nxt = starts[i + 1] if i + 1 < len(starts) else start + 4.0
-            at = start + (nxt - start) * 0.5
-            p = os.path.join(td, f"shot_{i:03d}.png")
-            ok = capture_at(at, p)
+        paths = capture_all(ats, os.path.join(td, "f.png"))
+        for i, ((_, label), at, p) in enumerate(zip(shots, ats, paths)):
+            ok = os.path.exists(p)
             print(f"  [{i:02d}] t={at:6.1f}s  {label}  {'ok' if ok else 'FAILED'}")
             frames.append((p if ok else None, label, at))
 
