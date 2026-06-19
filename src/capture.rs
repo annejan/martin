@@ -117,6 +117,7 @@ fn record_driver(
     comp: Option<Res<Composition>>,
     score: Option<Res<crate::music::ScoreRes>>,
     target: Option<Res<RecordTarget>>,
+    marks: Option<Res<crate::waypoints::Waypoints>>,
     mut clock: ResMut<SeqClock>,
     mut camq: Query<&mut OrbitCam>,
     mut commands: Commands,
@@ -189,8 +190,14 @@ fn record_driver(
     }
     let i = rec.i;
     clock.t = i as f32 * rec.dt;
-    // gentle front-sway for object showcases; hold the framed yaw when MARTIN_YAW pins a scene.
-    if rec.sway {
+    // gentle front-sway for object showcases; hold the framed yaw when MARTIN_YAW pins a scene. A
+    // fully-timed `[camera]` track is authoritative (flypath drives it) → no sway, or it'd fight the
+    // authored yaw.
+    let track = marks
+        .as_ref()
+        .map(|m| crate::waypoints::is_track(&m.list))
+        .unwrap_or(false);
+    if rec.sway && !track {
         let yaw = FRONT_YAW + SWAY * (i as f32 * rec.yaw_step).sin();
         for mut c in &mut camq {
             c.yaw = yaw;

@@ -183,13 +183,11 @@ fn flypath(
     if crate::serve::is_serving() {
         return;
     }
-    let Some(secs) = marks.fly else { return };
-    let n = marks.list.len();
-    if n < 2 {
-        return;
-    }
-    // a fully-timed path is a CAMERA TRACK: play it straight off the show clock — same curve live
-    // and in the recording, no part-window heuristic. (Authored with M, which stamps the clock.)
+    // A fully-timed `[camera]` TRACK is AUTHORITATIVE: play it straight off the show clock (same curve
+    // live + recording), ALWAYS — no `MARTIN_FLY` needed. (`MARTIN_FLY` only replays an M-key waypoint
+    // path: the part-window mode below.) This is how a `.show` `[camera]` (or a Blender-authored camera)
+    // drives BOTH compose and reel shows; without it, the build_* auto-frame + record sway own the camera
+    // and the authored pose is ignored.
     if waypoints::is_track(&marks.list) {
         if let Some(w) = waypoints::pose_at_time(&marks.list, clock.t) {
             for mut cam in &mut q {
@@ -199,6 +197,11 @@ fn flypath(
                 cam.pitch = w.pitch;
             }
         }
+        return;
+    }
+    let Some(secs) = marks.fly else { return };
+    let n = marks.list.len();
+    if n < 2 {
         return;
     }
     let legs = (n - 1) as f32;

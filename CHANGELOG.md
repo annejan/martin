@@ -11,6 +11,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Engine
+- **`[camera]` track is now authoritative for *any* show** (compose-only included), no `MARTIN_FLY`
+  needed. A fully-timed camera track (`t=…` on every keyframe) plays straight off the show clock in
+  `flypath`; the compose/sequence auto-frame still seeds the initial pose but the track drives every
+  frame, and the auto-orbit drift (`compose_camera`) + recorder front-sway stand down when a track is
+  present (they'd fight the authored yaw). Before, a compose stage ignored its `[camera]` and always
+  auto-framed (yaw = `FRONT_YAW`, auto-dist) unless `MARTIN_FLY` was set — so an authored/exported
+  camera never took. `MARTIN_FLY` now only replays an untimed M-key waypoint path. (Reel shows with a
+  `[camera]` track — e.g. cities-defeest — now follow it without `MARTIN_FLY` too.)
 - Sequence engine: a timeline of *parts* (`text:` / `splat:` / `mesh:` / `glb:` / `image:` / `wall:`)
   that assemble out of a ball cloud and morph into the next, per-Gaussian on the GPU, with a directed
   camera track. Composed via `MARTIN_*` env vars or a single unified `.show` file (`MARTIN_SHOW`).

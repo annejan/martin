@@ -733,10 +733,19 @@ pub(crate) fn compose_camera(
     seq: Option<Res<Sequence>>,
     rec: Res<RecordState>,
     time: Res<Time>,
+    marks: Option<Res<crate::waypoints::Waypoints>>,
     mut cam: Query<&mut OrbitCam>,
 ) {
     // when a morph hero track is present it owns the camera (its own sway/flypath) — don't add a drift.
     if seq.map(|s| !s.parts.is_empty()).unwrap_or(false) {
+        return;
+    }
+    // an authored `[camera]` track owns the camera (flypath drives it) — the auto-orbit drift would
+    // fight the authored yaw, so stand down when one is present.
+    if marks
+        .map(|m| crate::waypoints::is_track(&m.list))
+        .unwrap_or(false)
+    {
         return;
     }
     if comp.map(|c| c.built).unwrap_or(false) {

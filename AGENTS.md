@@ -114,7 +114,9 @@ Blender → read it back → write `[stage]`/`[camera]` → render. **Calibrated
   `FRAC_PI_4` (45°) **vertical** FOV (`camera.rs update_fov`, Bevy default; the `[sync] fov` knob scales it).
   Blender's 50 mm default (~27° vertical) is far too narrow → set `cam.data.sensor_fit='VERTICAL'`,
   `cam.data.angle=π/4`, render 16:9 — then framing (zoom + angle + positions) matches martin. VERIFIED:
-  3 colored cubes land green-left / blue-top / red-right in both Blender render and martin.
+  3 colored cubes land green-left / blue-top / red-right in both Blender render and martin. The exported
+  `[camera]` track is **authoritative** — it drives martin directly for compose-only OR reel shows, no
+  `MARTIN_FLY`/reel-hero trick needed (a fully-timed track overrides the auto-frame; see CHANGELOG).
 - **Text orientation**: a Blender text placeholder needs just `rotation_euler=(90°,0,0)`, **positive scale,
   NO mirror** — it then lands in the world XY (z=0) plane exactly like martin builds `text:` (`text.rs`:
   +X right, +Y up, Y-down→base-flip), so Blender camera-view = martin. VERIFIED (hi-res Blender shot +
