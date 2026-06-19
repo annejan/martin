@@ -180,3 +180,11 @@ SPDX-License-Identifier = "CC0-1.0"
 path = "assets/doggo.ply"
 SPDX-FileCopyrightText = "NONE"
 SPDX-License-Identifier = "CC0-1.0"
+
+# guinea production (added 2026-06-20): cavia (live guinea pig), cuy (the cooked dish), geit (goat),
+# pauw (peacock). The glb MODELS are Anne Jan Brouwer's own work, modelled from public-domain
+# reference images (no attribution found for the source photos).
+[[annotations]]
+path = ["assets/cavia.glb", "assets/cuy.glb", "assets/geit.glb", "assets/pauw.glb"]
+SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
+SPDX-License-Identifier = "MIT"
