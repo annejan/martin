@@ -100,6 +100,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         let mut tint = None;
         let mut ease = crate::scene::effects::Ease::Smoothstep;
         let mut freeze = None;
+        let mut ground = None;
         // Pull each modifier token out of the line by its sigil/prefix. A token carrying a known
         // prefix is ALWAYS consumed (never leaks into the head/text) — if it fails to parse we warn,
         // so a typo (`~explod`, `^wave2`) is a visible error, not a silently-dropped effect.
@@ -150,6 +151,11 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                     match f.parse() {
                         Ok(v) => freeze = Some(v),
                         Err(_) => eprintln!("seq: bad 'freeze:{f}' (need a number) — ignored"),
+                    }
+                } else if let Some(g) = tok.strip_prefix("ground:") {
+                    match g.parse() {
+                        Ok(v) => ground = Some(v),
+                        Err(_) => eprintln!("seq: bad 'ground:{g}' (need a number) — ignored"),
                     }
                 } else if let Some(res) = crate::scene::effects::parse_fx_modifier(tok) {
                     // the shared `~entrance` / `^deform[:amp]` / `tint:` modifiers (see effects.rs).
@@ -214,6 +220,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
             tint,
             ease,
             freeze,
+            ground,
         });
     }
     parts

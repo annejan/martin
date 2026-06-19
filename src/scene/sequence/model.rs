@@ -33,6 +33,8 @@ pub(crate) struct Shot {
     pub tint: Option<crate::scene::colorize::Tint>, // `tint:fry|rainbow|brand` → recolour this shape
     pub ease: Ease, // `ease:<name>` → shape the morph curve (default Smoothstep = unchanged)
     pub freeze: Option<f32>, // `freeze:N` → quantize the deform animation to N steps/bar (stop-motion)
+    pub ground: Option<f32>, // `ground:<y>` → seat this part's LOWEST splat at world-Y (rest it on a
+                             // [stage] plate); None = centred at the origin (floats), the default
 }
 
 impl Shot {
@@ -59,6 +61,7 @@ impl Shot {
             tint: None,
             ease: Ease::Smoothstep,
             freeze: None,
+            ground: None,
         }
     }
 }

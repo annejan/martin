@@ -79,6 +79,29 @@ pub fn rotate_gaussians(v: &mut [Gaussian3d], q: Quat) {
     }
 }
 
+/// Translate a cloud (in its LOCAL frame) so that, AFTER the reel entity's `base_rot`, its lowest
+/// splat sits at WORLD-Y `y` — seat a reel part on a surface (`ground:<y>`). Reel parts are centred on
+/// the origin and the whole entity is then rotated by `base_rot` (default `cloud_base_rotation` = Rx180,
+/// since .ply splats are Y-down). Grounding in the local frame would seat the *ceiling* after that flip,
+/// so we measure the bottom in WORLD space and translate the local cloud to achieve it. Bake it into the
+/// shape BEFORE the source/exit clouds derive from it.
+pub fn ground_to(v: &mut [Gaussian3d], base_rot: Quat, y: f32) {
+    let world_min = v
+        .iter()
+        .map(|g| (base_rot * Vec3::from_array(g.position_visibility.position)).y)
+        .fold(f32::MAX, f32::min);
+    if !world_min.is_finite() {
+        return;
+    }
+    // a local translation `dl` shifts the world position by `base_rot * dl`; solve for the local shift
+    // that moves the world bottom by exactly `(y - world_min)` in world-Y (no X/Z drift).
+    let dl = base_rot.inverse() * Vec3::new(0.0, y - world_min, 0.0);
+    for g in v.iter_mut() {
+        let p = g.position_visibility.position;
+        g.position_visibility.position = [p[0] + dl.x, p[1] + dl.y, p[2] + dl.z];
+    }
+}
+
 /// Spread a 10-bit integer so its bits occupy every 3rd position (for Morton/Z-order).
 fn part1by2(mut n: u32) -> u32 {
     n &= 0x3ff;

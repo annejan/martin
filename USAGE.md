@@ -452,6 +452,32 @@ for `glb:` too — the mesh and its sampled splats rotate together.)
 each tumbled differently). Deterministic (frame-stable for recording); the whole pile is sized to
 frame as one. Great for snacks, confetti, a swarm of logos, …
 
+**Ground** (`ground:<y>`) seats a part's **lowest splat at world-Y `<y>`** instead of centring it on
+the origin — so an object **rests on a surface** (e.g. a `[stage]` plate) rather than floating. Each
+part is otherwise normalized to the origin, so differently-shaped parts (a tall guinea pig vs a flat
+splayed dish) float at *different* heights over one plate; `ground:` to the plate's top seats them all
+regardless of shape. It is computed in the **world frame** (after the cloud's base Y-flip — see below),
+baked into the shape before the morph, and only affects Y. Omit it to keep a part floating (e.g. an
+opening logo). Example (a logo floats, then morphs down onto a plate):
+
+```ini
+[reel]
+mesh:defeest.glb  @@bar:0  ~fade                       # floats (un-grounded)
+mesh:cavia.glb    @@bar:4  ~morph  rot:0,0,0   ground:-0.65   # rests on the plate
+mesh:cuy.glb      @@bar:8  ~morph  rot:0,0,0   ground:-0.65   # the dish, seated on the same plate
+[stage]
+splat:sphere.ply  @0,-0.75,0  *2.2,0.10,2.2  alpha:0.6  ~fade  in @@bar:0   # the plate (top ≈ -0.65)
+```
+
+> **Orientation is per-asset — always render-check it.** glTF/mesh sampling has a base flip (`.ply`
+> splats are Y-down → the whole cloud is rotated 180° about X for Y-up). The `rot:` a part needs is
+> **not portable** between assets or between `mesh:` and `glb:` (they orient from different baselines):
+> a flat **deFEEST logo** reads forwards at `rot:180,0,0` (cancels the base flip-X — a *mirror*, which
+> a plain Y-rotation can't undo), while a 3D **animal** stands upright at `rot:0,0,0`. So a logo and an
+> animal in the *same* reel often need *different* `rot:`. Sample each into splats with **`mesh:`** (not
+> `glb:`) when you want a real textured per-Gaussian morph — `mesh:` reads the baseColorTexture and is a
+> normal morph part; `glb:` renders a crisp PBR mesh that only dissolves to flat-coloured splats.
+
 ---
 
 ## Meshes + splats in one universe

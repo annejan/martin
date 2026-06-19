@@ -168,4 +168,36 @@ at a time (`MARTIN_BUDGET≈6000 MARTIN_RES=640x360`) — never batches (concurr
    `record.sh` for the full video (~35 s) → full quality only when it's locked. SEND renders (don't just
    inspect them). Worked reference: `productions/camping/campsite.show`.
 
+### Object orientation & positioning (read before you place anything)
+
+Getting an object **facing the right way** and **sitting where you mean** is half of staging — and it
+bites *every* time because the rules differ per asset. Hard-won (the guinea cavia→cuy bit, 2026-06):
+
+- **Up is Y; the cloud has a baked Y-flip.** `.ply` splats (and glyph text) are authored **Y-down**, so
+  the whole reel cloud is rotated **180° about X** (`cloud_base_rotation`) to stand it up. World **+Y is
+  up, −Y is down** (the plate lives at negative Y, props rest on top of it). Anything that places by Y
+  (e.g. `ground:`) must reason in this **world** frame, not the un-flipped local one — grounding the
+  local min-Y would seat the *ceiling*.
+- **`rot:` is per-asset and NOT portable.** The rotation one object needs says nothing about the next.
+  A flat **logo** vs a 3D **body** behave oppositely under the same `rot:`; `mesh:` and `glb:` start from
+  **different baselines**. Concretely: the **deFEEST logo** reads forwards at `rot:180,0,0` (it cancels
+  the sampler's base **flip-X** — a *mirror*, which a plain Y-spin can NEVER undo), while an **animal**
+  stands upright at `rot:0,0,0`. So a logo + an animal in the *same* reel need *different* `rot:`. Always
+  **render a settled frame per asset** and fix `rot:` by eye — copying a value from another show is a trap.
+- **Seat reel parts with `ground:<y>`.** Reel parts are centred on the origin, so a tall animal and a
+  flat dish float at *different* heights over one plate. `ground:<y>` drops a part so its **lowest splat
+  rests at world-Y `<y>`** (the plate's top), shape-independent; omit it to let a part **float** (an
+  opening logo). Stage props place by `@pos` directly (see the python tool's grounding readout).
+- **Frame so resting reads as resting.** A camera **target up above the object + a steep top-down pitch
+  makes a seated object look like it's floating.** Put the target near the **plate/dish level** and use a
+  **moderate** downward pitch so the contact with the surface is visible. (This fooled us into "fixing"
+  placement that was already correct — check the camera before re-grounding.)
+- **For a textured per-Gaussian morph, sample with `mesh:` not `glb:`.** `mesh:foo.glb` surface-samples
+  the glTF into gaussians **with its baseColorTexture colour**, as a normal morph part (so `pair=match`
+  + the per-Gaussian flow just work). `glb:` renders the crisp PBR mesh and only dissolves to
+  **flat-coloured** splats — wrong if you want the live-animal-flows-into-the-dish morph.
+
+Blender (the MCP bridge) is handy to **preview an asset's native pose**, but the splat sampler's baseline
+≠ Blender's — trust the **martin render** for the final `rot:`/`ground:`, not the Blender viewport.
+
 *— code: annejan · greetings to everyone still rendering on the metal*

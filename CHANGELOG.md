@@ -11,6 +11,13 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Engine
+- **Reel parts can sit on a surface**: a new `ground:<y>` part token seats a part's **lowest splat at
+  world-Y `<y>`** (e.g. on a `[stage]` plate) instead of centring it on the origin — shape-independent,
+  so a tall animal and a flat dish both rest on the same plate; omit it to let a part float. Computed in
+  the **world frame** (it accounts for the cloud's baked 180°-X Y-flip — grounding the local cloud would
+  seat the ceiling). See USAGE “Per-part rotation/cluster/ground” + ART-DIRECTION “Object orientation &
+  positioning” (new section documenting the per-asset `rot:` gotchas, the Y-flip, and `mesh:` vs `glb:`
+  for textured morphs).
 - **Faster big-cloud morphs**: the build-time `pair=match` pairing (`match_reorder`) now splits large
   clouds into K equal x-slabs and matches them in parallel (rayon). A 1.2 M-splat city↔city pairing
   drops from **~18 s to ~0.45 s** per transition (~40×) — the cities loader pause goes from tens of

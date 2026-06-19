@@ -198,6 +198,13 @@ pub(crate) fn build_sequence(
     // (with the ball-pulse bulge); the others build a source from the part's own shape.
     // Build each part's `BuiltShot` directly (the only per-shot data the director reads) — shape +
     // morph-in origin + out-cloud + the resolved entrance/deform/raster/cue, in one pass.
+    // MARTIN_ROT="rx,ry,rz" (euler degrees) orients the whole cloud; default = cloud_base_rotation
+    // (Rx180 — .ply splats are Y-down). Computed BEFORE build_shots so `ground:` can seat parts in the
+    // WORLD frame (this rotation flips Y, so grounding the un-rotated local cloud would seat the ceiling).
+    let entity_rot = std::env::var("MARTIN_ROT")
+        .ok()
+        .and_then(|s| parse_euler_deg(&s))
+        .unwrap_or_else(cloud_base_rotation);
     let shots = build_shots(
         &seq.parts,
         raws,
@@ -207,6 +214,7 @@ pub(crate) fn build_sequence(
         &starts,
         n,
         content_radius,
+        entity_rot,
         &mut assets,
     );
     let intro0 = shots[0]
@@ -214,13 +222,6 @@ pub(crate) fn build_sequence(
         .clone()
         .expect("part 0 always builds a source cloud");
 
-    // MARTIN_ROT="rx,ry,rz" (euler degrees) orients the cloud — e.g. to stand a COLMAP scene
-    // upright for a "normal" POV. Default = cloud_base_rotation (flip-X, right for portrait
-    // splats; gives scenes their abstract sideways look).
-    let entity_rot = std::env::var("MARTIN_ROT")
-        .ok()
-        .and_then(|s| parse_euler_deg(&s))
-        .unwrap_or_else(cloud_base_rotation);
     // MARTIN_REEL_POS="x,y,z" translates the whole morph timeline off the world origin (default 0,0,0).
     // The reel normally sits at the origin; this lets you place the morphing subject relative to
     // `[stage]` props (which carry their own `@x,y,z`) — e.g. float the morph above a placed cityscape.
@@ -307,6 +308,7 @@ fn build_shots(
     starts: &[f32],
     n: usize,
     content_radius: f32,
+    base_rot: Quat,
     assets: &mut Assets<PlanarGaussian3d>,
 ) -> Vec<BuiltShot> {
     let pair_match = std::env::var("MARTIN_PAIR")
@@ -353,6 +355,11 @@ fn build_shots(
         // clouds and the next part's pair-match read it, so the whole lifecycle is tinted.
         if let Some(tint) = parts[idx].tint {
             crate::scene::colorize::apply(&mut shaped, tint);
+        }
+        // `ground:<y>` seats this part's lowest splat at world-Y (rest it on a [stage] plate). Baked
+        // BEFORE the source/exit/ball clouds derive from `shaped`, so the whole lifecycle sits seated.
+        if let Some(gy) = parts[idx].ground {
+            crate::morph::ground_to(&mut shaped, base_rot, gy);
         }
         let src: Option<Vec<Gaussian3d>> = match tr {
             // Morph/Swarm flow from the PREVIOUS part's shape (no source) — unless the previous part
