@@ -104,6 +104,11 @@ Blender → read it back → write `[stage]`/`[camera]` → render. **Calibrated
 - **Coord map** martin world (Y-up) ↔ Blender (Z-up): `blender = (wx, -wz, wy)`; inverse
   `world = (bx, bz, -by)`. A `[stage]` `@pos` IS a world position (the normalized cloud's centroid sits at
   the world origin), so **export prop**: `@(bx, bz, -by)`, `*scale = blender_max_dim / 2`.
+- **Rotation export** (`rot a,b,c` euler degrees, stage). Basis `B = [[1,0,0],[0,0,-1],[0,1,0]]` (martin→
+  Blender). For a Blender object with world-rotation `R_obj` and martin-default Blender orientation `R_base`
+  (identity for `splat:`/`mesh:` props; `Rx(90°)` for `text:` — see Text orientation), the extra rotation is
+  `R_extra = R_obj · R_baseᵀ`, and the martin token is `(Bᵀ · R_extra · B).to_euler('XYZ')` in degrees.
+  VERIFIED: a deFEEST text + doggo tilted ~50° in Blender land identically in martin.
 - **Display a splat `.ply` in Blender**: parse the Brush SH-3 header (count `property float` lines → stride),
   cols `x,y,z` + `f_dc_0..2`; `rgb = clip(f_dc*0.2820948 + 0.5, 0, 1)`. Build a `bpy.data.pointclouds`
   (`pc.resize(n)`; set `position`/`radius`/`color` FLOAT_COLOR attrs), emission material reading the
