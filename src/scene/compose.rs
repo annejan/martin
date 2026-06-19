@@ -644,10 +644,12 @@ pub(crate) fn animate_composition(
 ) {
     let t = clock.t;
     let k = beat.intensity;
+    let osc = (t * 0.6).sin(); // same for all objects — lift out of loop
+    let beat_pulse = 1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k;
+    let beat_pulse_kick = beat.kick * 0.06 * k;
     for (a, mut tf, cs) in &mut q {
         // spin = continuous rotation; sway = a gentle oscillation around the base orientation
         // (swings a hollow-back single-image splat left/right without ever facing away).
-        let osc = (t * 0.6).sin();
         tf.rotation = a.base_rot
             * Quat::from_euler(
                 EulerRot::XYZ,
@@ -685,7 +687,7 @@ pub(crate) fn animate_composition(
         let has_cs = cs.is_some();
         let scale_vis = if has_cs { 1.0 } else { vis }; // meshes carry the fade in their scale
         // kick thumps the scale (bulge is a no-op on a static cloud, so scale carries it too).
-        tf.scale = a.base_scale * (scale_vis * (1.0 + beat.kick * 0.06 * k));
+        tf.scale = a.base_scale * (scale_vis * (1.0 + beat_pulse_kick));
         if let Some(mut cs) = cs {
             // a `~entrance` object assembles via the morph (cs.time) — its IN-fade is the morph, so
             // only the OUT fade touches opacity. BUT it must stay HIDDEN until its `in` cue, else its
@@ -703,7 +705,7 @@ pub(crate) fn animate_composition(
                     1.0
                 };
                 let op = if started { dep } else { 0.0 }; // hold opaque, fade as it scatters out
-                cs.global_opacity = op * (1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k);
+                cs.global_opacity = op * beat_pulse;
                 cs.time = a.ease.apply(asm.min(dep)); // formed = min(assembled, not-yet-departed)
                 // per-particle reveal (pen-write tracing) only while ASSEMBLING in, not on the exit scatter.
                 let (mode, soft, axis) = if asm < 1.0 {
@@ -715,11 +717,11 @@ pub(crate) fn animate_composition(
                 cs.transition_softness = soft;
                 cs.transition_axis = axis;
             } else {
-                cs.global_opacity = vis * (1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k);
+                cs.global_opacity = vis * beat_pulse;
             }
             if let Some((mode, amp, freq)) = a.deform {
                 cs.deform_mode = mode;
-                cs.deform_amp = amp * (1.0 + (beat.kick * 0.6 + beat.snare * 0.3) * k);
+                cs.deform_amp = amp * (1.0 + (beat.kick * 0.6 + beat.snare * 0.3) * k); // per-object deform varies
                 cs.deform_freq = freq;
                 cs.deform_time = t * 2.0;
             }

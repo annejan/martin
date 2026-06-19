@@ -1,15 +1,16 @@
-//! Screen-anchored captions: a title/credit pinned to SCREEN space (a fixed screen fraction) that
-//! stays put while the splat camera flies — unlike `text:` which renders as world-space gaussians the
-//! camera moves past. Authored in a `.show` `[caption]` track:
+//! Screen-anchored captions: title/credit pinned to screen space — unlike `text:` which renders
+//! as world-space gaussians the camera moves past. Authored in a `.show` `[caption]` track:
 //!
-//!     [caption]
-//!     screentext:deFEEST       in @@intro  out @@drop      at 0.5,0.08  size 72
-//!     screentext:VJ annejan    in @@outro  out @@outro+4bar at 0.04,0.9  size 40
+//! ```text
+//! [caption]
+//! screentext:deFEEST           in @@intro  out @@drop        at 0.5,0.08  size 72
+//! screentext:VJ annejan        in @@outro  out @@outro+4bar  at 0.04,0.9  size 40
+//! screentext:SCENE & CAMP      in @@outro  out @@bar:128     center       size 30
+//! screentext:a deFEEST product in @@outro  out @@bar:124     center       size 26  scroll 0.05
+//! ```
 //!
-//! Built on bevy_ui `Text` (a real UI node — no reinvention). The load-bearing detail: the caption
-//! root carries `UiTargetCamera(orbit_cam)` so it composites into whatever the splat camera renders —
-//! the offscreen image in a HEADLESS record, the window live — so captions DO bake into recordings
-//! (the loader screen, lacking this, does not). Alpha is a pure function of `SeqClock.t` → deterministic.
+//! Built on bevy_ui `Text` — the root carries `UiTargetCamera` so captions bake into recordings.
+//! Alpha is a pure function of `t` (no randomness, no state) → deterministic seeks & recordings.
 
 use bevy::prelude::*;
 use bevy::text::Font;
@@ -19,27 +20,32 @@ use crate::camera::OrbitCam;
 use crate::scene::SeqClock;
 use crate::score::Score;
 
-/// Bundled font (same as text.rs — include_bytes, not the asset server, whose root is the .ply folder).
+/// Bundled font.
 static FONT: &[u8] = include_bytes!("../../assets/font.ttf");
 
-/// One parsed caption: what to show, when (show-clock seconds), where (screen fraction), how big.
+// ── data ───────────────────────────────────────────────────────────────────
+
+/// One parsed caption.
 #[derive(Clone)]
 pub struct CaptionSpec {
-    text: String,
-    appear: f32, // fade-in start (s); 0 = from the top
-    out: f32,    // fade-out start (s); f32::MAX = stays to the end
-    fade: f32,   // fade in/out duration (s)
-    fx: f32,     // screen x fraction (0..1) of the text's top-left
-    fy: f32,     // screen y fraction (0..1); can be >1 or <0 with scroll
-    size: f32,   // font size (px)
-    scroll: f32, // upward scroll speed (fraction of screen / s); 0 = static
+    pub text: String,
+    pub appear: f32,   // fade-in start (show seconds)
+    pub out: f32,      // fade-out start (show seconds); f32::MAX = stick to end
+    pub fade: f32,     // fade in/out duration (s)
+    pub fx: f32,       // screen-x fraction of left edge (used only when !center)
+    pub fy: f32,       // screen-y fraction; >1 = below-screen credit scroll
+    pub size: f32,     // font size (px)
+    pub center: bool,  // true → flex-centre text horizontally on screen
+    pub scroll: f32,   // upward scroll speed (fraction of screen / s); 0 = static
 }
 
-/// The parsed `[caption]` track (inserted from main once the score exists).
+/// The parsed `[caption]` track.
 #[derive(Resource, Default)]
 pub struct Captions(pub Vec<CaptionSpec>);
 
-/// Timing carried on each spawned caption text entity, so `animate_captions` ramps its alpha.
+// ── ECS components (internal) ──────────────────────────────────────────────
+
+/// Fade timing on each caption text entity.
 #[derive(Component)]
 struct CaptionTag {
     appear: f32,
@@ -47,18 +53,22 @@ struct CaptionTag {
     fade: f32,
 }
 
-/// Carried on the parent Node when a caption scrolls — drives its Y position from the show clock.
+/// Scroll state on the parent Node — drives Y position from the show clock.
 #[derive(Component)]
 struct CaptionScroll {
-    fy_pct: f32, // base screen-y as percentage (0–100)
+    fy_pct: f32, // base screen-y as percentage (0..100)
     speed: f32,  // percentage-points per second, positive = upward
     appear: f32,
 }
 
-/// Parse the `[caption]` lines (raw, comment-stripped) into specs. Forgiving: warn + skip a bad line.
-/// Grammar: `screentext:<text…>  [in <anchor>] [out <anchor>] [at fx,fy] [size px] [fade s] [scroll s]`.
+// ── parser ─────────────────────────────────────────────────────────────────
+
+/// Parse `[caption]` lines into specs. Forgiving: warn + skip bad lines.
+///
+/// Grammar (all tokens optional except `screentext:`):
+///   `screentext:<text…>  [in <anchor>] [out <anchor>] [at fx,fy] [size px] [fade s] [center] [scroll s]`
 pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
-    let is_kw = |t: &str| matches!(t, "in" | "out" | "at" | "size" | "fade" | "scroll");
+    let is_kw = |t: &str| matches!(t, "in" | "out" | "at" | "size" | "fade" | "center" | "scroll");
     let mut out = Vec::new();
     for raw in lines {
         let line = raw.split('#').next().unwrap_or("").trim();
@@ -73,7 +83,7 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
             warn!("caption: line must start with screentext:/title: — skipped: {line}");
             continue;
         };
-        // text = the head's first word + any following non-keyword tokens (so multi-word captions work).
+        // text = head's first word + any following non-keyword tokens
         let mut text = first.to_string();
         let mut i = 1;
         while i < toks.len() && !is_kw(toks[i]) {
@@ -81,18 +91,15 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
             text.push_str(toks[i]);
             i += 1;
         }
-        let (mut appear, mut out_t, mut fade, mut fx, mut fy, mut size, mut scroll) =
-            (0.0_f32, f32::MAX, 0.6_f32, 0.5_f32, 0.1_f32, 56.0_f32, 0.0_f32);
+        let (mut appear, mut out_t, mut fade, mut fx, mut fy, mut size, mut center, mut scroll) =
+            (0.0_f32, f32::MAX, 0.6_f32, 0.5_f32, 0.1_f32, 56.0_f32, false, 0.0_f32);
         while i < toks.len() {
             let val = toks.get(i + 1).copied().unwrap_or("");
             match toks[i] {
                 "in" => appear = score.anchor_seconds(val).unwrap_or(0.0),
                 "out" => out_t = score.anchor_seconds(val).unwrap_or(f32::MAX),
                 "at" => {
-                    let n: Vec<f32> = val
-                        .split(',')
-                        .filter_map(|x| x.trim().parse().ok())
-                        .collect();
+                    let n: Vec<f32> = val.split(',').filter_map(|x| x.trim().parse().ok()).collect();
                     if let Some(a) = n.first() {
                         fx = a.clamp(0.0, 1.0);
                     }
@@ -102,6 +109,7 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
                 }
                 "size" => size = val.parse().unwrap_or(56.0),
                 "fade" => fade = val.parse().unwrap_or(0.6),
+                "center" => center = true, // boolean flag, no value
                 "scroll" => scroll = val.parse().unwrap_or(0.0),
                 _ => {}
             }
@@ -110,22 +118,14 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
         if text.is_empty() {
             continue;
         }
-        out.push(CaptionSpec {
-            text,
-            appear,
-            out: out_t,
-            fade,
-            fx,
-            fy,
-            size,
-            scroll,
-        });
+        out.push(CaptionSpec { text, appear, out: out_t, fade, fx, fy, size, center, scroll });
     }
     out
 }
 
-/// Spawn the caption UI nodes ONCE, after the OrbitCam exists (Update + a `done` guard — the camera is
-/// a Startup spawn, so a Startup-system query could race it). The font is registered once into Assets.
+// ── spawn ──────────────────────────────────────────────────────────────────
+
+/// Spawn caption UI nodes once (guarded by `done`).
 fn spawn_captions(
     mut commands: Commands,
     caps: Res<Captions>,
@@ -137,23 +137,34 @@ fn spawn_captions(
     if *done || caps.0.is_empty() {
         return;
     }
-    let Ok(cam) = cam_q.single() else { return }; // wait until the orbit camera is up
-    let font = font_h
-        .get_or_insert_with(|| {
-            fonts.add(Font::try_from_bytes(FONT.to_vec()).expect("caption font"))
-        })
-        .clone();
+    let Ok(cam) = cam_q.single() else { return };
+    let font = font_h.get_or_insert_with(|| {
+        fonts.add(Font::try_from_bytes(FONT.to_vec()).expect("caption font"))
+    }).clone();
+
     for c in &caps.0 {
-        let mut entity = commands.spawn((
+        // Build node: flex-centred full-width or left-anchored at fx
+        let node = if c.center {
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Percent(0.0),
+                right: Val::Percent(0.0),
+                top: Val::Percent(c.fy * 100.0),
+                display: Display::Flex,
+                justify_content: JustifyContent::Center,
+                ..default()
+            }
+        } else {
             Node {
                 position_type: PositionType::Absolute,
                 left: Val::Percent(c.fx * 100.0),
                 top: Val::Percent(c.fy * 100.0),
                 ..default()
-            },
-            GlobalZIndex(500), // under the loader (1000), over the splat render
-            UiTargetCamera(cam), // composite into the splat camera → records headless
-        ));
+            }
+        };
+
+        let mut entity = commands.spawn((node, GlobalZIndex(500), UiTargetCamera(cam)));
+
         if c.scroll != 0.0 {
             entity.insert(CaptionScroll {
                 fy_pct: c.fy * 100.0,
@@ -161,29 +172,22 @@ fn spawn_captions(
                 appear: c.appear,
             });
         }
+
         entity.with_children(|p| {
-                p.spawn((
-                    Text::new(c.text.clone()),
-                    TextFont {
-                        font: font.clone(),
-                        font_size: c.size,
-                        ..default()
-                    },
-                    TextColor(Color::srgba(0.96, 0.96, 1.0, 0.0)), // starts invisible; animate fades in
-                    CaptionTag {
-                        appear: c.appear,
-                        out: c.out,
-                        fade: c.fade,
-                    },
-                ));
-            });
+            p.spawn((
+                Text::new(c.text.clone()),
+                TextFont { font: font.clone(), font_size: c.size, ..default() },
+                TextColor(Color::srgba(0.96, 0.96, 1.0, 0.0)),
+                CaptionTag { appear: c.appear, out: c.out, fade: c.fade },
+            ));
+        });
     }
     *done = true;
 }
 
-/// Ramp each caption's alpha from the show clock: smooth in over `fade` from `appear`, hold, smooth
-/// out over `fade` ending `fade` after `out`. Pure function of `SeqClock.t` → deterministic (records
-/// + seeks identically), the same in/out shape the compose stage uses.
+// ── animate ────────────────────────────────────────────────────────────────
+
+/// Ramp caption alpha from the show clock.
 fn animate_captions(clock: Res<SeqClock>, mut q: Query<(&CaptionTag, &mut TextColor)>) {
     let t = clock.t;
     for (c, mut col) in &mut q {
@@ -193,8 +197,7 @@ fn animate_captions(clock: Res<SeqClock>, mut q: Query<(&CaptionTag, &mut TextCo
     }
 }
 
-/// Drift a caption's Y position upward from its base `fy` at `scroll` speed. The offset starts
-/// at `appear` so the text scrolls in from below (fy ≥ 1.0) or scrolls away upward.
+/// Scroll caption Y position upward from base fy.
 fn scroll_captions(clock: Res<SeqClock>, mut q: Query<(&CaptionScroll, &mut Node)>) {
     let t = clock.t;
     for (s, mut node) in &mut q {
@@ -203,7 +206,8 @@ fn scroll_captions(clock: Res<SeqClock>, mut q: Query<(&CaptionScroll, &mut Node
     }
 }
 
-/// The screen-anchored caption layer. Resource is inserted by `main` (it needs the parsed score).
+// ── plugin ─────────────────────────────────────────────────────────────────
+
 pub(crate) struct CaptionPlugin;
 
 impl Plugin for CaptionPlugin {

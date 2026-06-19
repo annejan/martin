@@ -95,9 +95,9 @@ t=@@outro      flash=0.35  bg_dim=0.55  beat=1.2   exposure=1.1  bg=fractal
 t=@@bar:125    flash=0.0   bg_dim=0.10  beat=0.5   exposure=0.8
 
 [caption]
-# Static header — sits at top while credits roll underneath
-screentext:SCENE & CAMP          in @@outro out @@bar:128   at 0.5,0.10  size 30  fade 1.0
-# Scrolling credits — each starts below-screen at fy=1.2, drifts up, finishes before the outro wraps
-screentext:a deFEEST production  in @@outro        out @@bar:124  at 0.5,1.2  size 26  scroll 0.05  fade 1.0
-screentext:PonyCamp 2026          in @@outro+1bar   out @@bar:124  at 0.5,1.2  size 26  scroll 0.05  fade 1.0
-screentext:BEDANKT                in @@outro+2bar   out @@bar:124  at 0.5,1.2  size 26  scroll 0.05  fade 1.0
+# Static header — sits centred at top while credits roll underneath
+screentext:SCENE & CAMP          in @@outro out @@bar:128   at 0,0.10  center  size 32  fade 1.0
+# Scrolling credits — each starts below-screen (fy=1.2), scrolls upward centred
+screentext:a deFEEST production  in @@outro        out @@bar:124  at 0,1.2  center  size 26  scroll 0.05  fade 1.0
+screentext:PonyCamp 2026          in @@outro+1bar   out @@bar:124  at 0,1.2  center  size 26  scroll 0.05  fade 1.0
+screentext:BEDANKT                in @@outro+2bar   out @@bar:124  at 0,1.2  center  size 26  scroll 0.05  fade 1.0
