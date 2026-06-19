@@ -36,7 +36,24 @@ Current productions:
 - **cities** (`kind = demo`) — the smooth multi-city **morph tour**: one city disperses to a fuzzy
   sphere and reassembles as the next (the deFEEST ball-pulse signature applied to skylines). The morph
   *is* the transition. Currently **austin ⇄ nyc**; chicago/seattle drop into the `[reel]` once their
-  splats are baked. Same gitignored-capture / ©Google constraints as above.
+  splats are baked. Same gitignored-capture / ©Google constraints as above. Also here: **cities-defeest**
+  (the shareable causal loop — city tour balls into a bitterbal → the deFEEST logo → back) and **city-bite**.
+- **born2defeest** (`kind = demo`) — the **original hardstyle BornHack 2026 demo** (~220 s, 145 BPM): a
+  full 6-scene `[reel]` arc (deFEEST logo → host-camp build + ægg hatch → party drop → "Wij zijn deFEEST"
+  breakdown → climax → credits/fade) with its own `score.txt` and full `[camera]`/`[sync]`/`[caption]`
+  tracks. Exercises nearly every engine feature (`glb:`/`svg:`/`splat:`/`mesh: flock:`/`text:`/`wall:`,
+  all `~entrances` + `^deforms` + per-shot `backdrop:`).
+- **parade** (`kind = demo`) — character-parade: the whole deFEEST cast struts past as ONE colour-matched
+  morphing cloud (doggo→martin→LUIGI→train→truck→peace-sign) → balls into a bitterbal → resolves to the logo.
+- **bitterbal** (`kind = demo`) — bitterbal showcases: **zwerm** (26-ball lissajous swarm), **wereld**
+  ("de wereld is een bitterbal"), **cosmic-snack**, **lissajous-galaxy**, **alles** (the big multi-scene
+  reel+stage demo).
+- **credits** / **defeest** — the credits roll (`[compose]` layout) and the deFEEST title-build.
+
+> **Composing a scene visually?** Pose a production's `[stage]`/`[compose]` props (and camera) in
+> **Blender** and round-trip them back into the `.show` with `pipeline/blender_bridge.py` — see the
+> "Blender ↔ martin bridge" section in [`AGENTS.md`](../AGENTS.md). (Programmatic `[reel]`/`path:`/
+> `travel:` content isn't poseable; load one reel frame as a `backdrop=` to pose stage props over it.)
 
 Future candidates: kantoor, supermarkt, koffieshop, …
 

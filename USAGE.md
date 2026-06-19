@@ -487,10 +487,27 @@ up by eye. `glb:` sidesteps it entirely by sampling the gaussians **from the ren
 (normalizing the gaussians and placing the mesh on the identical `(centroid, scale)`), so they're
 coincident *by construction* — no rotation/scale/mirror knobs.
 
+### Composing a scene visually (Blender ↔ martin bridge)
+
+Pose a show's `[stage]`/`[compose]` props **and** the camera in Blender's viewport, then read them
+straight back into the `.show` — `pipeline/blender_bridge.py`, driven over the `blender-mcp` MCP server
+(`uvx blender-mcp` + the Blender add-on; `blender` is symlinked to `blender-5.1`). In Blender:
+```python
+exec(open('/home/annejan/Projects/martin/pipeline/blender_bridge.py').read())
+bridge_import('productions/camping/campsite.show', cam_anchor='climax')  # spawn [stage] + set the camera
+# …drag / rotate / scale props, orbit the camera (camera-lock is ON)…
+bridge_export('productions/camping/campsite.show')   # patch @pos/*scale/rot back (all other tokens kept)
+bridge_shot('/tmp/x.png')                            # save a shot to deliver (DISPLAY=:0 xdg-open it)
+```
+Position · rotation · scale · camera round-trip **1:1** with martin (calibrated maps; full reference in
+the script docstring + the "Blender ↔ martin bridge" section of `AGENTS.md`). Poseable = `[stage]`/
+`[compose]` props; programmatic `[reel]`/`path:`/`travel:` content is temporal (load one reel frame as a
+`backdrop=` city to pose stage props over it).
+
 ### Authoring / editing the mesh assets (Blender)
 
-Edit the 3D objects (the deFEEST logo, the Ægg board, …) in **Blender 5.0** (`/usr/bin/blender-5.0`
-— installed, all-AMD friendly). **glTF is the canonical format** both ways: Blender imports + exports
+Edit the 3D objects (the deFEEST logo, the Ægg board, …) in **Blender** (`blender` → `blender-5.1`,
+all-AMD friendly). **glTF is the canonical format** both ways: Blender imports + exports
 it natively (materials/PBR included) and martin loads `.glb` directly, so there's no lossy hop.
 
 Workflow:
