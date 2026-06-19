@@ -210,6 +210,7 @@ struct SubAtmo {
     atmo_start: usize,
     atmo_a: f32,
     atmo_ah: f32,
+    section: usize, // cached section index, re-resolved on boundary
 }
 
 impl SubAtmo {
@@ -220,12 +221,27 @@ impl SubAtmo {
         let fade = (1.5 * sr) as usize;
         for i in f0..f1 {
             let t = i as f32 * dt;
-            self.sub_hz += (sub_freq(score.chord_at(t).root) - self.sub_hz) * glide;
+            // cache section index — avoids linear scan per sample
+            let si = if self.section == usize::MAX {
+                let si = score.section_index_at(t);
+                self.section = si;
+                si
+            } else {
+                let s = &score.sections[self.section];
+                if t >= (s.start_bar + s.bars) as f32 * score.bar() {
+                    let si = score.section_index_at(t);
+                    self.section = si;
+                    si
+                } else {
+                    self.section
+                }
+            };
+            self.sub_hz += (sub_freq(score.chord_root_at(t, si)) - self.sub_hz) * glide;
             self.phase = (self.phase + TAU * self.sub_hz * dt) % TAU;
             let s = (self.phase.sin()
                 + (self.phase * 2.0).sin() * 0.42
                 + (self.phase * 3.0).sin() * 0.16)
-                * (0.14 + score.param("sub", 0.46) * score.levels(t).sub_bass);
+                * (0.14 + score.param("sub", 0.46) * score.levels_cached(t, si).sub_bass);
             bed[2 * i] += s;
             bed[2 * i + 1] += s;
             if amt > 0.0 && i >= self.atmo_start {
@@ -269,6 +285,7 @@ struct MasterChain {
     widen: f32,
     makeup: f32,
     ceiling: f32,
+    section: usize, // cached section index, re-resolved on boundary
 }
 
 impl MasterChain {
@@ -296,6 +313,7 @@ impl MasterChain {
             widen: score.param("widen", 1.55),
             makeup: score.param("makeup", 1.18),
             ceiling: score.param("ceiling", 0.93),
+            section: usize::MAX,
         }
     }
 
@@ -317,6 +335,22 @@ impl MasterChain {
         let demo = score.demo_len();
         let haas_d = self.haas_buf.len();
         for i in f0..f1 {
+            let t = i as f32 * dt;
+            // cache section index — avoids linear scan per sample
+            let si = if self.section == usize::MAX {
+                let si = score.section_index_at(t);
+                self.section = si;
+                si
+            } else {
+                let s = &score.sections[self.section];
+                if t >= (s.start_bar + s.bars) as f32 * score.bar() {
+                    let si = score.section_index_at(t);
+                    self.section = si;
+                    si
+                } else {
+                    self.section
+                }
+            };
             let m = 0.5 * (bed[2 * i] + bed[2 * i + 1]);
             self.hp += self.hp_a * (m - self.hp);
             let h = m - self.hp;
@@ -331,10 +365,9 @@ impl MasterChain {
             self.haas_filled = self.haas_filled.saturating_add(1);
             bed[2 * i + 1] += delayed * 0.25;
 
-            let t = i as f32 * dt;
             let fade_in = (t / 1.5).clamp(0.0, 1.0);
             let fade_out = ((demo - t) / 0.025).clamp(0.0, 1.0);
-            let g = fade_in * fade_out * score.gain_at(t);
+            let g = fade_in * fade_out * score.gain_at_cached(t, si);
             let mut lo = [0.0f32; 2];
             let mut hi = [0.0f32; 2];
             for c in 0..2 {
@@ -432,6 +465,7 @@ pub(crate) fn produce(score: &Score, mut sink: impl FnMut(&[f32])) {
     let mut arp_buf = vec![0f32; stereo];
     let mut wet = vec![0f32; stereo];
     let mut out = vec![0f32; stereo];
+    let mut dry = Vec::new(); // scratch for echo capture, reused per segment
 
     let beat = score.beat();
     let mut pp_echo = PingPong::new(beat * 0.75, 0.34, 0.55);
@@ -445,6 +479,7 @@ pub(crate) fn produce(score: &Score, mut sink: impl FnMut(&[f32])) {
         atmo_start: (section_time(score, "build").unwrap_or(0.0) * sr) as usize,
         atmo_a: 1.0 - (-std::f32::consts::TAU * 2000.0 / sr).exp(),
         atmo_ah: 1.0 - (-std::f32::consts::TAU * 350.0 / sr).exp(),
+        section: usize::MAX,
     };
     let atmo_amt = score.param("atmosphere", 1.0);
     let mut master = MasterChain::new(score, sr);
@@ -472,7 +507,8 @@ pub(crate) fn produce(score: &Score, mut sink: impl FnMut(&[f32])) {
         }
         // 2. resumable finishers over [f0, f1)
         sub_atmo.process(&mut bed, score, f0, f1, sr, atmo_amt);
-        let dry = echo_buf[2 * f0..2 * f1].to_vec(); // capture before pingpong → wet = after - dry
+        dry.clear();
+        dry.extend_from_slice(&echo_buf[2 * f0..2 * f1]); // capture before pingpong → wet = after - dry
         pp_echo.process(&mut echo_buf, f0, f1);
         for (k, i) in (f0..f1).enumerate() {
             bed[2 * i] += echo_buf[2 * i] - dry[2 * k];

@@ -119,7 +119,7 @@ impl Score {
     }
 
     // --- sections -----------------------------------------------------------------------------
-    fn section_index_at(&self, t: f32) -> usize {
+    pub(crate) fn section_index_at(&self, t: f32) -> usize {
         let b = self.bar_idx_at(t);
         let mut idx = 0;
         for (i, s) in self.sections.iter().enumerate() {
@@ -167,6 +167,17 @@ impl Score {
             return s.chords[(bar - s.start_bar as usize) % s.chords.len()];
         }
         self.chords[bar % self.chords.len()]
+    }
+
+    /// Chord root at `t` using a PRE-RESOLVED section index (avoids linear scan).
+    pub(crate) fn chord_root_at(&self, t: f32, si: usize) -> f32 {
+        let bar = self.bar_idx_at(t) as usize;
+        let s = &self.sections[si];
+        if !s.chords.is_empty() {
+            s.chords[(bar - s.start_bar as usize) % s.chords.len()].root
+        } else {
+            self.chords[bar % self.chords.len()].root
+        }
     }
 
     fn note_grid(&self, t: f32, pick: fn(&Section) -> &NoteLane) -> [Option<f32>; 16] {
@@ -228,9 +239,19 @@ impl Score {
     // --- dynamics -----------------------------------------------------------------------------
     fn section_value<F: Fn(&Section) -> Ramp>(&self, t: f32, pick: &F) -> f32 {
         let i = self.section_index_at(t);
-        let s = &self.sections[i];
+        self.section_value_at(i, t, pick)
+    }
+
+    /// Like `section_value` but uses a pre-resolved section index (avoids linear scan).
+    pub(crate) fn section_value_at<F: Fn(&Section) -> Ramp>(
+        &self,
+        si: usize,
+        t: f32,
+        pick: &F,
+    ) -> f32 {
+        let s = &self.sections[si];
         let dur = (s.bars as f32 * self.bar()).max(1e-3);
-        let p = ((t - self.section_start_secs(i)) / dur).clamp(0.0, 1.0);
+        let p = ((t - self.section_start_secs(si)) / dur).clamp(0.0, 1.0);
         pick(s).at(p)
     }
 
@@ -246,9 +267,27 @@ impl Score {
         }
     }
 
+    /// Like `smooth` but uses a pre-resolved section index (avoids linear scan).
+    pub(crate) fn smooth_at<F: Fn(&Section) -> Ramp>(&self, t: f32, si: usize, pick: F) -> f32 {
+        let b = self.section_start_secs(si);
+        let cur = self.section_value_at(si, t, &pick);
+        if b > 0.0 && t - b < SECTION_FADE {
+            let prev_si = self.section_index_at(b - 1e-3);
+            let prev = self.section_value_at(prev_si, b - 1e-3, &pick);
+            prev + (cur - prev) * ((t - b) / SECTION_FADE)
+        } else {
+            cur
+        }
+    }
+
     /// Master gain (per-section, crossfaded) the synth multiplies the mix by.
     pub fn gain_at(&self, t: f32) -> f32 {
         self.smooth(t, |s| s.gain)
+    }
+
+    /// Like `gain_at` but uses a pre-resolved section index (avoids linear scan).
+    pub(crate) fn gain_at_cached(&self, t: f32, si: usize) -> f32 {
+        self.smooth_at(t, si, |s| s.gain)
     }
 
     /// Sub-bass + mids levels: the per-section depth (crossfaded) under a slow LFO breath/swell.
@@ -259,6 +298,17 @@ impl Score {
         Levels {
             sub_bass: (breath * self.smooth(t, |s| s.sub)).clamp(0.0, 1.0),
             mids: (swell * self.smooth(t, |s| s.mids)).clamp(0.0, 1.0),
+        }
+    }
+
+    /// Like `levels` but uses a pre-resolved section index (avoids linear scan).
+    pub(crate) fn levels_cached(&self, t: f32, si: usize) -> Levels {
+        use std::f32::consts::TAU;
+        let breath = (t / (2.0 * self.beat()) * TAU).sin() * 0.5 + 0.5;
+        let swell = (t / (8.0 * self.beat()) * TAU).sin() * 0.5 + 0.5;
+        Levels {
+            sub_bass: (breath * self.smooth_at(t, si, |s| s.sub)).clamp(0.0, 1.0),
+            mids: (swell * self.smooth_at(t, si, |s| s.mids)).clamp(0.0, 1.0),
         }
     }
 
