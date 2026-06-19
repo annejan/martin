@@ -61,11 +61,7 @@ mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   rot 0,200,0  sway 0,5,0  bob 0.05  ^
 splat:doggo.ply     @0.9,-1.181,1.5  *0.5   sway 0,7,0  bob 0.04  travel:1.8,-1.0,1.2@climax,14  ~fade  in climax
 text:PonyCamp 2026  @1.4,1.5,1.0   *0.5   ~pen-write  tint:brand  bob 0.06  in climax
 
-# ── CREDITS: classic movie scroll ──
-text:a deFEEST production     @0,-1.5,0.5  *0.40  drift 0,0.08,0  ~fade  in outro  tint:brand
-text:SCENE & CAMP              @0,-2.4,0.5  *0.40  drift 0,0.08,0  ~fade  in outro  tint:brand
-text:PonyCamp 2026             @0,-3.3,0.5  *0.40  drift 0,0.08,0  ~fade  in outro  tint:brand
-text:BEDANKT                   @0,-4.2,0.5  *0.40  drift 0,0.08,0  ~fade  in outro  tint:brand
+# ── CREDITS: Bevy UI scrolling captions (see [caption] below) ──
 
 [camera]
 t=@@intro      pos=1.3,0.25,0.3    dist=9.5   yaw=1.00   pitch=0.16
@@ -99,4 +95,9 @@ t=@@outro      flash=0.35  bg_dim=0.55  beat=1.2   exposure=1.1  bg=fractal
 t=@@bar:125    flash=0.0   bg_dim=0.10  beat=0.5   exposure=0.8
 
 [caption]
-screentext:SCENE & CAMP         in @@outro out @@bar:125   at 0.5,0.10  size 30  fade 1.0
+# Static header — sits at top while credits roll underneath
+screentext:SCENE & CAMP          in @@outro out @@bar:128   at 0.5,0.10  size 30  fade 1.0
+# Scrolling credits — each starts below-screen at fy=1.2, drifts up, finishes before the outro wraps
+screentext:a deFEEST production  in @@outro        out @@bar:124  at 0.5,1.2  size 26  scroll 0.05  fade 1.0
+screentext:PonyCamp 2026          in @@outro+1bar   out @@bar:124  at 0.5,1.2  size 26  scroll 0.05  fade 1.0
+screentext:BEDANKT                in @@outro+2bar   out @@bar:124  at 0.5,1.2  size 26  scroll 0.05  fade 1.0

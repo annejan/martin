@@ -30,8 +30,9 @@ pub struct CaptionSpec {
     out: f32,    // fade-out start (s); f32::MAX = stays to the end
     fade: f32,   // fade in/out duration (s)
     fx: f32,     // screen x fraction (0..1) of the text's top-left
-    fy: f32,     // screen y fraction (0..1)
+    fy: f32,     // screen y fraction (0..1); can be >1 or <0 with scroll
     size: f32,   // font size (px)
+    scroll: f32, // upward scroll speed (fraction of screen / s); 0 = static
 }
 
 /// The parsed `[caption]` track (inserted from main once the score exists).
@@ -46,10 +47,18 @@ struct CaptionTag {
     fade: f32,
 }
 
+/// Carried on the parent Node when a caption scrolls — drives its Y position from the show clock.
+#[derive(Component)]
+struct CaptionScroll {
+    fy_pct: f32, // base screen-y as percentage (0–100)
+    speed: f32,  // percentage-points per second, positive = upward
+    appear: f32,
+}
+
 /// Parse the `[caption]` lines (raw, comment-stripped) into specs. Forgiving: warn + skip a bad line.
-/// Grammar: `screentext:<text…>  [in <anchor>] [out <anchor>] [at fx,fy] [size px] [fade s]`.
+/// Grammar: `screentext:<text…>  [in <anchor>] [out <anchor>] [at fx,fy] [size px] [fade s] [scroll s]`.
 pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
-    let is_kw = |t: &str| matches!(t, "in" | "out" | "at" | "size" | "fade");
+    let is_kw = |t: &str| matches!(t, "in" | "out" | "at" | "size" | "fade" | "scroll");
     let mut out = Vec::new();
     for raw in lines {
         let line = raw.split('#').next().unwrap_or("").trim();
@@ -72,8 +81,8 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
             text.push_str(toks[i]);
             i += 1;
         }
-        let (mut appear, mut out_t, mut fade, mut fx, mut fy, mut size) =
-            (0.0_f32, f32::MAX, 0.6_f32, 0.5_f32, 0.1_f32, 56.0_f32);
+        let (mut appear, mut out_t, mut fade, mut fx, mut fy, mut size, mut scroll) =
+            (0.0_f32, f32::MAX, 0.6_f32, 0.5_f32, 0.1_f32, 56.0_f32, 0.0_f32);
         while i < toks.len() {
             let val = toks.get(i + 1).copied().unwrap_or("");
             match toks[i] {
@@ -88,11 +97,12 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
                         fx = a.clamp(0.0, 1.0);
                     }
                     if let Some(b) = n.get(1) {
-                        fy = b.clamp(0.0, 1.0);
+                        fy = *b; // allow >1 (below-screen) for credit scroll
                     }
                 }
                 "size" => size = val.parse().unwrap_or(56.0),
                 "fade" => fade = val.parse().unwrap_or(0.6),
+                "scroll" => scroll = val.parse().unwrap_or(0.0),
                 _ => {}
             }
             i += 2;
@@ -108,6 +118,7 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
             fx,
             fy,
             size,
+            scroll,
         });
     }
     out
@@ -133,18 +144,24 @@ fn spawn_captions(
         })
         .clone();
     for c in &caps.0 {
-        commands
-            .spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Percent(c.fx * 100.0),
-                    top: Val::Percent(c.fy * 100.0),
-                    ..default()
-                },
-                GlobalZIndex(500), // under the loader (1000), over the splat render
-                UiTargetCamera(cam), // composite into the splat camera → records headless
-            ))
-            .with_children(|p| {
+        let mut entity = commands.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Percent(c.fx * 100.0),
+                top: Val::Percent(c.fy * 100.0),
+                ..default()
+            },
+            GlobalZIndex(500), // under the loader (1000), over the splat render
+            UiTargetCamera(cam), // composite into the splat camera → records headless
+        ));
+        if c.scroll != 0.0 {
+            entity.insert(CaptionScroll {
+                fy_pct: c.fy * 100.0,
+                speed: c.scroll * 100.0,
+                appear: c.appear,
+            });
+        }
+        entity.with_children(|p| {
                 p.spawn((
                     Text::new(c.text.clone()),
                     TextFont {
@@ -176,11 +193,21 @@ fn animate_captions(clock: Res<SeqClock>, mut q: Query<(&CaptionTag, &mut TextCo
     }
 }
 
+/// Drift a caption's Y position upward from its base `fy` at `scroll` speed. The offset starts
+/// at `appear` so the text scrolls in from below (fy ≥ 1.0) or scrolls away upward.
+fn scroll_captions(clock: Res<SeqClock>, mut q: Query<(&CaptionScroll, &mut Node)>) {
+    let t = clock.t;
+    for (s, mut node) in &mut q {
+        let elapsed = (t - s.appear).max(0.0);
+        node.top = Val::Percent(s.fy_pct - s.speed * elapsed);
+    }
+}
+
 /// The screen-anchored caption layer. Resource is inserted by `main` (it needs the parsed score).
 pub(crate) struct CaptionPlugin;
 
 impl Plugin for CaptionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (spawn_captions, animate_captions));
+        app.add_systems(Update, (spawn_captions, animate_captions, scroll_captions));
     }
 }
