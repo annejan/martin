@@ -11,6 +11,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Engine
+- **Smoother textured splats**: glTF `baseColorTexture` sampling in the mesh→gaussian path is now
+  **bilinear** (was nearest-texel) — textured `mesh:` objects read the texture smoothly between texels
+  instead of stepping, so they no longer look blocky/low-res. (Trilinear/mipmaps would only help under
+  heavy *minification* — when the texture out-resolves the splats — which dense splat clouds avoid;
+  skipped as diminished returns.) Pair with a higher `budget` for crisp hero objects.
 - **Reel parts can sit on a surface**: a new `ground:<y>` part token seats a part's **lowest splat at
   world-Y `<y>`** (e.g. on a `[stage]` plate) instead of centring it on the origin — shape-independent,
   so a tall animal and a flat dish both rest on the same plate; omit it to let a part float. Computed in

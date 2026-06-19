@@ -330,36 +330,54 @@ fn sample_tex(img: &image::RgbaImage, u: f32, v: f32) -> [f32; 3] {
 /// MARTIN_MESH_RGB. Single source of truth for the .obj/.dae and glTF paths.
 pub const MESH_FALLBACK_RGB: [f32; 3] = [0.80, 0.85, 0.95];
 
-/// Sample a decoded glTF `baseColorTexture` at UV `(u,v)` → an RGB triple (0..1). Nearest-texel, UV
+/// Sample a decoded glTF `baseColorTexture` at UV `(u,v)` → an RGB triple (0..1). **Bilinear**, UV
 /// wrapped to [0,1) (glTF tiling default), V measured from the top. Fed raw (the splat DC encodes the
 /// value directly, like the flat baseColorFactor path), so a textured mesh keeps its painted colour.
+/// Bilinear (vs nearest) is the difference between blocky, low-res-looking splats and a smooth read of
+/// the texture between texels — the same texture detail no longer steps from one sample to the next.
 /// 16/32-bit texture formats (rare for a base-colour map) fall back to the pale default.
 fn sample_texture(img: &gltf::image::Data, u: f32, v: f32) -> [f32; 3] {
     use gltf::image::Format;
     let w = (img.width as usize).max(1);
     let h = (img.height as usize).max(1);
-    let x = (((u - u.floor()) * w as f32) as usize).min(w - 1);
-    let y = (((v - v.floor()) * h as f32) as usize).min(h - 1);
+    let stride = match img.format {
+        Format::R8G8B8 => 3,
+        Format::R8G8B8A8 => 4,
+        Format::R8G8 => 2,
+        Format::R8 => 1,
+        _ => return MESH_FALLBACK_RGB, // 16/32-bit base-colour maps are rare; safe fallback
+    };
+    let gray = stride <= 2;
     let px = &img.pixels;
-    let rgb3 = |stride: usize| {
+    let texel = |x: usize, y: usize| -> [f32; 3] {
         let i = (y * w + x) * stride;
-        [
-            *px.get(i).unwrap_or(&204) as f32 / 255.0,
-            *px.get(i + 1).unwrap_or(&204) as f32 / 255.0,
-            *px.get(i + 2).unwrap_or(&204) as f32 / 255.0,
-        ]
+        let r = *px.get(i).unwrap_or(&204) as f32 / 255.0;
+        if gray {
+            [r, r, r]
+        } else {
+            [
+                r,
+                *px.get(i + 1).unwrap_or(&204) as f32 / 255.0,
+                *px.get(i + 2).unwrap_or(&204) as f32 / 255.0,
+            ]
+        }
     };
-    let gray = |stride: usize| {
-        let g = *px.get((y * w + x) * stride).unwrap_or(&204) as f32 / 255.0;
-        [g, g, g]
-    };
-    match img.format {
-        Format::R8G8B8 => rgb3(3),
-        Format::R8G8B8A8 => rgb3(4),
-        Format::R8G8 => gray(2),
-        Format::R8 => gray(1),
-        _ => MESH_FALLBACK_RGB, // 16/32-bit base-colour maps are rare; safe fallback
+    // texel-space sample point (−0.5 centres the texel grid), wrapped for tiling.
+    let fx = (u - u.floor()) * w as f32 - 0.5;
+    let fy = (v - v.floor()) * h as f32 - 0.5;
+    let (x0, y0) = (fx.floor(), fy.floor());
+    let (tx, ty) = (fx - x0, fy - y0);
+    let wrap = |i: i64, n: usize| -> usize { (((i % n as i64) + n as i64) % n as i64) as usize };
+    let (x0, x1) = (wrap(x0 as i64, w), wrap(x0 as i64 + 1, w));
+    let (y0, y1) = (wrap(y0 as i64, h), wrap(y0 as i64 + 1, h));
+    let (c00, c10, c01, c11) = (texel(x0, y0), texel(x1, y0), texel(x0, y1), texel(x1, y1));
+    let mut out = [0.0f32; 3];
+    for k in 0..3 {
+        let top = c00[k] * (1.0 - tx) + c10[k] * tx;
+        let bot = c01[k] * (1.0 - tx) + c11[k] * tx;
+        out[k] = top * (1.0 - ty) + bot * ty;
     }
+    out
 }
 
 fn build_gltf_gaussians(

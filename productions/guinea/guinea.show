@@ -4,7 +4,8 @@
 kind         = demo
 score        = productions/guinea/score.txt
 ply          = assets/sphere.ply
-budget       = 120000
+budget       = 400000   # dense — single hero objects held close, so spend on detail (more splats →
+                        # smaller disks → crisper); chunked match_reorder keeps the morph build fast
 bg           = stars
 bg_dim       = 0.5
 beat         = 0.5
