@@ -650,13 +650,18 @@ pub(crate) fn animate_composition(
     for (a, mut tf, cs) in &mut q {
         // spin = continuous rotation; sway = a gentle oscillation around the base orientation
         // (swings a hollow-back single-image splat left/right without ever facing away).
+        // Skip the trig when both are zero (static props — the common case).
         tf.rotation = a.base_rot
-            * Quat::from_euler(
-                EulerRot::XYZ,
-                a.spin.x * t + a.sway.x * osc,
-                a.spin.y * t + a.sway.y * osc,
-                a.spin.z * t + a.sway.z * osc,
-            );
+            * if a.spin == Vec3::ZERO && a.sway == Vec3::ZERO {
+                Quat::IDENTITY
+            } else {
+                Quat::from_euler(
+                    EulerRot::XYZ,
+                    a.spin.x * t + a.sway.x * osc,
+                    a.spin.y * t + a.sway.y * osc,
+                    a.spin.z * t + a.sway.z * osc,
+                )
+            };
         let bob = if a.bob != 0.0 {
             a.bob * (t * 1.5).sin()
         } else {

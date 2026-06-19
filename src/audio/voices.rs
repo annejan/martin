@@ -92,8 +92,10 @@ pub(super) fn woozbass(freq: f32) -> Box<dyn AudioUnit> {
     let f_sub = lfo(move |t: f32| {
         freq * (1.0 + 0.006 * (t * 4.3 * TAU).sin() + 0.004 * (t * 0.6 * TAU).sin())
     });
-    let f_up = lfo(move |t: f32| freq * 1.007 * (1.0 + 0.006 * (t * 4.1 * TAU + 1.0).sin()));
-    let f_dn = lfo(move |t: f32| freq * 0.993 * (1.0 + 0.005 * (t * 3.7 * TAU + 2.0).sin()));
+    let fu = freq * 1.007;
+    let fd = freq * 0.993;
+    let f_up = lfo(move |t: f32| fu * (1.0 + 0.006 * (t * 4.1 * TAU + 1.0).sin()));
+    let f_dn = lfo(move |t: f32| fd * (1.0 + 0.005 * (t * 3.7 * TAU + 2.0).sin()));
     let oscs = (f_sub >> sine()) * 0.7 + (f_up >> saw()) * 0.45 + (f_dn >> saw()) * 0.45;
     // the developing growl: a resonant-LPF cutoff wobble whose depth eases in over ~0.4 s.
     let cut = lfo(move |t: f32| {
@@ -124,9 +126,10 @@ pub(super) fn lead(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
         // a gentle vibrato that SWELLS IN over the note — the lead leans into the note like a singer
         // instead of one static, ethereal tone. Each saw gets its own phase (lush, decorrelated).
         let vib = move |mult: f32, ph: f32| {
+            let fm = freq * mult;
             lfo(move |t: f32| {
                 let depth = 0.005 * (t * 1.4).min(1.0);
-                freq * mult * (1.0 + depth * (t * 5.0 * TAU + ph).sin())
+                fm * (1.0 + depth * (t * 5.0 * TAU + ph).sin())
             })
         };
         let saws = ((vib(1.0, 0.0) >> saw())
@@ -320,12 +323,14 @@ pub(super) fn supersaw_sw2(freq: f32) -> Box<dyn AudioUnit> {
         // each saw drifts slowly around its detune offset on its own (rate, depth, phase) so the
         // ensemble chorus never locks — that slow beating is the "analog" life of the pad.
         let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
-            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+            let mf = mult * freq;
+            lfo(move |t: f32| mf * (1.0 + depth * (t * rate * TAU + ph).sin()))
         };
         // string-machine PWM voice: a pulse whose DUTY slowly wobbles 0.32..0.68 → animated shimmer
         // that moves differently from the saw drift (a distinct second motion layer).
         let pwm = move |mult: f32, drate: f32, ddepth: f32, dph: f32, prate: f32, pph: f32| {
-            ((lfo(move |t: f32| mult * freq * (1.0 + ddepth * (t * drate * TAU + dph).sin())))
+            let mf = mult * freq;
+            ((lfo(move |t: f32| mf * (1.0 + ddepth * (t * drate * TAU + dph).sin())))
                 | (lfo(move |t: f32| 0.5 + 0.18 * (t * prate * TAU + pph).sin())))
                 >> pulse()
         };
@@ -371,7 +376,8 @@ pub(super) fn choir_sw2(freq: f32) -> Box<dyn AudioUnit> {
     use std::f32::consts::TAU;
     let mk = move || {
         let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
-            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+            let mf = mult * freq;
+            lfo(move |t: f32| mf * (1.0 + depth * (t * rate * TAU + ph).sin()))
         };
         let saws = (drift(1.000, 0.11, 0.0013, 0.0) >> saw())
             + (drift(1.005, 0.14, 0.0017, 1.9) >> saw())
@@ -415,7 +421,8 @@ pub(super) fn supersaw_sw3(freq: f32) -> Box<dyn AudioUnit> {
         // one PWM string voice: pitch drifts (drate/ddepth/dph) and duty sweeps (prate/pph), all
         // decorrelated so the ensemble keeps shimmering for the whole held chord.
         let pwm_saw = move |mult: f32, drate: f32, ddepth: f32, dph: f32, prate: f32, pph: f32| {
-            let f = lfo(move |t: f32| mult * freq * (1.0 + ddepth * (t * drate * TAU + dph).sin()));
+            let mf = mult * freq;
+            let f = lfo(move |t: f32| mf * (1.0 + ddepth * (t * drate * TAU + dph).sin()));
             let duty = lfo(move |t: f32| 0.5 + 0.42 * (t * prate * TAU + pph).sin());
             (f | duty) >> pulse()
         };
@@ -458,7 +465,8 @@ pub(super) fn choir_sw3(freq: f32) -> Box<dyn AudioUnit> {
     use std::f32::consts::TAU;
     let mk = move || {
         let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
-            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+            let mf = mult * freq;
+            lfo(move |t: f32| mf * (1.0 + depth * (t * rate * TAU + ph).sin()))
         };
         // one PWM string voice to share the wall's Solina shimmer down in the body.
         let pwm_body = {
@@ -504,7 +512,8 @@ pub(super) fn supersaw_sw4(freq: f32) -> Box<dyn AudioUnit> {
         // each saw drifts slowly around its detune offset (rate, depth, phase all different) so the
         // wall keeps shimmering for the whole held chord — wide detune for a fat cinematic spread.
         let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
-            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+            let mf = mult * freq;
+            lfo(move |t: f32| mf * (1.0 + depth * (t * rate * TAU + ph).sin()))
         };
         let saws = ((drift(1.000, 0.17, 0.0010, 0.0) >> saw())
             + (drift(1.007, 0.21, 0.0013, 1.1) >> saw())
@@ -549,7 +558,8 @@ pub(super) fn choir_sw4(freq: f32) -> Box<dyn AudioUnit> {
     use std::f32::consts::TAU;
     let mk = move || {
         let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
-            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+            let mf = mult * freq;
+            lfo(move |t: f32| mf * (1.0 + depth * (t * rate * TAU + ph).sin()))
         };
         let body = ((drift(1.000, 0.13, 0.0011, 0.0) >> saw())
             + (drift(1.006, 0.17, 0.0014, 1.7) >> saw())
@@ -595,9 +605,10 @@ pub(super) fn lead_sw(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
         // instead of one static tone. Slow (~5 Hz) + a touch deep so it reads wistful, not nervous.
         // Each oscillator gets its own phase (lush, decorrelated).
         let vib = move |mult: f32, ph: f32| {
+            let fm = freq * mult;
             lfo(move |t: f32| {
                 let depth = 0.006 * (t * 1.2).min(1.0);
-                freq * mult * (1.0 + depth * (t * 5.0 * TAU + ph).sin())
+                fm * (1.0 + depth * (t * 5.0 * TAU + ph).sin())
             })
         };
         // a sweet 3-saw core (unison + ±6 cents) — expressive detune, not a 5-saw smear. A sine at the
@@ -698,8 +709,9 @@ pub(super) fn bass_sw(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
 pub(super) fn woozbass_sw(freq: f32) -> Box<dyn AudioUnit> {
     use std::f32::consts::TAU;
     // a true sub an octave down for deep, dark weight — gently woozy so even the spine drifts.
+    let foct = freq * 0.5;
     let f_oct = lfo(move |t: f32| {
-        freq * 0.5 * (1.0 + 0.004 * (t * 3.5 * TAU).sin() + 0.003 * (t * 0.55 * TAU).sin())
+        foct * (1.0 + 0.004 * (t * 3.5 * TAU).sin() + 0.003 * (t * 0.55 * TAU).sin())
     });
     // independent vibrato + slow drift per oscillator → they never lock, so the pitch feels unstable.
     let f_sub = lfo(move |t: f32| {
@@ -747,7 +759,8 @@ pub(super) fn supersaw_sw(freq: f32) -> Box<dyn AudioUnit> {
         // each saw drifts slowly around its detune offset (rate, depth, phase all different) so the
         // chorus never locks — the wall keeps shimmering for the whole held chord.
         let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
-            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+            let mf = mult * freq;
+            lfo(move |t: f32| mf * (1.0 + depth * (t * rate * TAU + ph).sin()))
         };
         let saws = ((drift(1.000, 0.17, 0.0009, 0.0) >> saw())
             + (drift(1.006, 0.21, 0.0011, 1.1) >> saw())
@@ -783,7 +796,8 @@ pub(super) fn choir_sw(freq: f32) -> Box<dyn AudioUnit> {
     use std::f32::consts::TAU;
     let mk = move || {
         let drift = move |mult: f32, rate: f32, depth: f32, ph: f32| {
-            lfo(move |t: f32| mult * freq * (1.0 + depth * (t * rate * TAU + ph).sin()))
+            let mf = mult * freq;
+            lfo(move |t: f32| mf * (1.0 + depth * (t * rate * TAU + ph).sin()))
         };
         let saws = ((drift(1.000, 0.13, 0.0010, 0.0) >> saw())
             + (drift(1.004, 0.17, 0.0012, 1.7) >> saw())
@@ -850,9 +864,10 @@ pub(super) fn lead_sw2(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
     // an expressive vibrato that SWELLS IN — the voice leans into the note. Slow (~5.2 Hz) + a touch
     // deep so it reads sung and wistful, not a nervous trill. Each oscillator gets its own phase.
     let vib = move |mult: f32, ph: f32| {
+        let fm = freq * mult;
         lfo(move |t: f32| {
             let depth = 0.007 * (t * 0.9).min(1.0); // eases in over ~1.1 s like a held vocal note
-            freq * mult * (1.0 + depth * (t * 5.2 * TAU + ph).sin())
+            fm * (1.0 + depth * (t * 5.2 * TAU + ph).sin())
         })
     };
     // round, throat-y BODY: a sine at the fundamental + a triangle doubling it (triangle's quiet odd
@@ -902,9 +917,10 @@ pub(super) fn lead_sw3(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
         // each saw rides a slow detune LFO (own phase) — the WIDTH opens a touch over the note so the
         // brass wall keeps a living, aggressive beat instead of a static, frozen chord-of-one.
         let det = move |mult: f32, ph: f32| {
+            let fm = freq * mult;
             lfo(move |t: f32| {
                 let depth = 0.004 + 0.006 * (t * 0.9).min(1.0);
-                freq * mult * (1.0 + depth * (t * 6.2 * TAU + ph).sin())
+                fm * (1.0 + depth * (t * 6.2 * TAU + ph).sin())
             })
         };
         // HARD 5-saw stack (±1.1c / ±2.2c — a thick metal wall) + octave-up saw shimmer + a touch of
@@ -1073,7 +1089,8 @@ pub(super) fn bass_sw2(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
 pub(super) fn woozbass_sw2(freq: f32) -> Box<dyn AudioUnit> {
     use std::f32::consts::TAU;
     // octave-down sub spine with a barely-there slow drift — deep weight, gently alive.
-    let f_oct = lfo(move |t: f32| freq * 0.5 * (1.0 + 0.0015 * (t * 0.4 * TAU).sin()));
+    let foct = freq * 0.5;
+    let f_oct = lfo(move |t: f32| foct * (1.0 + 0.0015 * (t * 0.4 * TAU).sin()));
     // fundamental with its own slow drift (different rate/phase) so it shimmers, never wobbles.
     let f_fun = lfo(move |t: f32| freq * (1.0 + 0.0018 * (t * 0.33 * TAU + 1.0).sin()));
     let oscs = (f_oct >> sine()) * 1.0 + (f_fun >> sine()) * 0.4 + triangle_hz(freq) * 0.08;
@@ -1180,10 +1197,12 @@ pub(super) fn bass_sw3(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
 pub(super) fn woozbass_sw3(freq: f32) -> Box<dyn AudioUnit> {
     use std::f32::consts::TAU;
     // a true sub an octave down for deep weight — only barely woozy so the spine stays solid.
-    let f_oct = lfo(move |t: f32| freq * 0.5 * (1.0 + 0.003 * (t * 3.0 * TAU).sin()));
+    let foct = freq * 0.5;
+    let f_oct = lfo(move |t: f32| foct * (1.0 + 0.003 * (t * 3.0 * TAU).sin()));
     // independent vibrato per oscillator → they never lock, so the growl shimmers and feels unstable.
     let det = move |mult: f32, rate: f32, ph: f32| {
-        lfo(move |t: f32| freq * mult * (1.0 + 0.005 * (t * rate * TAU + ph).sin()))
+        let fm = freq * mult;
+        lfo(move |t: f32| fm * (1.0 + 0.005 * (t * rate * TAU + ph).sin()))
     };
     // the Reese: octave-down body + a wide detuned-saw pair + a square edge for darkwave teeth.
     let oscs = (f_oct >> sine()) * 0.85

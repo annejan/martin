@@ -4014,7 +4014,7 @@ dependencies = [
 
 [[package]]
 name = "martin"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "ab_glyph",
  "base64 0.22.1",

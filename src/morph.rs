@@ -157,11 +157,28 @@ pub fn match_reorder(
             .map(|c| c.clamp(0, res - 1))
     };
     let idx = |c: [i32; 3]| (c[0] * res * res + c[1] * res + c[2]) as usize;
-    // bucket every target index into its cell
-    let mut grid: Vec<Vec<u32>> = vec![Vec::new(); (res * res * res) as usize];
-    for (i, g) in target.iter().enumerate() {
-        grid[idx(cell_of(pos(g)))].push(i as u32);
+    let cells = (res * res * res) as usize;
+    // flat grid: count per cell → prefix-sum offsets → flat Vec (avoids Vec<Vec<u32>> overhead).
+    let mut counts = vec![0u32; cells];
+    for g in &target {
+        counts[idx(cell_of(pos(g)))] += 1;
     }
+    let mut offsets = vec![0u32; cells + 1];
+    let mut total = 0u32;
+    for (i, &c) in counts.iter().enumerate() {
+        offsets[i] = total;
+        total += c;
+    }
+    offsets[cells] = total;
+    let mut cursor = offsets[..cells].to_vec();
+    let mut flat = vec![0u32; total as usize];
+    for (i, g) in target.iter().enumerate() {
+        let ci = idx(cell_of(pos(g)));
+        flat[cursor[ci] as usize] = i as u32;
+        cursor[ci] += 1;
+    }
+    // reuse counts as mutable per-cell lengths for swap-remove
+    let mut lengths = counts;
     let cost = |pp: [f32; 3], pc: [f32; 3], t: &Gaussian3d| -> f32 {
         let tp = pos(t);
         let tc = col(t);
@@ -199,11 +216,15 @@ pub fn match_reorder(
                         let gi = idx([c[0], c[1], c[2]]);
                         // scan the cell, swap-removing already-consumed entries as we pass them (keeps
                         // cells small amortized, so a depleting grid doesn't re-scan dead indices).
-                        let mut j = 0;
-                        while j < grid[gi].len() {
-                            let ti = grid[gi][j];
+                        let start = offsets[gi] as usize;
+                        let mut j = 0u32;
+                        while j < lengths[gi] {
+                            let ti = flat[start + j as usize];
                             if used[ti as usize] {
-                                grid[gi].swap_remove(j);
+                                lengths[gi] -= 1;
+                                if j < lengths[gi] {
+                                    flat[start + j as usize] = flat[start + lengths[gi] as usize];
+                                }
                                 continue;
                             }
                             let co = cost(pp, pc, &target[ti as usize]);

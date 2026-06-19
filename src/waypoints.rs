@@ -158,7 +158,7 @@ pub fn save(list: &[Key], path: &str) -> std::io::Result<()> {
 /// lock it to a music section/bar/beat, just like a seq part; omit → an untimed marker), `pos` (the
 /// look-at `x,y,z`), `dist`, `yaw`, `pitch` (radians). Needs the score for the `@@` anchors.
 pub fn parse_camera(lines: &[String], score: &crate::score::Score) -> Vec<Key> {
-    lines
+    let mut keys: Vec<Key> = lines
         .iter()
         .filter_map(|line| {
             let s = line.split('#').next().unwrap_or("").trim();
@@ -195,7 +195,15 @@ pub fn parse_camera(lines: &[String], score: &crate::score::Score) -> Vec<Key> {
             }
             Some(w)
         })
-        .collect()
+        .collect();
+    // sort by resolved time so pose_at_time works even with out-of-order anchors;
+    // untimed keyframes (None) sort to the end.
+    keys.sort_by(|a, b| {
+        let at = a.t.unwrap_or(f32::MAX);
+        let bt = b.t.unwrap_or(f32::MAX);
+        at.partial_cmp(&bt).unwrap_or(std::cmp::Ordering::Less)
+    });
+    keys
 }
 
 /// `x,y,z` → `Vec3` (all three required).
