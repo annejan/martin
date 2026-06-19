@@ -110,7 +110,11 @@ Blender → read it back → write `[stage]`/`[camera]` → render. **Calibrated
   `color` attr, viewport `shading.type='MATERIAL'`. City point n shows at `blender = (nx, nz, -ny)`.
 - **Camera** (martin orbit = target+dist+yaw+pitch): from Blender cam world `P` and its look target `T`
   (both →martin): `dist=|P−T|`, `d=(P−T)/dist`, `yaw=atan2(d.z, d.x)`, `pitch=asin(d.y)`, `pos=T`. Give the
-  Blender cam a Track-To an empty at the city centroid so `T` is stable.
+  Blender cam a Track-To an empty at the city centroid so `T` is stable. **FOV (load-bearing):** martin uses
+  `FRAC_PI_4` (45°) **vertical** FOV (`camera.rs update_fov`, Bevy default; the `[sync] fov` knob scales it).
+  Blender's 50 mm default (~27° vertical) is far too narrow → set `cam.data.sensor_fit='VERTICAL'`,
+  `cam.data.angle=π/4`, render 16:9 — then framing (zoom + angle + positions) matches martin. VERIFIED:
+  3 colored cubes land green-left / blue-top / red-right in both Blender render and martin.
 - **Text orientation**: a Blender text placeholder needs just `rotation_euler=(90°,0,0)`, **positive scale,
   NO mirror** — it then lands in the world XY (z=0) plane exactly like martin builds `text:` (`text.rs`:
   +X right, +Y up, Y-down→base-flip), so Blender camera-view = martin. VERIFIED (hi-res Blender shot +
