@@ -1,103 +1,101 @@
 # martin — NIGHT CAMPSITE MAX EDITION
-# Same moonlit tableau, MAXED: denser camp, more motion, aggro camera, sync+exposure, captions.
+# Same moonlit tableau, MAXED: denser camp, Lissajous bitterballen,
+# scrolling credits, aggro camera, sync+exposure.
 #   MARTIN_SHOW=productions/camping/campsite-max.show cargo +nightly run --release
 #   MARTIN_SHOW=productions/camping/campsite-max.show ./record.sh campsite-max.mp4
 
 [settings]
 kind           = demo
 score          = productions/camping/score.txt
-budget         = 140000          # more splats for denser camp
-morph_count    = 15000           # finer prop detail
+budget         = 140000
+morph_count    = 15000
 bg             = aurora
 post           = chroma
-cam_pump       = 0.15            # more kick lunge
+cam_pump       = 0.15
 particles      = embers
-particle_count = 666             # roaring fire
+particle_count = 666
 particle_at    = @@drop
 particle_origin = 0,-0.3,0.3
 particle_spread = 1.8,1.0,1.8
 bg_dim         = 0.6
 
 [stage]
-# ── BACKDROP: distant ridge, moon, terrain, extra star layer ──
-splat:mountains.ply @0,-1.2,-12.0  *11,3,9   ~fade  in intro  count:14000  # distant ridge
-splat:moon.ply      @0.8,3.0,-50.0 *7.0      spin 0,3,0  drift 0.05,0.006,0  ~fade  in intro  count:5000   # moon
-splat:terrain.ply   @0,-1.5,-7     *13,4.5,11 ~fade  in intro  count:28000  # field
-splat:galaxy.ply    @0,2.8,-8.0    *6,1,6    alpha:0.08  drift 0.002,0,0  ~fade  in intro  count:6000   # faint nebula high in sky
-splat:star.ply      @2.5,2.5,-9    *0.3      alpha:0.4  drift 0.003,-0.001,0  ~fade  in intro  count:2000  # twinkling star right
-splat:star.ply      @-2.0,2.0,-10  *0.25     alpha:0.35 drift -0.002,0,0.001  ~fade  in intro  count:1500  # star left
-splat:star.ply      @3.0,1.5,-8    *0.2      alpha:0.3  bob 0.02  ~fade  in intro  count:1000   # star twinkle
+# ── BACKDROP: ridge, moon, field, faint nebula, a few stars ──
+splat:mountains.ply @0,-1.2,-12.0  *11,3,9   ~fade  in intro  count:14000
+splat:moon.ply      @0.8,3.0,-50.0 *7.0      spin 0,3,0  drift 0.05,0.006,0  ~fade  in intro  count:5000
+splat:terrain.ply   @0,-1.5,-7     *13,4.5,11 ~fade  in intro  count:28000
+splat:galaxy.ply    @0,2.8,-8.0    *6,1,6    alpha:0.08  drift 0.002,0,0  ~fade  in intro  count:6000
+splat:star.ply      @2.5,2.5,-9    *0.3      alpha:0.4  drift 0.003,-0.001,0  ~fade  in intro  count:2000
+splat:star.ply      @-2.0,2.0,-10  *0.25     alpha:0.35 drift -0.002,0,0.001  ~fade  in intro  count:1500
+splat:star.ply      @3.0,1.5,-8    *0.2      alpha:0.3  bob 0.02  ~fade  in intro  count:1000
 
-# ── CAMP STRUCTURES: tent, 2nd tent, campfire + ring ──
+# ── TENTS: pitched well clear of each other and the trees ──
 splat:tent.ply      @-2.8,-1.11,0.7  *0.85  sway 0,4,0   ~fade  in build  count:9000
-splat:tent.ply      @3.2,-1.08,0.9   *0.55  rot 0,30,0  sway 0,3,0  ~fade  in drop  count:5000   # 2nd tent stage right
-splat:flame.ply     @0.0,-0.44,0.3   *0.7   bob 0.08  ^turbulence:0.55  ~fade  in drop  count:3000  # campfire
-splat:torus.ply     @0.0,-0.50,0.3   *0.55  rot 0,15,0  alpha:0.25  bob 0.02  ~fade  in drop  count:2500  # fire ring
+splat:tent.ply      @4.0,-1.08,1.2   *0.55  rot 0,30,0  sway 0,3,0  ~fade  in drop  count:5000
 
-# ── GROVE: pines framing the camp, more trees for depth ──
+# ── CAMPFIRE: flame in the centre, embers fly ──
+splat:flame.ply     @0.0,-0.44,0.3   *0.7   bob 0.08  ^turbulence:0.55  ~fade  in drop  count:3000
+
+# ── GROVE: spaced wide, well clear of tents ──
 splat:pine.ply      @3.0,-0.31,0.5   *0.9   sway 0,8,0  bob 0.04   ~fade  in build  count:6000
 splat:pine.ply      @3.8,-0.56,-0.6  *0.7   sway 0,11,0  bob 0.03  ~fade  in build  count:6000
 splat:pine.ply      @1.7,-0.44,-1.7  *0.8   sway 0,5,0  bob 0.05   ~fade  in climax  count:6000
 splat:pine.ply      @-1.5,-0.38,-1.9 *0.85  sway 0,9,0  bob 0.04   ~fade  in climax  count:6000
 splat:pine.ply      @-3.5,-0.31,-0.9 *0.9   sway 0,7,0  bob 0.03   ~fade  in climax  count:6000
-splat:pine.ply      @-4.0,-0.48,1.2  *0.75  sway 0,6,0  bob 0.04   ~fade  in drop   count:5000  # far-left front, fills left third
+splat:pine.ply      @-4.0,-0.48,1.2  *0.75  sway 0,6,0  bob 0.04   ~fade  in drop   count:5000
 
-# ── SIGNAGE ──
+# ── WORDMARK ──
 text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build
 
-# ── STORY: horse walks in, party erupts with bitterballen + dog + beer, 2nd horse ──
+# ── STORY: horse walks in, party erupts with flying bitterballen ──
 mesh:paard.glb  @-9.0,-0.5,-4.5  *0.9  rot 0,180,0  travel:-2.2,-0.868,-4.5@breakdown,16  sway 0,4,0  bob 0.05  ^pulse:0.4  ~fade  in breakdown
 mesh:bier.glb       @1.6,-0.55,0.9  *0.45  alpha:0.16  bob 0.04  spin 0,45,0  ~fade  in climax
-mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  spin 19,37,13  bob 0.14  ^pulse:0.6  tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  spin 23,29,17  bob 0.16  ^pulse:0.6  tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  spin 31,13,41  bob 0.18  ^pulse:0.6  tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  spin 11,23,7   bob 0.12  ^pulse:0.5  tint:fry  ~fade  in climax  # 4th bitterbal, stage left
-mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  spin 17,43,29  bob 0.15  ^pulse:0.7  tint:fry  ~fade  in climax  # 5th bitterbal, right flank
+# ── 5 bitterballen met Lissajous-achtige drift + tumble ──
+mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  drift 0.04,0.02,0.03  bob 0.14  ^pulse:0.6  spin 19,37,13  tint:fry  ~fade  in climax
+mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  drift -0.03,0.03,-0.02  bob 0.16  ^pulse:0.6  spin 23,29,17  tint:fry  ~fade  in climax
+mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  drift 0.02,-0.02,0.04  bob 0.18  ^pulse:0.6  spin 31,13,41  tint:fry  ~fade  in climax
+mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  drift -0.05,0.04,-0.03 bob 0.12  ^pulse:0.5  spin 11,23,7  tint:fry  ~fade  in climax
+mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  drift 0.03,0.01,-0.04  bob 0.15  ^pulse:0.7  spin 17,43,29  tint:fry  ~fade  in climax
 mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   rot 0,200,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax
-splat:doggo.ply     @0.9,-1.181,1.5  *0.5   sway 0,7,0  bob 0.04  travel:2.0,-1.0,1.2@climax,14  ~fade  in climax  # dog wanders during climax!
+splat:doggo.ply     @0.9,-1.181,1.5  *0.5   sway 0,7,0  bob 0.04  travel:1.8,-1.0,1.2@climax,14  ~fade  in climax
 text:PonyCamp 2026  @1.4,1.5,1.0   *0.5   ~pen-write  tint:brand  bob 0.06  in climax
 
-# ── CREDITS: fade in during outro ──
-svg:claude.svg      @-1.2,-0.6,1.0  *0.35  ~fade  in outro             # AI co-pilot
-svg:ferris.svg      @1.2,-0.6,1.0   *0.35  ~fade  in outro             # Rust mascot
-text:SCENE & CAMP   @0.0,2.0,1.0    *0.8   ~fade  tint:brand  in outro # festival wall
+# ── CREDITS: classic movie scroll ──
+text:a deFEEST production     @0,-1.5,0.5  *0.40  drift 0,0.08,0  ~fade  in outro  tint:brand
+text:SCENE & CAMP              @0,-2.4,0.5  *0.40  drift 0,0.08,0  ~fade  in outro  tint:brand
+text:PonyCamp 2026             @0,-3.3,0.5  *0.40  drift 0,0.08,0  ~fade  in outro  tint:brand
+text:BEDANKT                   @0,-4.2,0.5  *0.40  drift 0,0.08,0  ~fade  in outro  tint:brand
 
-# ── CAMERA: 17 waypoints, wider arcs, tighter push-ins, more cuts ──
 [camera]
-t=@@intro      pos=1.3,0.25,0.3    dist=9.5   yaw=1.00   pitch=0.16          # wide establish: camp left third
-t=@@bar:4      pos=1.0,0.10,0.2    dist=7.5   yaw=1.20   pitch=0.18          # slow orbit in as moon rises
-t=@@build      pos=0.6,-0.20,0.4   dist=5.4   yaw=1.45   pitch=0.20          # drop onto assembling camp
-t=@@bar:12     pos=0.4,-0.40,0.5   dist=4.2   yaw=1.50   pitch=0.15          # push toward tent + trees
-t=@@drop       pos=0.3,-0.60,0.6   dist=2.5   yaw=1.55   pitch=0.08   cut    # CUT: punch LOW on fire as it ignites
-t=@@bar:30     pos=-0.3,-0.50,0.4  dist=3.2   yaw=1.75   pitch=0.12          # drift right as party builds
-t=@@bar:45     pos=0.6,-0.40,0.3   dist=3.8   yaw=1.35   pitch=0.14          # counter-drift, ride the hook
-t=@@bar:52     pos=-0.4,-0.30,0.2  dist=4.5   yaw=1.80   pitch=0.16          # pull back for finale buildup
-t=@@breakdown  pos=-1.3,-0.35,0.4  dist=6.8   yaw=2.05   pitch=0.14          # SWITCH sides: open field as horse walks in
-t=@@bar:65     pos=-1.5,-0.30,0.3  dist=7.5   yaw=2.10   pitch=0.12          # drift further left, lowest energy
-t=@@climax     pos=-1.2,0.30,-3.0  dist=11.0  yaw=1.62   pitch=0.10          # ZOOM-OUT REVEAL: whole camp + moon
-t=@@bar:85     pos=-0.8,0.20,-2.5  dist=9.5   yaw=1.80   pitch=0.13          # drift in + orbit right
-t=@@bar:95     pos=-0.2,0.10,-1.5  dist=7.2   yaw=1.50   pitch=0.16          # keep moving, tightening
-t=@@bar:105    pos=0.5,0.00,-0.8   dist=5.0   yaw=1.35   pitch=0.20          # close intimate frame on party
-t=@@outro      pos=0.2,0.05,-0.6   dist=6.6   yaw=1.45   pitch=0.16          # begin easing back
-t=@@bar:120    pos=-0.3,0.10,-1.5  dist=8.0   yaw=1.55   pitch=0.14          # pull back through the pines
-t=225          pos=-1.2,0.30,-3.0  dist=11.0  yaw=1.62   pitch=0.10          # settle at the reveal → black
+t=@@intro      pos=1.3,0.25,0.3    dist=9.5   yaw=1.00   pitch=0.16
+t=@@bar:4      pos=1.0,0.10,0.2    dist=7.5   yaw=1.20   pitch=0.18
+t=@@build      pos=0.6,-0.20,0.4   dist=5.4   yaw=1.45   pitch=0.20
+t=@@bar:12     pos=0.4,-0.40,0.5   dist=4.2   yaw=1.50   pitch=0.15
+t=@@drop       pos=0.3,-0.60,0.6   dist=2.5   yaw=1.55   pitch=0.08   cut
+t=@@bar:30     pos=-0.3,-0.50,0.4  dist=3.2   yaw=1.75   pitch=0.12
+t=@@bar:45     pos=0.6,-0.40,0.3   dist=3.8   yaw=1.35   pitch=0.14
+t=@@bar:52     pos=-0.4,-0.30,0.2  dist=4.5   yaw=1.80   pitch=0.16
+t=@@breakdown  pos=-1.3,-0.35,0.4  dist=6.8   yaw=2.05   pitch=0.14
+t=@@bar:65     pos=-1.5,-0.30,0.3  dist=7.5   yaw=2.10   pitch=0.12
+t=@@climax     pos=-1.2,0.30,-3.0  dist=11.0  yaw=1.62   pitch=0.10
+t=@@bar:85     pos=-0.8,0.20,-2.5  dist=9.5   yaw=1.80   pitch=0.13
+t=@@bar:95     pos=-0.2,0.10,-1.5  dist=7.2   yaw=1.50   pitch=0.16
+t=@@bar:105    pos=0.5,0.00,-0.8   dist=5.0   yaw=1.35   pitch=0.20
+t=@@outro      pos=0.2,0.05,-0.6   dist=6.6   yaw=1.45   pitch=0.16
+t=@@bar:120    pos=-0.3,0.10,-1.5  dist=8.0   yaw=1.55   pitch=0.14
+t=225          pos=-1.2,0.30,-3.0  dist=11.0  yaw=1.62   pitch=0.10
 
 [sync]
-t=@@intro      flash=0.08  bg_dim=0.80  beat=0.25  bg=aurora                # calm aurora night
-t=@@build      flash=0.15  bg_dim=0.60  beat=0.7   exposure=1.0             # energy creeps in
-t=@@drop       flash=0.7   bg_dim=0.45  beat=1.8   exposure=1.2             # DROP: fire erupts
-t=@@bar:50     flash=0.5   bg_dim=0.50  beat=1.4   exposure=1.1             # mid-drop settle
-t=@@breakdown  flash=0.2   bg_dim=0.65  beat=0.7   exposure=0.9             # hush
-t=@@bar:65     flash=0.1   bg_dim=0.70  beat=0.4   exposure=0.8             # lowest point
-t=@@climax     flash=0.8   bg_dim=0.40  beat=2.0   exposure=1.5  bg=aurora  # MAX party
-t=@@bar:95     flash=0.6   bg_dim=0.45  beat=1.7   exposure=1.3             # riding the peak
-t=@@outro      flash=0.35  bg_dim=0.55  beat=1.2   exposure=1.1  bg=fractal # celebration dissolves
-t=@@bar:125    flash=0.0   bg_dim=0.10  beat=0.5   exposure=0.8             # final fade
+t=@@intro      flash=0.08  bg_dim=0.80  beat=0.25  bg=aurora
+t=@@build      flash=0.15  bg_dim=0.60  beat=0.7   exposure=1.0
+t=@@drop       flash=0.7   bg_dim=0.45  beat=1.8   exposure=1.2
+t=@@bar:50     flash=0.5   bg_dim=0.50  beat=1.4   exposure=1.1
+t=@@breakdown  flash=0.2   bg_dim=0.65  beat=0.7   exposure=0.9
+t=@@bar:65     flash=0.1   bg_dim=0.70  beat=0.4   exposure=0.8
+t=@@climax     flash=0.8   bg_dim=0.40  beat=2.0   exposure=1.5  bg=aurora
+t=@@bar:95     flash=0.6   bg_dim=0.45  beat=1.7   exposure=1.3
+t=@@outro      flash=0.35  bg_dim=0.55  beat=1.2   exposure=1.1  bg=fractal
+t=@@bar:125    flash=0.0   bg_dim=0.10  beat=0.5   exposure=0.8
 
 [caption]
-screentext:OP DE CAMPING         in @@intro  out @@build    at 0.5,0.85  size 28  fade 1.0
-screentext:MET deFEEST           in @@drop   out @@breakdown at 0.5,0.10  size 36  fade 0.5
-screentext:ZONDER deFEEST        in @@breakdown out @@climax at 0.5,0.45  size 38  fade 1.5
-screentext:IS HET KUT            in @@bar:62 out @@climax   at 0.5,0.52  size 28  fade 1.0
-screentext:MET deFEEST           in @@climax out @@outro    at 0.5,0.08  size 40  fade 0.5
-screentext:PonyCamp 2026         in @@outro out @@bar:125   at 0.5,0.85  size 26  fade 1.0
+screentext:SCENE & CAMP         in @@outro out @@bar:125   at 0.5,0.10  size 30  fade 1.0
