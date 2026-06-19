@@ -25,9 +25,9 @@ splat:mountains.ply @0,-1.2,-12.0  *11,3,9   ~fade  in intro  count:14000
 splat:moon.ply      @0.8,3.0,-50.0 *7.0      spin 0,3,0  drift 0.05,0.006,0  ~fade  in intro  count:5000
 splat:terrain.ply   @0,-1.5,-7     *13,4.5,11 ~fade  in intro  count:28000
 splat:galaxy.ply    @0,2.8,-8.0    *6,1,6    alpha:0.08  drift 0.002,0,0  ~fade  in intro  count:6000
-splat:star.ply      @2.5,2.5,-9    *0.3      alpha:0.4  drift 0.003,-0.001,0  ~fade  in intro  count:2000
-splat:star.ply      @-2.0,2.0,-10  *0.25     alpha:0.35 drift -0.002,0,0.001  ~fade  in intro  count:1500
-splat:star.ply      @3.0,1.5,-8    *0.2      alpha:0.3  bob 0.02  ~fade  in intro  count:1000
+splat:star.ply      @2.5,2.5,-9    *0.3   alpha:0.4   spin 4,6,3  bob 0.10  ^pulse:0.7  path:orbit:0.2,0.15,0.25   ~fade  in intro  count:2000  # twinkle: beat-pulse + slow spin + gentle orbit drift
+splat:star.ply      @-2.0,2.0,-10  *0.25  alpha:0.35  spin 5,3,4  bob 0.08  ^pulse:0.6  path:orbit:0.18,0.12,0.3   ~fade  in intro  count:1500
+splat:star.ply      @3.0,1.5,-8    *0.2   alpha:0.3   spin 3,7,2  bob 0.12  ^pulse:0.8  path:orbit:0.15,0.1,0.2    ~fade  in intro  count:1000
 
 # ── TENTS: pitched well clear of each other and the trees ──
 splat:tent.ply      @-2.8,-1.11,0.7  *0.85  sway 0,4,0   ~fade  in build  count:9000
@@ -50,12 +50,13 @@ text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build
 # ── STORY: horse walks in, party erupts with flying bitterballen ──
 mesh:paard.glb  @-9.0,-0.5,-4.5  *0.9  rot 0,180,0  travel:-2.2,-0.868,-4.5@breakdown,16  sway 0,4,0  bob 0.05  ^pulse:0.4  ~fade  in breakdown
 mesh:bier.glb       @1.6,-0.55,0.9  *0.45  alpha:0.16  bob 0.04  spin 0,45,0  ~fade  in climax
-# ── 5 bitterballen met Lissajous-achtige drift + tumble ──
-mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  drift 0.04,0.02,0.03  bob 0.14  ^pulse:0.6  spin 19,37,13  tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  drift -0.03,0.03,-0.02  bob 0.16  ^pulse:0.6  spin 23,29,17  tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  drift 0.02,-0.02,0.04  bob 0.18  ^pulse:0.6  spin 31,13,41  tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  drift -0.05,0.04,-0.03 bob 0.12  ^pulse:0.5  spin 11,23,7  tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  drift 0.03,0.01,-0.04  bob 0.15  ^pulse:0.7  spin 17,43,29  tint:fry  ~fade  in climax
+# ── 5 bitterballen: a BOUNDED Lissajous weave near the fire (was `drift` — constant velocity from
+#    t=0, so by the climax entry (~128s) they'd flown right out of frame; path:liss stays put + tumbles).
+mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  path:liss:0.35,0.25,0.3,2,3,1,0.45  bob 0.10  ^pulse:0.6  spin 19,37,13  tint:fry  ~fade  in climax
+mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  path:liss:0.3,0.3,0.25,3,1,2,0.50   bob 0.12  ^pulse:0.6  spin 23,29,17  tint:fry  ~fade  in climax
+mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  path:liss:0.28,0.22,0.32,1,3,2,0.40 bob 0.12  ^pulse:0.6  spin 31,13,41  tint:fry  ~fade  in climax
+mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  path:liss:0.32,0.28,0.3,2,1,3,0.55  bob 0.10  ^pulse:0.5  spin 11,23,7   tint:fry  ~fade  in climax
+mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  path:liss:0.3,0.26,0.28,3,2,1,0.48  bob 0.12  ^pulse:0.7  spin 17,43,29  tint:fry  ~fade  in climax
 mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   rot 0,200,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax
 splat:doggo.ply     @0.9,-1.181,1.5  *0.5   sway 0,7,0  bob 0.04  travel:1.8,-1.0,1.2@climax,14  ~fade  in climax
 text:PonyCamp 2026  @1.4,1.5,1.0   *0.5   ~pen-write  tint:brand  bob 0.06  in climax
