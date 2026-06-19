@@ -11,6 +11,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Engine
+- **Localized particles**: `MARTIN_PARTICLE_ORIGIN=x,y,z` re-centres the particle field and
+  `MARTIN_PARTICLE_SPREAD=<f>` scales it (`particle_origin=`/`particle_spread=` in `[settings]`), so
+  embers can cluster tight around a campfire (`origin` on the flame, `spread` ~0.35) instead of filling
+  the whole scene. Default (origin 0, spread 1) is unchanged.
 - **`[camera]` track is now authoritative for *any* show** (compose-only included), no `MARTIN_FLY`
   needed. A fully-timed camera track (`t=…` on every keyframe) plays straight off the show clock in
   `flypath`; the compose/sequence auto-frame still seeds the initial pose but the track drives every

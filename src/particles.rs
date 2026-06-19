@@ -63,6 +63,15 @@ struct ParticleFade {
     start: f32,
 }
 
+/// Where the particle field sits + how tight. By default it fills a wide box around the origin (the
+/// whole scene); `MARTIN_PARTICLE_ORIGIN=x,y,z` re-centres it and `MARTIN_PARTICLE_SPREAD=<f>` scales
+/// the box (e.g. `0.3` clusters embers tight around a campfire). Applied as `origin + pos*spread`.
+#[derive(Resource)]
+struct ParticleField {
+    origin: Vec3,
+    spread: f32,
+}
+
 /// The colour palette (base rgb, emissive rgb) for a kind. Embers = one warm spark; sparks = one hot
 /// white-gold; fireworks = a few hot hues; confetti = a bright multi-hue palette (one per flake).
 fn palette(kind: Kind) -> Vec<([f32; 3], [f32; 3])> {
@@ -132,6 +141,22 @@ fn spawn_particles(
         start,
     });
 
+    // Localize the field: re-centre (e.g. on the campfire) + tighten the spread so embers cluster
+    // around the fire instead of filling the whole scene.
+    let origin = std::env::var("MARTIN_PARTICLE_ORIGIN")
+        .ok()
+        .map(|s| {
+            let v: Vec<f32> = s.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+            Vec3::new(
+                v.first().copied().unwrap_or(0.0),
+                v.get(1).copied().unwrap_or(0.0),
+                v.get(2).copied().unwrap_or(0.0),
+            )
+        })
+        .unwrap_or(Vec3::ZERO);
+    let spread = crate::envvar::or("MARTIN_PARTICLE_SPREAD", 1.0_f32).max(0.01);
+    commands.insert_resource(ParticleField { origin, spread });
+
     for i in 0..count {
         let s = [
             hash01(i as u32 * 3),
@@ -142,7 +167,7 @@ fn spawn_particles(
         commands.spawn((
             Mesh3d(quad.clone()),
             MeshMaterial3d(mat),
-            Transform::from_translation(particle_xform(kind, s, 0.0, 0.0).0),
+            Transform::from_translation(origin + particle_xform(kind, s, 0.0, 0.0).0 * spread),
             Particle { s, kind },
         ));
     }
@@ -160,6 +185,7 @@ fn spawn_particles(
 fn animate_particles(
     clock: Res<SeqClock>,
     beat: Option<Res<Beat>>,
+    field: Option<Res<ParticleField>>,
     cam: Query<&Transform, (With<Camera3d>, Without<Particle>)>,
     mut q: Query<(&Particle, &mut Transform), Without<Camera3d>>,
 ) {
@@ -167,9 +193,12 @@ fn animate_particles(
     let face = cam.rotation; // screen-aligned billboard (deterministic: camera pose is clock-driven)
     let t = clock.t;
     let burst = beat.map(|b| b.kick * b.intensity).unwrap_or(0.0);
+    let (origin, spread) = field
+        .map(|f| (f.origin, f.spread))
+        .unwrap_or((Vec3::ZERO, 1.0));
     for (p, mut tf) in &mut q {
         let (pos, spin, scale) = particle_xform(p.kind, p.s, t, burst);
-        tf.translation = pos;
+        tf.translation = origin + pos * spread; // re-centre + tighten the field (campfire embers)
         tf.rotation = face * spin;
         tf.scale = Vec3::splat(scale);
     }
