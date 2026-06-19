@@ -210,13 +210,19 @@ fn particle_xform(kind: Kind, s: [f32; 3], t: f32, burst: f32) -> (Vec3, Quat, f
     use std::f32::consts::TAU;
     let span = 2.0 * FIELD;
     match kind {
-        // rises in +Y (wrapping through the box) with a per-particle speed, sways in x/z — unchanged.
+        // a campfire PLUME: narrow at the base, rises TALL into the sky, drifts wider, then FIZZLES
+        // out (scale → 0 near the top) so it never hard-ends in a block — embers wink out, they don't
+        // teleport. Each ember loops on its own staggered phase (deterministic, pure fn of s + t).
         Kind::Embers => {
-            let speed = 0.25 + 0.6 * s[0];
-            let y = (s[1] * span + t * speed).rem_euclid(span) - FIELD;
-            let x = (s[2] * span - FIELD) + (t * 0.5 + s[0] * TAU).sin() * 0.25;
-            let z = (s[0] * span - FIELD) + (t * 0.4 + s[1] * TAU).cos() * 0.25;
-            (Vec3::new(x, y, z), Quat::IDENTITY, 1.0)
+            let speed = 0.5 + 0.7 * s[0];
+            let life = (s[1] + t * speed * 0.13).rem_euclid(1.0); // 0..1 rise cycle, staggered
+            let y = -FIELD * 0.5 + life * (FIELD * 2.8); // start at the fire base, rise well up
+            let widen = 0.12 + life * 0.6; // narrow base → wider plume as it drifts up
+            let x = (s[2] - 0.5) * widen + (t * 0.6 + s[0] * TAU).sin() * 0.06 * (0.3 + life);
+            let z = (s[0] - 0.5) * widen + (t * 0.5 + s[1] * TAU).cos() * 0.06 * (0.3 + life);
+            // fizzle: snap in at the base, taper smoothly to 0 by the top (no pop, no block-end)
+            let fade = (life * 8.0).min(1.0) * (1.0 - life).powf(1.3);
+            (Vec3::new(x, y, z), Quat::IDENTITY, 1.1 * fade)
         }
         // tumbling coloured flakes FALLING (top→bottom, wraps); flutter widens + a kick-shove on the beat.
         Kind::Confetti => {
