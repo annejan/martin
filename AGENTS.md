@@ -96,7 +96,23 @@ Transform the "Op de Camping" (Ome Henk, 1995) demoscene track from a basic plac
 ## Blender ↔ martin bridge (MCP scene-making)
 Author/inspect a scene visually in Blender via the `blender-mcp` MCP server (`uvx blender-mcp` + the
 Blender add-on, port 9876; `blender` is symlinked to `blender-5.1`). Round-trip: drag a prop/camera in
-Blender → read it back → write `[stage]`/`[camera]` → render. **Calibrated, exact:**
+Blender → read it back → write `[stage]`/`[camera]` → render.
+
+**USE THE TOOL — `pipeline/blender_bridge.py`** (don't hand-roll the import/export each time). Run it
+inside Blender via `execute_blender_code`; it encodes every map/normalize/rotation/FOV detail below and
+keeps the round-trip lossless (it tags each prop with its source line so export patches ONLY
+`@pos`/`*scale`/`rot`, preserving all martin-only tokens):
+```python
+exec(open('/home/annejan/Projects/martin/pipeline/blender_bridge.py').read())
+bridge_import('productions/camping/campsite.show', cam_anchor='climax')  # spawn [stage] + set camera
+# …user poses props + orbits (camera-lock ON)…  bridge_shot('/tmp/x.png') to deliver
+bridge_export('productions/camping/campsite.show')   # write @pos/*scale/rot back; prints camera line
+```
+Poseable = `[stage]`/`[compose]` props. NOT poseable: `path:`/`travel:` (programmatic; show start `@pos`)
+and `[reel]` morphs (temporal — load one frame as a `backdrop=` city to pose stage props over it). Then
+render martin (`MARTIN_SHOW=… MARTIN_RECORD=…`) and `DISPLAY=:0 xdg-open` the frame to deliver.
+
+The maths the tool implements (kept here as the reference) — **calibrated, exact:**
 
 - **Engine normalize** (`morph::normalize_to`, every part): centre = **centroid mean**; scale =
   `NORMALIZE_EXTENT*0.5 / p90` = **1/p90** (90th-pct distance from centroid). Match this in Blender or
