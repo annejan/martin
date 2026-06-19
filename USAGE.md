@@ -493,7 +493,7 @@ Pose a show's `[stage]`/`[compose]` props **and** the camera in Blender's viewpo
 straight back into the `.show` — `pipeline/blender_bridge.py`, driven over the `blender-mcp` MCP server
 (`uvx blender-mcp` + the Blender add-on; `blender` is symlinked to `blender-5.1`). In Blender:
 ```python
-exec(open('/home/annejan/Projects/martin/pipeline/blender_bridge.py').read())
+exec(open('/path/to/martin/pipeline/blender_bridge.py').read())
 bridge_import('productions/camping/campsite.show', cam_anchor='climax')  # spawn [stage] + set the camera
 # …drag / rotate / scale props, orbit the camera (camera-lock is ON)…
 bridge_export('productions/camping/campsite.show')   # patch @pos/*scale/rot back (all other tokens kept)

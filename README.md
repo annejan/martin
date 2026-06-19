@@ -1,6 +1,6 @@
 # Martin — a deFEEST demoscene engine
 
-[![build](https://github.com/annejan/evoke-martin/actions/workflows/build.yml/badge.svg)](https://github.com/annejan/evoke-martin/actions/workflows/build.yml)
+[![build](https://github.com/annejan/martin/actions/workflows/build.yml/badge.svg)](https://github.com/annejan/martin/actions/workflows/build.yml)
 
 A music-synced **Gaussian-splat demoscene engine** (**Bevy + Vulkan**) that flies a camera around 3D
 splats while they **morph into one another** — a title, two faces, a dog, a whole city — entirely
@@ -109,7 +109,7 @@ Vulkan/RADV driver).
 
 **Prebuilt binaries:** GitHub Actions builds release binaries for **Linux, Windows, and macOS**
 on every push — grab them from the artifacts of the latest
-[build run](https://github.com/annejan/evoke-martin/actions/workflows/build.yml). The release
+[build run](https://github.com/annejan/martin/actions/workflows/build.yml). The release
 binary is ~75 MB (`strip` + thin LTO); use `cargo run --release` to show it off (the 1.8 GiB
 build is debug-only, for fast iteration).
 

@@ -103,7 +103,7 @@ inside Blender via `execute_blender_code`; it encodes every map/normalize/rotati
 keeps the round-trip lossless (it tags each prop with its source line so export patches ONLY
 `@pos`/`*scale`/`rot`, preserving all martin-only tokens):
 ```python
-exec(open('/home/annejan/Projects/martin/pipeline/blender_bridge.py').read())
+exec(open('/path/to/martin/pipeline/blender_bridge.py').read())
 bridge_import('productions/camping/campsite.show', cam_anchor='climax')  # spawn [stage] + set camera
 # …user poses props + orbits (camera-lock ON)…  bridge_shot('/tmp/x.png') to deliver
 bridge_export('productions/camping/campsite.show')   # write @pos/*scale/rot back; prints camera line

@@ -1017,8 +1017,8 @@ handle). Demoscene credit beats, mapped onto the part model.
 - **Kloot is the AI. Credit it as `Kloot`, full stop.** Never `Claude & Kloot`, never
   `Claude (Kloot)` — that's one entity twice. `annejan & Kloot` is the human+AI pair.
 - **Do NOT print "Evoke" anywhere** in published output (titles, credits, scroller,
-  logo beats). "Evoke" survives only as part of the repo slug
-  `github.com/annejan/evoke-martin`, which may appear as a bare source link.
+  logo beats). The repo lives at `github.com/annejan/martin`, which may appear as a
+  bare source link.
 - **deFEEST** spelling is stylised (lower `de`, upper `FEEST`); keep it consistent.
   **Cinder (deFEEST)** is music; keep the group tag on first mention.
 
@@ -1086,7 +1086,7 @@ splat:defeest.ply               @4.0,3.0,0.0
 
 Text-only fallback (no logo `.ply`/PNG part yet): swap the two `splat:defeest.ply`
 lines for `text:deFEEST`. End-scroller beats use held text and the repo link as a bare
-slug (`github.com/annejan/evoke-martin`).
+slug (`github.com/annejan/martin`).
 
 ### 7.5 Style guardrails
 
