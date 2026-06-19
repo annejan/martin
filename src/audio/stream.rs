@@ -221,7 +221,8 @@ impl SubAtmo {
         let fade = (1.5 * sr) as usize;
         for i in f0..f1 {
             let t = i as f32 * dt;
-            // cache section index — avoids linear scan per sample
+            // cache section index — avoids the linear section scan per sample. Assumes monotonic `t`
+            // (true for this streamed WAV render); a backward seek would need to reset `self.section`.
             let si = if self.section == usize::MAX {
                 let si = score.section_index_at(t);
                 self.section = si;
@@ -336,7 +337,8 @@ impl MasterChain {
         let haas_d = self.haas_buf.len();
         for i in f0..f1 {
             let t = i as f32 * dt;
-            // cache section index — avoids linear scan per sample
+            // cache section index — avoids the linear section scan per sample. Assumes monotonic `t`
+            // (true for this streamed WAV render); a backward seek would need to reset `self.section`.
             let si = if self.section == usize::MAX {
                 let si = score.section_index_at(t);
                 self.section = si;

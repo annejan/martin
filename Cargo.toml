@@ -1,6 +1,6 @@
 [package]
 name = "martin"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2024"
 description = "Martin — a deFEEST demoscene engine (music-synced Gaussian-splat shows)"
 # `cargo run` → the engine; the procedural-splat generator is the secondary `splatgen` bin
