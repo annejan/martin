@@ -6,6 +6,7 @@
 
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy_gaussian_splatting::Gaussian3d;
+use rayon::prelude::*;
 
 /// Replicate `shape` into `copies` scattered, randomly-rotated instances — a "serving" (e.g. a pile
 /// of bitterballen, never just one). Deterministic (index-hashed) so it's frame-stable for recording.
@@ -138,13 +139,72 @@ pub fn match_reorder(
     if n == 0 || target.len() != n {
         return target; // only meaningful for equal-count clouds (both resampled to N)
     }
+    // Pairing is n sources × ~7³ cells of cost-evals — seconds at 1M+ splats (build-time). Split into
+    // K equal x-slabs (sources AND targets sorted by x, so each slab has the same count) and match each
+    // slab in parallel: same total work, ~K× wall-clock + better cache locality, no leftover handling.
+    // K is derived from n (NOT cpu count) so the result is identical run-to-run / machine-to-machine —
+    // each slab's match is the deterministic serial `match_core`, and slabs write disjoint perm entries.
+    // A boundary source pairs within its slab instead of just across the line — invisible in motion.
+    let k_chunks = (n / 100_000).clamp(1, 16);
+    if k_chunks == 1 {
+        let perm = match_core(prev, &target, color_w);
+        return perm.into_iter().map(|i| target[i as usize]).collect();
+    }
+    let px = |g: &Gaussian3d| g.position_visibility.position[0];
+    let by_x = |c: &[Gaussian3d]| {
+        let mut order: Vec<u32> = (0..c.len() as u32).collect();
+        order.sort_by(|&a, &b| {
+            px(&c[a as usize])
+                .partial_cmp(&px(&c[b as usize]))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        order
+    };
+    let src_order = by_x(prev);
+    let tgt_order = by_x(&target);
+    let chunk = n.div_ceil(k_chunks);
+    // each slab → (global source idx, global target idx) pairs; slabs are index-disjoint in `prev`.
+    let pieces: Vec<Vec<(u32, u32)>> = (0..k_chunks)
+        .into_par_iter()
+        .map(|c| {
+            let lo = c * chunk;
+            let hi = ((c + 1) * chunk).min(n);
+            let ps: Vec<Gaussian3d> = src_order[lo..hi]
+                .iter()
+                .map(|&i| prev[i as usize])
+                .collect();
+            let ts: Vec<Gaussian3d> = tgt_order[lo..hi]
+                .iter()
+                .map(|&i| target[i as usize])
+                .collect();
+            let local = match_core(&ps, &ts, color_w); // local[j] = index into ts
+            (lo..hi)
+                .map(|p| (src_order[p], tgt_order[lo + local[p - lo] as usize]))
+                .collect()
+        })
+        .collect();
+    let mut perm = vec![0u32; n];
+    for piece in pieces {
+        for (s, t) in piece {
+            perm[s as usize] = t;
+        }
+    }
+    perm.into_iter().map(|i| target[i as usize]).collect()
+}
+
+/// Greedy bijective nearest match of `prev` against `target` (equal length) over a voxel grid.
+/// Returns `perm` where `perm[k]` is the chosen target index for `prev[k]`. The marquee logic
+/// (grid bucketing + ring search + swap-remove + fallback) lives here so `match_reorder` can run it
+/// serially (small clouds) or per-slab in parallel (large clouds).
+fn match_core(prev: &[Gaussian3d], target: &[Gaussian3d], color_w: f32) -> Vec<u32> {
+    let n = prev.len();
     let pos = |g: &Gaussian3d| g.position_visibility.position;
     let col = |g: &Gaussian3d| {
         let c = g.spherical_harmonic.coefficients;
         [c[0], c[1], c[2]]
     };
     // grid bounds over the target positions
-    let (lo, hi) = bounds(&target);
+    let (lo, hi) = bounds(target);
     let res: i32 = (n as f64).cbrt().round().clamp(16.0, 128.0) as i32;
     let span = [
         (hi[0] - lo[0]).max(1e-6),
@@ -160,7 +220,7 @@ pub fn match_reorder(
     let cells = (res * res * res) as usize;
     // flat grid: count per cell → prefix-sum offsets → flat Vec (avoids Vec<Vec<u32>> overhead).
     let mut counts = vec![0u32; cells];
-    for g in &target {
+    for g in target {
         counts[idx(cell_of(pos(g)))] += 1;
     }
     let mut offsets = vec![0u32; cells + 1];
@@ -264,7 +324,7 @@ pub fn match_reorder(
         used[ti as usize] = true;
         perm[k] = ti;
     }
-    perm.into_iter().map(|i| target[i as usize]).collect()
+    perm
 }
 
 /// Scatter each gaussian of `shape` onto a fuzzy sphere shell of radius `shell_r` (paired

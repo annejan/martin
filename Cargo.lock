@@ -4025,6 +4025,7 @@ dependencies = [
  "image",
  "lz4_flex",
  "mesh-loader",
+ "rayon",
  "resvg",
  "serde_json",
  "ttf-parser",

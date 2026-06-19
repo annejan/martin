@@ -11,6 +11,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Engine
+- **Faster big-cloud morphs**: the build-time `pair=match` pairing (`match_reorder`) now splits large
+  clouds into K equal x-slabs and matches them in parallel (rayon). A 1.2 M-splat city↔city pairing
+  drops from **~18 s to ~0.45 s** per transition (~40×) — the cities loader pause goes from tens of
+  seconds to ~1 s. K is derived from the splat count (not CPU count), so the result stays identical
+  run-to-run; small clouds keep the exact serial path. No visible change to morph flow.
 - **Localized particles**: `MARTIN_PARTICLE_ORIGIN=x,y,z` re-centres the particle field and
   `MARTIN_PARTICLE_SPREAD` scales it — a single value OR **per-axis `x,y,z`** (e.g. `1.6,0.8,1.6` for a
   WIDE, shorter campfire spread). Settings `particle_origin=`/`particle_spread=`; default (0 / 1)

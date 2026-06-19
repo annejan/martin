@@ -34,6 +34,9 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg"]
 resvg = { version = "0.47", default-features = false }
 # Parse 3DGS `cameras.json` capture poses (MARTIN_CAMERAS). Same version Bevy already pulls in.
 serde_json = "1"
+# Data-parallel the build-time morph pairing (match_reorder chunks). Already in the lockfile
+# transitively (the splat crate's sort_rayon); a direct dep so morph.rs can use it.
+rayon = "1"
 # Base64-encode screenshots for the MCP server's inline image replies (MARTIN_MCP). Already in-tree.
 base64 = "0.22"
 # Load meshes (COLLADA .dae, .obj, .stl, .ply) → triangles, to sample into gaussians (mesh: source).
