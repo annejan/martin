@@ -1202,9 +1202,11 @@ Two modules cross the 1000-line smell. The review's plans, kept here so the work
 1. ✅ **Keystone — `BuiltShot`.** `SeqState`'s seven index-parallel `Vec`s collapsed into one
    `Vec<BuiltShot>` (resolved form); `shot_director` reads one `&state.shots[idx]`. Index-parallelism
    risk gone.
-2. *(Todo)* **De-god `build_sequence`**: extract pure stages `resolve_modes` / `build_raw_parts` /
-   `frame_of` / `build_clouds` (the framing + cloud math become unit-testable). Move the camera-seeding
-   block to `camera.rs`. (The file SPLIT into `sequence/{model,parse,build,director}.rs` ✅ landed.)
+2. ✅ **De-god `build_sequence`** (largely): the framing math is now pure `frame_of` + `union_bounds`,
+   the entrance resolution pure `arrival_entrance` — **both unit-tested**; the per-shot cloud build is
+   `build_shots`; the camera-seeding block moved to `camera::seed_orbit_framing`. (`build_raw_parts`
+   left inline — it's asset-bound, not unit-testable, so extracting it only shuffles borrows.) The file
+   had already SPLIT into `sequence/{model,parse,build,director}.rs` ✅.
 3. ✅ **Renames (Stage 2):** `Part→Shot`, `Composed→Prop`, `Waypoint→Key`, `Sequence.count→budget`,
    `sources→origins`, `part_starts→shot_starts`, `active_part→active_shot`, `part_director→shot_director`.
 4. ✅ `Departure::out_cloud` in `effects.rs`; `MARTIN_ROT` reuses `parse_euler_deg`; the env reads route
@@ -1213,17 +1215,14 @@ Two modules cross the 1000-line smell. The review's plans, kept here so the work
 Remaining domain-vocab work (DOMAIN.md §9): Stage 3 enums (`AnchorKind`, `CameraMove`) + Stage 4
 on-demand (per-`Shot` density, scene-scoped looks, the `SyncTrack`/Automation north-star).
 
-**`audio/render.rs` (1166 lines) — *determinism-risky; needs a WAV A/B gate; do deliberately, not in a
-sweep.*** The file is large because the **arrangement is transcribed twice**: the batch passes
-(`render_voices`/`render_harmony`/`render_fx`) and `collect_events` (the stream source) are the same
-notes/amps/seeds written verbatim, and the `master` finisher duplicates `stream.rs`'s `MasterChain`.
-A designer must edit both or the engines silently diverge (only `stream_matches_batch`'s tolerance
-hides it). Plan: make `collect_events` the single arrangement source + the stream's resumable
-`MasterChain`/`Reverb`/`SubAtmo` the single finisher, and have batch consume both (`produce` over the
-full range, or lane-parallel). Turn the 3 stab layers + casio into a `[StabLayer]` table and the ~15
-FX accents into an `[FxAccent]` table. **Gate:** batch output must stay bit-stable for recordings/the
-bundle — validate against a known WAV (the A/B the memory describes) before committing. Net: render.rs
-drops from 1166 → ~0 unique lines; `stream_matches_batch` becomes an identity, not a drift detector.
+**`audio/render.rs` — *the double-transcription is gone.* ✅ LANDED.** The arrangement is no longer
+written twice: `collect_events` is the single arrangement source and the stream's resumable
+`MasterChain`/`Reverb`/`SubAtmo` the single finisher, with the batch path now *consuming* the stream —
+`synth_track` → `stream::produce` → `collect_events` + `MasterChain` (so the on-disk WAV and live
+playback can't diverge, and `stream_matches_batch` is gone). The file dropped from 1166 → ~640 lines.
+*Still optional:* fold the stab layers + casio into a `[StabLayer]` table and the ~15 FX accents into
+an `[FxAccent]` table. **Gate (unchanged):** any change here must keep batch output bit-stable for
+recordings/the bundle — validate against a known WAV before committing.
 
 ---
 

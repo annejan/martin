@@ -11,14 +11,57 @@ use bevy_gaussian_splatting::{
     CloudSettings, Gaussian3d, PlanarGaussian3d, PlanarGaussian3dHandle, RasterizeMode,
 };
 
-use super::model::{BuiltShot, SeqState, Sequence, shot_starts};
+use super::model::{BuiltShot, SeqState, Sequence, Shot, shot_starts};
 use super::parse::{global_raster, parse_euler_deg};
-use crate::camera::{DEFAULT_PITCH, FRONT_YAW, OrbitCam};
+use crate::camera::OrbitCam;
 use crate::morph::{ball_of, resample_morton};
 use crate::scene::content::{PartContent, sample_content};
 use crate::scene::effects::{BALL_SHELL, Deform, Entrance, source_cloud};
 use crate::scene::gl_dissolve::spawn_gl_dissolve;
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, cloud_base_rotation};
+
+/// The union AABB `(min, max)` over every shot's raw gaussians — the extent raw (non-normalized) mode
+/// frames the camera on.
+fn union_bounds(raws: &[Vec<Gaussian3d>]) -> (Vec3, Vec3) {
+    let mut lo = Vec3::splat(f32::MAX);
+    let mut hi = Vec3::splat(f32::MIN);
+    for g in raws.iter().flatten() {
+        let p = Vec3::from_array(g.position_visibility.position);
+        lo = lo.min(p);
+        hi = hi.max(p);
+    }
+    (lo, hi)
+}
+
+/// Framing geometry `(center, content_radius, frame_factor)` for the union of all shots. When
+/// normalized, every shot is ~`NORMALIZE_EXTENT` across centred on its centroid, so we frame from that
+/// — robust to the floaters that inflate the raw union AABB and would otherwise shrink the scene to a
+/// distant dot. Raw mode (no normalize) frames the union box instead. Pure — unit-tested.
+fn frame_of(normalize: bool, union_lo: Vec3, union_hi: Vec3) -> (Vec3, f32, f32) {
+    if normalize {
+        (Vec3::ZERO, NORMALIZE_EXTENT * 0.5, 2.5)
+    } else {
+        let c = (union_lo + union_hi) * 0.5;
+        (c, ((union_hi - union_lo) * 0.5).length().max(0.1), 1.7)
+    }
+}
+
+/// Resolve a shot's arrival entrance: explicit `~name` > global `MARTIN_TRANSITION` > Ball for shot 0
+/// / Morph after. Shot 0 has nothing to flow FROM, so Morph/Swarm/Cut degrade to a Ball assemble (the
+/// caller logs the degrade). Pure — unit-tested.
+fn arrival_entrance(idx: usize, explicit: Option<Entrance>, global: Option<Entrance>) -> Entrance {
+    let tr = explicit.or(global).unwrap_or(if idx == 0 {
+        Entrance::Ball
+    } else {
+        Entrance::Morph
+    });
+    // shot 0 has no previous shape to morph/swarm/cut from — degrade to a ball assemble.
+    if idx == 0 && matches!(tr, Entrance::Morph | Entrance::Swarm | Entrance::Cut) {
+        Entrance::Ball
+    } else {
+        tr
+    }
+}
 
 /// Once every referenced splat has loaded, build each part's shape (resampled to the fixed
 /// count) + the intro ball, spawn the single interpolate entity, and frame the union once.
@@ -68,22 +111,22 @@ pub(crate) fn build_sequence(
         .iter()
         .enumerate()
         .map(|(idx, part)| {
-            let tr = part.entrance.or(global_tr).unwrap_or(if idx == 0 {
-                Entrance::Ball
-            } else {
-                Entrance::Morph
-            });
-            // part 0 has nothing to morph from — fall back to a ball assemble (Cut needs a prior shape too).
-            if idx == 0 && matches!(tr, Entrance::Morph | Entrance::Swarm | Entrance::Cut) {
-                if tr == Entrance::Cut {
-                    warn!("seq: shot 0 can't ~cut (nothing to cut from) — assembling from a ball");
-                } else if tr == Entrance::Swarm {
-                    warn!("seq: shot 0 can't ~swarm (no prev shape) — assembling from a ball");
+            // shot 0 has nothing to morph/swarm/cut FROM — log the degrade (Morph falls back silently),
+            // then `arrival_entrance` resolves it to a ball assemble.
+            if idx == 0 {
+                match part.entrance.or(global_tr) {
+                    Some(Entrance::Cut) => {
+                        warn!(
+                            "seq: shot 0 can't ~cut (nothing to cut from) — assembling from a ball"
+                        )
+                    }
+                    Some(Entrance::Swarm) => {
+                        warn!("seq: shot 0 can't ~swarm (no prev shape) — assembling from a ball")
+                    }
+                    _ => {}
                 }
-                Entrance::Ball
-            } else {
-                tr
             }
+            arrival_entrance(idx, part.entrance, global_tr)
         })
         .collect();
 
@@ -143,24 +186,11 @@ pub(crate) fn build_sequence(
         raws.iter().map(Vec::len).max().unwrap_or(0).max(1)
     };
 
-    let mut union_lo = Vec3::splat(f32::MAX);
-    let mut union_hi = Vec3::splat(f32::MIN);
-    for g in raws.iter().flatten() {
-        let p = Vec3::from_array(g.position_visibility.position);
-        union_lo = union_lo.min(p);
-        union_hi = union_hi.max(p);
-    }
-
-    // Framing radius of the *content*: when normalized, every part is ~NORMALIZE_EXTENT across
-    // centred on its centroid, so frame from that — robust to the floaters that still inflate
-    // the raw union AABB and would otherwise shrink the scene to a distant dot. Raw mode (no
-    // normalize) frames the union box instead. This radius also sizes each entrance source.
-    let (frame_center, content_radius, frame_factor) = if normalize {
-        (Vec3::ZERO, NORMALIZE_EXTENT * 0.5, 2.5)
-    } else {
-        let c = (union_lo + union_hi) * 0.5;
-        (c, ((union_hi - union_lo) * 0.5).length().max(0.1), 1.7)
-    };
+    // Framing geometry of the *content* (see `frame_of`): normalized shots frame from the centroid
+    // (robust to floaters that inflate the raw union AABB); raw mode frames the union box. The radius
+    // also sizes each entrance source.
+    let (union_lo, union_hi) = union_bounds(&raws);
+    let (frame_center, content_radius, frame_factor) = frame_of(normalize, union_lo, union_hi);
 
     // Each part is resampled to the shared count N, then gets the *source* cloud it morphs in
     // FROM, chosen by its entrance (`~name` per part > MARTIN_TRANSITION default > Ball for
@@ -168,99 +198,17 @@ pub(crate) fn build_sequence(
     // (with the ball-pulse bulge); the others build a source from the part's own shape.
     // Build each part's `BuiltShot` directly (the only per-shot data the director reads) — shape +
     // morph-in origin + out-cloud + the resolved entrance/deform/raster/cue, in one pass.
-    let mut shots: Vec<BuiltShot> = Vec::with_capacity(seq.parts.len());
-    // MARTIN_PAIR=match (or `pair=match` in [settings]): instead of index-rank Morton pairing — which
-    // pinches DISSIMILAR scenes through a centre "ball" — reorder each Morph part so splat k pairs with
-    // a nearby, similar-colour splat in the PREVIOUS part (greedy bijective nearest match, cost =
-    // pos² + color_w·colour²). Short colour-matched moves → a coherent ghostly morph (grass→trees,
-    // tower→tower), no centre-collapse. MARTIN_PAIR_COLOR weights colour vs position (default 0.5).
-    let pair_match = std::env::var("MARTIN_PAIR")
-        .map(|v| v.eq_ignore_ascii_case("match"))
-        .unwrap_or(false);
-    let pair_color_w = crate::envvar::or("MARTIN_PAIR_COLOR", 0.5_f32);
-    let mut prev_shaped: Option<Vec<Gaussian3d>> = None;
-    for (idx, raw) in raws.into_iter().enumerate() {
-        // ROBUSTNESS: a part that produced 0 gaussians (an unsupported/broken asset) must NOT reach
-        // the morph shader — an empty cloud is a wgpu validation error that crashes the whole render.
-        // Degrade it to a transparent placeholder so the show plays on (the part is just invisible).
-        let raw = if raw.is_empty() {
-            warn!(
-                "part {}: 0 gaussians — substituting a transparent placeholder (asset failed to load?)",
-                seq.parts[idx].content.label()
-            );
-            crate::mesh::transparent_placeholder(256)
-        } else {
-            raw
-        };
-        let mut shaped = resample_morton(raw, n);
-        // bake the part's own `rot:` into its shape (so sources/out clouds inherit it, and the morph
-        // between differently-oriented parts reorients smoothly). glb parts rotate in sample_gl_mesh.
-        if let Some(q) = seq.parts[idx].rot {
-            if !matches!(seq.parts[idx].content, PartContent::GlMesh(_)) {
-                crate::morph::rotate_gaussians(&mut shaped, q);
-            }
-        }
-        let tr = transitions[idx];
-        let r = content_radius;
-        // if the PREVIOUS part DEPARTS (washes/disperses away), there's no shape to flow from →
-        // a Morph/Swarm part must assemble fresh from a ball instead.
-        let prev_departs = idx > 0 && seq.parts[idx - 1].exit.is_some();
-        // pair=match: when this Morph part flows DIRECTLY from the previous shape (no departure, no
-        // source cloud), reorder it so each splat slides to the nearest same-colour splat of the prev
-        // part — minimal travel, coherent morph. Only the Morph/Swarm-flow case has a prev shape to
-        // pair against; sourced transitions (ball/wash/etc.) assemble from their own cloud regardless.
-        if pair_match && matches!(tr, Entrance::Morph | Entrance::Swarm) && !prev_departs {
-            if let Some(prev) = &prev_shaped {
-                shaped = crate::morph::match_reorder(prev, shaped, pair_color_w);
-            }
-        }
-        // `tint:` recolours this shot's shape (e.g. a deep-fried bitterbal) BEFORE the source/out clouds
-        // and the next part's pair-match read it, so the whole lifecycle is tinted.
-        if let Some(tint) = seq.parts[idx].tint {
-            crate::scene::colorize::apply(&mut shaped, tint);
-        }
-        let src: Option<Vec<Gaussian3d>> = match tr {
-            // Morph/Swarm flow from the PREVIOUS part's shape (no source) — unless the previous part
-            // departed (washed away), in which case there's nothing to flow from → assemble fresh.
-            Entrance::Morph | Entrance::Swarm if prev_departs => {
-                Some(ball_of(&shaped, r * BALL_SHELL))
-            }
-            Entrance::Morph | Entrance::Swarm => None,
-            // Cut shows the shape instantly (director pins the factor to 1.0) — flows from the prev
-            // shape like Morph, no source cloud to build.
-            Entrance::Cut => None,
-            other => source_cloud(other, &shaped, r),
-        };
-        // `exit:` departure target cloud (faded + displaced) — the part morphs to this as it leaves.
-        let exit = seq.parts[idx].exit.map(|d| d.out_cloud(&shaped, r));
-        let origin = src.map(|s| assets.add(PlanarGaussian3d::from(s)));
-        let exit_cloud = exit.map(|o| assets.add(PlanarGaussian3d::from(o)));
-        // keep this part's shape so the NEXT part can pair-match against it (only needed for pair=match;
-        // the clone is gated to avoid copying a big cloud on every render otherwise).
-        if pair_match {
-            prev_shaped = Some(shaped.clone());
-        }
-        let shot = &seq.parts[idx];
-        shots.push(BuiltShot {
-            shape: assets.add(PlanarGaussian3d::from(shaped)),
-            origin,
-            exit_cloud,
-            entrance: tr,
-            deform: deforms[idx],
-            deform_amp: shot.deform_amp,
-            // a hard cut with no explicit flash gets an automatic white-flash pop on its frame.
-            flash: shot.flash.or((tr == Entrance::Cut).then_some(0.8)),
-            beat: shot.beat,
-            raster: rasters[idx],
-            ease: shot.ease,
-            freeze: shot.freeze,
-            start: starts[idx],
-            morph: shot.morph,
-            bulge: shot.bulge,
-            exit: shot.exit,
-            is_gl_mesh: matches!(shot.content, PartContent::GlMesh(_)),
-        });
-    }
+    let shots = build_shots(
+        &seq.parts,
+        raws,
+        &transitions,
+        &deforms,
+        &rasters,
+        &starts,
+        n,
+        content_radius,
+        &mut assets,
+    );
     let intro0 = shots[0]
         .origin
         .clone()
@@ -302,52 +250,19 @@ pub(crate) fn build_sequence(
         ))
         .id();
 
-    // frame the union once (camera never pops between parts); apply the same rotation to the
-    // centre so the camera looks at the post-transform world centre.
-    // Seed the free-orbit camera. MARTIN_ZOOM scales distance (>1 = closer); MARTIN_YAW /
-    // MARTIN_PITCH (radians) seed the orbit angle so you can bake a found viewpoint into a
-    // render (and freely orbit live from there).
-    use crate::envvar::or as env;
-    let zoom = env("MARTIN_ZOOM", 1.0_f32);
-    let zoom = if zoom > 0.0 { zoom } else { 1.0 }; // a non-positive zoom is meaningless → default
+    // Frame the union once (camera never pops between parts); apply the same rotation to the centre
+    // so the camera looks at the post-transform world centre. The seeding itself (MARTIN_ZOOM/YAW/
+    // PITCH and the MARTIN_CAMERAS capture-pose override) lives in `camera::seed_orbit_framing`.
     let center = entity_rot * frame_center;
-    let (mut yaw, mut pitch, mut dist) = (
-        env("MARTIN_YAW", FRONT_YAW),
-        env("MARTIN_PITCH", DEFAULT_PITCH),
-        content_radius * frame_factor / zoom,
-    );
-    // MARTIN_CAMERAS=<cameras.json>: park the camera at a real capture pose (the only viewpoint
-    // a raw 360° scene renders coherently). Transform the chosen capture position through the
-    // SAME normalize (part 0) + cloud rotation as the gaussians, then read off yaw/pitch/dist
-    // around the framed centre. MARTIN_CAM_INDEX picks which shot (default 0).
-    if let Ok(cpath) = std::env::var("MARTIN_CAMERAS") {
-        let positions = super::parse::load_camera_positions(&cpath);
-        if positions.is_empty() {
-            warn!("MARTIN_CAMERAS: no camera positions in {cpath}");
-        } else {
-            let idx = std::env::var("MARTIN_CAM_INDEX")
-                .ok()
-                .and_then(|s| s.parse::<usize>().ok())
-                .unwrap_or(0)
-                .min(positions.len() - 1);
-            let (c0, s0) = scene_norm;
-            let dir = entity_rot * ((positions[idx] - c0) * s0) - center;
-            let len = dir.length().max(1e-4);
-            yaw = dir.z.atan2(dir.x);
-            pitch = (dir.y / len).asin();
-            dist = len / zoom;
-            info!(
-                "camera: capture pose {idx}/{} from {cpath}",
-                positions.len()
-            );
-        }
-    }
     for mut c in &mut cam {
-        c.target = center;
-        c.dist = dist;
-        c.yaw = yaw;
-        c.pitch = pitch;
-        c.framed = true;
+        crate::camera::seed_orbit_framing(
+            &mut c,
+            center,
+            content_radius,
+            frame_factor,
+            entity_rot,
+            scene_norm,
+        );
     }
 
     // `glb:` parts: render the real mesh AND sample its gaussians from that same mesh (filled by
@@ -375,6 +290,115 @@ pub(crate) fn build_sequence(
     info!("sequence built: {built_n} shots × {n} gaussians");
 }
 
+/// Build each shot's `BuiltShot` (consuming `raws`) — its shape (resampled to the shared budget `n`,
+/// with `rot:`/`tint:` baked in) + the morph-in `origin` cloud its entrance flows FROM (`~name` per
+/// shot > `MARTIN_TRANSITION` > Ball for shot 0 / Morph after; Morph/Swarm flow straight from the
+/// previous shape with no source) + the `exit:` departure cloud + the resolved deform/raster/cue.
+/// `MARTIN_PAIR=match` reorders each Morph shot so splat k slides to the nearest same-colour splat of
+/// the PREVIOUS shape (cost = pos² + `MARTIN_PAIR_COLOR`·colour²) — a coherent ghostly morph instead
+/// of an index-rank centre-ball. The only per-shot data `shot_director` reads.
+#[allow(clippy::too_many_arguments)] // the build inputs are genuinely independent resolved tables
+fn build_shots(
+    parts: &[Shot],
+    raws: Vec<Vec<Gaussian3d>>,
+    transitions: &[Entrance],
+    deforms: &[Option<Deform>],
+    rasters: &[RasterizeMode],
+    starts: &[f32],
+    n: usize,
+    content_radius: f32,
+    assets: &mut Assets<PlanarGaussian3d>,
+) -> Vec<BuiltShot> {
+    let pair_match = std::env::var("MARTIN_PAIR")
+        .map(|v| v.eq_ignore_ascii_case("match"))
+        .unwrap_or(false);
+    let pair_color_w = crate::envvar::or("MARTIN_PAIR_COLOR", 0.5_f32);
+    let mut shots: Vec<BuiltShot> = Vec::with_capacity(parts.len());
+    let mut prev_shaped: Option<Vec<Gaussian3d>> = None;
+    for (idx, raw) in raws.into_iter().enumerate() {
+        // ROBUSTNESS: a part that produced 0 gaussians (an unsupported/broken asset) must NOT reach
+        // the morph shader — an empty cloud is a wgpu validation error that crashes the whole render.
+        // Degrade it to a transparent placeholder so the show plays on (the part is just invisible).
+        let raw = if raw.is_empty() {
+            warn!(
+                "part {}: 0 gaussians — substituting a transparent placeholder (asset failed to load?)",
+                parts[idx].content.label()
+            );
+            crate::mesh::transparent_placeholder(256)
+        } else {
+            raw
+        };
+        let mut shaped = resample_morton(raw, n);
+        // bake the part's own `rot:` into its shape (so sources/out clouds inherit it, and the morph
+        // between differently-oriented parts reorients smoothly). glb parts rotate in sample_gl_mesh.
+        if let Some(q) = parts[idx].rot {
+            if !matches!(parts[idx].content, PartContent::GlMesh(_)) {
+                crate::morph::rotate_gaussians(&mut shaped, q);
+            }
+        }
+        let tr = transitions[idx];
+        let r = content_radius;
+        // if the PREVIOUS part DEPARTS (washes/disperses away), there's no shape to flow from →
+        // a Morph/Swarm part must assemble fresh from a ball instead.
+        let prev_departs = idx > 0 && parts[idx - 1].exit.is_some();
+        // pair=match: when this Morph part flows DIRECTLY from the previous shape (no departure, no
+        // source cloud), reorder it so each splat slides to the nearest same-colour splat of the prev
+        // part — minimal travel, coherent morph. Only the Morph/Swarm-flow case has a prev shape.
+        if pair_match && matches!(tr, Entrance::Morph | Entrance::Swarm) && !prev_departs {
+            if let Some(prev) = &prev_shaped {
+                shaped = crate::morph::match_reorder(prev, shaped, pair_color_w);
+            }
+        }
+        // `tint:` recolours this shot's shape (e.g. a deep-fried bitterbal) BEFORE the source/out
+        // clouds and the next part's pair-match read it, so the whole lifecycle is tinted.
+        if let Some(tint) = parts[idx].tint {
+            crate::scene::colorize::apply(&mut shaped, tint);
+        }
+        let src: Option<Vec<Gaussian3d>> = match tr {
+            // Morph/Swarm flow from the PREVIOUS part's shape (no source) — unless the previous part
+            // departed (washed away), in which case there's nothing to flow from → assemble fresh.
+            Entrance::Morph | Entrance::Swarm if prev_departs => {
+                Some(ball_of(&shaped, r * BALL_SHELL))
+            }
+            Entrance::Morph | Entrance::Swarm => None,
+            // Cut shows the shape instantly (director pins the factor to 1.0) — flows from the prev
+            // shape like Morph, no source cloud to build.
+            Entrance::Cut => None,
+            other => source_cloud(other, &shaped, r),
+        };
+        // `exit:` departure target cloud (faded + displaced) — the part morphs to this as it leaves.
+        let exit = parts[idx].exit.map(|d| d.out_cloud(&shaped, r));
+        let origin = src.map(|s| assets.add(PlanarGaussian3d::from(s)));
+        let exit_cloud = exit.map(|o| assets.add(PlanarGaussian3d::from(o)));
+        // keep this part's shape so the NEXT part can pair-match against it (only needed for
+        // pair=match; the clone is gated to avoid copying a big cloud on every render otherwise).
+        if pair_match {
+            prev_shaped = Some(shaped.clone());
+        }
+        let shot = &parts[idx];
+        shots.push(BuiltShot {
+            shape: assets.add(PlanarGaussian3d::from(shaped)),
+            origin,
+            exit_cloud,
+            entrance: tr,
+            deform: deforms[idx],
+            deform_amp: shot.deform_amp,
+            // a hard cut with no explicit flash gets an automatic white-flash pop on its frame.
+            flash: shot.flash.or((tr == Entrance::Cut).then_some(0.8)),
+            beat: shot.beat,
+            raster: rasters[idx],
+            ease: shot.ease,
+            freeze: shot.freeze,
+            start: starts[idx],
+            morph: shot.morph,
+            bulge: shot.bulge,
+            exit: shot.exit,
+            is_gl_mesh: matches!(shot.content, PartContent::GlMesh(_)),
+        });
+    }
+    shots
+}
+
 /// Add `NoFrustumCulling` to the sequence entity once its Aabb exists, so morph/ball
 /// particles that briefly leave the framed view don't pop out.
 #[allow(clippy::type_complexity)] // a Bevy query filter tuple — verbose by nature
@@ -394,5 +418,80 @@ pub(crate) fn seq_no_cull(
     let Some(e) = state.entity else { return };
     if q.get(e).is_ok() {
         commands.entity(e).insert(NoFrustumCulling);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frame_of_normalized_is_fixed_and_ignores_the_union() {
+        // normalized shots always frame from the centroid origin at the fixed normalize radius — the
+        // raw union (here lopsided with a far floater) must not move the framing.
+        let (c, r, f) = frame_of(
+            true,
+            Vec3::new(-100.0, 0.0, 5.0),
+            Vec3::new(100.0, 9.0, 9.0),
+        );
+        assert_eq!(c, Vec3::ZERO);
+        assert_eq!(r, NORMALIZE_EXTENT * 0.5);
+        assert_eq!(f, 2.5);
+    }
+
+    #[test]
+    fn frame_of_raw_frames_the_union_box() {
+        // raw mode centres on the union box and sizes the radius to its half-diagonal.
+        let (c, r, f) = frame_of(false, Vec3::splat(-1.0), Vec3::splat(1.0));
+        assert_eq!(c, Vec3::ZERO);
+        assert!((r - 3.0_f32.sqrt()).abs() < 1e-5); // half-diagonal of a 2-unit cube
+        assert_eq!(f, 1.7);
+    }
+
+    #[test]
+    fn frame_of_raw_radius_has_a_floor() {
+        // a degenerate (single-point) union must not yield a zero framing radius (camera-at-target).
+        let (_, r, _) = frame_of(false, Vec3::ZERO, Vec3::ZERO);
+        assert_eq!(r, 0.1);
+    }
+
+    #[test]
+    fn arrival_entrance_shot0_cannot_flow_from_a_prev_shape() {
+        // shot 0 has no previous shape — Morph/Swarm/Cut all degrade to a Ball assemble.
+        assert_eq!(
+            arrival_entrance(0, Some(Entrance::Morph), None),
+            Entrance::Ball
+        );
+        assert_eq!(
+            arrival_entrance(0, Some(Entrance::Swarm), None),
+            Entrance::Ball
+        );
+        assert_eq!(
+            arrival_entrance(0, Some(Entrance::Cut), None),
+            Entrance::Ball
+        );
+        // an explicit non-flow entrance still applies on shot 0…
+        assert_eq!(
+            arrival_entrance(0, Some(Entrance::Fade), None),
+            Entrance::Fade
+        );
+        // …and the default with nothing set is a Ball assemble.
+        assert_eq!(arrival_entrance(0, None, None), Entrance::Ball);
+    }
+
+    #[test]
+    fn arrival_entrance_precedence_and_later_default() {
+        // explicit ~name beats the global MARTIN_TRANSITION default.
+        assert_eq!(
+            arrival_entrance(2, Some(Entrance::Fade), Some(Entrance::Explode)),
+            Entrance::Fade
+        );
+        // the global applies when the shot has no explicit entrance.
+        assert_eq!(
+            arrival_entrance(2, None, Some(Entrance::Explode)),
+            Entrance::Explode
+        );
+        // later shots default to Morph (flow from the previous shape).
+        assert_eq!(arrival_entrance(1, None, None), Entrance::Morph);
     }
 }

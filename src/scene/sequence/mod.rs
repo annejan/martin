@@ -19,4 +19,4 @@ pub(crate) use director::shot_director;
 pub(crate) use model::{
     FlashStrength, SeqState, Sequence, Shot, active_shot, shot_starts, show_end,
 };
-pub(crate) use parse::sequence_from_env;
+pub(crate) use parse::{load_camera_positions, sequence_from_env};
