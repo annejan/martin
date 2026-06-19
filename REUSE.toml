@@ -138,7 +138,6 @@ path = [
     "ART-DIRECTION.md",
     "DESIGN.md",
     "SHADER-BLUEPRINT.md",
-    "CODE-QUALITY-REVIEW.md",
     "record.sh",
     "pipeline/splat-setup.sh",
     "pipeline/splat.sh",

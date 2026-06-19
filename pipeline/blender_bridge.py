@@ -8,7 +8,7 @@ Blender (it needs `bpy`), driven over the `blender-mcp` MCP server (`uvx blender
 add-on, port 9876; `blender` is symlinked to `blender-5.1`). Typical loop, from the martin repo:
 
     # in Blender (via mcp__*__execute_blender_code):
-    exec(open('/home/annejan/Projects/martin/pipeline/blender_bridge.py').read())
+    exec(open('/path/to/martin/pipeline/blender_bridge.py').read())
     bridge_import('productions/camping/campsite.show')        # spawn the [stage] + set the camera
     # …user drags/rotates/scales props + orbits the camera (camera-lock is ON)…
     bridge_export('productions/camping/campsite.show')        # write @pos/*scale/rot back, keep all tokens
@@ -64,7 +64,7 @@ import bpy, numpy as np, re, math, os
 from math import radians, degrees, cos, sin
 from mathutils import Matrix, Euler, Vector
 
-ROOT = "/home/annejan/Projects/martin"          # repo root (override if relocated)
+ROOT = "/path/to/martin"                        # repo root (override if relocated)
 ASSET_DIRS = ["assets", "austin_run/exports"]   # searched in order for a referenced asset
 B = Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0)))  # martin-world -> Blender basis
 NORMALIZE_EXTENT = 2.0
