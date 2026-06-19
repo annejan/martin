@@ -41,6 +41,58 @@ impl Default for OrbitCam {
     }
 }
 
+/// Seed the free-orbit camera to frame a built sequence. `center` is the framed world centre and
+/// `content_radius`/`frame_factor` come from the builder's `frame_of`. `MARTIN_ZOOM` scales the
+/// distance (>1 = closer), `MARTIN_YAW`/`MARTIN_PITCH` (radians) seed the orbit angle so a found
+/// viewpoint bakes into a render, and `MARTIN_CAMERAS=<cameras.json>` parks the camera at a real
+/// capture pose (the only viewpoint a raw 360° scene renders coherently) — transformed through the
+/// same `entity_rot` + part-0 `scene_norm` (center, scale) as the gaussians. `MARTIN_CAM_INDEX`
+/// picks which shot (default 0). Moved here from `build_sequence` so the builder stays cloud-math.
+pub(crate) fn seed_orbit_framing(
+    cam: &mut OrbitCam,
+    center: Vec3,
+    content_radius: f32,
+    frame_factor: f32,
+    entity_rot: Quat,
+    scene_norm: (Vec3, f32),
+) {
+    use crate::envvar::or as env;
+    let zoom = env("MARTIN_ZOOM", 1.0_f32);
+    let zoom = if zoom > 0.0 { zoom } else { 1.0 }; // a non-positive zoom is meaningless → default
+    let (mut yaw, mut pitch, mut dist) = (
+        env("MARTIN_YAW", FRONT_YAW),
+        env("MARTIN_PITCH", DEFAULT_PITCH),
+        content_radius * frame_factor / zoom,
+    );
+    if let Ok(cpath) = std::env::var("MARTIN_CAMERAS") {
+        let positions = crate::scene::sequence::load_camera_positions(&cpath);
+        if positions.is_empty() {
+            warn!("MARTIN_CAMERAS: no camera positions in {cpath}");
+        } else {
+            let idx = std::env::var("MARTIN_CAM_INDEX")
+                .ok()
+                .and_then(|s| s.parse::<usize>().ok())
+                .unwrap_or(0)
+                .min(positions.len() - 1);
+            let (c0, s0) = scene_norm;
+            let dir = entity_rot * ((positions[idx] - c0) * s0) - center;
+            let len = dir.length().max(1e-4);
+            yaw = dir.z.atan2(dir.x);
+            pitch = (dir.y / len).asin();
+            dist = len / zoom;
+            info!(
+                "camera: capture pose {idx}/{} from {cpath}",
+                positions.len()
+            );
+        }
+    }
+    cam.target = center;
+    cam.dist = dist;
+    cam.yaw = yaw;
+    cam.pitch = pitch;
+    cam.framed = true;
+}
+
 /// Place the camera on a sphere around `target` from `yaw`/`pitch`/`dist`. With `MARTIN_CAM_PUMP=<s>`
 /// the kick beat-pumps a transient lunge inward (clean per-frame offset, not stored `dist`, so it
 /// bakes identically into recordings). **Off by default** — the camera shake is nauseating on a long
