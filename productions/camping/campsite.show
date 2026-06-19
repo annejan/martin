@@ -19,7 +19,7 @@ particles       = embers
 particle_count  = 420            # roaring fire for the PonyCamp party (was 260)
 particle_at     = @@drop         # sparks fade in WITH the campfire, not before it's lit
 particle_origin = 0,-0.3,0.3     # embers rise FROM the fire (@0,-0.44,0.3) instead of the whole scene
-particle_spread = 0.6            # a tall-ish plume off the flames (tight x/z is built into the ember shape; 1.0 = wide scene-fill)
+particle_spread = 1.6,0.8,1.6    # WIDE x/z fire spread, moderate height (per-axis; set this via the PARTICLE.embers empty in Blender)
 bg_dim         = 0.6
 
 [stage]
@@ -78,10 +78,9 @@ t=@@drop       pos=0.3,-0.60,0.6   dist=3.0   yaw=1.55   pitch=0.08   cut    # C
 t=@@breakdown  pos=-1.3,-0.35,0.4  dist=6.8   yaw=2.05   pitch=0.14          # SWITCH sides: low along the open field as the horse walks in
 t=@@climax     pos=-1.2,0.30,-3.0  dist=11.0  yaw=1.62   pitch=0.10          # ZOOM-OUT REVEAL: the whole camp + moon + mountains, pulled way back
 t=150          pos=-0.4,0.15,-2.0  dist=8.5   yaw=1.95   pitch=0.14          # DRIFT in + orbit right across the party (keep moving)
-t=170          pos=0.5,0.00,-0.8   dist=6.2   yaw=1.35   pitch=0.18          # counter-arc + DIP into the camp (the close, intimate moment)
-t=@@outro      pos=0.2,0.10,-0.5   dist=8.0   yaw=1.55   pitch=0.20          # start pulling back out
-t=210          pos=0.0,0.20,-1.0   dist=12.0  yaw=1.50   pitch=0.24          # ZOOM OUT AGAIN: reveal the whole scene one last time
-t=224          pos=0.0,0.25,-1.0   dist=13.8  yaw=1.48   pitch=0.26          # final gentle pull-back into black
+t=170          pos=0.5,0.00,-0.8   dist=6.2   yaw=1.35   pitch=0.18          # counter-arc + DIP in CLOSE (the intimate moment)
+t=@@outro      pos=0.2,0.05,-0.6   dist=6.6   yaw=1.45   pitch=0.16          # still close, begin easing back out
+t=224          pos=-1.2,0.30,-3.0  dist=11.0  yaw=1.62   pitch=0.10          # pull back to ~where the CLIMAX began (the reveal) → settle there into black
 
 [sync]
 t=@@intro      flash=0.08  bg_dim=0.80  beat=0.25                # calm: aurora breathes, barely any beat

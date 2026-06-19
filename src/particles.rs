@@ -63,13 +63,15 @@ struct ParticleFade {
     start: f32,
 }
 
-/// Where the particle field sits + how tight. By default it fills a wide box around the origin (the
-/// whole scene); `MARTIN_PARTICLE_ORIGIN=x,y,z` re-centres it and `MARTIN_PARTICLE_SPREAD=<f>` scales
-/// the box (e.g. `0.3` clusters embers tight around a campfire). Applied as `origin + pos*spread`.
+/// Where the particle field sits + how tight, PER AXIS. By default it fills a wide box around the
+/// origin (the whole scene); `MARTIN_PARTICLE_ORIGIN=x,y,z` re-centres it and `MARTIN_PARTICLE_SPREAD`
+/// scales the box — a single value `0.3` (all axes) OR `x,y,z` (e.g. `1.5,0.7,1.5` = a WIDE, shorter
+/// campfire spread). Applied component-wise as `origin + pos*spread`. Authorable in Blender via a
+/// `PARTICLE.embers` empty (location → origin, scale → spread); see `pipeline/blender_bridge.py`.
 #[derive(Resource)]
 struct ParticleField {
     origin: Vec3,
-    spread: f32,
+    spread: Vec3,
 }
 
 /// The colour palette (base rgb, emissive rgb) for a kind. Embers = one warm spark; sparks = one hot
@@ -154,7 +156,19 @@ fn spawn_particles(
             )
         })
         .unwrap_or(Vec3::ZERO);
-    let spread = crate::envvar::or("MARTIN_PARTICLE_SPREAD", 1.0_f32).max(0.01);
+    // spread: a single value (all axes) or per-axis `x,y,z` (wide x/z, shorter y for a fire spread).
+    let spread = std::env::var("MARTIN_PARTICLE_SPREAD")
+        .ok()
+        .map(|s| {
+            let v: Vec<f32> = s.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+            match v.len() {
+                0 => Vec3::ONE,
+                1 => Vec3::splat(v[0]),
+                _ => Vec3::new(v[0], v[1], v.get(2).copied().unwrap_or(v[1])),
+            }
+        })
+        .unwrap_or(Vec3::ONE)
+        .max(Vec3::splat(0.01));
     commands.insert_resource(ParticleField { origin, spread });
 
     for i in 0..count {
@@ -195,7 +209,7 @@ fn animate_particles(
     let burst = beat.map(|b| b.kick * b.intensity).unwrap_or(0.0);
     let (origin, spread) = field
         .map(|f| (f.origin, f.spread))
-        .unwrap_or((Vec3::ZERO, 1.0));
+        .unwrap_or((Vec3::ZERO, Vec3::ONE));
     for (p, mut tf) in &mut q {
         let (pos, spin, scale) = particle_xform(p.kind, p.s, t, burst);
         tf.translation = origin + pos * spread; // re-centre + tighten the field (campfire embers)
@@ -217,11 +231,11 @@ fn particle_xform(kind: Kind, s: [f32; 3], t: f32, burst: f32) -> (Vec3, Quat, f
             let speed = 0.5 + 0.7 * s[0];
             let life = (s[1] + t * speed * 0.13).rem_euclid(1.0); // 0..1 rise cycle, staggered
             let y = -FIELD * 0.5 + life * (FIELD * 2.8); // start at the fire base, rise well up
-            let widen = 0.12 + life * 0.6; // narrow base → wider plume as it drifts up
+            let widen = 0.5 + life * 0.7; // a WIDE base that opens further as it drifts up
             let x = (s[2] - 0.5) * widen + (t * 0.6 + s[0] * TAU).sin() * 0.06 * (0.3 + life);
             let z = (s[0] - 0.5) * widen + (t * 0.5 + s[1] * TAU).cos() * 0.06 * (0.3 + life);
             // fizzle: snap in at the base, taper smoothly to 0 by the top (no pop, no block-end)
-            let fade = (life * 8.0).min(1.0) * (1.0 - life).powf(1.3);
+            let fade = (life * 8.0).min(1.0) * (1.0 - life).powf(1.1);
             (Vec3::new(x, y, z), Quat::IDENTITY, 1.1 * fade)
         }
         // tumbling coloured flakes FALLING (top→bottom, wraps); flutter widens + a kick-shove on the beat.

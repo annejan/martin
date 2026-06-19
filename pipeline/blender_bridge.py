@@ -151,6 +151,32 @@ def parse_camera(show_path):
     return out
 
 
+def parse_settings(show_path):
+    """Return the top-level / `[settings]` key=value knobs as a dict."""
+    path = show_path if os.path.isabs(show_path) else os.path.join(ROOT, show_path)
+    out, sec = {}, "settings"
+    for raw in open(path):
+        line = raw.split("#", 1)[0].strip()
+        m = re.match(r"\[(\w+)\]", line)
+        if m:
+            sec = m.group(1)
+            continue
+        if sec == "settings" and "=" in line:
+            k, v = line.split("=", 1)
+            out[k.strip()] = v.strip()
+    return out
+
+
+def _patch_setting(lines, key, val):
+    """Replace `key = …` in a settings line list (keeps any trailing comment); no-op if absent."""
+    for i, ln in enumerate(lines):
+        m = re.match(r"(\s*" + re.escape(key) + r"\s*=)\s*([^#]*?)\s*(#.*)?$", ln)
+        if m:
+            lines[i] = f"{m.group(1)} {val}" + (f"  {m.group(3)}" if m.group(3) else "")
+            return lines
+    return lines
+
+
 def _find_asset(name):
     for sub in ASSET_DIRS:
         p = os.path.join(ROOT, sub, name)
@@ -388,6 +414,19 @@ def bridge_import(show_path, cam_anchor=None, backdrop=None, splat_n=10000):
             ob["_show_kind"] = spec["kind"]
             ob["_has_travel"] = spec["has_travel"]
             n += 1
+    # particle area-of-effect handle: a PARTICLE.embers empty whose location = origin, scale = spread
+    # (per-axis). Move/scale it in Blender to dial where embers sit + how wide/tall — export writes it.
+    st = parse_settings(show_path)
+    if st.get("particles"):
+        org = _vec3(st.get("particle_origin", "0,0,0"))
+        sp = st.get("particle_spread", "1")
+        spv = _vec3(sp) if "," in sp else [float(sp)] * 3
+        e = bpy.data.objects.new("PARTICLE.embers", None)
+        bpy.context.collection.objects.link(e)
+        e.empty_display_type = "CUBE"
+        e.empty_display_size = NORMALIZE_EXTENT  # rough volume handle (embers fill ~this box × spread)
+        e.location = m2b(org)
+        e.scale = (spv[0], spv[2], spv[1])       # martin spread (x,y,z) -> Blender (x,z,y)
     cams = parse_camera(show_path)
     cam = next((c for c in cams if cam_anchor and cam_anchor in str(c["t"])), cams[0] if cams else None)
     if cam:
@@ -443,6 +482,14 @@ def bridge_export(show_path, write=True):
         if sc is not None and re.search(r"\*[-\d.]", ln):
             ln = re.sub(r"\*[-\d.][^\s]*", "*%g" % sc, ln, count=1)
         lines[li] = ln
+    # particle volume → particle_origin / particle_spread settings (if the handle is present)
+    pe = bpy.data.objects.get("PARTICLE.embers")
+    if pe:
+        org = b2m(pe.matrix_world.translation)
+        s = pe.scale
+        spv = (round(s.x, 3), round(s.z, 3), round(s.y, 3))  # Blender (x,z,y) -> martin spread (x,y,z)
+        lines = _patch_setting(lines, "particle_origin", "%g,%g,%g" % org)
+        lines = _patch_setting(lines, "particle_spread", "%g,%g,%g" % spv)
     cam = read_camera()
     if write:
         open(path, "w").write("\n".join(lines))

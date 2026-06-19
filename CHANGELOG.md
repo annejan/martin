@@ -12,9 +12,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Engine
 - **Localized particles**: `MARTIN_PARTICLE_ORIGIN=x,y,z` re-centres the particle field and
-  `MARTIN_PARTICLE_SPREAD=<f>` scales it (`particle_origin=`/`particle_spread=` in `[settings]`), so
-  embers can cluster tight around a campfire (`origin` on the flame, `spread` ~0.35) instead of filling
-  the whole scene. Default (origin 0, spread 1) is unchanged.
+  `MARTIN_PARTICLE_SPREAD` scales it — a single value OR **per-axis `x,y,z`** (e.g. `1.6,0.8,1.6` for a
+  WIDE, shorter campfire spread). Settings `particle_origin=`/`particle_spread=`; default (0 / 1)
+  unchanged. The **embers shape** is now a campfire PLUME (wide base → rises tall → fizzles to 0 near
+  the top, no hard block-end). Authorable in Blender via a `PARTICLE.embers` empty (location → origin,
+  scale → spread) — `pipeline/blender_bridge.py` imports/exports it.
 - **`[camera]` track is now authoritative for *any* show** (compose-only included), no `MARTIN_FLY`
   needed. A fully-timed camera track (`t=…` on every keyframe) plays straight off the show clock in
   `flypath`; the compose/sequence auto-frame still seeds the initial pose but the track drives every
