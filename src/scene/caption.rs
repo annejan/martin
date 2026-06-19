@@ -29,14 +29,14 @@ static FONT: &[u8] = include_bytes!("../../assets/font.ttf");
 #[derive(Clone)]
 pub struct CaptionSpec {
     pub text: String,
-    pub appear: f32,   // fade-in start (show seconds)
-    pub out: f32,      // fade-out start (show seconds); f32::MAX = stick to end
-    pub fade: f32,     // fade in/out duration (s)
-    pub fx: f32,       // screen-x fraction of left edge (used only when !center)
-    pub fy: f32,       // screen-y fraction; >1 = below-screen credit scroll
-    pub size: f32,     // font size (px)
-    pub center: bool,  // true → flex-centre text horizontally on screen
-    pub scroll: f32,   // upward scroll speed (fraction of screen / s); 0 = static
+    pub appear: f32,  // fade-in start (show seconds)
+    pub out: f32,     // fade-out start (show seconds); f32::MAX = stick to end
+    pub fade: f32,    // fade in/out duration (s)
+    pub fx: f32,      // screen-x fraction of left edge (used only when !center)
+    pub fy: f32,      // screen-y fraction; >1 = below-screen credit scroll
+    pub size: f32,    // font size (px)
+    pub center: bool, // true → flex-centre text horizontally on screen
+    pub scroll: f32,  // upward scroll speed (fraction of screen / s); 0 = static
 }
 
 /// The parsed `[caption]` track.
@@ -68,7 +68,12 @@ struct CaptionScroll {
 /// Grammar (all tokens optional except `screentext:`):
 ///   `screentext:<text…>  [in <anchor>] [out <anchor>] [at fx,fy] [size px] [fade s] [center] [scroll s]`
 pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
-    let is_kw = |t: &str| matches!(t, "in" | "out" | "at" | "size" | "fade" | "center" | "scroll");
+    let is_kw = |t: &str| {
+        matches!(
+            t,
+            "in" | "out" | "at" | "size" | "fade" | "center" | "scroll"
+        )
+    };
     let mut out = Vec::new();
     for raw in lines {
         let line = raw.split('#').next().unwrap_or("").trim();
@@ -91,15 +96,26 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
             text.push_str(toks[i]);
             i += 1;
         }
-        let (mut appear, mut out_t, mut fade, mut fx, mut fy, mut size, mut center, mut scroll) =
-            (0.0_f32, f32::MAX, 0.6_f32, 0.5_f32, 0.1_f32, 56.0_f32, false, 0.0_f32);
+        let (mut appear, mut out_t, mut fade, mut fx, mut fy, mut size, mut center, mut scroll) = (
+            0.0_f32,
+            f32::MAX,
+            0.6_f32,
+            0.5_f32,
+            0.1_f32,
+            56.0_f32,
+            false,
+            0.0_f32,
+        );
         while i < toks.len() {
             let val = toks.get(i + 1).copied().unwrap_or("");
             match toks[i] {
                 "in" => appear = score.anchor_seconds(val).unwrap_or(0.0),
                 "out" => out_t = score.anchor_seconds(val).unwrap_or(f32::MAX),
                 "at" => {
-                    let n: Vec<f32> = val.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+                    let n: Vec<f32> = val
+                        .split(',')
+                        .filter_map(|x| x.trim().parse().ok())
+                        .collect();
                     if let Some(a) = n.first() {
                         fx = a.clamp(0.0, 1.0);
                     }
@@ -113,12 +129,24 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
                 "scroll" => scroll = val.parse().unwrap_or(0.0),
                 _ => {}
             }
-            i += 2;
+            // `center` is a value-less flag — advance ONE token, not two, or it eats the next
+            // key (e.g. `size`/`scroll`) and desyncs every remaining key=value pair.
+            i += if toks[i] == "center" { 1 } else { 2 };
         }
         if text.is_empty() {
             continue;
         }
-        out.push(CaptionSpec { text, appear, out: out_t, fade, fx, fy, size, center, scroll });
+        out.push(CaptionSpec {
+            text,
+            appear,
+            out: out_t,
+            fade,
+            fx,
+            fy,
+            size,
+            center,
+            scroll,
+        });
     }
     out
 }
@@ -138,9 +166,11 @@ fn spawn_captions(
         return;
     }
     let Ok(cam) = cam_q.single() else { return };
-    let font = font_h.get_or_insert_with(|| {
-        fonts.add(Font::try_from_bytes(FONT.to_vec()).expect("caption font"))
-    }).clone();
+    let font = font_h
+        .get_or_insert_with(|| {
+            fonts.add(Font::try_from_bytes(FONT.to_vec()).expect("caption font"))
+        })
+        .clone();
 
     for c in &caps.0 {
         // Build node: flex-centred full-width or left-anchored at fx
@@ -176,9 +206,17 @@ fn spawn_captions(
         entity.with_children(|p| {
             p.spawn((
                 Text::new(c.text.clone()),
-                TextFont { font: font.clone(), font_size: c.size, ..default() },
+                TextFont {
+                    font: font.clone(),
+                    font_size: c.size,
+                    ..default()
+                },
                 TextColor(Color::srgba(0.96, 0.96, 1.0, 0.0)),
-                CaptionTag { appear: c.appear, out: c.out, fade: c.fade },
+                CaptionTag {
+                    appear: c.appear,
+                    out: c.out,
+                    fade: c.fade,
+                },
             ));
         });
     }
