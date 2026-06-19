@@ -133,6 +133,7 @@ SPDX-License-Identifier = "MIT"
 [[annotations]]
 path = [
     "AGENTS.md",
+    "CLAUDE.md",
     "README.md",
     "ART-DIRECTION.md",
     "DESIGN.md",
