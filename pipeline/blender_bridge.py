@@ -64,7 +64,14 @@ import bpy, numpy as np, re, math, os
 from math import radians, degrees, cos, sin
 from mathutils import Matrix, Euler, Vector
 
-ROOT = "/path/to/martin"                        # repo root (override if relocated)
+# Repo root: $MARTIN_ROOT, else the cwd or ~/Projects/martin if it looks like the repo (has
+# productions/), else the cwd. Auto-detect so the file carries no machine-specific path.
+ROOT = next(
+    (p for p in (os.environ.get("MARTIN_ROOT", ""), os.getcwd(),
+                 os.path.expanduser("~/Projects/martin"))
+     if p and os.path.isdir(os.path.join(p, "productions"))),
+    os.getcwd(),
+)
 ASSET_DIRS = ["assets", "austin_run/exports"]   # searched in order for a referenced asset
 B = Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0)))  # martin-world -> Blender basis
 NORMALIZE_EXTENT = 2.0
