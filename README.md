@@ -189,6 +189,26 @@ cargo +nightly run --release
 #   ./record.sh out.mp4   renders the whole timeline to video
 ```
 
+## Composing scenes in Blender (the bridge)
+
+Pose a show's `[stage]`/`[compose]` props **and** the camera in **Blender's** viewport, then read them
+straight back into the `.show` — full transform (position · rotation · scale · camera) round-trips **1:1**
+with martin. It's `pipeline/blender_bridge.py`, driven over the `blender-mcp` MCP server. In Blender:
+
+```python
+exec(open('/path/to/martin/pipeline/blender_bridge.py').read())
+bridge_import('productions/camping/campsite.show', cam_anchor='climax')  # spawn [stage] + set camera
+# …drag / rotate / scale props, orbit the camera (camera-lock is ON); scale the PARTICLE.embers
+#   cube to dial the campfire ember volume…
+bridge_export('productions/camping/campsite.show')   # patch @pos/*scale/rot + particle volume back
+bridge_shot('/tmp/x.png')                            # save a shot (DISPLAY=:0 xdg-open to view)
+```
+
+Export patches only `@pos`/`*scale`/`rot` (+ `particle_origin`/`particle_spread`) on each prop's source
+line, so every other show token is preserved. Poseable = `[stage]`/`[compose]` props; programmatic
+`[reel]`/`path:`/`travel:` content is temporal (load one reel frame as a `backdrop=` to pose over it).
+Full reference: the script docstring + the "Blender ↔ martin bridge" section of `AGENTS.md`.
+
 ## Build profiles
 
 The **spherical-harmonic degree** is a compile-time choice (one-hot in the splat crate), exposed as two
