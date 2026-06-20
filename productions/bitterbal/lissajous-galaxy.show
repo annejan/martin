@@ -68,7 +68,9 @@ t=@@outro      pos=0.0,0.2,0     dist=7.6   yaw=1.40  pitch=0.18    # settle fro
 [sync]
 t=@@intro      flash=0.10  bg_dim=0.50  beat=0.3   bg=stars        # cosmic calm, the hub turns alone
 t=@@build      flash=0.18  bg_dim=0.50  beat=0.8                   # snacks + eggs weave in
-t=@@drop       flash=0.85  bg_dim=0.36  beat=1.7   bg=fractal      # punch into the heart — full kick, the cosmos boils
-t=@@breakdown  flash=0.18  bg_dim=0.55  beat=0.6   bg=stars        # hush, the weave breathes
-t=@@climax     flash=0.7   bg_dim=0.36  beat=1.8   bg=fractal      # the ring fills out — peak
+# peaks stay on the calm starfield — a busy fractal/kaleido bg DROWNS the swarm (the weave is the show);
+# the kick lands via flash + exposure + beat + the chroma split, not a competing backdrop.
+t=@@drop       flash=0.95  bg_dim=0.42  beat=1.8   bg=stars   exposure=1.45   # punch into the heart — full kick
+t=@@breakdown  flash=0.18  bg_dim=0.55  beat=0.6   bg=stars   exposure=0.95   # hush, the weave breathes
+t=@@climax     flash=0.85  bg_dim=0.42  beat=1.9   bg=stars   exposure=1.55   # the ring fills out — peak
 t=@@outro      flash=0.22  bg_dim=0.50  beat=0.6                   # ease to the logo + loop
