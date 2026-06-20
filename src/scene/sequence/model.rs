@@ -34,7 +34,9 @@ pub(crate) struct Shot {
     pub ease: Ease, // `ease:<name>` → shape the morph curve (default Smoothstep = unchanged)
     pub freeze: Option<f32>, // `freeze:N` → quantize the deform animation to N steps/bar (stop-motion)
     pub ground: Option<f32>, // `ground:<y>` → seat this part's LOWEST splat at world-Y (rest it on a
-                             // [stage] plate); None = centred at the origin (floats), the default
+    // [stage] plate); None = centred at the origin (floats), the default
+    pub disk: Option<f32>, // `disk:<f>` → per-part mesh splat-disk overlap (overrides MARTIN_MESH_SPLAT);
+                           // smaller = crisper edges on a sharp graphic (the logo), None = global default
 }
 
 impl Shot {
@@ -62,6 +64,7 @@ impl Shot {
             ease: Ease::Smoothstep,
             freeze: None,
             ground: None,
+            disk: None,
         }
     }
 }

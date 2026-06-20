@@ -134,6 +134,7 @@ pub(crate) fn part_gaussians(
     state: &SeqState,
     assets: &Assets<PlanarGaussian3d>,
     root: &std::path::Path,
+    disk: Option<f32>,
 ) -> Vec<Gaussian3d> {
     match content {
         PartContent::Text(s) => build_text_gaussians(s, TEXT_RGB, 3.0, 2, 0.012),
@@ -158,7 +159,9 @@ pub(crate) fn part_gaussians(
             // MARTIN_MESH_SPLAT is the splat size as an OVERLAP factor on the mean inter-sample
             // spacing: ~1.0 = disks just touch (crispest), >1 = more overlap (softer/smoother),
             // <1 = gaps. Density-adaptive, so it's right for any mesh size or polygon count.
-            let splat = crate::envvar::or("MARTIN_MESH_SPLAT", 1.2);
+            // per-part `disk:<f>` overrides the global MARTIN_MESH_SPLAT (smaller disks = crisper
+            // edges on a sharp graphic like the logo, without blurring other parts' texture detail).
+            let splat = disk.unwrap_or_else(|| crate::envvar::or("MARTIN_MESH_SPLAT", 1.2));
             // None when unset → the loader falls back to the mesh's own material colour (a glTF
             // `baseColorFactor`, e.g. defeest.glb's blue+yellow), then to a pale default. An explicit
             // MARTIN_MESH_RGB is a deliberate flat recolour and wins over the material.
@@ -213,6 +216,7 @@ pub(crate) fn sample_content(
     state: &SeqState,
     assets: &Assets<PlanarGaussian3d>,
     root: &std::path::Path,
+    disk: Option<f32>,
 ) -> Vec<Gaussian3d> {
     use crate::scene::effects::Entrance;
     use crate::text::{build_text_outline_gaussians, build_text_penwrite_gaussians};
@@ -225,7 +229,7 @@ pub(crate) fn sample_content(
             let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
             build_text_penwrite_gaussians(s, TEXT_RGB, 3.0, pw_step, pw_splat)
         }
-        _ => part_gaussians(content, state, assets, root),
+        _ => part_gaussians(content, state, assets, root, disk),
     }
 }
 

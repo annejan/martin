@@ -140,7 +140,9 @@ pub(crate) fn build_sequence(
         .parts
         .iter()
         .zip(&transitions)
-        .map(|(part, &tr)| sample_content(&part.content, Some(tr), &state, &assets, &root.0))
+        .map(|(part, &tr)| {
+            sample_content(&part.content, Some(tr), &state, &assets, &root.0, part.disk)
+        })
         .collect();
     // `cluster:N` → replicate a part into N scattered, randomly-rotated copies (a "serving", e.g. a
     // pile of bitterballen) BEFORE normalize, so the whole pile frames as one. Downsample per copy

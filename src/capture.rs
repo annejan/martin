@@ -45,9 +45,14 @@ pub(crate) fn render_size() -> (u32, u32) {
     }
 }
 
-/// Create the offscreen image (`MARTIN_RES`-sized) when recording, before the camera is retargeted to it.
+/// Create the offscreen image (`MARTIN_RES`-sized) when recording OR screenshotting, before the camera
+/// is retargeted to it — so `MARTIN_SHOT`/`MARTIN_SHOTS` grab the image (truly headless) instead of the
+/// OS window (which renders black / panics acquiring its swapchain on RADV when unfocused).
 fn setup_record_target(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    if std::env::var_os("MARTIN_RECORD").is_none() {
+    if std::env::var_os("MARTIN_RECORD").is_none()
+        && std::env::var_os("MARTIN_SHOT").is_none()
+        && std::env::var_os("MARTIN_SHOTS").is_none()
+    {
         return;
     }
     let (width, height) = render_size();
@@ -238,14 +243,18 @@ fn shot_path(path: &str, at: f32, multi: bool) -> String {
     }
 }
 
+#[allow(clippy::too_many_arguments)] // ECS system params + the file-wait Locals
 fn shot_driver(
     mut shot: ResMut<ShotConfig>,
     mut clock: ResMut<SeqClock>,
     state: Option<Res<SeqState>>,
     comp: Option<Res<crate::scene::compose::Composition>>,
+    target: Option<Res<RecordTarget>>,
+    camq: Query<&OrbitCam>,
     mut commands: Commands,
     mut exit: MessageWriter<AppExit>,
     mut frames: Local<u32>,
+    mut last_out: Local<String>,
 ) {
     let Some(path) = shot.path.clone() else {
         return;
@@ -261,22 +270,31 @@ fn shot_driver(
     clock.t = at;
     // wait until the show is actually built (assets loaded → composition/sequence assembled), then a
     // few more frames so the held pose + sort settle before grabbing the frame.
+    // wait for the show to be built AND the camera to be framed — else the screenshot grabs the
+    // offscreen image before the camera is positioned + a frame has rendered into it (a black frame).
     let built = state.map(|s| s.built).unwrap_or(false) || comp.map(|c| c.built).unwrap_or(false);
-    if !built {
+    if !built || !camq.iter().any(|c| c.framed) {
         return;
     }
     *frames += 1;
     if !shot.done && *frames >= 8 {
         let out = shot_path(&path, at, shot.ats.len() > 1);
-        commands
-            .spawn(Screenshot::primary_window())
-            .observe(save_to_disk(out.clone()));
+        // shoot the offscreen image (headless, window-independent); fall back to the window only if the
+        // target wasn't set up (e.g. a live windowed session that happens to request a shot).
+        let grab = match &target {
+            Some(t) => Screenshot::image(t.0.clone()),
+            None => Screenshot::primary_window(),
+        };
+        commands.spawn(grab).observe(save_to_disk(out.clone()));
         shot.done = true;
+        *last_out = out.clone();
         info!("auto-screenshot @ t={at:.1} -> {out}");
     }
-    // hold extra frames so the async screenshot save finishes before we re-seek (else a sheet frame
-    // races the next shot and comes out blank).
-    if shot.done && *frames >= 16 {
+    // WAIT for the screenshot file to actually land on disk before re-seeking / exiting — the
+    // screenshot is an async GPU readback saved by an observer a few render frames later, so a fixed
+    // frame count raced it (the file never finished writing before AppExit / the next sheet seek). Poll
+    // for the file; a large frame cap is just a backstop so a failed save can't hang the process.
+    if shot.done && (std::path::Path::new(&*last_out).exists() || *frames >= 1200) {
         // next frame in the sheet (re-seek), or exit after the last
         shot.idx += 1;
         shot.done = false;

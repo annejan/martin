@@ -18,6 +18,22 @@ fn dc(c: f32) -> f32 {
     (c - 0.5) / 0.282_094_79
 }
 
+/// Encode a LINEAR colour to sRGB. The render shader (fork `planar.wgsl::convert_sh_color_to_linear`)
+/// applies `srgb_to_linear` to every DC colour, so a colour that is ALREADY linear — a glTF
+/// `baseColorFactor` or glTF vertex colours, both linear per the spec — must be sRGB-encoded first or it
+/// double-decodes and renders dark/desaturated. Texture texels + text/`MARTIN_MESH_RGB` are already sRGB
+/// display values, so they're fed raw (no call here).
+fn lin_to_srgb(c: f32) -> f32 {
+    if c <= 0.003_130_8 {
+        12.92 * c
+    } else {
+        1.055 * c.powf(1.0 / 2.4) - 0.055
+    }
+}
+fn lin_to_srgb3(c: [f32; 3]) -> [f32; 3] {
+    [lin_to_srgb(c[0]), lin_to_srgb(c[1]), lin_to_srgb(c[2])]
+}
+
 /// A degree-0 SH from a target RGB.
 fn sh_of(rgb: [f32; 3]) -> SphericalHarmonicCoefficients {
     let mut sh = SphericalHarmonicCoefficients::default();
@@ -454,7 +470,7 @@ fn build_gltf_gaussians(
                 let mat = prim.material();
                 let mat_col = mat.index().map(|_| {
                     let b = mat.pbr_metallic_roughness().base_color_factor();
-                    [b[0], b[1], b[2]]
+                    lin_to_srgb3([b[0], b[1], b[2]]) // baseColorFactor is LINEAR per spec → encode
                 });
                 let base = rgb.or(mat_col).unwrap_or(MESH_FALLBACK_RGB);
                 // the primitive's diffuse texture (an index into the decoded `images`), if any.
@@ -516,11 +532,12 @@ fn build_gltf_gaussians(
             // vertex colours win; then the diffuse TEXTURE (unless MARTIN_MESH_RGB forces a flat
             // override); then the flat material/base colour.
             if let Some(c) = tri_cols[ti] {
-                return sh_of([
+                // glTF vertex colours are LINEAR per spec → encode (the shader decodes again).
+                return sh_of(lin_to_srgb3([
                     c[0][0] * bw + c[1][0] * bu + c[2][0] * bv,
                     c[0][1] * bw + c[1][1] * bu + c[2][1] * bv,
                     c[0][2] * bw + c[1][2] * bu + c[2][2] * bv,
-                ]);
+                ]));
             }
             if rgb.is_none() {
                 if let (Some(uv), Some(idx)) = (tri_uv[ti], tri_tex[ti]) {

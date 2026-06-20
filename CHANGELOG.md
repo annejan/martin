@@ -11,6 +11,17 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Engine
+- **Correct glTF mesh colours**: `baseColorFactor` + glTF vertex colours are LINEAR per spec, but the
+  render shader decodes every DC colour as sRGB → they were double-decoded (dark / desaturated, e.g. the
+  deFEEST logo's blue+yellow). Now sRGB-encoded before the SH DC encode so they render correctly
+  (textures + text/`MARTIN_MESH_RGB` are already sRGB → unchanged). `src/mesh.rs` `lin_to_srgb`.
+- **Headless `MARTIN_SHOT`/`MARTIN_SHOTS`**: single screenshots now run truly headless (no window) like
+  the recorder — render the camera to an offscreen image instead of the OS window (which renders black /
+  panics acquiring its swapchain on RADV when unfocused), and **wait for the file to land** before
+  exiting. A 1080p frame in ~5 s vs a full video render — fast iteration / profiling. (`MARTIN_BENCH`
+  also confirms splat COUNT is not the per-frame bottleneck: ~350 render-fps at 50k and 400k alike.)
+- **Per-part mesh disk size** `disk:<f>`: a reel-part token overriding `MARTIN_MESH_SPLAT` (disk overlap)
+  for that part only — smaller = crisper edges on a sharp graphic without blurring other parts.
 - **Smoother textured splats**: glTF `baseColorTexture` sampling in the mesh→gaussian path is now
   **bilinear** (was nearest-texel) — textured `mesh:` objects read the texture smoothly between texels
   instead of stepping, so they no longer look blocky/low-res. (Trilinear/mipmaps would only help under

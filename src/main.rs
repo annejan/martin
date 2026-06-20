@@ -200,10 +200,16 @@ fn main() {
     // renders black whenever it isn't the focused/visible window, so the recorder renders the
     // camera into an offscreen image (capture.rs) and drives the schedule itself; live runs keep
     // a normal window. MARTIN_FULLSCREEN=1 → borderless fullscreen (live only).
-    let recording = std::env::var("MARTIN_RECORD").is_ok() || std::env::var("MARTIN_BENCH").is_ok();
-    let fullscreen = std::env::var("MARTIN_FULLSCREEN").is_ok() && !recording;
+    // Headless = no window, drive the schedule ourselves, render the camera into an offscreen image:
+    // recording, the perf bench, AND single/contact-sheet screenshots all need it (the RADV window
+    // renders black / panics acquiring its swapchain when unfocused). Live runs keep a normal window.
+    let headless = std::env::var("MARTIN_RECORD").is_ok()
+        || std::env::var("MARTIN_BENCH").is_ok()
+        || std::env::var("MARTIN_SHOT").is_ok()
+        || std::env::var("MARTIN_SHOTS").is_ok();
+    let fullscreen = std::env::var("MARTIN_FULLSCREEN").is_ok() && !headless;
     let mut plugins = DefaultPlugins.set(WindowPlugin {
-        primary_window: (!recording).then(|| Window {
+        primary_window: (!headless).then(|| Window {
             title: "martin — splat fly-around".into(),
             resolution: (1280, 720).into(), // fixed size so recorded frames are uniform
             mode: if fullscreen {
@@ -213,7 +219,7 @@ fn main() {
             },
             ..default()
         }),
-        exit_condition: if recording {
+        exit_condition: if headless {
             bevy::window::ExitCondition::DontExit
         } else {
             bevy::window::ExitCondition::OnAllClosed
@@ -230,14 +236,14 @@ fn main() {
         unapproved_path_mode: bevy::asset::UnapprovedPathMode::Allow,
         ..default()
     });
-    if recording {
+    if headless {
         plugins = plugins.disable::<bevy::winit::WinitPlugin>();
     }
 
     let mut app = App::new();
     app.add_plugins(plugins)
         .add_plugins(GaussianSplattingPlugin);
-    if recording {
+    if headless {
         // No winit event loop — drive the schedule ourselves; record_driver exits via AppExit.
         app.add_plugins(bevy::app::ScheduleRunnerPlugin::run_loop(
             std::time::Duration::ZERO,

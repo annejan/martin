@@ -19,7 +19,7 @@ pair         = match
 # neighbours, so the logo flows into the guinea pig flows into the cooked dish (no centre-collapse).
 # Part 0: the deFEEST logo — fades in (NOT a ball), the brand opens the bit. rot:180,0,0 cancels the
 # sampler's base flip-X so the wordmark reads forwards (same trick as cities-defeest/cosmic-snack).
-mesh:defeest.glb  @@bar:0    @3,3    ~fade    rot:180,0,0   backdrop:off
+mesh:defeest.glb  @@bar:0    @3,3    ~fade    rot:180,0,0   backdrop:off   disk:0.65
 # Part 1: cavia (live guinea pig) — morphs in from the logo; ground: seats it ON the plate
 mesh:cavia.glb    @@bar:4    @3,3,0  ~morph   rot:0,0,0   ground:-0.65
 # Part 2: cuy (the cooked dish) — morphs in from cavia; bulge 0 = no ball balloon; seated on the plate.
