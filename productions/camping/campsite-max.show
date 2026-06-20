@@ -103,10 +103,8 @@ t=@@outro      flash=0.30  bg_dim=0.58  beat=1.0   exposure=1.05  bg=aurora    #
 t=@@bar:125    flash=0.0   bg_dim=0.22  beat=0.4   exposure=0.85               # fade to close
 
 [caption]
-# The emotional dip: the camp sits dark + empty in the breakdown (deFEEST has left) — the line lands,
-# held + still (no scroll), then fades as the climax erupts WITH deFEEST back. The showbook's heart.
-screentext:zonder deFEEST is het kut   in @@breakdown+2bar  out @@climax  at 0,0.4  center  size 32  fade 1.6
-
+# (The emotional dip is now shown, not told: the deFEEST wordmark visibly LEAVES at the breakdown +
+#  RETURNS on the climax — no on-screen caption. Only the end-credits scroll remains.)
 # Scrolling credits — each starts below-screen (fy=1.2), scrolls upward centred
 screentext:deFEEST fun and games  in @@outro        out @@bar:124  at 0,1.2  center  size 22  scroll 0.05  fade 1.0
 screentext:PonyCamp 2026          in @@outro+2bar   out @@bar:124  at 0,1.2  center  size 22  scroll 0.05  fade 1.0
