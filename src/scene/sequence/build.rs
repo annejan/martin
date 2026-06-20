@@ -140,7 +140,15 @@ pub(crate) fn build_sequence(
         .iter()
         .zip(&transitions)
         .map(|(part, &tr)| {
-            sample_content(&part.content, Some(tr), &state, &assets, &root.0, part.disk)
+            sample_content(
+                &part.content,
+                Some(tr),
+                &state,
+                &assets,
+                &root.0,
+                part.disk,
+                part.aniso,
+            )
         })
         .collect();
     // `cluster:N` → replicate a part into N scattered, randomly-rotated copies (a "serving", e.g. a

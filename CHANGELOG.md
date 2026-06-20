@@ -32,6 +32,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   pre-parse `--mcp` special-case is gone from `main`. `$MARTIN_MCP` still works for parity.
 
 ### Engine
+- **`aniso:<f>` — anisotropic mesh splats** (reel per-part token): `>1` stretches each sampled `mesh:`
+  splat into an **ellipsoid along the surface grain** (the triangle's longest in-plane edge),
+  area-preserving, so the cloud follows the mesh's contours for a streaky/painterly read instead of round
+  dots; `1` (the default) = round disks, byte-identical to before. Restores the math removed with the
+  global `MARTIN_MESH_ANISO` env var, now a per-part token. `mesh.rs`, `content.rs`, `model.rs`,
+  `parse.rs`.
 - **`^name@morph` — morph-gated deform** (reel): append `@morph` to a per-Shot `^deform` and its
   amplitude becomes a half-sine over the morph-in (0 at the ends, peak at the midpoint, 0 through the
   rest of the hold) instead of running the whole time. A wobble that builds as the shape transforms then

@@ -455,6 +455,12 @@ part only — smaller (`disk:0.7`) = tighter, crisper edges on a sharp graphic; 
 fill. Lets one part (e.g. the logo) be crisp without re-tuning the rest. Only affects sampled `mesh:`
 parts.
 
+**Aniso** (`aniso:<f>`) makes a sampled `mesh:` part's splats **anisotropic** — `>1`
+stretches each sample into an **ellipsoid along the surface grain** (the triangle's longest in-plane
+edge), area-preserving, so the cloud follows the mesh's contours for a streaky/painterly look instead
+of round dots. `1` (the default) = round disks, byte-identical to before. Only affects sampled `mesh:`
+parts.
+
 **Ground** (`ground:<y>`) seats a part's **lowest splat at world-Y `<y>`** instead of centring it on
 the origin — so an object **rests on a surface** (e.g. a `[stage]` plate) rather than floating. Each
 part is otherwise normalized to the origin, so differently-shaped parts (a tall guinea pig vs a flat

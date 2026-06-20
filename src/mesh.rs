@@ -103,6 +103,30 @@ fn quat_from_basis(t: [f32; 3], b: [f32; 3], n: [f32; 3]) -> [f32; 4] {
     }
 }
 
+/// Longest of a triangle's three edges, projected into the plane perpendicular to `n` and normalized
+/// — the surface "grain" direction. `[1,0,0]` if degenerate. Used to orient anisotropic splats.
+fn longest_edge_in_plane(tri: &[[f32; 3]; 3], n: [f32; 3]) -> [f32; 3] {
+    let proj = |e: [f32; 3]| {
+        let d = e[0] * n[0] + e[1] * n[1] + e[2] * n[2];
+        [e[0] - d * n[0], e[1] - d * n[1], e[2] - d * n[2]]
+    };
+    let mut best = [1.0, 0.0, 0.0];
+    let mut best_len = 0.0;
+    for e in [
+        sub(tri[1], tri[0]),
+        sub(tri[2], tri[0]),
+        sub(tri[2], tri[1]),
+    ] {
+        let p = proj(e);
+        let len = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt();
+        if len > best_len {
+            best_len = len;
+            best = p;
+        }
+    }
+    norm_or(best, [1.0, 0.0, 0.0])
+}
+
 /// An arbitrary tangent basis `(t, b)` perpendicular to `n` (the disk is rotationally symmetric in
 /// plane, so any perpendicular pair will do).
 fn tangent_basis(n: [f32; 3]) -> ([f32; 3], [f32; 3]) {
@@ -116,9 +140,11 @@ fn tangent_basis(n: [f32; 3]) -> ([f32; 3], [f32; 3]) {
     (t, b)
 }
 
-/// Append one round, surface-aligned flat-disk gaussian at `pos` (local +Z = `n_axis`, in-plane radius
-/// `r_plane`, thickness `r_thin`). The disk is rotationally symmetric in plane, so any perpendicular
-/// tangent basis does.
+/// Append one surface-aligned gaussian at `pos` (local +Z = `n_axis`). `aniso == 1.0` is a round flat
+/// disk (in-plane rotation is irrelevant → byte-identical to the original); `aniso != 1.0` stretches
+/// it into an **ellipsoid** along `edge_dir` (the surface grain): in-plane scales become
+/// `r_plane*aniso` × `r_plane/aniso` (area-preserving), so the cloud follows the mesh's contours.
+#[allow(clippy::too_many_arguments)] // geometry + disk knobs + anisotropy basis
 fn push_disk(
     out: &mut Vec<Gaussian3d>,
     pos: [f32; 3],
@@ -127,13 +153,27 @@ fn push_disk(
     r_plane: f32,
     r_thin: f32,
     alpha: f32,
+    aniso: f32,
+    edge_dir: [f32; 3],
 ) {
-    let (t, b) = tangent_basis(n_axis);
+    let (sx, sy, t, b) = if (aniso - 1.0).abs() < 1e-6 {
+        let (t, b) = tangent_basis(n_axis); // round disk — unchanged (byte-identical default)
+        (r_plane, r_plane, t, b)
+    } else {
+        let t = edge_dir;
+        let b = norm_or(cross(n_axis, t), tangent_basis(n_axis).1); // perp to grain + normal
+        (
+            (r_plane * aniso).max(1e-6),
+            (r_plane / aniso).max(1e-6),
+            t,
+            b,
+        )
+    };
     out.push(Gaussian3d {
         position_visibility: [pos[0], pos[1], pos[2], 1.0].into(),
         spherical_harmonic: sh,
         rotation: quat_from_basis(t, b, n_axis).into(),
-        scale_opacity: [r_plane, r_plane, r_thin, alpha].into(),
+        scale_opacity: [sx, sy, r_thin, alpha].into(),
     });
 }
 
@@ -150,6 +190,7 @@ fn sample_surface_disks<F>(
     splat: f32,
     thin: f32,
     alpha: f32,
+    aniso: f32,
     flip_y: bool,
     mut color: F,
 ) -> Vec<Gaussian3d>
@@ -284,7 +325,24 @@ where
                     None => face_n,
                 }
             };
-            push_disk(&mut out, yd(p), n_axis, sh, r_plane_t, r_thin_t, alpha);
+            // surface grain (longest edge in-plane) — only matters when aniso != 1.0.
+            let edge_dir = if (aniso - 1.0).abs() < 1e-6 {
+                [1.0, 0.0, 0.0]
+            } else {
+                let ytri = [yd(tri[0]), yd(tri[1]), yd(tri[2])];
+                longest_edge_in_plane(&ytri, n_axis)
+            };
+            push_disk(
+                &mut out,
+                yd(p),
+                n_axis,
+                sh,
+                r_plane_t,
+                r_thin_t,
+                alpha,
+                aniso,
+                edge_dir,
+            );
         }
     }
     out
@@ -316,6 +374,7 @@ pub fn transparent_placeholder(n: usize) -> Vec<Gaussian3d> {
 /// Build flat-disk gaussians from triangles already in their final frame (positions + normals in
 /// the SAME space the mesh renders), one flat colour per triangle. No Y-flip — the glTF dissolve
 /// wants the splats to coincide with the rendered mesh, not the Y-down splat convention.
+#[allow(clippy::too_many_arguments)] // tris + norms + rgb + 4 sampling knobs + aniso
 pub fn build_gaussians_from_tris(
     tris: &[[[f32; 3]; 3]],
     tri_norms: &[Option<[[f32; 3]; 3]>],
@@ -324,6 +383,7 @@ pub fn build_gaussians_from_tris(
     splat: f32,
     thin: f32,
     alpha: f32,
+    aniso: f32,
 ) -> Vec<Gaussian3d> {
     sample_surface_disks(
         tris,
@@ -332,6 +392,7 @@ pub fn build_gaussians_from_tris(
         splat,
         thin,
         alpha,
+        aniso,
         false,
         |ti, _, _, _| sh_of(tri_rgb[ti]),
     )
@@ -431,12 +492,14 @@ fn sample_texture(img: &gltf::image::Data, u: f32, v: f32) -> [f32; 3] {
     out
 }
 
+#[allow(clippy::too_many_arguments)] // path + 4 sampling knobs + aniso + colour override
 fn build_gltf_gaussians(
     path: &Path,
     target_count: usize,
     splat: f32,
     thin: f32,
     alpha: f32,
+    aniso: f32,
     rgb: Option<[f32; 3]>,
 ) -> Vec<Gaussian3d> {
     let (doc, buffers, images) = match gltf::import(path) {
@@ -562,6 +625,7 @@ fn build_gltf_gaussians(
         splat,
         thin,
         alpha,
+        aniso,
         true,
         |ti, bw, bu, bv| {
             // vertex colours win; then the diffuse TEXTURE (unless MARTIN_MESH_RGB forces a flat
@@ -588,12 +652,14 @@ fn build_gltf_gaussians(
     )
 }
 
+#[allow(clippy::too_many_arguments)] // path + 4 sampling knobs + aniso + colour override
 pub fn build_mesh_gaussians(
     path: &Path,
     target_count: usize,
     splat: f32,
     thin: f32,
     alpha: f32,
+    aniso: f32,
     rgb: Option<[f32; 3]>,
 ) -> Vec<Gaussian3d> {
     // mesh-loader handles .obj/.stl/.dae/.ply but NOT glTF — route .glb/.gltf to a dedicated path.
@@ -603,7 +669,7 @@ pub fn build_mesh_gaussians(
         .unwrap_or("")
         .to_ascii_lowercase();
     if ext == "glb" || ext == "gltf" {
-        return build_gltf_gaussians(path, target_count, splat, thin, alpha, rgb);
+        return build_gltf_gaussians(path, target_count, splat, thin, alpha, aniso, rgb);
     }
     let scene = match mesh_loader::Loader::default().load(path) {
         Ok(s) => s,
@@ -688,6 +754,7 @@ pub fn build_mesh_gaussians(
         splat,
         thin,
         alpha,
+        aniso,
         true,
         |ti, bw, bu, bv| {
             let mi = tri_mesh[ti];
@@ -719,11 +786,62 @@ mod tests {
     fn push_disk_is_a_flat_round_disk() {
         let sh = SphericalHarmonicCoefficients::default();
         let mut out = Vec::new();
-        push_disk(&mut out, [0.0; 3], [0.0, 0.0, 1.0], sh, 0.5, 0.05, 1.0);
+        // aniso == 1.0 → round disk (byte-identical to the original): in-plane radius is uniform.
+        push_disk(
+            &mut out,
+            [0.0; 3],
+            [0.0, 0.0, 1.0],
+            sh,
+            0.5,
+            0.05,
+            1.0,
+            1.0,
+            [1.0, 0.0, 0.0],
+        );
         let s = out[0].scale_opacity.scale;
         assert!((s[0] - s[1]).abs() < 1e-7, "round disk: x==y, got {s:?}");
         assert!((s[0] - 0.5).abs() < 1e-7);
         assert!(s[2] < s[0], "thin axis flatter than the in-plane radius");
+    }
+
+    #[test]
+    fn push_disk_aniso_stretches_area_preserving() {
+        let sh = SphericalHarmonicCoefficients::default();
+        let mut out = Vec::new();
+        // aniso == 2.0 → ellipsoid stretched along the grain: in-plane scales unequal, area preserved.
+        push_disk(
+            &mut out,
+            [0.0; 3],
+            [0.0, 0.0, 1.0],
+            sh,
+            0.5,
+            0.05,
+            1.0,
+            2.0,
+            [1.0, 0.0, 0.0],
+        );
+        let s = out[0].scale_opacity.scale;
+        assert!(s[0] > s[1], "ellipsoid: x > y, got {s:?}");
+        assert!(
+            (s[0] * s[1] - 0.5 * 0.5).abs() < 1e-6,
+            "area preserved (x·y ≈ r_plane²), got {s:?}"
+        );
+    }
+
+    #[test]
+    fn longest_edge_is_unit_and_in_plane() {
+        // a right triangle in the z=0 plane; longest edge is the hypotenuse (3-4-5).
+        let tri = [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [0.0, 3.0, 0.0]];
+        let d = longest_edge_in_plane(&tri, [0.0, 0.0, 1.0]);
+        assert!(
+            (d[0] * d[0] + d[1] * d[1] + d[2] * d[2] - 1.0).abs() < 1e-5,
+            "unit"
+        );
+        assert!(d[2].abs() < 1e-6, "lies in the plane (z≈0)");
+        // degenerate (zero-area) triangle → safe fallback, never NaN.
+        let deg = [[1.0, 1.0, 1.0]; 3];
+        let f = longest_edge_in_plane(&deg, [0.0, 0.0, 1.0]);
+        assert!(f.iter().all(|c| c.is_finite()));
     }
 
     // Verifies COLLADA `.dae` parsing + surface sampling + disk orientation without a GPU. Skips
@@ -735,7 +853,7 @@ mod tests {
             eprintln!("skip dae_surface_samples: {} not present", p.display());
             return;
         }
-        let g = build_mesh_gaussians(&p, 10_000, 1.2, 0.2, 1.0, Some([0.8, 0.85, 0.95]));
+        let g = build_mesh_gaussians(&p, 10_000, 1.2, 0.2, 1.0, 1.0, Some([0.8, 0.85, 0.95]));
         assert!(!g.is_empty(), "defeest.dae produced no gaussians");
         let finite = g.iter().all(|gg| {
             gg.position_visibility
@@ -774,7 +892,7 @@ mod tests {
         }
         // None = no explicit MARTIN_MESH_RGB, so the mesh's own material colours must drive it
         // (a grey result then means materials weren't read). MESH_FALLBACK_RGB is that grey.
-        let g = build_mesh_gaussians(&p, 60_000, 1.2, 0.2, 1.0, None);
+        let g = build_mesh_gaussians(&p, 60_000, 1.2, 0.2, 1.0, 1.0, None);
         let grey = sh_of(MESH_FALLBACK_RGB);
         let n_grey = g
             .iter()

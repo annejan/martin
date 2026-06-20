@@ -508,7 +508,15 @@ pub(crate) fn build_composition(
         }
         // `~outline`/`~pen-write` text builds the special stroke gaussians (shared with the reel via
         // `sample_content`) so the per-particle reveal traces real handwriting; else `part_gaussians`.
-        let mut raw = sample_content(&obj.content, obj.entrance, &state, &assets, &root.0, None);
+        let mut raw = sample_content(
+            &obj.content,
+            obj.entrance,
+            &state,
+            &assets,
+            &root.0,
+            None,
+            None,
+        );
         if raw.is_empty() {
             continue;
         }

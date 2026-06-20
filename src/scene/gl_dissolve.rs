@@ -165,6 +165,7 @@ pub(crate) fn sample_gl_mesh(
             model.splat,
             model.thin,
             model.alpha,
+            1.0, // round disks (the glTF dissolve doesn't carry an aniso token)
         );
         // normalize like every morph part — capture (centroid, scale) to place the mesh identically.
         let (c, k) = crate::morph::normalize_to(&mut raw, NORMALIZE_EXTENT);

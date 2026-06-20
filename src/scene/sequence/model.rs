@@ -37,7 +37,9 @@ pub(crate) struct Shot {
     pub ground: Option<f32>, // `ground:<y>` → seat this part's LOWEST splat at world-Y (rest it on a
     // [stage] plate); None = centred at the origin (floats), the default
     pub disk: Option<f32>, // `disk:<f>` → per-part mesh splat-disk overlap (overrides MARTIN_MESH_SPLAT);
-                           // smaller = crisper edges on a sharp graphic (the logo), None = global default
+    // smaller = crisper edges on a sharp graphic (the logo), None = global default
+    pub aniso: Option<f32>, // `aniso:<f>` → per-part anisotropic mesh splats (>1 stretches each sample
+                            // into an ellipsoid along the surface grain, area-preserving), None = round
 }
 
 impl Shot {
@@ -68,6 +70,7 @@ impl Shot {
             freeze: None,
             ground: None,
             disk: None,
+            aniso: None,
         }
     }
 }

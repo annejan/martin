@@ -135,6 +135,7 @@ pub(crate) fn part_gaussians(
     assets: &Assets<PlanarGaussian3d>,
     root: &std::path::Path,
     disk: Option<f32>,
+    aniso: Option<f32>,
 ) -> Vec<Gaussian3d> {
     match content {
         PartContent::Text(s) => build_text_gaussians(s, TEXT_RGB, 3.0, 2, 0.012),
@@ -160,7 +161,17 @@ pub(crate) fn part_gaussians(
             // alpha 0.6 (blends front-to-back so grazing-edge "hairs" melt), colour from the mesh's own
             // material (glTF baseColorFactor / vertex colours).
             let splat = disk.unwrap_or(1.2);
-            mesh::build_mesh_gaussians(&root.join(name), 60_000, splat, 0.3, 0.6, None)
+            // `aniso:<f>` (>1) stretches each sample into an ellipsoid along the surface grain
+            // (area-preserving) for a streaky/painterly read; 1.0 = round disks (the default).
+            mesh::build_mesh_gaussians(
+                &root.join(name),
+                60_000,
+                splat,
+                0.3,
+                0.6,
+                aniso.unwrap_or(1.0),
+                None,
+            )
         }
         // A real glTF mesh isn't sampled to gaussians — build_composition spawns it as PBR geometry.
         PartContent::Model(_) => Vec::new(),
@@ -201,6 +212,7 @@ pub(crate) fn sample_content(
     assets: &Assets<PlanarGaussian3d>,
     root: &std::path::Path,
     disk: Option<f32>,
+    aniso: Option<f32>,
 ) -> Vec<Gaussian3d> {
     use crate::scene::effects::Entrance;
     use crate::text::{build_text_outline_gaussians, build_text_penwrite_gaussians};
@@ -213,7 +225,7 @@ pub(crate) fn sample_content(
             let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
             build_text_penwrite_gaussians(s, TEXT_RGB, 3.0, pw_step, pw_splat)
         }
-        _ => part_gaussians(content, state, assets, root, disk),
+        _ => part_gaussians(content, state, assets, root, disk, aniso),
     }
 }
 
