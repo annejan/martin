@@ -31,6 +31,7 @@ mod background;
 mod bundle;
 mod camera;
 mod capture;
+mod cli;
 mod envvar;
 mod fourd;
 mod glb;
@@ -94,6 +95,16 @@ fn main() {
     // Bevy, so stdout stays clean JSON-RPC. Must be the very first thing main does.
     if mcp::maybe_run() {
         return;
+    }
+
+    // Parse the CLI and compile each present flag into its MARTIN_* env var with OVERWRITE — so a flag
+    // beats both an existing env var and the .show file (which expand with set-if-absent below). This is
+    // the whole precedence rule: CLI flag > env > .show [settings] > built-in default. (`--mcp` is
+    // handled above, before clap, since .mcp.json still invokes it.)
+    let cli = <cli::Cli as clap::Parser>::parse();
+    for (key, value) in cli::apply_cli(&cli) {
+        // SAFETY: top of main(), single-threaded, before the Bevy app (and its threads) start.
+        unsafe { std::env::set_var(key, value) };
     }
 
     // Bundled single-binary build: self-extract the embedded assets + seed the baked-in show into

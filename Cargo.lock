@@ -4020,6 +4020,7 @@ dependencies = [
  "base64 0.22.1",
  "bevy",
  "bevy_gaussian_splatting",
+ "clap",
  "fundsp",
  "gltf",
  "image",

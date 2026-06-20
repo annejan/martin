@@ -69,6 +69,26 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 
 ---
 
+## Command line
+
+```
+martin [SHOW]                 # a .show file to play (else $MARTIN_SHOW, else the bundled intro)
+  --production NAME            # shorthand for productions/NAME/NAME.show
+  --record DIR                 # dump frames headless (record.sh wraps this)
+  --shot PATH [--shot-at S]    # one headless screenshot at time S
+  --shots T1,T2,…              # contact sheet (uses --shot as the path stem)
+  --bench N                    # render N frames headless, log fps, exit
+  --validate [--strict]        # print the resolved timeline + exit
+  --serve [PORT]               # the HTTP control bridge (default 7878)
+  --synth-wav PATH             # render the synth to a WAV + exit
+  --dump-score PATH            # write the built-in score as an editable tracker file + exit
+martin --mcp                   # the stdio MCP server (proxy to a --serve bridge)
+```
+
+Each flag compiles to its `MARTIN_*` env var with **overwrite**, so the precedence is **CLI flag >
+env var > `.show` `[settings]` > built-in default**. Every var below is still read directly, so the
+env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
+
 ## Full env var reference
 
 | Env var | Default | What it does |

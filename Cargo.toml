@@ -37,6 +37,9 @@ serde_json = "1"
 # Data-parallel the build-time morph pairing (match_reorder chunks). Already in the lockfile
 # transitively (the splat crate's sort_rayon); a direct dep so morph.rs can use it.
 rayon = "1"
+# CLI front: `martin <show> [--record/--shot/--validate/--serve/…]` compiles flags into the same
+# MARTIN_* env the .show + bundle expand into, with OVERWRITE so a flag beats env + the .show file.
+clap = { version = "4", features = ["derive"] }
 # Base64-encode screenshots for the MCP server's inline image replies (MARTIN_MCP). Already in-tree.
 base64 = "0.22"
 # Load meshes (COLLADA .dae, .obj, .stl, .ply) → triangles, to sample into gaussians (mesh: source).

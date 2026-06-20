@@ -10,6 +10,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ## [Unreleased]
 
+### CLI
+- **A real CLI** (the start of moving config off the ~85 global `MARTIN_*` env vars): `martin [SHOW]
+  [--record DIR] [--shot PATH --shot-at S] [--shots T1,T2] [--bench N] [--validate] [--strict]
+  [--serve [PORT]] [--synth-wav PATH] [--dump-score PATH]`, plus `--production NAME` →
+  `productions/NAME/NAME.show`. Each flag compiles to its `MARTIN_*` env var with **overwrite**, so the
+  precedence is **CLI flag > env > `.show` [settings] > default**. Every env var is still honored
+  (record.sh / CI / the bundle unchanged); `--mcp` still works. (clap.)
+
 ### Engine
 - **Jittered mesh sampling (no weave)**: the R2 low-discrepancy sample sequence is even but *regular* —
   a faint grid weave shows in dense fills. Add a deterministic per-sample jitter (~one local cell),
