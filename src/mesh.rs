@@ -196,8 +196,7 @@ where
     let weights: Vec<f32> = tris.iter().map(double_area).collect();
     let total: f32 = weights.iter().sum::<f32>().max(1e-9);
     let spacing = (0.5 * total / target_count.max(1) as f32).sqrt(); // double_area = 2·area
-    let r_plane = (splat * spacing).max(1e-6);
-    let r_thin = (r_plane * thin).max(1e-7);
+    let r_plane = (splat * spacing).max(1e-6); // mesh-wide reference; per-triangle disks clamp around it
     let mut out: Vec<Gaussian3d> = Vec::with_capacity(target_count + tris.len());
     // R2 low-discrepancy sequence (plastic-number additive recurrence): evenly-spread barycentric
     // samples instead of random ones, which kills the clumpy/grainy look. The accumulators stay in
