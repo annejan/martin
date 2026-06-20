@@ -60,6 +60,35 @@ use crate::scene::compose::{Composition, parse_compose};
 use crate::scene::sequence::{Sequence, sequence_from_env};
 use crate::scene::{AssetRoot, ScenePlugin, parent_dir};
 
+/// Which content path a run takes — extracted from `main`'s inline if/else so it's pure + unit-tested.
+/// `glb_alone`: a standalone `glb:`/`4D` scene (no morph track); `Seq`: the morph timeline (or the
+/// default demo); `ComposeOnly`: a placed-objects stage with no morph track.
+#[derive(Debug, PartialEq, Eq)]
+enum ContentMode {
+    GlbAlone,
+    Seq,
+    ComposeOnly,
+}
+
+/// Decide the content path from the three signals. `glb_or_4d` alone (no explicit seq, no compose) is a
+/// standalone glb/4D scene; an explicit seq — or nothing at all — runs the morph track; otherwise it's
+/// a compose-only stage. Pure (no env) so the precedence is locked by tests.
+fn choose_mode(glb_or_4d: bool, explicit_seq: bool, has_compose: bool) -> ContentMode {
+    if glb_or_4d && !explicit_seq && !has_compose {
+        ContentMode::GlbAlone
+    } else if explicit_seq || !has_compose {
+        ContentMode::Seq
+    } else {
+        ContentMode::ComposeOnly
+    }
+}
+
+/// Run headless (no window, drive the schedule ourselves, render to an offscreen image): any output
+/// mode — recording, the perf bench, single/contact-sheet screenshots. Pure (bool inputs) → tested.
+fn is_headless(record: bool, bench: bool, shot: bool, shots: bool) -> bool {
+    record || bench || shot || shots
+}
+
 fn main() {
     // MARTIN_MCP / --mcp: run the stdio MCP server (proxy to a MARTIN_SERVE bridge) and exit — no
     // Bevy, so stdout stays clean JSON-RPC. Must be the very first thing main does.
@@ -130,34 +159,31 @@ fn main() {
     ]
     .iter()
     .any(|k| std::env::var(k).is_ok());
-    let glb_alone = (std::env::var("MARTIN_GLB").is_ok()
-        || std::env::var("MARTIN_4D_TEST").is_ok())
-        && !explicit_seq
-        && composition.is_none();
-    let (sequence, asset_root) = if glb_alone {
-        // MARTIN_GLB alone: a standalone KHR_gaussian_splatting scene (glb::GlbScenePlugin spawns
-        // it) — no morph track. Asset root = the .glb's folder so the typed GaussianScene load
-        // resolves. COMBINED with a seq/compose show, the glb is set dressing instead: the normal
-        // branches below run and the .glb must sit in that show's asset root (e.g. assets/).
-        // (MARTIN_4D_TEST rides the same standalone branch — fourd.rs frames + builds itself.)
-        (
-            Sequence {
-                parts: Vec::new(),
-                budget: 0,
-            },
-            std::env::var("MARTIN_GLB").ok().and_then(parent_dir),
-        )
-    } else if explicit_seq || composition.is_none() {
-        sequence_from_env(&score) // the morph track (or the default demo when nothing is set)
-    } else {
-        // compose-only: no morph track.
-        (
+    let glb_or_4d = std::env::var("MARTIN_GLB").is_ok() || std::env::var("MARTIN_4D_TEST").is_ok();
+    let (sequence, asset_root) = match choose_mode(glb_or_4d, explicit_seq, composition.is_some()) {
+        ContentMode::GlbAlone => {
+            // MARTIN_GLB alone: a standalone KHR_gaussian_splatting scene (glb::GlbScenePlugin spawns
+            // it) — no morph track. Asset root = the .glb's folder so the typed GaussianScene load
+            // resolves. COMBINED with a seq/compose show, the glb is set dressing instead: the normal
+            // branches run and the .glb must sit in that show's asset root (e.g. assets/).
+            // (MARTIN_4D_TEST rides the same standalone branch — fourd.rs frames + builds itself.)
+            (
+                Sequence {
+                    parts: Vec::new(),
+                    budget: 0,
+                },
+                std::env::var("MARTIN_GLB").ok().and_then(parent_dir),
+            )
+        }
+        ContentMode::Seq => sequence_from_env(&score), // the morph track (or the default demo)
+        ContentMode::ComposeOnly => (
+            // compose-only: no morph track.
             Sequence {
                 parts: Vec::new(),
                 budget: 0,
             },
             std::env::var("MARTIN_PLY").ok().and_then(parent_dir),
-        )
+        ),
     };
     // The camera waypoints: a `.show` inline `[camera]` track (parsed now the score exists, so its
     // keyframes can anchor to music sections), else the MARTIN_WAYPOINTS file.
@@ -203,10 +229,12 @@ fn main() {
     // Headless = no window, drive the schedule ourselves, render the camera into an offscreen image:
     // recording, the perf bench, AND single/contact-sheet screenshots all need it (the RADV window
     // renders black / panics acquiring its swapchain when unfocused). Live runs keep a normal window.
-    let headless = std::env::var("MARTIN_RECORD").is_ok()
-        || std::env::var("MARTIN_BENCH").is_ok()
-        || std::env::var("MARTIN_SHOT").is_ok()
-        || std::env::var("MARTIN_SHOTS").is_ok();
+    let headless = is_headless(
+        std::env::var("MARTIN_RECORD").is_ok(),
+        std::env::var("MARTIN_BENCH").is_ok(),
+        std::env::var("MARTIN_SHOT").is_ok(),
+        std::env::var("MARTIN_SHOTS").is_ok(),
+    );
     let fullscreen = std::env::var("MARTIN_FULLSCREEN").is_ok() && !headless;
     let mut plugins = DefaultPlugins.set(WindowPlugin {
         primary_window: (!headless).then(|| Window {
@@ -282,4 +310,36 @@ fn main() {
             crate::scene::caption::CaptionPlugin,
         ))
         .run();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ContentMode, choose_mode, is_headless};
+
+    #[test]
+    fn choose_mode_truth_table() {
+        use ContentMode::*;
+        // glb/4D alone (no seq, no compose) → standalone glb scene
+        assert_eq!(choose_mode(true, false, false), GlbAlone);
+        // an explicit seq always wins → the morph track (even with a glb or compose present)
+        assert_eq!(choose_mode(false, true, false), Seq);
+        assert_eq!(choose_mode(true, true, false), Seq); // glb is set-dressing, not standalone
+        assert_eq!(choose_mode(true, true, true), Seq);
+        assert_eq!(choose_mode(false, true, true), Seq);
+        // nothing at all → the default demo runs through the seq path
+        assert_eq!(choose_mode(false, false, false), Seq);
+        // compose only (no seq, no standalone glb) → the placed-objects stage
+        assert_eq!(choose_mode(false, false, true), ComposeOnly);
+        // glb + compose but no seq → compose stage (the glb is dressing, not standalone)
+        assert_eq!(choose_mode(true, false, true), ComposeOnly);
+    }
+
+    #[test]
+    fn is_headless_any_output_mode() {
+        assert!(!is_headless(false, false, false, false)); // live windowed
+        assert!(is_headless(true, false, false, false)); // record
+        assert!(is_headless(false, true, false, false)); // bench
+        assert!(is_headless(false, false, true, false)); // shot
+        assert!(is_headless(false, false, false, true)); // shots (contact sheet)
+    }
 }

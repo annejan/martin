@@ -279,6 +279,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn canonical_key_aliases() {
+        // domain spellings alias to the env var the engine actually reads
+        assert_eq!(canonical_key("budget"), "morph_count");
+        assert_eq!(canonical_key("backdrop"), "bg");
+        assert_eq!(canonical_key("BUDGET"), "morph_count"); // case-insensitive
+        // an unknown key passes through unchanged
+        assert_eq!(canonical_key("particles"), "particles");
+        assert_eq!(canonical_key("cam_pump"), "cam_pump");
+    }
+
+    #[test]
+    fn set_if_absent_does_not_clobber_an_explicit_env() {
+        // unique key so this test never races other tests over a shared env var
+        let key = "test_show_precedence_xyz";
+        let var = "MARTIN_TEST_SHOW_PRECEDENCE_XYZ";
+        // SAFETY: unique-named var, set + read within this single test.
+        unsafe { std::env::set_var(var, "from_cli") };
+        set_if_absent(key, "from_show"); // the .show should LOSE to the already-set env
+        assert_eq!(std::env::var(var).unwrap(), "from_cli");
+        unsafe { std::env::remove_var(var) };
+        set_if_absent(key, "from_show"); // now unset → the .show value lands
+        assert_eq!(std::env::var(var).unwrap(), "from_show");
+        unsafe { std::env::remove_var(var) };
+    }
+
+    #[test]
     fn scenes_flatten_to_a_reel_with_inheritance() {
         let body = "\
 scene opener @@intro backdrop:off
