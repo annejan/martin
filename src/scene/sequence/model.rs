@@ -40,9 +40,10 @@ pub(crate) struct Shot {
 }
 
 impl Shot {
-    /// A shot with `content` and every effect/modifier at its default (no entrance/deform/tint/…).
-    /// Callers spell only the fields they set and fill the rest with `..Shot::base(content)`, so a new
-    /// `Shot` field doesn't ripple into every construction site (the timing defaults match `parse_seq`).
+    /// A shot with `content` and every effect/modifier at its default — a TEST helper (`parse_seq`, the
+    /// only real builder, spells every field from the parsed tokens). Keeps tests terse: spell the
+    /// field under test, default the rest with `..Shot::base(content)`.
+    #[cfg(test)]
     pub(crate) fn base(content: PartContent) -> Self {
         Self {
             content,

@@ -1,11 +1,13 @@
 //! martin — fly a camera around Gaussian splats while they morph and reassemble.
 //!
-//! Two ways to stage content, both driven by `MARTIN_*` env vars (no config file):
-//!   * the **morph timeline** (`scene::sequence`) — a chain of parts that each assemble out of a
-//!     source cloud and morph into the next (`MARTIN_SEQ`, or the `MARTIN_PLY/_TEXT/_REFORM`
-//!     shorthands); and
-//!   * the **composition stage** (`scene::compose`) — many objects on one stage at once
-//!     (`MARTIN_COMPOSE`), placed and animated, with the camera flowing among them.
+//! Two ways to stage content, authored in a `.show` file (CLI: `martin <show>` / `--production`):
+//!   * the **morph timeline** (`scene::sequence`, a `[reel]`) — a chain of parts that each assemble out
+//!     of a source cloud and morph into the next; and
+//!   * the **composition stage** (`scene::compose`, a `[stage]`/`[compose]`) — many objects on one
+//!     stage at once, placed and animated, with the camera flowing among them.
+//!
+//! A `.show` expands (`show::apply`) into `MARTIN_*` env vars — the internal IR every parser reads;
+//! CLI flags (`cli`) compile to the same env with overwrite. There is no config file beyond the show.
 //!
 //! Rendering: our `bevy_gaussian_splatting` fork (GPU blend + radix depth sort + HDR
 //! bloom on black), pulled in as a git dep (the `martin` branch of
@@ -161,15 +163,8 @@ fn main() {
     let composition = std::env::var("MARTIN_COMPOSE")
         .ok()
         .map(|spec| parse_compose(&spec, &score));
-    let explicit_seq = [
-        "MARTIN_SEQ",
-        "MARTIN_TEXT",
-        "MARTIN_PLY",
-        "MARTIN_PLY2",
-        "MARTIN_REFORM",
-    ]
-    .iter()
-    .any(|k| std::env::var(k).is_ok());
+    // a morph reel is requested by MARTIN_SEQ (the .show `[reel]`/`[seq]` body, expanded by show::apply).
+    let explicit_seq = std::env::var("MARTIN_SEQ").is_ok();
     let glb_or_4d = std::env::var("MARTIN_GLB").is_ok() || std::env::var("MARTIN_4D_TEST").is_ok();
     let (sequence, asset_root) = match choose_mode(glb_or_4d, explicit_seq, composition.is_some()) {
         ContentMode::GlbAlone => {

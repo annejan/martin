@@ -26,14 +26,11 @@ use crate::capture::RecordState;
 const NORMALIZE_EXTENT: f32 = 2.0; // each part is centered + scaled so its largest dim = this
 
 /// The env vars that request specific content. With none of them set (and no `MARTIN_SHOW`), martin
-/// plays the bundled default demo (`assets/demo.show`).
-pub(crate) const CONTENT_VARS: [&str; 8] = [
+/// plays the bundled intro. (`MARTIN_PLY` is NOT here — it's only the asset ROOT now, not content, so a
+/// bare `MARTIN_PLY` still falls through to the intro.)
+pub(crate) const CONTENT_VARS: [&str; 4] = [
     "MARTIN_SEQ",
     "MARTIN_COMPOSE",
-    "MARTIN_TEXT",
-    "MARTIN_PLY",
-    "MARTIN_PLY2",
-    "MARTIN_REFORM",
     "MARTIN_GLB",
     "MARTIN_4D_TEST",
 ];

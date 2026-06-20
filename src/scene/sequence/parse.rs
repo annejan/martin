@@ -1,13 +1,13 @@
-//! Parse-time logic: build the `Sequence` from `MARTIN_SEQ` / `MARTIN_TEXT` / `MARTIN_PLY`, plus
+//! Parse-time logic: build the `Sequence` from `MARTIN_SEQ` (the `.show` `[reel]` body), plus
 //! the small parsers it leans on (`raster:`, `rot:` euler degrees) and the capture-camera loader.
 
 use bevy::prelude::*;
 use bevy_gaussian_splatting::RasterizeMode;
 
 use super::model::{Sequence, Shot};
-use crate::scene::content::{PartContent, parse_source, side_by_side};
+use crate::scene::content::parse_source;
 use crate::scene::effects::Departure;
-use crate::scene::{file_name_of, parent_dir};
+use crate::scene::parent_dir;
 use crate::score;
 
 /// `raster:<mode>` / `MARTIN_RASTER=<mode>` → the fork's RasterizeMode (the debug-shading views from
@@ -246,101 +246,26 @@ pub(crate) fn parse_euler_deg(s: &str) -> Option<Quat> {
     })
 }
 
-/// Build the show: `MARTIN_SEQ` if set, else a shorthand from `MARTIN_TEXT` /
-/// `MARTIN_PLY(+_PLY2)(+_REFORM)`. Returns the sequence + the asset root (the .ply folder).
+/// Build the morph timeline from `MARTIN_SEQ` (a `.show`'s `[reel]`/`[seq]` body, expanded by
+/// `show::apply`). `MARTIN_PLY` is the asset ROOT only (the `.ply` folder, so `splat:` basenames
+/// resolve). No `MARTIN_SEQ` → an empty reel (a compose-only show, or nothing): `build_sequence` is then
+/// a no-op and the stage stands alone — never a synthesized fallback cloud.
 pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<String>) {
-    // The default demo is now `assets/demo.show` (set as MARTIN_SHOW in `main` when nothing is
-    // requested), so by the time we get here MARTIN_SEQ is set from its `[seq]` section.
-    let budget_default = if std::env::var("MARTIN_SEQ").is_ok() {
-        200_000
+    let root = std::env::var("MARTIN_PLY").ok().and_then(parent_dir);
+    let spec = std::env::var("MARTIN_SEQ").unwrap_or_default();
+    let budget = crate::envvar::or("MARTIN_MORPH_COUNT", if spec.is_empty() { 0 } else { 200_000 });
+    let parts = if spec.is_empty() {
+        Vec::new()
     } else {
-        0
+        parse_seq(&spec, score)
     };
-    let budget = crate::envvar::or("MARTIN_MORPH_COUNT", budget_default);
-
-    if let Ok(spec) = std::env::var("MARTIN_SEQ") {
-        // asset root = the .ply folder (so `splat:` filenames resolve); MARTIN_PLY sets it.
-        let root = std::env::var("MARTIN_PLY").ok().and_then(parent_dir);
-        return (
-            Sequence {
-                parts: parse_seq(&spec, score),
-                budget,
-            },
-            root,
-        );
-    }
-
-    if let Ok(text) = std::env::var("MARTIN_TEXT") {
-        let part = Shot {
-            hold: 2.0,
-            morph: 3.0,
-            bulge: 0.0,
-            ..Shot::base(PartContent::Text(text))
-        };
-        return (
-            Sequence {
-                parts: vec![part],
-                budget,
-            },
-            None,
-        );
-    }
-
-    // A composition-only show (`[stage]`/`[compose]` with NO `[reel]`/`[seq]`): the `ply=` setting is
-    // just the asset ROOT (so `splat:` basenames resolve) — NOT a reel shape. Don't synthesize the
-    // fallback sphere reel below; it would render as a giant cloud at the origin behind the stage (the
-    // "rainbow ball" bug). Empty sequence → `build_sequence` is a no-op and the composition stands alone.
-    if std::env::var("MARTIN_COMPOSE")
-        .map(|s| !s.trim().is_empty())
-        .unwrap_or(false)
-    {
-        let root = std::env::var("MARTIN_PLY").ok().and_then(parent_dir);
-        return (
-            Sequence {
-                parts: Vec::new(),
-                budget,
-            },
-            root,
-        );
-    }
-
-    // splat shorthand: PLY (+ PLY2) as part 0; REFORM (if any) as part 1.
-    let primary = std::env::var("MARTIN_PLY").ok();
-    let root = primary.as_deref().and_then(|p| parent_dir(p.to_string()));
-    let name1 = primary
-        .as_deref()
-        .map(file_name_of)
-        .unwrap_or_else(|| "aegg.ply".into());
-    let mut names = vec![name1];
-    if let Ok(p2) = std::env::var("MARTIN_PLY2") {
-        names.push(file_name_of(&p2));
-    }
-    let bulge = crate::envvar::or("MARTIN_BULGE", 0.9);
-    let mut parts = vec![Shot {
-        hold: 2.0,
-        morph: 3.0,
-        bulge: 0.0,
-        ..Shot::base(PartContent::Splats(side_by_side(
-            names.iter().map(String::as_str),
-        )))
-    }];
-    if let Ok(reform) = std::env::var("MARTIN_REFORM") {
-        parts.push(Shot {
-            hold: 2.0,
-            morph: 3.5,
-            bulge,
-            ..Shot::base(PartContent::Splats(vec![(
-                file_name_of(&reform),
-                Vec3::ZERO,
-            )]))
-        });
-    }
     (Sequence { parts, budget }, root)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scene::content::PartContent;
     use crate::scene::effects::{Deform, Entrance};
     use crate::scene::sequence::{shot_starts, show_end};
 
