@@ -30,7 +30,7 @@ splat:star.ply                   @4.5,1.8 ~morph  ^turbulence:0.2               
 splat:helix.ply                  @4.5,2.1 ~morph  ^spiral:0.2                         backdrop:tunnel    # …cosmic DNA spirals out 🧬
 mesh:bitterbal.glb  @@drop       @4,1.5   ~shockwave  ease:snap  tint:fry  flash:0.9  beat:1.8  backdrop:stars   # …IT'S ALL A BITTERBAL 🟤 (cosmic kill-shot reveal)
 mesh:bitterbal.glb  @@breakdown  @3,2     ~morph  ^turbulence:0.3  tint:fry           backdrop:stars     # it hovers, glistening hot, while the snack-rain falls
-mesh:bitterbal.glb  @@climax     @4,2     ~ball   flock:14  tint:fry  flash:0.6  beat:1.9  ^turbulence:0.4  backdrop:fractal   # the peak — the giant bal balls up glorious
+mesh:bitterbal.glb  @@climax     @4,2     ~ball   flock:14  tint:fry  flash:0.6  beat:1.9  ^turbulence:0.4  backdrop:stars   # the peak — the giant bal balls up glorious (stars, not fractal: keep the bal the hero)
 mesh:defeest.glb    rot:180,0,0  @4,2     ~morph  beat:0                              backdrop:stars     # → the deFEEST logo (rot cancels base flip-X) → loops
 
 # THE SNACK-RAIN — async swarm IN FRONT of the reel (Z-safe). Each bitterbal rides its OWN coprime

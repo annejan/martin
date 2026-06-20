@@ -10,7 +10,7 @@ kind     = demo
 score    = productions/cities/score.txt
 ply      = assets/sphere.ply
 budget   = 200000
-bg       = fractal
+bg       = stars
 post     = chroma
 cam_pump = 0.3
 bg_dim   = 0.45
@@ -54,7 +54,9 @@ t=@@climax     pos=0.5,0.0,0    dist=6.0  yaw=1.5   pitch=0.20    # the peak whi
 t=@@outro      pos=0.0,0.1,0    dist=8.0  yaw=1.45  pitch=0.24    # pull back
 
 [sync]
+# bg stays the calm starfield (a busy fractal drowned the 26-ball swarm); the kick lands via
+# flash + exposure + beat + chroma, not a competing backdrop.
 t=@@intro      flash=0.1   bg_dim=0.4   beat=0.4
-t=@@drop       flash=0.7   bg_dim=0.3   beat=1.8
-t=@@climax     flash=0.6   bg_dim=0.3   beat=1.7
+t=@@drop       flash=0.9   bg_dim=0.3   beat=1.8   exposure=1.45
+t=@@climax     flash=0.8   bg_dim=0.3   beat=1.7   exposure=1.5
 t=@@outro      flash=0.2   bg_dim=0.45  beat=0.7
