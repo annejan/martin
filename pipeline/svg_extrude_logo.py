@@ -24,7 +24,8 @@ from pathlib import Path
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(os.path.dirname(HERE), "assets")   # script lives in pipeline/, assets sit in assets/
 SVG = os.path.join(ASSETS, "defeest.svg")
-OUT = os.path.join(ASSETS, "defeest")
+# output stem — defaults to assets/defeest; override with LOGO_OUT to regen to a scratch path (A/B).
+OUT = os.environ.get("LOGO_OUT", os.path.join(ASSETS, "defeest"))
 SVG_NS = "http://www.w3.org/2000/svg"
 ET.register_namespace("", SVG_NS)   # default ns (no ns0: prefixes — openscad needs clean SVG)
 YELLOW = (1.0, 0.9608, 0.4274)        # SVG fill rgb(100%,96.08%,42.74%)
