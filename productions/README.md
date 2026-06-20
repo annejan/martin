@@ -48,6 +48,10 @@ Current productions:
 - **bitterbal** (`kind = demo`) — bitterbal showcases: **zwerm** (26-ball lissajous swarm), **wereld**
   ("de wereld is een bitterbal"), **cosmic-snack**, **lissajous-galaxy**, **alles** (the big multi-scene
   reel+stage demo).
+- **guinea** (`kind = demo`) — a short dark-humour bit: the deFEEST logo floats in, morphs into a live
+  guinea pig (**cavia**) on a plate, which morphs into the cooked Andean dish (**cuy**, served splayed),
+  over a cheerful fairground (kermis) polka. A `[reel]` of `mesh:`-sampled textured glTF morphs +
+  a `[stage]` plate; exercises `ground:`/`disk:`/`pair=match` + the sRGB/bilinear mesh-colour fixes.
 - **credits** / **defeest** — the credits roll (`[compose]` layout) and the deFEEST title-build.
 
 > **Composing a scene visually?** Pose a production's `[stage]`/`[compose]` props (and camera) in

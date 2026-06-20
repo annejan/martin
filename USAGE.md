@@ -125,7 +125,7 @@ MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
 | `MARTIN_PREVIEW_FPS` | 60 | `=<n>` renders the timeline at `n` fps instead of 60 — **far fewer frames** for a fast preview (rendering frames is the slow part, not the mux). `=8` → ~1/8 the frames. Frame `dt` + camera sway scale with it, so timing/motion stay correct; `record.sh` muxes at the same fps so duration + audio sync hold. Use for quick looks; drop it (or set 60) for the final render. |
 | `MARTIN_BENCH` | — | `=<frames>` renders that many frames **headless with no PNG output** and logs the render-only fps, then exits — a clean perf probe (disk-I/O-free). |
 | `MARTIN_LOADER` / `MARTIN_LOGO` | off | `=1` shows a **loading screen** (black + progress bar; `MARTIN_LOGO=<png OR svg in the asset root>` adds the logo — an `.svg` is rasterized, so it can be the same artwork the opening mesh was extruded from) until the show is built, then **cross-fades** into the opening logo behind it. Set automatically in a bundled build. (Window-only — not captured in recordings.) |
-| `MARTIN_SHOT` | — | Capture a single headless screenshot to this path, then exit ~2 s later. |
+| `MARTIN_SHOT` | — | Capture a single screenshot to this path, then exit. **Fully headless** (no window — renders the camera to an offscreen image like the recorder, so it works over SSH / on RADV where an unfocused window panics) and **waits for the file to land** before exiting (~5 s for a 1080p frame — fast look/perf iteration vs a whole video render). |
 | `MARTIN_SHOT_AT` | `6.0` | When (seconds) to take the `MARTIN_SHOT`. |
 | `MARTIN_SHOTS` | — | **Contact sheet**: comma-separated times (seconds) — seek to each, take a screenshot, exit after the last. Overrides `MARTIN_SHOT_AT`. |
 | `MARTIN_SERVE` | — | `=1` (or `=<port>`, default 7878) starts the **live control bridge** — see below. |
@@ -453,6 +453,11 @@ for `glb:` too — the mesh and its sampled splats rotate together.)
 "serving" rather than a lone object (e.g. `mesh:bitterbal.obj cluster:9` → a plate of 9 bitterballen,
 each tumbled differently). Deterministic (frame-stable for recording); the whole pile is sized to
 frame as one. Great for snacks, confetti, a swarm of logos, …
+
+**Disk** (`disk:<f>`) overrides `MARTIN_MESH_SPLAT` (the mesh splat-disk **overlap factor**) for this
+part only — smaller (`disk:0.7`) = tighter, crisper edges on a sharp graphic; larger = softer/smoother
+fill. Lets one part (e.g. the logo) be crisp without re-tuning the rest. Only affects sampled `mesh:`
+parts.
 
 **Ground** (`ground:<y>`) seats a part's **lowest splat at world-Y `<y>`** instead of centring it on
 the origin — so an object **rests on a surface** (e.g. a `[stage]` plate) rather than floating. Each
