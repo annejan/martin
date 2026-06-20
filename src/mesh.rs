@@ -213,6 +213,25 @@ where
             [0.0, 0.0, 1.0],
         );
         let n = ((target_count as f32 * weights[ti] / total).round() as usize).max(1);
+        // DENSITY-ADAPTIVE disk size: a thin/tiny triangle (a logo letter's outline stroke) forced to
+        // ≥1 disk would otherwise get the GLOBAL disk (sized for the mesh-wide average) and overhang its
+        // colour across the seam — the fray. Size each triangle's disks to ITS OWN local sample spacing,
+        // clamped near the global so broad fills don't grain out.
+        let local_spacing = (weights[ti] * 0.5 / n as f32).sqrt();
+        let r_plane_t = (splat * local_spacing)
+            .clamp(0.35 * r_plane, 1.5 * r_plane)
+            .max(1e-6);
+        let r_thin_t = (r_plane_t * thin).max(1e-7);
+        // EDGE-INSET: pull samples off the triangle edges toward the centroid by ~the disk's footprint
+        // (inset ∝ disk_radius / inradius), so a disk near a colour seam doesn't straddle it. Tiny
+        // triangles (disk ≫ inradius) inset hard; broad fills barely move.
+        let elen = |a: [f32; 3], b: [f32; 3]| {
+            let d = sub(a, b);
+            (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt()
+        };
+        let perim = elen(tri[0], tri[1]) + elen(tri[1], tri[2]) + elen(tri[2], tri[0]);
+        let inradius = (weights[ti] / perim.max(1e-6)).max(1e-6); // area/semiperim = 2area/perim
+        let inset = (r_plane_t / inradius * 0.7).clamp(0.0, 0.55);
         for _ in 0..n {
             const A1: f32 = 0.754_877_7; // 1/plastic
             const A2: f32 = 0.569_840_3; // 1/plastic²
@@ -223,6 +242,9 @@ where
                 bu = 1.0 - bu;
                 bv = 1.0 - bv;
             }
+            // inset toward the centroid (1/3,1/3,1/3) so samples avoid the colour-seam edges
+            bu = bu * (1.0 - inset) + inset / 3.0;
+            bv = bv * (1.0 - inset) + inset / 3.0;
             let bw = 1.0 - bu - bv;
             let lerp3 = |f: [[f32; 3]; 3]| {
                 [
@@ -244,8 +266,8 @@ where
                 yd(p),
                 n_axis,
                 sh,
-                r_plane,
-                r_thin,
+                r_plane_t,
+                r_thin_t,
                 alpha,
                 aniso,
                 edge_dir,

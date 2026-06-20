@@ -11,6 +11,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Engine
+- **Crisper mesh→splat edges (less fray)**: surface sampling now sizes each triangle's disks to its
+  OWN local sample spacing (a thin logo-outline triangle no longer gets the mesh-wide-average disk that
+  overhung its colour across the seam), and **edge-insets** samples toward the triangle centroid so a
+  disk near a colour boundary doesn't straddle it. Sharp 2-colour graphics (the deFEEST logo) read
+  markedly tighter; organic textured meshes are unchanged. `src/mesh.rs::sample_surface_disks`.
 - **Anti-aliasing for the master**: `MARTIN_SS=2` (in `record.sh`) renders at 2× `MARTIN_RES` and
   lanczos-downscales in the mux — supersample AA that noticeably smooths the splat disk-edges + text
   (there is no in-engine AA). For the final master (≈n² fill), not fast previews.
