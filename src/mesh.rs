@@ -47,6 +47,10 @@ fn sub(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
+fn dot(a: [f32; 3], b: [f32; 3]) -> f32 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
 /// Deterministic pseudo-random in [0,1) from an index + seed (same as morph.rs) — frame-stable, so a
 /// jittered sampling records identically. Used to break the R2 weave (`MARTIN_MESH_JITTER`).
 fn hash01(k: u32, seed: u32) -> f32 {
@@ -173,12 +177,54 @@ where
     // random's clumping (A/B'd: random blotches, pure R2 weaves, this is clean).
     const JITTER: f32 = 0.6;
     let mut si: u32 = 0; // running sample index (jitter hash seed)
-    for (ti, tri) in tris.iter().enumerate() {
-        let ytri = [yd(tri[0]), yd(tri[1]), yd(tri[2])];
-        let face_n = norm_or(
-            cross(sub(ytri[1], ytri[0]), sub(ytri[2], ytri[0])),
+    // SLAB-AXIS edge crisping. An extruded SVG (the deFEEST logo) is a flat slab, but ~half its
+    // triangles are extrusion WALLS whose normal lies IN the slab plane — sampled as round disks
+    // oriented to that normal they project to edge-on SLIVERS scattered along the outline (the ragged
+    // speckle fringe). Find the slab axis (area-weighted mean |face normal|); for SLAB-LIKE meshes only
+    // (cap_frac gate → 3D models/captures untouched) drop the worst wall slivers + taper the bevel +
+    // shrink/inset boundary caps, so the silhouette reads as a clean edge instead of dotty straddle.
+    let face_ns: Vec<[f32; 3]> = tris
+        .iter()
+        .map(|tri| {
+            let yt = [yd(tri[0]), yd(tri[1]), yd(tri[2])];
+            norm_or(cross(sub(yt[1], yt[0]), sub(yt[2], yt[0])), [0.0, 0.0, 1.0])
+        })
+        .collect();
+    // Slab axis = the DOMINANT normal direction = the top eigenvector of the area-weighted normal
+    // covariance M = Σ w·(n⊗n). (Averaging |n| fails: the walls' spread biases the mean off-axis.) The
+    // caps (n ≈ ±axis) pile onto one eigenvalue; the walls fill the perpendicular plane. Power-iterate.
+    let mut m = [[0.0f32; 3]; 3];
+    for (ti, fnv) in face_ns.iter().enumerate() {
+        let w = weights[ti];
+        for r in 0..3 {
+            for c in 0..3 {
+                m[r][c] += w * fnv[r] * fnv[c];
+            }
+        }
+    }
+    let mut slab = [0.267_f32, 0.535, 0.802]; // generic start (not axis-aligned → never orthogonal to the eigenvector)
+    for _ in 0..32 {
+        slab = norm_or(
+            [
+                m[0][0] * slab[0] + m[0][1] * slab[1] + m[0][2] * slab[2],
+                m[1][0] * slab[0] + m[1][1] * slab[1] + m[1][2] * slab[2],
+                m[2][0] * slab[0] + m[2][1] * slab[1] + m[2][2] * slab[2],
+            ],
             [0.0, 0.0, 1.0],
         );
+    }
+    let cap_frac = face_ns
+        .iter()
+        .zip(&weights)
+        .filter(|(fnv, _)| dot(**fnv, slab).abs() > 0.85)
+        .map(|(_, w)| *w)
+        .sum::<f32>()
+        / total;
+    // a flat extruded logo (cap area dominates one axis) vs a 3D model (normals spread → low cap_frac).
+    // Logos measure ~0.5+, animals/captures ~0.3 → 0.40 separates them.
+    let slab_like = cap_frac > 0.40;
+    for (ti, tri) in tris.iter().enumerate() {
+        let face_n = face_ns[ti];
         let n = ((target_count as f32 * weights[ti] / total).round() as usize).max(1);
         // DENSITY-ADAPTIVE disk size: a thin/tiny triangle (a logo letter's outline stroke) forced to
         // ≥1 disk would otherwise get the GLOBAL disk (sized for the mesh-wide average) and overhang its
@@ -188,16 +234,16 @@ where
         let r_plane_t = (splat * local_spacing)
             .clamp(0.35 * r_plane, 1.5 * r_plane)
             .max(1e-6);
-        let r_thin_t = (r_plane_t * thin).max(1e-7);
-        // EDGE-INSET: pull samples off the triangle edges toward the centroid by ~the disk's footprint
-        // (inset ∝ disk_radius / inradius), so a disk near a colour seam doesn't straddle it. Tiny
-        // triangles (disk ≫ inradius) inset hard; broad fills barely move.
         let elen = |a: [f32; 3], b: [f32; 3]| {
             let d = sub(a, b);
             (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt()
         };
         let perim = elen(tri[0], tri[1]) + elen(tri[1], tri[2]) + elen(tri[2], tri[0]);
         let inradius = (weights[ti] / perim.max(1e-6)).max(1e-6); // area/semiperim = 2area/perim
+        let r_thin_t = (r_plane_t * thin).max(1e-7);
+        // EDGE-INSET: pull samples off the triangle edges toward the centroid by ~the disk's footprint
+        // (inset ∝ disk_radius / inradius), so a disk near a seam/outline doesn't straddle it. Tiny
+        // triangles (disk ≫ inradius) inset hard; broad fills barely move.
         let inset = (r_plane_t / inradius * 0.7).clamp(0.0, 0.55);
         let jscale = JITTER / (n as f32).sqrt(); // jitter within ~one local cell
         for _ in 0..n {
@@ -226,9 +272,17 @@ where
             };
             let p = lerp3(*tri);
             let sh = color(ti, bw, bu, bv);
-            let n_axis = match tri_norms[ti] {
-                Some(nn) => norm_or(yd(lerp3(nn)), face_n),
-                None => face_n,
+            // SLAB RE-ORIENT: for a flat extruded logo, face EVERY disk along the slab axis (the logo's
+            // flat front) instead of its own face normal. The extrusion-WALL samples — whose normal is
+            // edge-on — would otherwise project to slivers scattered along the outline (the ragged
+            // speckle fringe); faced front they become clean disks that FILL the stroke (no hollowing).
+            let n_axis = if slab_like {
+                slab
+            } else {
+                match tri_norms[ti] {
+                    Some(nn) => norm_or(yd(lerp3(nn)), face_n),
+                    None => face_n,
+                }
             };
             push_disk(&mut out, yd(p), n_axis, sh, r_plane_t, r_thin_t, alpha);
         }
