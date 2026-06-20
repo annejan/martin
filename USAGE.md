@@ -24,8 +24,6 @@ Everything is one timeline. `MARTIN_SEQ` writes it explicitly; the other env var
 | If you set… | The sequence it builds |
 |---|---|
 | `MARTIN_SEQ` | exactly the parts you write (the full timeline) |
-| `MARTIN_TEXT` | one part: that title, assembled from a ball |
-| `MARTIN_PLY` (+ `_PLY2`) (+ `_REFORM`) | the splat(s) as part 1; the reform target (if any) as part 2 |
 | *(nothing)* | the **intro production** (`productions/intro/intro.show`); `assets/demo.show` is the alt effect-catalogue |
 
 Examples:
@@ -35,11 +33,12 @@ Examples:
 MARTIN_PLY=assets/martin.ply cargo +nightly run --release
 
 # Two Martins morph into a dog
-MARTIN_PLY=assets/martin-peace.ply MARTIN_PLY2=martin.ply \
-MARTIN_REFORM=doggo.ply cargo +nightly run --release
+MARTIN_PLY=assets/martin.ply \
+MARTIN_SEQ="splat:martin-peace.ply+martin.ply; splat:doggo.ply" \
+cargo +nightly run --release
 
 # A glowing title that assembles from particles
-MARTIN_TEXT="MARTIN GAUS" cargo +nightly run --release
+MARTIN_SEQ="text:MARTIN GAUS" cargo +nightly run --release
 
 # A whole show (see "Sequences" below)
 MARTIN_PLY=assets/doggo.ply \
@@ -52,14 +51,13 @@ cargo +nightly run --release
 ## Where files are loaded from
 
 The demo's splats live in **`assets/`** — the default asset root — so splat names
-(`MARTIN_PLY2`, `MARTIN_REFORM`, `splat:` parts) resolve there with no extra setup. To
+(`splat:` parts) resolve there with no extra setup. To
 load splats from a **different folder**, point `MARTIN_PLY` at one of them; its **parent
 folder becomes the asset root** and the other names resolve beside it:
 
 ```bash
-MARTIN_PLY=/other/dir/martin.ply   # → asset root = /other/dir
-MARTIN_PLY2=martin-peace.ply        # → /other/dir/martin-peace.ply
-MARTIN_REFORM=doggo.ply             # → /other/dir/doggo.ply
+MARTIN_PLY=/other/dir/martin.ply              # → asset root = /other/dir
+MARTIN_SEQ="splat:martin-peace.ply; splat:doggo.ply"   # → /other/dir/{martin-peace,doggo}.ply
 ```
 
 (In a sequence, `MARTIN_PLY` itself need not appear in the parts — it just sets the root.)
@@ -93,22 +91,13 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 
 | Env var | Default | What it does |
 |---|---|---|
-| `MARTIN_PLY` | `assets/aegg.ply` | Primary splat / asset-folder override — its parent folder becomes the asset root. |
-| `MARTIN_PLY2` | — | A second splat, placed beside the first. |
-| `MARTIN_REFORM` | — | Morph target: the source splat(s) turn into this one. |
-| `MARTIN_GLB` | — | Load a **`KHR_gaussian_splatting` glTF** (`.glb`) splat scene — the standard splat container (e.g. a TRELLIS single-image→3DGS export). **Alone**: a standalone scene view. **Combined with a seq/compose show**: the scene is *set dressing* placed alongside the morphing splats (same camera + bloom; put the `.glb` in the show's asset root, place it with `MARTIN_GLB_POS`). **NB:** glTF-as-*splats*, distinct from `glb:`/`model:` which load glTF as a real PBR *mesh*. |
-| `MARTIN_GLB_SCALE` | `1.0` | Scales the loaded `MARTIN_GLB` scene (handy when an export's native units are tiny or huge). |
-| `MARTIN_GLB_POS` | `0,0,0` | Places the `MARTIN_GLB` scene (`x,y,z`) — e.g. `2.2,-0.4,-1.5` to park it beside the morph track. |
-| `MARTIN_GLB_DIST` | `5.0` | Orbit-camera distance when `MARTIN_GLB` runs **alone** (smaller = tighter framing). |
-| `MARTIN_TEXT` | — | Splat-text: this string assembles out of a ball cloud (glowing). |
+| `MARTIN_PLY` | `assets/aegg.ply` | Asset-root override — its parent folder becomes the asset root that `splat:`/`image:`/etc. parts resolve against. |
+| `MARTIN_GLB` | — | Load a **`KHR_gaussian_splatting` glTF** (`.glb`) splat scene — the standard splat container (e.g. a TRELLIS single-image→3DGS export) — as a standalone scene at the origin, with the camera auto-framing it. **NB:** glTF-as-*splats*, distinct from `glb:`/`model:` which load glTF as a real PBR *mesh*. |
 | `MARTIN_SEQ` | — | A timeline of parts (see [Sequences](#sequences)). Highest precedence. |
 | `MARTIN_SHOW` | — | A **unified scene file** (`.show`) — settings + `[seq]` + `[compose]` + a `[camera]` track in one file. Expands into the other `MARTIN_*` vars (which still override it). See [The unified scene file](#the-unified-scene-file-martin_show). |
 | `MARTIN_KIND` | — | Env projection of the show's `kind = intro|demo` setting. An **intro** is a self-contained, asset-budgeted showcase that bundles into the single binary; a **demo** is the full-fat production (heavy local captures allowed). Unknown values are ignored. |
 | `MARTIN_VALIDATE` | — | `=1` **dry-run**: parse the show, print the resolved timeline (part cue times, effects, compose, camera track) and exit — no render. See [Validate a show](#validate-a-show-without-rendering-martin_validate). |
-| `MARTIN_TRANSITION` | — | Default arrival transition for every part: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`rain`/`funnel`/`shatter`/`condense`/`swirl` (data-only) or `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`shockwave`/`outline`/`pen-write` (per-particle shader; `outline`/`pen-write` are text-only). A per-part `~name` overrides it. See [Sequences](#sequences). |
-| `MARTIN_DEFORM` | — | Scene-wide **persistent deform** field over every part *and* compose object: `wave`/`cloth`/`ripple`/`twist`/`wind`/`turbulence`/`pulse`/`jitter`/`spiral` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it. See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
-| `MARTIN_DEFORM_AMP` | `1.0` | Scales the deform amplitude — **`0.2`–`0.3` ≈ a gentle wobble on a big scene**, `1` = default, higher = wild. |
-| `MARTIN_DEFORM_SPEED` | `2.0` | Deform animation rate — `0.6`–`1` = slow/dreamy, higher = faster. |
+| `MARTIN_DEFORM` | — | Scene-wide **persistent deform** field over every part *and* compose object: `wave`/`cloth`/`ripple`/`twist`/`wind`/`turbulence`/`pulse`/`jitter`/`spiral` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it (the `^name:amp` form scales its amplitude). See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
 | `MARTIN_BEAT` | `1.0` | **Beat-reactive visuals** strength (`0` = off). The score's drums drive the look: kick → a scale "thump", snare → a bloom flare, hat → a shimmer, and any active `^deform` swells on the beat. Per-Shot `beat:<scale>` dials it per shot. See [Beat-reactive visuals](#beat-reactive-visuals). |
 | `MARTIN_FFT` | `1.0` | **Spectral reactivity** strength (`0` = off). An FFT of the rendered track is baked into 8 log frequency bands (sub→air); the **background** (`MARTIN_BG`) and **`shader:` interludes** then react to the actual *spectrum* — the bass swells the whole field, the mids wash colour over it, the air sparkles — not just the drum triggers (`MARTIN_BEAT`). Deterministic (baked once from the score, indexed by show-time), so it bakes identically into recordings. Only affects shows with a backdrop/interlude; splat-only morph shows are untouched. See [Spectral reactivity](#spectral-reactivity). |
 | `MARTIN_CAM_PUMP` | `0` (off) | Kick-driven **camera lunge** (a transient pull-in on each kick). **Off by default** — the shake is nauseating over a long loop. Opt in with a small value (`0.04` ≈ the old default) for a single punchy clip. |
@@ -117,8 +106,7 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_PARTICLE_COUNT` | `200` | Number of embers when `MARTIN_PARTICLES` is set (clamped 1–5000). |
 | `MARTIN_TINT_MUSIC` | off | **Harmonic tint**: the backdrop palette leans **cool** in minor / low-energy passages and **warm** on lifts / major (from the score's chord quality + section gain), so colour breathes with the harmony. `=1` enables; a `[sync] tint_music=<-1..1>` keyframe overrides it. Backdrop-only (splats untouched), default-off, deterministic. |
 | `MARTIN_POST` | off | **Beat-gated post-processing** over the whole rendered frame: `chroma` (or `chroma:<strength>`) does an RGB channel-split whose magnitude rides the kick — the image shears red/cyan on every drum hit (the "screen reacts to the track" layer). Runs in the camera's render graph after tonemapping, so it covers the window, the live `MARTIN_SERVE` view, and headless recordings alike. Deterministic (the shear scales with the clock-driven `kick`), so it bakes identically into a render. Default-off; splat geometry is untouched. See [Post-processing](#post-processing). |
-| `MARTIN_TONEMAP` | `tonymcmapface` | Camera **tonemap**. Default `TonyMcMapface` (film-grade — bright splats roll off instead of clipping to flat white). `MARTIN_TONEMAP=none` restores the old `Tonemapping::None` for byte-identical legacy renders. **Note: the default changed**, so a show looks slightly richer than before unless you set `none`. |
-| `MARTIN_EXPOSURE` | `1.0` | Static **exposure** (bloom-intensity multiplier). `1.0` = unchanged; `<1` dims the glow, `>1` lifts it. A `[sync] exposure=` keyframe overrides it per frame (music-timed). Only takes effect when set (or keyframed) — otherwise the bloom is left at its tuned default. |
+| `[sync] exposure=` (track) | Music-timed **exposure** keyframes (bloom-intensity multiplier): `1.0` = unchanged; `<1` dims the glow, `>1` lifts it. A `[sync]` track in the show drives it per frame; with no keyframes the bloom stays at its tuned default. Camera tonemap is fixed to `TonyMcMapface` (film-grade roll-off). |
 | `MARTIN_BG` | — | **Fullscreen background shader** behind the splats (the demoscene classic): `plasma` / `tunnel` / `stars` / `warp` / `rings` / `grid` / `kaleido` / `bolt` / `fractal` (Kaliset orbit-trap filaments) / `clouds` (drifting fbm haze) (or a number). A custom-material quad parented to the camera, opaque at the far plane so the splats blend over it; fed time + beat (kick brightens). The WGSL is `assets/bg.wgsl` — a `mode` uniform switches effects; edit it / add your own (Shadertoy-ish: work in `p` + `bg.time`). |
 | `MARTIN_BG_DIM` | `1.0` | Scales the background brightness so foreground content (a logo, glowing text) reads over it — e.g. `0.4` for a punchy effect dialled back to a backdrop. |
 | `MARTIN_FLASH` | `0` | Over-bright **bloom flash on each part cut** (0 = off; `~0.6` = punchy). Synced to the music when parts are `@@`-anchored to beats/bars. |
@@ -131,8 +119,7 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_CAMERAS` | — | A 3DGS/COLMAP `cameras.json` (graphdeco format); parks the camera at a real capture pose (transformed through the same normalize + rotation as the splats). `MARTIN_CAM_INDEX` picks which shot (default 0). *Experimental:* helps cleanly-captured scenes; soft 360° photogrammetry dumps still render abstract (see the scene heads-up above). |
 | `MARTIN_BULGE` | `0.9` | Ball-cloud size at a morph's midpoint, in object-radii. `0` = clean "puzzle-box" reorder (no explosion); `~0.9` = a ball roughly the object's size. (In sequences this is the per-part 3rd timing number instead.) |
 | `MARTIN_MORPH_COUNT` | `0` (shorthand) / `200000` (`MARTIN_SEQ`) | Gaussian budget every part is resampled to. `0` = the largest part's natural count (~1.15M for the Martins; crisp, ~20 fps). Lower = faster: **250k ≈ 60 fps, 500k ≈ 40 fps.** |
-| `MARTIN_PAIR` | — | `=match` switches morph pairing from **index-rank** (Morton Z-order; default) to **nearest same-colour match**. Rank pairing flows beautifully between *similar* shapes (a truck → a train) but pinches *dissimilar* ones (city → city) through a centre **ball** — distant rank-pairs cross at the centroid. `match` reorders each shot so every splat slides to a nearby, similar-colour splat of the previous shot (grass→grass, tower→tower): short moves, a straight ghostly morph, no ball. Also suppresses the beat ball-pulse (below) so the slide stays clean. See [Sequences](#sequences). |
-| `MARTIN_PAIR_COLOR` | `0.5` | Colour weight in the `MARTIN_PAIR=match` cost (`distance² + w·colour²`). Higher = pair more by hue (risks longer moves → ball); lower = pair more by position (risks colour-mismatched slides). `0.5` balances both. |
+| `MARTIN_PAIR` | — | `=match` switches morph pairing from **index-rank** (Morton Z-order; default) to **nearest same-colour match** (colour weight fixed at `0.5` in the `distance² + 0.5·colour²` cost). Rank pairing flows beautifully between *similar* shapes (a truck → a train) but pinches *dissimilar* ones (city → city) through a centre **ball** — distant rank-pairs cross at the centroid. `match` reorders each shot so every splat slides to a nearby, similar-colour splat of the previous shot (grass→grass, tower→tower): short moves, a straight ghostly morph, no ball. Also suppresses the beat ball-pulse (below) so the slide stays clean. See [Sequences](#sequences). |
 | `MARTIN_YAW` | `1.4` (front) | Seed the orbit **yaw** in **radians** (e.g. `1.57` ≈ head-on). When set, a recording **holds** this yaw instead of swaying — bake a found scene viewpoint. |
 | `MARTIN_PITCH` | `0.12` | Seed the orbit **pitch** in **radians** (0 = eye level, `+` looks down). |
 | `MARTIN_WAYPOINTS` | `waypoints.json` | File the **M-key camera waypoints** are written to (and read from on startup). Each marker appends the live orbit pose (target/dist/yaw/pitch) so you can author a camera path while flying — see [live controls](#live-keyboard-controls). |
@@ -141,7 +128,6 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_RECORD` | — | Directory to dump one PNG per frame into (the whole timeline; used by `record.sh`). **Recording runs fully headless** — no window, camera → an offscreen image (so it works over SSH / on any compositor, and never captures a black background). Works for `MARTIN_COMPOSE` stages too. |
 | `MARTIN_RES` | `1280x720` | Offscreen **render resolution** `WxH` for recordings (and the `MARTIN_SERVE` view) — e.g. `1920x1080`, `2560x1440` for a crisp master. **Keep it 16:9** (the fullscreen quads + framing assume that aspect; a non-16:9 size warns). |
 | `MARTIN_SS` | `1` | **Supersample anti-aliasing** (`record.sh` only): `=2` renders at 2× `MARTIN_RES` then lanczos-downscales in the mux — smooths the splat disk-edges + text (there's no in-engine AA). Costs ~n² fill, so it's for the final master, not fast previews. |
-| `MARTIN_AABB` | off | Render each splat as its true **projected ellipse** (conic from the 2D covariance) instead of a round isotropic blob (the default OBB). Subtle for synthetic disk-splats (already normal-oriented); more visible on real captures. Default off = byte-identical. |
 | `MARTIN_PREVIEW_FPS` | 60 | `=<n>` renders the timeline at `n` fps instead of 60 — **far fewer frames** for a fast preview (rendering frames is the slow part, not the mux). `=8` → ~1/8 the frames. Frame `dt` + camera sway scale with it, so timing/motion stay correct; `record.sh` muxes at the same fps so duration + audio sync hold. Use for quick looks; drop it (or set 60) for the final render. |
 | `MARTIN_BENCH` | — | `=<frames>` renders that many frames **headless with no PNG output** and logs the render-only fps, then exits — a clean perf probe (disk-I/O-free). |
 | `MARTIN_LOADER` / `MARTIN_LOGO` | off | `=1` shows a **loading screen** (black + progress bar; `MARTIN_LOGO=<png OR svg in the asset root>` adds the logo — an `.svg` is rasterized, so it can be the same artwork the opening mesh was extruded from) until the show is built, then **cross-fades** into the opening logo behind it. Set automatically in a bundled build. (Window-only — not captured in recordings.) |
@@ -151,18 +137,8 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_SERVE` | — | `=1` (or `=<port>`, default 7878) starts the **live control bridge** — see below. |
 | `MARTIN_FULLSCREEN` | off | `=1` starts borderless-fullscreen; toggle live with **F11 / F**. (Ignored while recording — that needs the fixed window.) |
 | `MARTIN_LOOP` | off | `=1` keeps a live window up after the show ends (for tuning). By default a live run **exits when the show is done** (Space restarts). |
-| `MARTIN_NORMALIZE` | on | Each part is centred on its **centroid** and uniformly scaled (positions *and* gaussian sizes) so the bulk of its content (90th-percentile radius) ≈ 2 units. Using a percentile, not the bounding box, **ignores stray "floater" splats** that would otherwise shrink the scene to a distant dot — so a 200-unit COLMAP scene and a 1-unit TRELLIS object share one "normal" scale. `=0` keeps raw scales. |
-| `MARTIN_ZOOM` | `1.0` | Camera closeness multiplier: **`>1` = closer / more zoomed in, `<1` = pull back**. The camera frames the normalized content up close by default; nudge this to taste. |
-| `MARTIN_MESH_COUNT` | `60000` | Target gaussian count when surface-sampling a `mesh:` part (distributed by triangle area; ≥1 per triangle). |
-| `MARTIN_MESH_SPLAT` | `1.2` | Mesh disk **overlap factor** on the mean inter-sample spacing (density-adaptive, so it's right for any mesh size / poly count): `~1` = disks just touch (crispest), `>1` = more overlap (softer/smoother fill), `<1` = gaps. Per-part override: the `disk:<f>` reel token. |
-| `MARTIN_MESH_THIN` | `0.3` | Mesh disk thickness as a fraction of the in-plane radius (how flat the surface splats are). |
-| `MARTIN_MESH_JITTER` | `0.6` | Per-sample jitter (~one local cell) that breaks the R2 sample sequence's regular **weave** (visible in dense fills) — "jittered low-discrepancy": even coverage without the grid pattern *and* without pure random's clumping. `0` = pure R2; higher = more random. |
-| `MARTIN_MESH_RANDOM` | off | Force **pure-random** barycentric sampling (ignores R2) — a comparison baseline only; it clumps (blotchy fills + gaps), which is why R2 + jitter is the default. |
-| `MARTIN_MESH_RGB` | texture / vertex / `0.8,0.85,0.95` | Flat `r,g,b` fallback for a `mesh:` part. Colour priority: the material's **diffuse texture** (sampled at the UV; PNG/JPEG) > vertex colours > material diffuse > this. |
-| `MARTIN_MESH_ANISO` | `1.0` (round) | **Anisotropic mesh splats**: `>1` stretches each `mesh:` sample into an **ellipsoid** along the surface grain (the triangle's longest edge), area-preserving (`r·aniso` × `r/aniso`), so the cloud follows the mesh's contours instead of looking like uniform dots. `2`–`4` ≈ a clear streak; `1.0` = round disks (byte-identical to before). Clamped to `0.1`–`10`. |
-| `MARTIN_MESH_OPACITY` | `0.6` | Per-splat alpha for `mesh:` parts. `1.0` = solid; `<1` lets disks blend front-to-back. |
+| `MARTIN_ZOOM` | `1.0` | Camera closeness multiplier: **`>1` = closer / more zoomed in, `<1` = pull back**. The camera frames the normalized content up close by default; nudge this to taste. (Each part is always centred on its centroid + scaled by its 90th-percentile radius so a 200-unit COLMAP scene and a 1-unit TRELLIS object share one "normal" scale.) |
 | `MARTIN_ROT` | — | `rx,ry,rz` euler **degrees** applied to the cloud — e.g. stand a COLMAP scene upright for a "normal" POV. Default = the portrait flip (gives scenes their abstract sideways look). Also orients a `glb:` dissolve (mesh + its splats together). |
-| `MARTIN_REEL_POS` | `0,0,0` | `x,y,z` translation of the whole **reel** (the morph timeline) off the world origin. The reel normally sits at the origin; this places the morphing subject **relative to `[stage]` props** (which carry their own `@x,y,z`) — e.g. `0,0.6,0` floats a knot⇄galaxy morph above a placed cityscape. Settings key: `reel_pos = x,y,z`. |
 | `MARTIN_4D_TEST` | — | **Experimental** 4D gaussian smoke test: spawns random 4D splats as a standalone scene. Niche — not needed for normal show authoring. |
 
 ---
@@ -301,7 +277,7 @@ path to a file** with one part per line (`#` starts a comment, blank lines are s
 text:STRING                      # splat-text (glowing)
 wall:LINE1|LINE2|LINE3           # a multi-line WALL of text (| = newline), or wall:greets.txt
 image:logo.png                   # a PNG in the asset folder, rasterized to gaussians (a logo)
-svg:logo.svg                     # an SVG, rasterized (vector→pixels, MARTIN_SVG_PX wide) → gaussians
+svg:logo.svg                     # an SVG, rasterized (vector→pixels, 512px wide) → gaussians
 mesh:logo.dae                    # a 3D mesh (.dae/.obj/.stl/.ply), surface-sampled into gaussians
 glb:badge.glb                    # a real glTF mesh: rendered crisp, THEN dissolves into its own
                                  #   sampled splats (coincident by construction) which morph on
@@ -315,7 +291,7 @@ splat:a.ply+b.ply                # several splats, auto-arranged side by side
 
 > **Per-Shot look overrides (scene-scoped looks):** `flash:<strength>` flares the cut-bloom on *this*
 > Shot's entry (overrides the global `MARTIN_FLASH` — punch one drop, not every cut); `^deform:<amp>`
-> scales this Shot's wobble (e.g. `^wave:0.4` gentle, `^twist:2` violent) on top of `MARTIN_DEFORM_AMP`;
+> scales this Shot's wobble (e.g. `^wave:0.4` gentle, `^twist:2` violent);
 > `beat:<scale>` dials this Shot's beat-bounce (`beat:0` = still through the drop, `beat:1.6` = punchier)
 > so the kick reaction rides only on *some* Shots, not the whole show. `ease:<curve>` shapes the morph
 > curve (`snap`/`hold-snap`/`anticipate`/`stutter`/`smooth`; see [Morph easing](#sequences)); `freeze:N`
@@ -376,9 +352,8 @@ on** (sticky until the next `bg:` token): `plasma` / `tunnel` / `stars` / `warp`
 across the show — e.g. `bg:off` for the intro, `bg:bolt` on the drop, back to `bg:stars` for the
 outro. `MARTIN_BG` (if set) is the default before the first token; `MARTIN_BG_DIM` stays global.
 
-`image:`/`svg:` parts share the crispness knobs **`MARTIN_IMG_STRIDE`** (pixel subsample, default
-`2`) and **`MARTIN_IMG_SPLAT`** (gaussian size, `0.012`); an `svg:` also takes **`MARTIN_SVG_PX`**
-(the width it rasterizes the vector to before sampling, default `512` — raise it for a crisper logo).
+`image:`/`svg:` parts rasterize to gaussians with fixed sensible defaults — pixel subsample stride
+`2`, gaussian size `0.012`, and (for `svg:`) a `512`px-wide raster before sampling.
 
 The optional trailing `@hold,morph,bulge` sets, in **seconds** (and ball amount):
 - **hold** — how long to rest on this part once it arrives (default `1.5`)
@@ -445,8 +420,7 @@ of them). It can sit anywhere on the line, but reads best last:
 | `~pen-write` (`~pen`) | **text only** — real handwriting: traces a *single-stroke* font's centerline in pen order |
 | `~shockwave` (`~blast`) | materialises as an **expanding ring** sweeping outward from the centre — a directional blast-front instead of a uniform converge. Pair with `@@drop`+`ease:snap` so the kick blasts the shape into being. Best on full/procedural shapes (a hollow-back capture can show its empty side as the ring passes). |
 
-`MARTIN_TRANSITION=<name>` sets a default for **every** part (handy for trying one out); an
-explicit per-part `~name` wins over it.
+The per-part `~name` token picks each part's arrival; with no token a part uses the default `ball`.
 
 **Departures** (`out:name`) — where `~name` says how a part *arrives*, `out:name` says how it
 **leaves**: it morphs to a faded "gone" cloud as a distinct step at the end of its hold (before the
@@ -476,7 +450,7 @@ for `glb:` too — the mesh and its sampled splats rotate together.)
 each tumbled differently). Deterministic (frame-stable for recording); the whole pile is sized to
 frame as one. Great for snacks, confetti, a swarm of logos, …
 
-**Disk** (`disk:<f>`) overrides `MARTIN_MESH_SPLAT` (the mesh splat-disk **overlap factor**) for this
+**Disk** (`disk:<f>`) sets the mesh splat-disk **overlap factor** for this
 part only — smaller (`disk:0.7`) = tighter, crisper edges on a sharp graphic; larger = softer/smoother
 fill. Lets one part (e.g. the logo) be crisp without re-tuning the rest. Only affects sampled `mesh:`
 parts.
@@ -532,7 +506,7 @@ it and splats blend over it. Three ways to combine them, from simplest to riches
 
 So `glb:badge.glb → splat:dog.ply → text:HELLO` reads as: random → badge splats → **mesh** → badge
 splats → dog → text. `MARTIN_ROT` orients the mesh **and** its splats together (they always coincide).
-`MARTIN_MESH_COUNT`/`_SPLAT`/`_THIN` tune the sampled disks.
+The per-part `disk:<f>` token tunes the sampled disks' overlap.
 
 **Why `glb:` and not just `model:` + `mesh:` of the same board?** Two separately-exported files can't
 be aligned by a rotation: the mesh *sampler* reflects Y (Y-down convention) while the *renderer*
@@ -582,7 +556,7 @@ Tips so it reads well once sampled into splats:
   text) → correctly coloured splats. (Textures aren't sampled by `glb:` yet — use materials.)
 - **Apply transforms** (`Object ▸ Apply ▸ All Transforms`) so the export is in a clean frame; martin
   orients the whole thing with `MARTIN_ROT` (it moves mesh + splats together).
-- Poly count isn't critical — sampling is area-weighted to the splat budget (`MARTIN_MESH_COUNT`).
+- Poly count isn't critical — sampling is area-weighted to the splat budget.
 
 **Other handy ways to edit** (besides Blender):
 - **Inkscape → Blender (the logo route).** A logo edits best as **2D vector**: tweak the
@@ -671,12 +645,11 @@ every placed compose object — `MARTIN_DEFORM=wind` blows the whole stage at on
 per-part / per-object `^name` always wins over the field.
 The deform is independent of the arrival transition, so a part can `~fade` in *and* `^wave`. (Off
 by default → no movement; it's a default-off branch in the fork shader, see the fork's `CHANGES.md §5`.)
-**`MARTIN_DEFORM_AMP`** scales the wobble (`0.2`–`0.3` ≈ gentle on a whole scene) and
-**`MARTIN_DEFORM_SPEED`** its rate — so you can load a scene and softly wobble it while you fly
-around it:
+The per-part `^name:amp` token scales an individual Shot's wobble (`^wave:0.3` ≈ gentle on a whole
+scene) — so you can load a scene and softly wobble it while you fly around it:
 
 ```bash
-MARTIN_PLY=assets/train.ply MARTIN_DEFORM=wave MARTIN_DEFORM_AMP=0.3 MARTIN_DEFORM_SPEED=1 \
+MARTIN_PLY=assets/train.ply MARTIN_SEQ="splat:train.ply ^wave:0.3" \
   MARTIN_ZOOM=1.5 cargo +nightly run --release
 ```
 
@@ -852,7 +825,7 @@ the camera slowly **auto-orbits** the whole arrangement (grab it any time with t
 `MARTIN_MORPH_COUNT` caps splats **per object**.
 
 **Stage + timeline together (tracks).** A compose stage can run *alongside* the morph timeline: set
-`MARTIN_COMPOSE` **and** an explicit `MARTIN_SEQ` (or `MARTIN_PLY`/`MARTIN_TEXT`). The morph timeline
+`MARTIN_COMPOSE` **and** an explicit `MARTIN_SEQ`. The morph timeline
 is then the **hero** track (it frames the camera) and the compose objects are placed around it —
 objects, text and meshes living in one scene. (Compose *alone*, with no morph track requested, still
 frames + auto-orbits itself.) Place the objects near the origin (`@±1`) so they sit in the hero's
@@ -1036,7 +1009,7 @@ MARTIN_SHOW=assets/examples/truck-show.show ./record.sh truck_show.mp4
 To grab a single still instead:
 
 ```bash
-MARTIN_TEXT="MARTIN GAUS" MARTIN_SHOT=/tmp/title.png MARTIN_SHOT_AT=6 \
+MARTIN_SEQ="text:MARTIN GAUS" MARTIN_SHOT=/tmp/title.png MARTIN_SHOT_AT=6 \
 cargo +nightly run --release
 ```
 

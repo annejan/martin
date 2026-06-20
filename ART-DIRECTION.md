@@ -107,10 +107,10 @@ Open the `.ply` at **<https://superspl.at/editor>**:
 - **Export as uncompressed / standard PLY** — the demo's loader rejects SuperSplat's
   *compressed* format (`missing required properties`).
 
-> martin already **auto-crops floaters**: `MARTIN_NORMALIZE` centres each part on its centroid
-> and scales by the 90th-percentile radius, so a handful of stray splats won't shrink your
-> scene to a distant dot. Cleaning in SuperSplat still helps the *morph* (paired by spatial
-> sort) and keeps the gaussian budget honest.
+> martin already **auto-crops floaters**: each part is centred on its centroid and scaled by
+> the 90th-percentile radius, so a handful of stray splats won't shrink your scene to a distant
+> dot. Cleaning in SuperSplat still helps the *morph* (paired by spatial sort) and keeps the
+> gaussian budget honest.
 
 ---
 

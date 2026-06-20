@@ -87,9 +87,8 @@ pub(crate) fn build_sequence(
     // resolve each part's entrance first (explicit ~name > MARTIN_TRANSITION > Ball for part
     // 0 / Morph after) — needed before building gaussians so a PenWrite text part is built as a
     // stroked outline (pen order baked into visibility) instead of filled coverage.
-    let global_tr = std::env::var("MARTIN_TRANSITION")
-        .ok()
-        .and_then(|s| Entrance::parse(&s));
+    // global default transition: none — each shot's per-part `~name` token is the knob.
+    let global_tr: Option<Entrance> = None;
     // persistent per-part deform: explicit `^name` > MARTIN_DEFORM > none. Runs while the part is
     // held (a waving wall of text etc.), independent of the arrival entrance above.
     let global_deform = std::env::var("MARTIN_DEFORM")
@@ -160,9 +159,7 @@ pub(crate) fn build_sequence(
     // Normalize each part to a common "normal" size (MARTIN_NORMALIZE=0 to disable). Sources
     // vary wildly — a COLMAP scene spans hundreds of units, a TRELLIS object ~1 — so without
     // this they'd frame inconsistently and morph badly. We log the raw extent first.
-    let normalize = std::env::var("MARTIN_NORMALIZE")
-        .map(|v| v != "0")
-        .unwrap_or(true);
+    let normalize = true; // always frame each part to a common extent (parts vary wildly in raw scale)
     let mut scene_norm = (Vec3::ZERO, 1.0); // part 0's (center, scale) — to transform camera poses
     for (i, (raw, part)) in raws.iter_mut().zip(&seq.parts).enumerate() {
         let label = part.content.label();
@@ -225,15 +222,7 @@ pub(crate) fn build_sequence(
         .expect("part 0 always builds a source cloud");
 
     // MARTIN_REEL_POS="x,y,z" translates the whole morph timeline off the world origin (default 0,0,0).
-    // The reel normally sits at the origin; this lets you place the morphing subject relative to
-    // `[stage]` props (which carry their own `@x,y,z`) — e.g. float the morph above a placed cityscape.
-    let reel_pos = std::env::var("MARTIN_REEL_POS")
-        .ok()
-        .and_then(|s| {
-            let mut it = s.split(',').map(|c| c.trim().parse::<f32>().ok());
-            Some(Vec3::new(it.next()??, it.next()??, it.next()??))
-        })
-        .unwrap_or(Vec3::ZERO);
+    let reel_pos = Vec3::ZERO; // the reel sits at the origin; [stage] props carry their own @x,y,z
 
     let entity = commands
         .spawn((
@@ -247,9 +236,7 @@ pub(crate) fn build_sequence(
                 time_start: 0.0,
                 time_stop: 1.0,
                 bulge: 0.0,
-                // MARTIN_AABB: render each splat as its true projected ellipse (conic from cov2d)
-                // instead of a round isotropic blob (OBB). Default off = byte-identical.
-                aabb: std::env::var("MARTIN_AABB").is_ok(),
+                aabb: false, // round isotropic splats (OBB), not the conic-from-cov2d ellipse
                 ..default()
             },
             Transform::from_rotation(entity_rot).with_translation(reel_pos),
@@ -319,7 +306,7 @@ fn build_shots(
     let pair_match = std::env::var("MARTIN_PAIR")
         .map(|v| v.eq_ignore_ascii_case("match"))
         .unwrap_or(false);
-    let pair_color_w = crate::envvar::or("MARTIN_PAIR_COLOR", 0.5_f32);
+    let pair_color_w = 0.5_f32; // colour weight in nearest-match pairing (was MARTIN_PAIR_COLOR)
     let mut shots: Vec<BuiltShot> = Vec::with_capacity(parts.len());
     let mut prev_shaped: Option<Vec<Gaussian3d>> = None;
     for (idx, raw) in raws.into_iter().enumerate() {

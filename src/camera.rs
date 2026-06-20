@@ -311,20 +311,12 @@ fn fullscreen_toggle(keys: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut Wi
 /// Spawn the HDR + bloom camera with its `OrbitCam` (framed later by `build_sequence` /
 /// `build_composition`).
 fn spawn_camera(mut commands: Commands) {
-    // Tonemap: default TonyMcMapface (film-grade — bright splats roll off instead of clipping to flat
-    // white). `MARTIN_TONEMAP=none` restores the old Tonemapping::None for byte-identical legacy renders.
-    let tonemap = match std::env::var("MARTIN_TONEMAP")
-        .map(|s| s.to_ascii_lowercase())
-        .as_deref()
-    {
-        Ok("none") | Ok("off") => Tonemapping::None,
-        _ => Tonemapping::TonyMcMapface,
-    };
     let mut cam = commands.spawn((
         GaussianCamera { warmup: true },
         Camera3d::default(),
         Hdr, // HDR target so bright splats bloom
-        tonemap,
+        // film-grade tonemap: bright splats roll off instead of clipping to flat white
+        Tonemapping::TonyMcMapface,
         Bloom::NATURAL,
         Transform::default(),
         OrbitCam::default(),
@@ -343,18 +335,12 @@ fn update_exposure(
     sync: Option<Res<crate::sync::SyncTrack>>,
     clock: Res<SeqClock>,
     mut base: Local<Option<f32>>,
-    // MARTIN_EXPOSURE resolved ONCE (env is immutable) — no per-frame getenv+parse. The `[sync]` track
-    // still wins per frame when it keyframes exposure; this is only the static fallback.
-    mut env_exposure: Local<Option<Option<f32>>>,
     mut q: Query<&mut Bloom>,
 ) {
-    let env = *env_exposure.get_or_insert_with(|| {
-        std::env::var("MARTIN_EXPOSURE")
-            .ok()
-            .and_then(|s| s.parse::<f32>().ok())
-    });
-    let exposure = sync.as_ref().and_then(|s| s.exposure_at(clock.t)).or(env);
-    let Some(exposure) = exposure else { return }; // no exposure source → leave NATURAL untouched
+    // exposure is driven by the `[sync] exposure` keyframe track; no track → leave NATURAL untouched.
+    let Some(exposure) = sync.as_ref().and_then(|s| s.exposure_at(clock.t)) else {
+        return;
+    };
     for mut bloom in &mut q {
         let b = *base.get_or_insert(bloom.intensity); // capture NATURAL's intensity once
         bloom.intensity = (b * exposure).clamp(0.0, 1.0);

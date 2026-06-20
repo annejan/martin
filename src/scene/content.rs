@@ -153,30 +153,14 @@ pub(crate) fn part_gaussians(
             }
         },
         PartContent::Mesh(name) => {
-            // MARTIN_MESH_COUNT (target gaussian count), MARTIN_MESH_SPLAT (size), MARTIN_MESH_RGB
-            // ("r,g,b" flat colour; vertex colours used when the mesh has them).
-            let count = crate::envvar::or("MARTIN_MESH_COUNT", 60_000);
-            // MARTIN_MESH_SPLAT is the splat size as an OVERLAP factor on the mean inter-sample
-            // spacing: ~1.0 = disks just touch (crispest), >1 = more overlap (softer/smoother),
-            // <1 = gaps. Density-adaptive, so it's right for any mesh size or polygon count.
-            // per-part `disk:<f>` overrides the global MARTIN_MESH_SPLAT (smaller disks = crisper
-            // edges on a sharp graphic like the logo, without blurring other parts' texture detail).
-            let splat = disk.unwrap_or_else(|| crate::envvar::or("MARTIN_MESH_SPLAT", 1.2));
-            // None when unset → the loader falls back to the mesh's own material colour (a glTF
-            // `baseColorFactor`, e.g. defeest.glb's blue+yellow), then to a pale default. An explicit
-            // MARTIN_MESH_RGB is a deliberate flat recolour and wins over the material.
-            let rgb = std::env::var("MARTIN_MESH_RGB").ok().and_then(|s| {
-                let n: Vec<f32> = s.split(',').filter_map(|x| x.trim().parse().ok()).collect();
-                (n.len() == 3).then(|| [n[0], n[1], n[2]])
-            });
-            // MARTIN_MESH_THIN: disk thickness as a fraction of the in-plane radius (flatness).
-            // Default 0.3 — slightly rounded, so disks read less razor-flat at grazing angles.
-            let thin = crate::envvar::or("MARTIN_MESH_THIN", 0.3);
-            // MARTIN_MESH_OPACITY: per-splat alpha. 1.0 = solid; <1 lets disks blend front-to-back, so
-            // the surface stays opaque where many overlap (interior) but softens where few do (the
-            // silhouette) — which melts the flat-disk "hairs" at grazing edges. Default 0.6.
-            let alpha = crate::envvar::or("MARTIN_MESH_OPACITY", 0.6);
-            mesh::build_mesh_gaussians(&root.join(name), count, splat, thin, alpha, rgb)
+            // Mesh → gaussians with fixed, well-tuned defaults. The one per-part knob is `disk:<f>` —
+            // the splat-disk OVERLAP factor on the mean sample spacing (~1.2 = disks just overlap;
+            // density-adaptive, right for any mesh size/poly count). Smaller = crisper edges on a sharp
+            // graphic (the logo) without blurring another part's texture detail. thin 0.3 (flatness),
+            // alpha 0.6 (blends front-to-back so grazing-edge "hairs" melt), colour from the mesh's own
+            // material (glTF baseColorFactor / vertex colours).
+            let splat = disk.unwrap_or(1.2);
+            mesh::build_mesh_gaussians(&root.join(name), 60_000, splat, 0.3, 0.6, None)
         }
         // A real glTF mesh isn't sampled to gaussians — build_composition spawns it as PBR geometry.
         PartContent::Model(_) => Vec::new(),

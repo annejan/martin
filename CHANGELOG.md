@@ -10,6 +10,17 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ## [Unreleased]
 
+### Removed
+- **Pruned ~23 never-used global `MARTIN_*` env vars** — mesh-sampling (`MESH_COUNT`/`MESH_SPLAT`/
+  `MESH_THIN`/`MESH_OPACITY`/`MESH_RGB`/`MESH_JITTER`/`MESH_ANISO`/`MESH_RANDOM`), image
+  (`IMG_STRIDE`/`IMG_SPLAT`/`SVG_PX`), camera (`TONEMAP`/`EXPOSURE`/`AABB`/`NORMALIZE`), reel
+  (`REEL_POS`/`PAIR_COLOR`/`TRANSITION`/`DEFORM_AMP`/`DEFORM_SPEED`), standalone-glb (`GLB_POS`/
+  `GLB_SCALE`/`GLB_DIST`), and the legacy direct-content path (`TEXT`/`PLY2`/`REFORM`). None were set
+  by any production/show/CLI. The values became fixed sensible defaults (zero behavior change); the
+  surviving authoring knobs are the `.show` `[settings]` keys + per-part tokens (`disk:`, `~name`,
+  `^name:amp`). `MARTIN_PLY` stays as the asset-root setting; `MARTIN_GLB` still loads a standalone
+  splat scene (now origin-centred, camera auto-frames).
+
 ### CLI
 - **A real CLI** (the start of moving config off the ~85 global `MARTIN_*` env vars): `martin [SHOW]
   [--record DIR] [--shot PATH --shot-at S] [--shots T1,T2] [--bench N] [--validate] [--strict]
@@ -20,10 +31,9 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Engine
 - **Jittered mesh sampling (no weave)**: the R2 low-discrepancy sample sequence is even but *regular* —
-  a faint grid weave shows in dense fills. Add a deterministic per-sample jitter (~one local cell),
-  `MARTIN_MESH_JITTER` (default **0.6**) — "jittered low-discrepancy": R2's even coverage without the
-  pattern, and without pure random's clumping (A/B confirmed: random blotches, R2 weaves, this is clean).
-  `MARTIN_MESH_RANDOM=1` forces pure random as a comparison baseline.
+  a faint grid weave shows in dense fills. Surface sampling now adds a deterministic per-sample jitter
+  (~one local cell) — "jittered low-discrepancy": R2's even coverage without the grid pattern, and
+  without pure random's clumping (A/B confirmed: random blotches, R2 weaves, this is clean).
 - **Crisper mesh→splat edges (less fray)**: surface sampling now sizes each triangle's disks to its
   OWN local sample spacing (a thin logo-outline triangle no longer gets the mesh-wide-average disk that
   overhung its colour across the seam), and **edge-insets** samples toward the triangle centroid so a
@@ -43,8 +53,8 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   panics acquiring its swapchain on RADV when unfocused), and **wait for the file to land** before
   exiting. A 1080p frame in ~5 s vs a full video render — fast iteration / profiling. (`MARTIN_BENCH`
   also confirms splat COUNT is not the per-frame bottleneck: ~350 render-fps at 50k and 400k alike.)
-- **Per-part mesh disk size** `disk:<f>`: a reel-part token overriding `MARTIN_MESH_SPLAT` (disk overlap)
-  for that part only — smaller = crisper edges on a sharp graphic without blurring other parts.
+- **Per-part mesh disk size** `disk:<f>`: a reel-part token setting the splat-disk overlap factor for
+  that part only — smaller = crisper edges on a sharp graphic without blurring other parts.
 - **Smoother textured splats**: glTF `baseColorTexture` sampling in the mesh→gaussian path is now
   **bilinear** (was nearest-texel) — textured `mesh:` objects read the texture smoothly between texels
   instead of stepping, so they no longer look blocky/low-res. (Trilinear/mipmaps would only help under

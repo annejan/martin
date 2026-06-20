@@ -142,18 +142,8 @@ pub(crate) fn shot_director(
     cs.transition_axis = axis;
     // Persistent deform (wave/cloth/ripple/twist): unlike the entrance this runs the *whole*
     // time the shot is up (not just while morphing), animated by the show clock. Mode 0 = off.
-    let (amp_scale, speed) = *deform_tune.get_or_insert_with(|| {
-        let f = |k: &str, d: f32| {
-            std::env::var(k)
-                .ok()
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(d)
-        };
-        (
-            f("MARTIN_DEFORM_AMP", 1.0),
-            f("MARTIN_DEFORM_SPEED", DEFORM_SPEED),
-        )
-    });
+    // global deform amp scale 1.0 + speed: the per-shot `^name:amp` token is the live strength knob.
+    let (amp_scale, speed) = *deform_tune.get_or_insert((1.0_f32, DEFORM_SPEED));
     let (dmode, damp, dfreq) = s.deform.map(|d| d.uniforms()).unwrap_or((0, 0.0, 0.0));
     cs.deform_mode = dmode;
     // per-shot `^name:amp` scales this shot's wobble on top of the global MARTIN_DEFORM_AMP.

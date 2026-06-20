@@ -30,24 +30,10 @@ fn spawn_glb_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut d
         return;
     };
     *done = true;
-    let scale = env_f32("MARTIN_GLB_SCALE", 1.0);
-    let pos = std::env::var("MARTIN_GLB_POS")
-        .ok()
-        .map(|s| {
-            let mut it = s.split(',').map(|v| v.trim().parse().unwrap_or(0.0));
-            Vec3::new(
-                it.next().unwrap_or(0.0),
-                it.next().unwrap_or(0.0),
-                it.next().unwrap_or(0.0),
-            )
-        })
-        .unwrap_or(Vec3::ZERO);
+    // standalone glb viewer: scene at the origin, unit scale (the camera frames it in glb_ready).
     let handle: Handle<GaussianScene> = asset_server.load(file_name_of(&path));
-    commands.spawn((
-        GaussianSceneHandle(handle),
-        Transform::from_translation(pos).with_scale(Vec3::splat(scale)),
-    ));
-    info!("glb: loading KHR_gaussian_splatting scene {path} (scale {scale}, pos {pos})");
+    commands.spawn((GaussianSceneHandle(handle), Transform::IDENTITY));
+    info!("glb: loading KHR_gaussian_splatting scene {path}");
 }
 
 /// Once the crate has spawned the scene's clouds, frame the camera and mark the show "built" so the
@@ -75,21 +61,13 @@ fn glb_ready(
     if let Some(mut state) = state {
         state.built = true; // record_driver gate (empty sequence never sets this itself)
     }
-    let dist = env_f32("MARTIN_GLB_DIST", 5.0);
     for mut c in &mut camq {
         c.target = Vec3::ZERO;
-        c.dist = dist;
+        c.dist = 5.0;
         c.framed = true;
     }
-    info!("glb: scene ready, camera framed (dist {dist})");
+    info!("glb: scene ready, camera framed");
     *done = true;
-}
-
-fn env_f32(key: &str, default: f32) -> f32 {
-    std::env::var(key)
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(default)
 }
 
 /// Active only when `MARTIN_GLB` is set — otherwise martin's normal sequence/compose path runs.

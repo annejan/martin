@@ -62,7 +62,7 @@ so they're gitignored, not committed):
 ```bash
 ./pipeline/fetch-demo-assets.sh    # → assets/go_trimmed.ply + assets/trellis.glb
 MARTIN_PLY=assets/go_trimmed.ply cargo r-sh3                     # multi-view photogrammetry (SH3 glints)
-MARTIN_GLB=assets/trellis.glb MARTIN_GLB_DIST=2.6 cargo r-sh0    # a KHR_gaussian_splatting glTF scene
+MARTIN_GLB=assets/trellis.glb cargo r-sh0    # a KHR_gaussian_splatting glTF scene (camera auto-frames it)
 ```
 
 The go-board is a real multi-view capture (its `sh3` glint is visible — `cargo r-sh3`); the trellis is a
@@ -96,9 +96,9 @@ into the downloadable single binary, so a fresh `git clone` runs exactly what th
 procedural splats are synthesized by `build.rs` on first build (no python/numpy), so the clone needs
 no extra step. (The older effect-catalogue demo still lives at [`assets/demo.show`](assets/demo.show),
 built only from shipped assets — `MARTIN_SHOW=assets/demo.show cargo run --release`.) Point it
-at your own splat with `MARTIN_PLY=assets/your.ply cargo run --release`. Add `MARTIN_PLY2=second.ply` (same folder)
-for a **second splat beside it**, and `MARTIN_REFORM=dog.ply` so the source splat(s) **morph
-into that one** — a per-Gaussian `GaussianInterpolate` blend where each source is paired to the
+at your own splat with `MARTIN_PLY=assets/your.ply cargo run --release`, then chain it into a
+`MARTIN_SEQ` to **morph** between splats — e.g. `splat:a.ply; splat:b.ply` — a per-Gaussian
+`GaussianInterpolate` blend where each source is paired to the
 target by **Morton (Z-order) spatial sort**, so particles *flow* into their nearest part of the
 target (no teleporting) and colours/positions lerp together (e.g. two Martins → one dog: each
 becomes a half of the dog). A front-facing camera sway keeps the hollow back of single-image
@@ -123,20 +123,16 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 |---|---|
 | `MARTIN_SHOW=show.show` | **Unified scene file** — one file with settings + a `[reel]` (`[seq]`) + a `[compose]` stage + a music-timed `[camera]` track (keyframes can anchor to a music section, `t=@@drop`). A `kind = intro\|demo` setting declares the production kind, and a `[scenes]` block can author the show as an **arc of named scenes** that flattens to `[reel]` (see [`DOMAIN.md`](DOMAIN.md)). Expands into the env vars below (which still override it). The recommended way to author a whole show; see `assets/example.show`. |
 | `MARTIN_VALIDATE=1` | **Dry-run** — parse the show, print the resolved timeline (part cue times, effects, compose, camera) and exit, no render. A fast authoring check. |
-| `MARTIN_PLY=/abs/x.ply` | Load a splat (sets the asset folder for the others). |
-| `MARTIN_PLY2=y.ply` | A second splat beside the first (the two morph together). |
-| `MARTIN_REFORM=dog.ply` | The source(s) **morph** into this one (Morton-paired particle flow). |
-| `MARTIN_TEXT="MARTIN GAUS"` | **Splat-text**: the title assembles out of a ball cloud (glowing). |
-| `MARTIN_SEQ="…"` | **Timeline** — a chain of parts that morph into one another (see below). |
+| `MARTIN_PLY=/abs/x.ply` | Load a splat (sets the asset folder — its parent becomes the asset root). |
+| `MARTIN_SEQ="…"` | **Timeline** — a chain of parts that morph into one another (see below). Use `splat:`/`text:` parts to load splats and titles. |
 | `MARTIN_COMPOSE=stage.compose` | **Composition** — many objects on one stage at once, placed + spinning/bobbing/drifting, fading in on the music, camera auto-orbiting (vs the morph timeline). Example: `assets/examples/stage.show`. |
 | `MARTIN_FPS=1` / **`I`** key | Log FPS + splat count (the `I` key toggles it live + logs a snapshot). |
 | `MARTIN_BULGE=0.9` | Ball-cloud explosiveness at a morph's midpoint (`0` = clean reorder). |
-| `MARTIN_TRANSITION=fade` | How each part **arrives**: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl`, or the shader ones `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write` (per-part `~name` wins). `swarm` = like `morph` but the splats flock along curled paths *between* the two scenes (the `@_,_,N` value tunes the swarm strength). |
+| `~name` (per-part token) | How each part **arrives**: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl`, or the shader ones `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write`. `swarm` = like `morph` but the splats flock along curled paths *between* the two scenes (the `@_,_,N` value tunes the swarm strength). |
 | `MARTIN_DEFORM=wave` | A **scene-wide persistent deform** field held the whole part (`wave`/`cloth`/`ripple`/`twist`/`wind`/`turbulence`/`pulse`/`jitter`/`spiral`) — great on a `wall:` of text, or to **gently wobble a whole splat scene** while you fly around it; applies to compose objects too. Per-part `^name` wins. |
-| `MARTIN_DEFORM_AMP=0.3` `MARTIN_DEFORM_SPEED=1` | Tune the deform: amplitude scale (`0.3` ≈ a gentle wobble on a big scene; `1` = default) and animation rate. |
-| `MARTIN_MESH_COUNT=60000` | A `mesh:model.dae` part (`.dae`/`.obj`/`.stl`/`.ply`) is surface-sampled into this many **flat, normal-aligned** gaussians, coloured from the diffuse texture (sampled at the UV), else vertex/material colour, else `MARTIN_MESH_RGB`. `MARTIN_MESH_SPLAT` = in-plane disk size; `MARTIN_MESH_THIN` = thickness (default 0.2× the radius). |
+| `^name:amp` (per-part token) | Scale a part's deform amplitude (`^wave:0.3` ≈ a gentle wobble on a big scene; `1` = default). |
+| `mesh:model.dae` (part) | A `mesh:` part (`.dae`/`.obj`/`.stl`/`.ply`) is surface-sampled into **flat, normal-aligned** gaussians, coloured from the diffuse texture (sampled at the UV), else vertex/material colour. The per-part `disk:<f>` token tunes the splat-disk overlap. |
 | `MARTIN_MORPH_COUNT=250000` | Gaussian budget (`0`=max ~1.15M ≈ 20 fps; 250k ≈ 60 fps on the iGPU). |
-| `MARTIN_NORMALIZE=0` | Disable per-part centring + robust scale-to-common-size (on by default). |
 | `MARTIN_ZOOM=1.5` | Camera closeness (`>1` = closer / more zoomed in, `<1` = pull back). |
 | `MARTIN_ROT=rx,ry,rz` | Orient the cloud (euler degrees) — e.g. stand a COLMAP scene upright. |
 | `MARTIN_YAW=1.4` `MARTIN_PITCH=0.1` | Seed the free-orbit camera angle (radians); `MARTIN_YAW` also holds it (no sway) when recording. |

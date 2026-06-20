@@ -1,0 +1,121 @@
+# RUIMTE — a maximalist cosmic morph journey through abstract shapes in space
+# Music: productions/cities/score.txt (124 BPM, A-minor, epic night-drive synthwave)
+# Section starts: intro 0 · build 7.7 · drop 19.4 · breakdown 42.6 · climax 50.3 · outro 73.5 (s)
+#
+# Shows off: all backdrop types, 6+ deforms, 5 entrance effects, caption center+scroll,
+# per-object lissajous paths + travel, camera cuts, sync mood, tint modes, chroma post-FX,
+# mesh + text + splat compose objects. Every engine toy.
+
+[settings]
+kind         = demo
+pair         = match
+score        = productions/cities/score.txt
+ply          = assets/galaxy.ply
+budget       = 150000
+bg           = stars
+post         = chroma
+cam_pump     = 0.3
+flash        = 0.0
+bg_dim       = 0.5
+beat         = 1.0
+
+# ── THE MORPH JOURNEY ──────────────────────────────────────────────────────────
+# Each part is a shot in the sequence: one cloud morphs into the next.
+#   @@anchor  @hold,morph[,bulge]  ~entrance  ^deform  backdrop:TYPE  tokens
+[reel]
+# ── INTRO (bars 0-3, 7.7s) ── Ontwaken: a galaxy rises from black, stars wake
+splat:galaxy.ply              @@intro    @6,1.5    ~fade              backdrop:stars     rot:0,-0.12,0
+
+# ── BUILD (bars 4-9, 11.6s) ── Vorming: the galaxy tightens into a star with a twist
+splat:star.ply                @@build    @8,3      ~morph   ^twist:0.5   backdrop:aurora   beat:1.3   rot:0,0.2,0
+
+# ── DROP (bars 10-21, 23.2s) ── Explosie: a morph parade through abstract shapes
+splat:helix.ply               @@bar:10   @2,1.5    ~morph   ^spiral:0.3    backdrop:rings       tint:brand    beat:1.5   flash:0.5
+splat:knot.ply                @@bar:12   @3,1      ~morph   ^turbulence:0.5 backdrop:warp       tint:fry      beat:1.8
+splat:supershape.ply          @@bar:15   @3,1.5    ~morph   ^wave:0.3      backdrop:kaleido     tint:rainbow  beat:1.6
+splat:sphere.ply              @@bar:18   @2,1      ~rain                    backdrop:bolt                      beat:1.4
+splat:galaxy.ply              @@bar:20   @2,1      ~morph   ^turbulence:0.7 backdrop:stars                     flash:0.8   beat:2.0
+
+# ── BREAKDOWN (bars 22-25, 7.7s) ── Stilte: black, title appears in handwriting
+text:RUIMTE                   @@bar:22   @6,1.5    ~pen-write             backdrop:off       beat:0.5   rot:0,0,0
+
+# ── CLIMAX (bars 26-37, 23.2s) ── Groots: the galaxy returns, grand and turbulent
+splat:galaxy.ply              @@climax   @12,3     ~morph   ^turbulence:0.8 backdrop:fractal   tint:brand  flash:0.7   beat:1.9
+
+# ── OUTRO (bars 38-45, 15.5s) ── Vertrek: signature, credits scroll, fade
+text:deFEEST                  @@outro    @10,2     ~pen-write             backdrop:stars     beat:1.0
+
+# ── STAGE OBJECTS (parallel compose layer) ─────────────────────────────────────
+[stage]
+# Build: a single bitterbal on a lissajous orbit around the star, front-right
+mesh:bitterbal.glb   @1.8,0.5,1.5   *0.35   path:liss:2.0,1.0,1.5,0.8,0.5,0.6   spin 0,30,0   alpha:0.7   ~fade   in @@build   out @@drop
+
+# Drop: bitterballen swarm flies in with explode, orbits the morphs
+mesh:bitterbal.glb   @-1.2,0.3,1.5   *0.25   path:liss:2.5,1.2,1.0,0.6,0.4,0.5   count:6   ~explode   tint:brand   beat:1.5   in @@drop   out @@bar:22
+
+# Breakdown: a small, calm sphere floats upward in black
+splat:sphere.ply     @0,-0.3,0     *0.4    drift 0,0.08,0   rot:0.1,0.2,0   alpha:0.4   ~fade   in @@bar:22   out @@climax
+
+# Climax: torus travels across space with spiral deform, rainbow tint
+splat:torus.ply      @-1.2,0.6,0.8   *0.5    travel:1.5,0.2,-0.5   ^spiral:0.4   rot:0.5,0.3,0.1   tint:rainbow   beat:1.8   in @@climax   out @@outro
+
+# Climax: aegg logo subtly present, bottom-right
+mesh:aegg.glb        @1.0,-0.5,0.5   *0.18   drift -0.02,0,0     alpha:0.5   ~fade   in @@climax   out @@outro
+
+# Outro: bitterbal drifts by as credits appear
+mesh:bitterbal.glb   @-2,0,0.5       *0.2    travel:2.5,-0.3,-0.5   path:liss:1.0,0.5,0.3,0.3,0.2,0.2   alpha:0.4   ~fade   in @@outro   out @@outro+7bar
+
+# ── CAPTIONS (2D screen text overlay) ──────────────────────────────────────────
+[caption]
+# Credit roll: each line staggers in from below screen, scroll upward (center aligned)
+screentext:martin engine · 2026   in @@outro+1bar  out @@outro+7bar  at 0,1.2  center  size 26  scroll 0.04  fade 0.5
+screentext:opencode.ai           in @@outro+2bar  out @@outro+7bar  at 0,1.2  center  size 22  scroll 0.04  fade 0.5
+screentext:Rust · Bevy · FunDSP  in @@outro+3bar  out @@outro+7bar  at 0,1.2  center  size 22  scroll 0.04  fade 0.5
+screentext:Annex                 in @@outro+4bar  out @@outro+7bar  at 0,1.2  center  size 20  scroll 0.04  fade 0.5
+screentext:BEDANKT               in @@outro+5bar  out @@outro+7bar  at 0,1.2  center  size 28  scroll 0.04  fade 1.0
+
+# ── CAMERA TRACK ───────────────────────────────────────────────────────────────
+[camera]
+# Intro: wide, slow drift, galaxy fills the view
+t=@@bar:0     pos=0,0,0   dist=8    yaw=0.2    pitch=0.10
+t=@@bar:2     pos=0,0,0   dist=9    yaw=0.3    pitch=0.06
+
+# Build: push in, arc right as star twists
+t=@@bar:4     pos=0,0,0   dist=6    yaw=-0.3   pitch=0.20
+t=@@bar:7     pos=0,0,0   dist=4.5  yaw=0.1    pitch=0.25
+
+# Drop: CUT close, orbit the morph parade
+t=@@bar:10    pos=0,0,0   dist=3    yaw=-0.1   pitch=0.15   cut
+t=@@bar:13    pos=0.3,0,0     dist=3.5  yaw=0.5    pitch=0.10
+t=@@bar:17    pos=-0.2,0.2,0  dist=4    yaw=-0.6   pitch=0.20
+t=@@bar:20    pos=0,0,0       dist=2.5  yaw=0.2    pitch=0.15
+
+# Breakdown: pull back to wide, centered on text
+t=@@bar:22    pos=0,0,0   dist=7    yaw=0      pitch=0.05   cut
+
+# Climax: dive in, arc up and over the galaxy+torus
+t=@@bar:26    pos=0,0.2,0     dist=2.5   yaw=0.3    pitch=0.10   cut
+t=@@bar:30    pos=0.5,0.3,0   dist=3.5   yaw=-0.4   pitch=0.30
+t=@@bar:34    pos=-0.3,0,0.2  dist=4     yaw=0.7    pitch=0.20
+t=@@bar:37    pos=0,0,0       dist=2.8   yaw=0.4    pitch=0.15
+
+# Outro: pull back to show the full signature, then drift
+t=@@bar:38    pos=0,0,0   dist=5    yaw=0.2    pitch=0.05   cut
+t=@@bar:43    pos=0,0,0   dist=9    yaw=0.4    pitch=0.10
+
+# ── SYNC TRACK (mood keyframes) ────────────────────────────────────────────────
+[sync]
+t=@@bar:0       flash=0.0   bg_dim=0.5   beat=0.8
+t=@@bar:4       flash=0.1   bg_dim=0.45  beat=1.2
+t=@@bar:10      flash=0.6   bg_dim=0.3   beat=1.8
+t=@@bar:12      flash=0.3   bg_dim=0.25  beat=1.6
+t=@@bar:15      flash=0.5   bg_dim=0.3   beat=1.7
+t=@@bar:18      flash=0.4   bg_dim=0.35  beat=1.5
+t=@@bar:20      flash=0.7   bg_dim=0.3   beat=2.0
+t=@@bar:22      flash=0.0   bg_dim=0.0   beat=0.4
+t=@@bar:26      flash=0.5   bg_dim=0.25  beat=1.9
+t=@@bar:30      flash=0.6   bg_dim=0.2   beat=1.8
+t=@@bar:34      flash=0.7   bg_dim=0.25  beat=1.9
+t=@@bar:37      flash=0.3   bg_dim=0.3   beat=1.5
+t=@@bar:38      flash=0.0   bg_dim=0.5   beat=1.0
+t=@@bar:44      flash=0.0   bg_dim=0.7   beat=0.6

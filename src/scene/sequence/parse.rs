@@ -253,7 +253,10 @@ pub(crate) fn parse_euler_deg(s: &str) -> Option<Quat> {
 pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<String>) {
     let root = std::env::var("MARTIN_PLY").ok().and_then(parent_dir);
     let spec = std::env::var("MARTIN_SEQ").unwrap_or_default();
-    let budget = crate::envvar::or("MARTIN_MORPH_COUNT", if spec.is_empty() { 0 } else { 200_000 });
+    let budget = crate::envvar::or(
+        "MARTIN_MORPH_COUNT",
+        if spec.is_empty() { 0 } else { 200_000 },
+    );
     let parts = if spec.is_empty() {
         Vec::new()
     } else {

@@ -71,7 +71,7 @@ ships.** Verified in the live tree:
 
 - `Part` already carries `transition: Option<Transition>` (`main.rs`).
 - A `Transition` enum already exists — `Morph, Ball, Fade, Explode, Implode, Drop,
-  Swirl` — with `Transition::parse` and a `MARTIN_TRANSITION` global env default
+  Swirl` — with `Transition::parse` and the per-part `~name` token
   (`main.rs`). **This enum *is* the "registry."** A new transition =
   one enum variant + one `morph.rs` fn + one `build_sequence` match arm; no new
   abstraction is needed.
@@ -114,8 +114,8 @@ struct Sequence { parts: Vec<Part>, count: usize } // count = the ONE shared bud
 Authored via `parse_seq` (`main.rs`): a path-or-inline string, split on `;`/`\n`,
 `#`-comments skipped, each part `head @ hold,morph,bulge` with an **optional trailing
 `~name`** transition token (already parsed). `head` is `text:...` or
-`splat:a.ply[+b.ply]`. Env shorthands (`MARTIN_PLY`, `MARTIN_TEXT`, `MARTIN_REFORM`,
-`MARTIN_TRANSITION`, …) build `Part`s directly.
+`splat:a.ply[+b.ply]`. The `MARTIN_PLY` asset root + `MARTIN_SEQ` parts build the
+`Part` list directly.
 
 At build, every part is resampled to **one shared count `N`** (`resample_morton`),
 part 0 assembles from a fuzzy ball (`ball_of`), and the show runs through **exactly
@@ -552,8 +552,8 @@ audio playback (new); new `MusicClock` resource; new `src/cues.rs`; `parse_seq`
 ## 4. Transition catalog — what ships, what's the gap
 
 The ball-pulse is **one** transition. The registry already exists: the `Transition`
-enum + `Transition::parse` + `MARTIN_TRANSITION` + `build_sequence`'s per-part source
-match (§0.1). A new transition is **one enum variant + one `morph.rs` fn + one
+enum + `Transition::parse` + the per-part `~name` token + `build_sequence`'s per-part
+source match (§0.1). A new transition is **one enum variant + one `morph.rs` fn + one
 `build_sequence` arm** — not a new abstraction.
 
 The lever depends on the tier:
@@ -814,8 +814,8 @@ is still a flat `Vec<Gaussian3d>`. **Stays inside all six constraints.**
 **Trade-offs.** Morphing is *excellent and free* (a logo can literally morph into text
 into a splat — they're one buffer; the whole reason the engine exists). One radix sort
 = correct depth order, no inter-element transparency artifacts. Best perf. **Cost:**
-per-element normalize must be *opt-out, not global* — today `MARTIN_NORMALIZE`
-normalizes the whole part (`build_sequence`); normalizing the union after
+per-element normalize must be *opt-out, not global* — today normalize runs over
+the whole part (`build_sequence`); normalizing the union after
 merging destroys the relative sizing transforms set, so normalize moves *inside* the
 element loop. Count budget is shared (a 5-pixel logo and a 1M-splat object both
 resample to `N`). **Limitation:** cannot host a non-gaussian `Mesh3d` — that forces

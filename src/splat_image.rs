@@ -5,44 +5,42 @@
 
 use bevy_gaussian_splatting::{Gaussian3d, SphericalHarmonicCoefficients};
 
+/// Sample every Nth pixel (keeps the splat count sane) at this in-plane disk size (fraction of the
+/// image's world width). SVGs rasterize at 512 px wide.
+const IMG_STRIDE: usize = 2;
+const IMG_SPLAT: f32 = 0.012;
+
 /// 3DGS degree-0 encode: rendered colour ≈ 0.5 + 0.2820948·dc, so invert for a target linear.
 fn dc(c: f32) -> f32 {
     (c - 0.5) / 0.282_094_79
 }
 
-/// Sample the opaque pixels of a PNG/JPEG (every `stride`-th pixel) into colored gaussians. Reads
-/// `MARTIN_IMG_STRIDE` and `MARTIN_IMG_SPLAT` from the env.
+/// Sample the opaque pixels of a PNG/JPEG (every `IMG_STRIDE`-th pixel) into colored gaussians.
 pub fn build_image_gaussians(
     png: &[u8],
     world_width: f32,
     alpha_thresh: f32,
     gain: f32,
 ) -> Vec<Gaussian3d> {
-    let stride = crate::envvar::or("MARTIN_IMG_STRIDE", 2);
-    let splat = crate::envvar::or("MARTIN_IMG_SPLAT", 0.012);
     let img = match image::load_from_memory(png) {
         Ok(i) => i.to_rgba8(),
         Err(_) => return Vec::new(),
     };
-    sample_rgba(&img, world_width, stride, splat, alpha_thresh, gain)
+    sample_rgba(&img, world_width, IMG_STRIDE, IMG_SPLAT, alpha_thresh, gain)
 }
 
 /// Rasterize an SVG to a raster and sample it into gaussians, exactly like a PNG logo — so any
-/// vector art is a morph source. Reads `MARTIN_IMG_STRIDE`, `MARTIN_IMG_SPLAT`, and `MARTIN_SVG_PX`
-/// from the env.
+/// vector art is a morph source.
 pub fn build_svg_gaussians(
     svg: &[u8],
     world_width: f32,
     alpha_thresh: f32,
     gain: f32,
 ) -> Vec<Gaussian3d> {
-    let stride = crate::envvar::or("MARTIN_IMG_STRIDE", 2);
-    let splat = crate::envvar::or("MARTIN_IMG_SPLAT", 0.012);
-    let px = crate::envvar::or("MARTIN_SVG_PX", 512_u32);
-    let Some(img) = rasterize_svg(svg, px) else {
+    let Some(img) = rasterize_svg(svg, 512) else {
         return Vec::new();
     };
-    sample_rgba(&img, world_width, stride, splat, alpha_thresh, gain)
+    sample_rgba(&img, world_width, IMG_STRIDE, IMG_SPLAT, alpha_thresh, gain)
 }
 
 /// SVG bytes → an `RgbaImage` `px` wide (height preserves the aspect), straight (un-premultiplied)
