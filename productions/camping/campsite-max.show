@@ -96,6 +96,6 @@ t=@@bar:125    flash=0.0   bg_dim=0.10  beat=0.5   exposure=0.8
 
 [caption]
 # Scrolling credits — each starts below-screen (fy=1.2), scrolls upward centred
-screentext:deFEEST fun and games  in @@outro        out @@bar:124  at 0,1.2  center  size 26  scroll 0.05  fade 1.0
-screentext:PonyCamp 2026          in @@outro+1bar   out @@bar:124  at 0,1.2  center  size 26  scroll 0.05  fade 1.0
-screentext:6-9 augustus 2026      in @@outro+2bar   out @@bar:124  at 0,1.2  center  size 26  scroll 0.05  fade 1.0
+screentext:deFEEST fun and games  in @@outro        out @@bar:124  at 0,1.2  center  size 22  scroll 0.05  fade 1.0
+screentext:PonyCamp 2026          in @@outro+2bar   out @@bar:124  at 0,1.2  center  size 22  scroll 0.05  fade 1.0
+screentext:6-9 augustus 2026      in @@outro+4bar   out @@bar:124  at 0,1.2  center  size 22  scroll 0.05  fade 1.0
