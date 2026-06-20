@@ -10,6 +10,12 @@ bg_dim       = 0.5
 beat         = 0.5
 cam_pump     = 0.0
 pair         = match
+post           = chroma          # RGB-shear on the cook slam (killshot pattern)
+particles      = embers          # warm rising specks = sizzle/steam off the hot dish
+particle_count = 120
+particle_at    = @@bar:8         # the plume ramps in WITH the cook
+particle_origin = 0,-0.5,0       # on the plate, not the whole scene
+particle_spread = 1.2,0.8,1.2    # a low wide plume hugging the dish
 
 [reel]
 # mesh: (NOT glb:) surface-samples each glTF into TEXTURED gaussians at build (build_gltf_gaussians
@@ -19,11 +25,16 @@ pair         = match
 # Part 0: the deFEEST logo — fades in (NOT a ball), the brand opens the bit. rot:180,0,0 cancels the
 # sampler's base flip-X so the wordmark reads forwards (same trick as cities-defeest/cosmic-snack).
 mesh:defeest.glb  @@bar:0    @3,3    ~fade    rot:180,0,0   backdrop:off   disk:0.65
-# Part 1: cavia (live guinea pig) — morphs in from the logo; ground: seats it ON the plate
-mesh:cavia.glb    @@bar:4    @3,3,0  ~morph   rot:0,0,0   ground:-0.65
-# Part 2: cuy (the cooked dish) — morphs in from cavia; bulge 0 = no ball balloon; seated on the plate.
-# Long hold (18 bars) so the demo lingers on the served dish — the punchline of the bit.
-mesh:cuy.glb      @@bar:8    @18,4,0  ~morph   rot:0,0,0   ground:-0.65
+# Part 1: cavia (live guinea pig) — morphs in from the logo; ground: seats it ON the plate.
+# ^jitter: a nervous per-particle twitch while it holds (6.4→12.8s) — the live pet is ALIVE (and the
+# bar-7 drum fill reads as a death-twitch), so the cook lands as a transformation, not a swap.
+mesh:cavia.glb    @@bar:4    @3,3,0  ~morph   ^jitter:1.2   rot:0,0,0   ground:-0.65
+# Part 2: cuy (the cooked dish). ease:hold-snap HANGS the live cavia through the morph then SLAMS the
+# cooked dish in over the last 20% — landing fully revealed on the 16.0s kick (bar:10). @18,3.2,0 =
+# hold 18 / morph 3.2 / bulge 0 (KEEP bulge 0 + pair=match: bulge balloons to a cloud = wrong gag).
+# NO tint: the cuy.glb's own baked roast texture (detailed browned skin) reads far better than tint:fry
+# (which flattens it to a uniform orange). beat:1.4 thumps the dish in on its entry.
+mesh:cuy.glb      @@bar:8    @18,3.2,0  ~morph   ease:hold-snap   beat:1.4   rot:0,0,0   ground:-0.65
 
 [stage]
 # Plate — a SOLID round disc (a flat squashed sphere, not the holed ring/donut) the animal rests on.
@@ -38,8 +49,16 @@ splat:sphere.ply   @0,-0.75,0   *2.2,0.10,2.2   alpha:0.6   ~fade   in @@bar:0
 # logo/cavia, then a SLOW lingering orbit around the served cuy (bars 8→22) — the demo's focus.
 t=@@bar:0    pos=0,-0.45,0   dist=3.0   yaw=1.57    pitch=0.26   # the deFEEST logo
 t=@@bar:4    pos=0,-0.45,0   dist=2.8   yaw=0.60    pitch=0.28   # cavia (live)
-t=@@bar:8    pos=0,-0.45,0   dist=2.8   yaw=-0.40   pitch=0.30   # morph → cuy
-t=@@bar:12   pos=0,-0.45,0   dist=2.7   yaw=-1.30   pitch=0.30   # cuy — slow linger begins
+t=@@bar:8    pos=0,-0.45,0   dist=2.8   yaw=-0.40   pitch=0.30   # cavia holds, the cook begins
+t=@@bar:10   pos=0,-0.55,0   dist=1.9   yaw=0.10    pitch=0.10   cut   # SLAM: hard cut, low+close, ON the 16.0s kick reveal
+t=@@bar:12   pos=0,-0.45,0   dist=2.7   yaw=-1.30   pitch=0.30   # ease back, slow linger begins
 t=@@bar:16   pos=0,-0.45,0   dist=2.7   yaw=-2.30   pitch=0.28   # cuy
 t=@@bar:20   pos=0,-0.45,0   dist=2.8   yaw=-3.40   pitch=0.28   # cuy
 t=@@bar:23   pos=0,-0.45,0   dist=3.0   yaw=-4.20   pitch=0.26   # cuy — gentle pull-back to close
+
+[sync]
+# Dip the look through the morph, then SLAM bloom + energy on the 16.0s reveal kick, then settle —
+# the music-timed "flash at the instant of transformation".
+t=@@bar:8    flash=0.10  bg_dim=0.55  beat=0.5   exposure=0.85   # cavia: calm, slightly dimmed pre-cook
+t=@@bar:10   flash=0.90  bg_dim=0.35  beat=1.6   exposure=1.05   # THE COOK: bloom + energy slam on the kick
+t=@@bar:12   flash=0.25  bg_dim=0.50  beat=0.7   exposure=0.90   # settle into the linger
