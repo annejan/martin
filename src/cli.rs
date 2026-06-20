@@ -7,7 +7,7 @@
 //! duplicated. [`apply_cli`] is PURE (returns the `(var, value)` pairs, mutates nothing) so the
 //! flag→env mapping is unit-tested without touching the process environment.
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 /// `martin [SHOW] [flags]` — the run modes (record / shot / bench / validate / serve / synth-wav /
 /// dump-score) all compile to a `MARTIN_*` env var; the show's *look* stays in the `.show` file.
@@ -53,10 +53,21 @@ pub struct Cli {
     /// Write the built-in score as an editable tracker file and exit.
     #[arg(long = "dump-score", value_name = "PATH")]
     pub dump_score: Option<String>,
+    #[command(subcommand)]
+    pub command: Option<Commands>,
 }
-// NOTE: MCP mode is still entered via the legacy `--mcp` flag (handled by `mcp::maybe_run` BEFORE clap
-// parses, since `.mcp.json` invokes `martin --mcp`). A `martin mcp` subcommand + a `.mcp.json` switch
-// is a follow-up — kept out of the clap surface for now so `--mcp` isn't rejected as unknown.
+
+/// Subcommands (none required — a bare `martin [SHOW]` runs the show).
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    /// Run the stdio MCP server (a proxy to a `--serve` bridge), then exit — no Bevy, so stdout stays
+    /// clean JSON-RPC. `.mcp.json` invokes `martin mcp`.
+    Mcp {
+        /// Bridge port to proxy to (else `$MARTIN_MCP_PORT` / `$MARTIN_SERVE` / 7878).
+        #[arg(long, value_name = "PORT")]
+        port: Option<u16>,
+    },
+}
 
 /// The `MARTIN_*` env vars a CLI invocation sets, as ordered `(var, value)` pairs — PURE (no env
 /// mutation). `main` applies these with `set_var` (overwrite) BEFORE the `.show`/bundle expansion, so a

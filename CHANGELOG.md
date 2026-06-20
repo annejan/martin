@@ -27,7 +27,9 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   [--serve [PORT]] [--synth-wav PATH] [--dump-score PATH]`, plus `--production NAME` →
   `productions/NAME/NAME.show`. Each flag compiles to its `MARTIN_*` env var with **overwrite**, so the
   precedence is **CLI flag > env > `.show` [settings] > default**. Every env var is still honored
-  (record.sh / CI / the bundle unchanged); `--mcp` still works. (clap.)
+  (record.sh / CI / the bundle unchanged). (clap.)
+- **`martin mcp` subcommand** replaces the `--mcp` flag (`.mcp.json` updated) — clap owns argv, so the
+  pre-parse `--mcp` special-case is gone from `main`. `$MARTIN_MCP` still works for parity.
 
 ### Engine
 - **Jittered mesh sampling (no weave)**: the R2 low-discrepancy sample sequence is even but *regular* —

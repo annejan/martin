@@ -17,17 +17,6 @@ use serde_json::{Value, json};
 /// The MCP protocol version this server speaks.
 const PROTOCOL: &str = "2025-06-18";
 
-/// If MCP mode is requested, run the stdio server (blocking) and return `true` so `main` exits before
-/// touching Bevy. Otherwise `false` (normal run).
-pub(crate) fn maybe_run() -> bool {
-    let on = std::env::var_os("MARTIN_MCP").is_some() || std::env::args().any(|a| a == "--mcp");
-    if !on {
-        return false;
-    }
-    run();
-    true
-}
-
 fn bridge_port() -> u16 {
     std::env::var("MARTIN_MCP_PORT")
         .or_else(|_| std::env::var("MARTIN_SERVE"))
@@ -48,7 +37,8 @@ fn bridge(cmd: &Value) -> Result<Value, String> {
     serde_json::from_str(&line).map_err(|e| format!("bad reply: {e}"))
 }
 
-fn run() {
+/// Run the stdio MCP server (blocking). `main` calls this for `martin mcp` (or `$MARTIN_MCP`), then exits.
+pub(crate) fn run() {
     eprintln!(
         "mcp: martin MCP server on stdio → bridge 127.0.0.1:{}",
         bridge_port()

@@ -93,17 +93,26 @@ fn is_headless(record: bool, bench: bool, shot: bool, shots: bool) -> bool {
 }
 
 fn main() {
-    // MARTIN_MCP / --mcp: run the stdio MCP server (proxy to a MARTIN_SERVE bridge) and exit — no
-    // Bevy, so stdout stays clean JSON-RPC. Must be the very first thing main does.
-    if mcp::maybe_run() {
+    let cli = <cli::Cli as clap::Parser>::parse();
+
+    // `martin mcp` (or $MARTIN_MCP) → run the stdio MCP server (proxy to a --serve bridge) and exit —
+    // no Bevy, so stdout stays clean JSON-RPC. Before anything else touches the engine.
+    if let Some(cli::Commands::Mcp { port }) = &cli.command {
+        if let Some(p) = port {
+            // SAFETY: top of main(), single-threaded, before any threads spawn.
+            unsafe { std::env::set_var("MARTIN_MCP_PORT", p.to_string()) };
+        }
+        mcp::run();
+        return;
+    }
+    if std::env::var_os("MARTIN_MCP").is_some() {
+        mcp::run();
         return;
     }
 
-    // Parse the CLI and compile each present flag into its MARTIN_* env var with OVERWRITE — so a flag
-    // beats both an existing env var and the .show file (which expand with set-if-absent below). This is
-    // the whole precedence rule: CLI flag > env > .show [settings] > built-in default. (`--mcp` is
-    // handled above, before clap, since .mcp.json still invokes it.)
-    let cli = <cli::Cli as clap::Parser>::parse();
+    // Compile each present CLI flag into its MARTIN_* env var with OVERWRITE — so a flag beats both an
+    // existing env var and the .show file (which expand with set-if-absent below). The whole precedence
+    // rule: CLI flag > env > .show [settings] > built-in default.
     for (key, value) in cli::apply_cli(&cli) {
         // SAFETY: top of main(), single-threaded, before the Bevy app (and its threads) start.
         unsafe { std::env::set_var(key, value) };

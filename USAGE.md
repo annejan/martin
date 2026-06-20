@@ -80,7 +80,7 @@ martin [SHOW]                 # a .show file to play (else $MARTIN_SHOW, else th
   --serve [PORT]               # the HTTP control bridge (default 7878)
   --synth-wav PATH             # render the synth to a WAV + exit
   --dump-score PATH            # write the built-in score as an editable tracker file + exit
-martin --mcp                   # the stdio MCP server (proxy to a --serve bridge)
+martin mcp                   # the stdio MCP server (proxy to a --serve bridge)
 ```
 
 Each flag compiles to its `MARTIN_*` env var with **overwrite**, so the precedence is **CLI flag >
@@ -174,9 +174,9 @@ def cmd(d):
 cmd({"cmd":"seek","t":25}); cmd({"cmd":"camera","dist":0.6}); cmd({"cmd":"screenshot","path":"/tmp/m.png"})
 ```
 
-### Full MCP — `martin --mcp`
+### Full MCP — `martin mcp`
 
-`martin --mcp` (or `MARTIN_MCP=1`) runs a **stdio MCP server** (JSON-RPC 2.0) that proxies to a running
+`martin mcp` (or `MARTIN_MCP=1`) runs a **stdio MCP server** (JSON-RPC 2.0) that proxies to a running
 bridge, exposing `camera` / `seek` / `pause` / `play` / `step` / `dump_camera` / `state` as native MCP
 tools — and `screenshot` returns the PNG **inline as image content**. It's registered in `.mcp.json`,
 so an MCP client (e.g. Claude Code) drives the live engine directly. Two steps:
@@ -184,7 +184,7 @@ so an MCP client (e.g. Claude Code) drives the live engine directly. Two steps:
 ```bash
 # 1. start the engine bridge with your show (windowed):
 MARTIN_SERVE=1 MARTIN_SHOW=productions/austin/austin.show cargo +nightly run --release
-# 2. the MCP client launches `./target/release/martin --mcp`, which connects to the bridge on 7878.
+# 2. the MCP client launches `./target/release/martin mcp`, which connects to the bridge on 7878.
 ```
 
 Port: `MARTIN_MCP_PORT`, else `MARTIN_SERVE` if numeric, else 7878. The MCP server is pure stdio (no
