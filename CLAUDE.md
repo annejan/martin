@@ -13,8 +13,9 @@ deeper doc disagree, the deeper doc wins — keep this one short and link out.
 A music-synced **Gaussian-splat demoscene engine** built on **Bevy 0.18 + `bevy_gaussian_splatting`
 7.0.2**, rendering through **wgpu → Vulkan** with **no CUDA/ROCm**. It flies a camera around 3D
 splats while they **morph into one another** (per-Gaussian, on the GPU), with HDR bloom on black,
-all driven by a synth track. There is **no config file** — a show is composed from `MARTIN_*` env
-vars (or a single `.show` file that expands into them).
+all driven by a synth track. A show is a **`.show` file** (run it: `martin <show>` / `--production
+<name>`); it expands into `MARTIN_*` env vars — the internal IR — which a **CLI** layers run-mode flags
+on top of (`--record`/`--shot`/`--validate`/…). No separate config file.
 
 Two ways to stage content (both in `src/scene/`):
 - **Reel / morph timeline** (`scene::sequence`, `MARTIN_SEQ`) — a chain of *parts* that each assemble
@@ -28,7 +29,7 @@ Two ways to stage content (both in `src/scene/`):
 |---|---|
 | `README.md` | Project overview, the splat-creation pipeline, build profiles. Start here. |
 | `DOMAIN.md` | The domain model + canonical vocabulary (Reel, Stage, Shot, Score, Show, anchor/cue, Showbook). |
-| `USAGE.md` | **The full `MARTIN_*` env-var reference** + the `.show` file format. The single source of truth for knobs. |
+| `USAGE.md` | **The CLI + `MARTIN_*` env reference** + the `.show` file format. The single source of truth for knobs. |
 | `DESIGN.md` | Engine architecture, design decisions, the one deliberate fork edit, refactor debt. |
 | `CONTRIBUTING.md` | Build deps, the CI gates, the SH profiles, commit style. |
 | `AGENTS.md` | Demoscene authoring + audio/score tuning + the Blender bridge + common pitfalls. |
@@ -73,14 +74,18 @@ build.rs     synthesizes the demo's gitignored .ply at build time; bundles asset
 current nightly). Linux build deps: `libudev-dev libasound2-dev libwayland-dev libxkbcommon-dev`.
 
 ```bash
-cargo run --release                       # the default demo (windowed)
-cargo test --release                      # 100+ pure unit tests (parsers, timeline, score, effects — NO GPU)
-MARTIN_SYNTH_WAV=out.wav cargo run --release   # render the synth to WAV, then exit (headless)
-./record.sh out.mp4                       # render the whole timeline to mp4 (headless PNG dump → ffmpeg)
-MARTIN_VALIDATE=1 cargo run --release     # dry-run: print the resolved timeline + exit (no render)
+cargo run --release                              # the default demo (windowed)
+cargo run --release -- <show.show>               # play a .show  (or --production <name>)
+cargo run --release -- <show.show> --validate    # dry-run: print the resolved timeline + exit
+cargo run --release -- --synth-wav out.wav       # render the synth to WAV, then exit (headless)
+cargo test --release                             # 100+ pure unit tests (parsers, timeline, score, effects — NO GPU)
+./record.sh out.mp4                              # render the whole timeline to mp4 (headless PNG dump → ffmpeg)
 ```
 
-`cargo run` defaults to the `martin` binary; the procedural generator is the second binary
+A run is a **CLI**: `martin [SHOW] [--record/--shot/--shots/--bench/--validate/--serve/--synth-wav/
+--production NAME]`, plus `martin mcp`. Each flag compiles to its `MARTIN_*` env var with overwrite, so
+the precedence is **CLI flag > env > `.show` [settings] > default** (env still works everywhere). See
+`USAGE.md`. `cargo run` defaults to the `martin` binary; the procedural generator is the second binary
 (`cargo run --bin splatgen -- list`).
 
 ### SH build profiles (sh0 / sh3)

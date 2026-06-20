@@ -172,7 +172,7 @@ A cross-morph is a straight per-particle lerp: splat *k* of shape A → splat *k
   contracts to a **ball** and re-expands. Geometric, not a bug.
 - **Nearest-match** (`MARTIN_PAIR=match`, `match_reorder`) — reorder B so each A-splat pairs with a
   *nearby, similar-colour* B-splat: a greedy bijective match over a voxel grid, cost = `pos² + w·colour²`
-  (`MARTIN_PAIR_COLOR`). Every move is short and colour-coherent (grass→grass, tower→tower) → a straight
+  (a fixed colour weight). Every move is short and colour-coherent (grass→grass, tower→tower) → a straight
   ghostly morph, no centre-collapse. The ring search is **radius-capped with a fallback pool** so it
   stays O(n) even as the grid depletes (otherwise the bijection tail is O(n·res³) — minutes at 1M+).
 
@@ -189,10 +189,9 @@ morph). Each Prop: `@x,y,z *scale rot/spin/sway/bob/drift in/out <anchor>` plus 
 and `^deform`. Lineage: a film *multi-element shot* / a theatre stage.
 
 **Reel + Stage compose in one world.** A Show may carry both: the Reel's morph entity and every Stage
-Prop share the same coordinate space, camera, and bloom. The Reel sits at the origin by default; `reel_pos
-= x,y,z` (`MARTIN_REEL_POS`) translates it, so the morphing subject is placed **relative to** the Props
-— e.g. float a knot⇄galaxy morph above a Stage cityscape. The Props move with `@`, the Reel with
-`reel_pos`; the camera aims at whatever world point you give it.
+Prop share the same coordinate space, camera, and bloom. The Reel sits at the origin; the Props place
+themselves **around it** with `@x,y,z` — e.g. a knot⇄galaxy morph at the centre with a Stage cityscape
+behind. The camera aims at whatever world point you give it.
 
 ### Camera (`[camera]`) — the keyframed track
 A **Camera** track is a list of **Keys** (was Waypoints): `t= pos= dist= yaw= pitch=`, interpolated,
@@ -304,8 +303,8 @@ Aliasing is idiomatic in martin's parsers, so every DSL rename is additive and b
   token / per-move easing is the deferred next step (Stage 4), so the enum isn't a parked label.
 - **Stage 4 — new concepts, on demand (highest blast-radius, last).**
   - **Scene-scoped looks ✅ LANDED.** A Shot owns its whole look: `backdrop:`/`raster:` (already there) +
-    now per-Shot `flash:<strength>` (cut-bloom override of `MARTIN_FLASH`), `^name:<amp>` (deform
-    strength scale over `MARTIN_DEFORM_AMP`), and `beat:<scale>` (beat-bounce reaction, `0` = still) —
+    now per-Shot `flash:<strength>` (cut-bloom override of the `flash` setting), `^name:<amp>` (per-Shot
+    deform strength scale), and `beat:<scale>` (beat-bounce reaction, `0` = still) —
     so the kick reaction rides only on chosen Shots, not the whole show.
   - **SyncTrack / Automation ✅ LANDED.** The Rocket step: a `[sync]` look-track keyframes any knob
     over the score clock, smoothstep-interpolated, same `t=`/`@@anchor` grammar as `[camera]`
