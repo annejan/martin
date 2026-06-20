@@ -45,8 +45,11 @@ splat:pine.ply      @-1.5,-0.38,-1.9 *1.15  sway 0,9,0  bob 0.04   ~fade  in cli
 splat:pine.ply      @-3.5,-0.31,-0.9 *0.65  sway 0,7,0  bob 0.03   ~fade  in climax  count:4500  # short
 splat:pine.ply      @-4.0,-0.48,1.2  *0.9   sway 0,6,0  bob 0.04   ~fade  in drop   count:6000
 
-# ── WORDMARK ──
-text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build
+# ── WORDMARK: the emotional spine. deFEEST opens the camp (build), then LEAVES at the breakdown
+#    (the "zonder deFEEST is het kut" dip — the camp goes dark + empty), then RETURNS bigger + bright
+#    on the climax (~explode = the joyful comeback) — the party only erupts WITH deFEEST back. ──
+text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build  out breakdown
+text:deFEEST        @-1.4,0.9,1.0 *0.55  ~explode    tint:brand  bob 0.05  in climax
 
 # ── STORY: horse walks in, party erupts with flying bitterballen ──
 mesh:paard.glb  @-9.0,-0.5,-4.5  *0.9  rot 0,180,0  travel:-2.2,-0.868,-4.5@breakdown,16  sway 0,4,0  bob 0.05  ^pulse:0.4  ~fade  in breakdown
@@ -100,6 +103,10 @@ t=@@outro      flash=0.30  bg_dim=0.58  beat=1.0   exposure=1.05  bg=aurora    #
 t=@@bar:125    flash=0.0   bg_dim=0.22  beat=0.4   exposure=0.85               # fade to close
 
 [caption]
+# The emotional dip: the camp sits dark + empty in the breakdown (deFEEST has left) — the line lands,
+# held + still (no scroll), then fades as the climax erupts WITH deFEEST back. The showbook's heart.
+screentext:zonder deFEEST is het kut   in @@breakdown+2bar  out @@climax  at 0,0.4  center  size 32  fade 1.6
+
 # Scrolling credits — each starts below-screen (fy=1.2), scrolls upward centred
 screentext:deFEEST fun and games  in @@outro        out @@bar:124  at 0,1.2  center  size 22  scroll 0.05  fade 1.0
 screentext:PonyCamp 2026          in @@outro+2bar   out @@bar:124  at 0,1.2  center  size 22  scroll 0.05  fade 1.0
