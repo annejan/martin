@@ -47,6 +47,12 @@ fn sub(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
+/// Deterministic pseudo-random in [0,1) from an index + seed (same as morph.rs) — frame-stable, so a
+/// jittered sampling records identically. Used to break the R2 weave (`MARTIN_MESH_JITTER`).
+fn hash01(k: u32, seed: u32) -> f32 {
+    ((k.wrapping_mul(seed) >> 8) & 0xffff) as f32 / 65535.0
+}
+
 fn cross(u: [f32; 3], v: [f32; 3]) -> [f32; 3] {
     [
         u[1] * v[2] - u[2] * v[1],
@@ -205,6 +211,13 @@ where
     // MARTIN_MESH_ANISO: 1.0 = round disks (default, byte-identical); >1 stretches splats along the
     // surface grain (the triangle's longest edge) into ellipsoids → the cloud follows the mesh's form.
     let aniso = crate::envvar::or("MARTIN_MESH_ANISO", 1.0_f32).clamp(0.1, 10.0);
+    // MARTIN_MESH_JITTER: break up the R2 sequence's regular weave (visible at high splat counts) with a
+    // deterministic per-sample hash jitter, scaled to ~one local cell — "jittered low-discrepancy": the
+    // even coverage of R2 WITHOUT the grid pattern, and WITHOUT pure random's clumping (A/B'd: pure
+    // random blotches, R2 weaves, this is clean). Default 0.6; 0 = pure R2, higher = more random.
+    let jitter = crate::envvar::or("MARTIN_MESH_JITTER", 0.6_f32).clamp(0.0, 2.0);
+    let random = std::env::var_os("MARTIN_MESH_RANDOM").is_some(); // pure-random comparison toggle
+    let mut si: u32 = 0; // running sample index (jitter/random hash seed)
     for (ti, tri) in tris.iter().enumerate() {
         let ytri = [yd(tri[0]), yd(tri[1]), yd(tri[2])];
         let face_n = norm_or(
@@ -231,12 +244,30 @@ where
         let perim = elen(tri[0], tri[1]) + elen(tri[1], tri[2]) + elen(tri[2], tri[0]);
         let inradius = (weights[ti] / perim.max(1e-6)).max(1e-6); // area/semiperim = 2area/perim
         let inset = (r_plane_t / inradius * 0.7).clamp(0.0, 0.55);
+        let jscale = if jitter > 0.0 {
+            jitter / (n as f32).sqrt()
+        } else {
+            0.0
+        };
         for _ in 0..n {
             const A1: f32 = 0.754_877_7; // 1/plastic
             const A2: f32 = 0.569_840_3; // 1/plastic²
             r2u = (r2u + A1).fract();
             r2v = (r2v + A2).fract();
             let (mut bu, mut bv) = (r2u, r2v);
+            if random {
+                // MARTIN_MESH_RANDOM: pure hash-random barycentric (ignore R2) — the "why not random?"
+                // baseline: it CLUMPS (Poisson clustering → grainy/blotchy fills + gaps) vs R2's even
+                // spread. Kept as a comparison toggle, not for real use.
+                si = si.wrapping_add(1);
+                bu = hash01(si, 0x9E37_79B1);
+                bv = hash01(si, 0x85EB_CA77);
+            } else if jscale > 0.0 {
+                // jitter within ~one local cell to break the regular R2 weave (frame-stable hash)
+                si = si.wrapping_add(1);
+                bu = (bu + (hash01(si, 0x9E37_79B1) - 0.5) * jscale).clamp(0.0, 1.0);
+                bv = (bv + (hash01(si, 0x85EB_CA77) - 0.5) * jscale).clamp(0.0, 1.0);
+            }
             if bu + bv > 1.0 {
                 bu = 1.0 - bu;
                 bv = 1.0 - bv;

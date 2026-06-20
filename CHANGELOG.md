@@ -11,6 +11,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Engine
+- **Jittered mesh sampling (no weave)**: the R2 low-discrepancy sample sequence is even but *regular* —
+  a faint grid weave shows in dense fills. Add a deterministic per-sample jitter (~one local cell),
+  `MARTIN_MESH_JITTER` (default **0.6**) — "jittered low-discrepancy": R2's even coverage without the
+  pattern, and without pure random's clumping (A/B confirmed: random blotches, R2 weaves, this is clean).
+  `MARTIN_MESH_RANDOM=1` forces pure random as a comparison baseline.
 - **Crisper mesh→splat edges (less fray)**: surface sampling now sizes each triangle's disks to its
   OWN local sample spacing (a thin logo-outline triangle no longer gets the mesh-wide-average disk that
   overhung its colour across the seam), and **edge-insets** samples toward the triangle centroid so a
