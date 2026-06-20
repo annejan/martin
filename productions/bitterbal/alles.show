@@ -29,7 +29,7 @@ splat:austin_tight.ply          @0.7,0.4,0.2  ~morph                            
 splat:nyc_tight.ply             @0.7,0.4,0.2  ~morph                                           backdrop:grid
 mesh:bitterbal.glb  @@drop      @4,1.5        ~shockwave  ease:snap  tint:fry  flash:0.9  beat:1.8  backdrop:stars
 mesh:bitterbal.glb  @@breakdown @3,2          ~morph  ^turbulence:0.3  tint:fry                backdrop:stars
-mesh:bitterbal.glb  @@climax    @4,2          ~ball  tint:fry  flash:0.6  beat:1.9  ^turbulence:0.15  backdrop:fractal
+mesh:bitterbal.glb  @@climax    @4,2          ~ball  tint:fry  flash:0.6  beat:1.9  ^turbulence:0.15  backdrop:stars
 mesh:defeest.glb    rot:180,0,0 @@outro       @4,2          ~morph                             backdrop:stars
 
 [stage]
@@ -95,5 +95,5 @@ t=@@intro      flash=0.10  bg_dim=0.45  beat=0.3                bg=stars
 t=@@build      flash=0.22  bg_dim=0.50  beat=1.0
 t=@@drop       flash=0.90  bg_dim=0.35  beat=1.8                bg=aurora
 t=@@breakdown  flash=0.20  bg_dim=0.55  beat=0.7                bg=stars
-t=@@climax     flash=0.70  bg_dim=0.35  beat=1.9                bg=fractal
+t=@@climax     flash=0.70  bg_dim=0.35  beat=1.9                bg=stars
 t=@@outro      flash=0.25  bg_dim=0.50  beat=0.7                bg=aurora

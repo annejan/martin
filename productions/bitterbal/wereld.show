@@ -37,7 +37,7 @@ splat:aegg.ply                  @1.3,0.4,0.1  ~morph                            
 splat:helix.ply                 @1.4,0.6,0.15  ~morph  ^spiral:0.2                backdrop:tunnel    # …a helix 🧬
 mesh:bitterbal.glb  @@drop      @4,1.5     ~shockwave  ease:snap  tint:fry  flash:0.9  beat:1.8  backdrop:stars   # …IT'S ALL A BITTERBAL 🟤 (kill-shot reveal)
 mesh:bitterbal.glb  @@breakdown @3,2       ~morph  ^turbulence:0.3  tint:fry     backdrop:stars     # it hovers, glistening, hot
-mesh:bitterbal.glb  @@climax    @4,2       ~ball  flock:12  tint:fry  flash:0.6  beat:1.9  ^turbulence:0.4  backdrop:fractal   # the peak — balls up glorious
+mesh:bitterbal.glb  @@climax    @4,2       ~ball  flock:12  tint:fry  flash:0.6  beat:1.9  ^turbulence:0.4  backdrop:stars   # the peak — balls up glorious (stars: the bal stays the hero)
 mesh:defeest.glb    rot:180,0,0 @4,2       ~morph                                backdrop:stars     # → the deFEEST logo → loops
 
 # the punchline caption — handwrites in AS the bitterbal is revealed, off-centre (rule of thirds).
