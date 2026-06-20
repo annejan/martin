@@ -10,6 +10,19 @@ OUT="${1:-$HERE/martin.mp4}"
 FR="$(mktemp -d)"
 export DISPLAY="${DISPLAY:-:0}"
 
+# MARTIN_SS=<n>: supersample anti-aliasing — render at n× the target MARTIN_RES, then lanczos-downscale
+# in the mux. Smooths the splat disk-edges + text without any in-engine AA (the iGPU has fill headroom
+# offline). Default 1 = off. Costs ~n² fill, so use it for the final master, not fast previews.
+SS="${MARTIN_SS:-1}"
+RES="${MARTIN_RES:-1280x720}"
+TW="${RES%x*}"; TH="${RES#*x}"
+SCALE=""
+if [ "${SS}" -gt 1 ]; then
+  export MARTIN_RES="$((TW * SS))x$((TH * SS))"
+  SCALE="scale=${TW}:${TH}:flags=lanczos,"
+  echo "==> supersample ${SS}x: rendering ${MARTIN_RES} → ${RES}"
+fi
+
 echo "==> building martin (release — debug can render the splats black, and release is far"
 echo "    faster for big .ply clouds)"
 cargo +nightly build --release --manifest-path "$HERE/Cargo.toml"
@@ -47,7 +60,7 @@ FADE=$(awk "BEGIN{d=$NF/$FPS-2.6; print (d>0)?d:0}")
 
 echo "==> assembling $OUT (${FPS} fps)"
 ffmpeg -y -framerate "$FPS" -start_number 0 -i "$FR/frame_%05d.png" "${AUDIO[@]}" \
-  -vf "fade=t=in:st=0:d=1.5,fade=t=out:st=$FADE:d=2.6" \
+  -vf "${SCALE}fade=t=in:st=0:d=1.5,fade=t=out:st=$FADE:d=2.6" \
   -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart "$OUT"
 rm -rf "$FR"
 echo "==> wrote $OUT"

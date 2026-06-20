@@ -247,6 +247,9 @@ pub(crate) fn build_sequence(
                 time_start: 0.0,
                 time_stop: 1.0,
                 bulge: 0.0,
+                // MARTIN_AABB: render each splat as its true projected ellipse (conic from cov2d)
+                // instead of a round isotropic blob (OBB). Default off = byte-identical.
+                aabb: std::env::var("MARTIN_AABB").is_ok(),
                 ..default()
             },
             Transform::from_rotation(entity_rot).with_translation(reel_pos),

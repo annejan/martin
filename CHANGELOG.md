@@ -11,6 +11,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Engine
+- **Anti-aliasing for the master**: `MARTIN_SS=2` (in `record.sh`) renders at 2× `MARTIN_RES` and
+  lanczos-downscales in the mux — supersample AA that noticeably smooths the splat disk-edges + text
+  (there is no in-engine AA). For the final master (≈n² fill), not fast previews.
+- **`MARTIN_AABB`**: render splats as their true projected ellipse (conic) instead of a round OBB blob.
+  Subtle for synthetic normal-oriented disk-splats; kept as a gated lever (default off) for real captures.
 - **Correct glTF mesh colours**: `baseColorFactor` + glTF vertex colours are LINEAR per spec, but the
   render shader decodes every DC colour as sRGB → they were double-decoded (dark / desaturated, e.g. the
   deFEEST logo's blue+yellow). Now sRGB-encoded before the SH DC encode so they render correctly

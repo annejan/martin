@@ -549,6 +549,8 @@ pub(crate) fn build_composition(
             time_stop: 1.0,
             bulge: 0.0,
             global_opacity: 0.0, // animate_composition fades it in (or holds it for a entrance)
+            // MARTIN_AABB: true projected-ellipse splats (conic) vs round blobs (OBB); default off.
+            aabb: std::env::var("MARTIN_AABB").is_ok(),
             ..default()
         };
         let tf = Transform {

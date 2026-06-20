@@ -276,8 +276,11 @@ fn shot_driver(
     if !built || !camq.iter().any(|c| c.framed) {
         return;
     }
+    // settle generously after the SEEK before grabbing: a jump re-positions the morph + churns the
+    // radix sort for several frames, so an early grab catches a half-sorted (near-black) cloud — most
+    // visible in a fade/morph window. 40 frames is still milliseconds in the headless run-loop.
     *frames += 1;
-    if !shot.done && *frames >= 8 {
+    if !shot.done && *frames >= 40 {
         let out = shot_path(&path, at, shot.ats.len() > 1);
         // shoot the offscreen image (headless, window-independent); fall back to the window only if the
         // target wasn't set up (e.g. a live windowed session that happens to request a shot).
