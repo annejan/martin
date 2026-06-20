@@ -21,7 +21,8 @@ pub(crate) struct Shot {
     pub bulge: f32,                 // ball-pulse explosiveness (Morph entrance only)
     pub entrance: Option<Entrance>, // None = default (Ball for shot 0, else Morph)
     pub anchor: Option<f32>,        // absolute start (s) on the music clock; None = relative
-    pub deform: Option<Deform>,     // persistent deform while held (None = none / MARTIN_DEFORM)
+    pub deform: Option<Deform>,     // persistent deform while held (None = none)
+    pub deform_gated: bool, // `^name@morph` → gate the deform amp to the morph (peak mid, then die)
     pub exit: Option<Departure>, // how the shot LEAVES (`exit:name`, was `out:`); None = cross-morph to next
     pub rot: Option<Quat>,       // per-shot orientation (`rot:rx,ry,rz` deg), baked into the shape
     pub flock: Option<usize>, // `flock:N` (was `cluster:`) → N scattered, randomly-rotated copies
@@ -53,6 +54,7 @@ impl Shot {
             entrance: None,
             anchor: None,
             deform: None,
+            deform_gated: false,
             exit: None,
             rot: None,
             flock: None,
@@ -90,6 +92,7 @@ pub(crate) struct BuiltShot {
     pub entrance: Entrance,
     pub deform: Option<Deform>,
     pub deform_amp: Option<f32>, // per-shot deform strength scale (`^name:amp`); None = 1.0
+    pub deform_gated: bool,      // `^name@morph` → amp gated to the morph (peak mid, then die)
     pub flash: Option<f32>, // per-shot cut-bloom strength (`flash:N`); None = global MARTIN_FLASH
     pub beat: Option<f32>,  // per-shot beat-bounce scale (`beat:N`); None = 1.0, 0 = still
     pub raster: RasterizeMode,

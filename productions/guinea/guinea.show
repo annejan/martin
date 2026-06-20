@@ -34,7 +34,9 @@ mesh:cavia.glb    @@bar:4    @3,3,0  ~morph   ^jitter:1.2   rot:0,0,0   ground:-
 # hold 18 / morph 3.2 / bulge 0 (KEEP bulge 0 + pair=match: bulge balloons to a cloud = wrong gag).
 # NO tint: the cuy.glb's own baked roast texture (detailed browned skin) reads far better than tint:fry
 # (which flattens it to a uniform orange). beat:1.4 thumps the dish in on its entry.
-mesh:cuy.glb      @@bar:8    @18,3.2,0  ~morph   ease:hold-snap   beat:1.4   rot:0,0,0   ground:-0.65
+# ^turbulence@morph: deform amp GATED to the morph — the held cavia boils/writhes as it cooks (peak
+# mid-transform ~14.4s) then goes limp as the dish snaps in (0 by 16.0s); doesn't pollute the linger.
+mesh:cuy.glb      @@bar:8    @18,3.2,0  ~morph   ease:hold-snap   ^turbulence@morph:1.5   beat:1.4   rot:0,0,0   ground:-0.65
 
 [stage]
 # Plate — a SOLID round disc (a flat squashed sphere, not the holed ring/donut) the animal rests on.

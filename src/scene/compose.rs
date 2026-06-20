@@ -326,7 +326,8 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     use crate::scene::effects::FxMod;
                     match res {
                         Ok(FxMod::Entrance(x)) => entrance = Some(x),
-                        Ok(FxMod::Deform(d, a)) => {
+                        Ok(FxMod::Deform(d, a, _)) => {
+                            // `@morph` gating is reel-only (compose objects don't morph) → ignore it.
                             deform = Some(d);
                             deform_amp = a;
                         }

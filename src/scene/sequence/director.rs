@@ -146,8 +146,20 @@ pub(crate) fn shot_director(
     let (amp_scale, speed) = *deform_tune.get_or_insert((1.0_f32, DEFORM_SPEED));
     let (dmode, damp, dfreq) = s.deform.map(|d| d.uniforms()).unwrap_or((0, 0.0, 0.0));
     cs.deform_mode = dmode;
-    // per-shot `^name:amp` scales this shot's wobble on top of the global MARTIN_DEFORM_AMP.
-    cs.deform_amp = damp * amp_scale * s.deform_amp.unwrap_or(1.0);
+    // per-shot `^name:amp` scales this shot's wobble.
+    let mut amp = damp * amp_scale * s.deform_amp.unwrap_or(1.0);
+    if s.deform_gated {
+        // `^name@morph`: gate the amplitude to the morph — a half-sine over the transition (0 at both
+        // ends, peak at the midpoint), and 0 outside it. A writhe that builds as the shape transforms
+        // then goes limp once it settles (the cavia struggling as it cooks), instead of the deform
+        // running the whole hold.
+        amp *= if arriving {
+            (std::f32::consts::PI * factor).sin()
+        } else {
+            0.0
+        };
+    }
+    cs.deform_amp = amp;
     cs.deform_freq = dfreq;
     // `freeze:N` quantizes the deform playhead to N steps per bar → the wobble JUMPS on the grid
     // (stop-motion) instead of running smooth. Pure fn of clock.t + the score's bar → record-safe.

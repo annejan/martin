@@ -640,6 +640,12 @@ camera to catch the ripple in 3D):
 wall:GREETINGS|TO ALL|DEMOSCENERS   @8,1   ~fade   ^wave
 ```
 
+**`^name@morph` — gate the deform to the morph** (reel only). Normally a `^deform` runs the whole
+hold; append `@morph` and its amplitude is instead a half-sine over the part's morph-in — **0 at the
+start, peak at the midpoint, 0 once it lands**, then nothing for the rest of the hold. A wobble that
+*builds as the shape transforms then goes limp* — e.g. `^turbulence@morph:1.5` makes the guinea pig
+**writhe/boil as it cooks** into the dish, then settle. Composes with `:amp` (`^name@morph:amp`).
+
 `MARTIN_DEFORM=<name>` is a **scene-wide field**: it sets a default deform for every seq part *and*
 every placed compose object — `MARTIN_DEFORM=wind` blows the whole stage at once. An explicit
 per-part / per-object `^name` always wins over the field.

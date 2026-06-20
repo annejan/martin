@@ -253,7 +253,7 @@ pub(crate) enum Departure {
 #[derive(Debug, PartialEq)]
 pub(crate) enum FxMod {
     Entrance(Entrance),
-    Deform(Deform, Option<f32>), // (deform, optional `:amp` strength)
+    Deform(Deform, Option<f32>, bool), // (deform, optional `:amp` strength, `@morph`-gated envelope)
     Tint(crate::scene::colorize::Tint),
     Ease(Ease), // `ease:name` — shapes the morph curve (snap/anticipate/…)
 }
@@ -270,10 +270,16 @@ pub(crate) fn parse_fx_modifier(tok: &str) -> Option<Result<FxMod, String>> {
         );
     }
     if let Some(d) = tok.strip_prefix('^') {
-        // `^name` or `^name:amp` — the optional amp scales the deform strength (bad amp → 1.0).
-        let (name, amp) = d.split_once(':').map_or((d, None), |(n, a)| (n, Some(a)));
+        // `^name` / `^name:amp` (amp scales strength, bad amp → 1.0) / `…@morph` (gate the amplitude to
+        // the morph: peaks mid-transition then dies, instead of running the whole hold — a writhe-while-
+        // -transforming-then-calm, e.g. the cavia struggling as it cooks into the cuy).
+        let gated = d.contains("@morph");
+        let cleaned = d.replace("@morph", "");
+        let (name, amp) = cleaned
+            .split_once(':')
+            .map_or((cleaned.as_str(), None), |(n, a)| (n, Some(a)));
         return Some(match Deform::parse(name) {
-            Some(de) => Ok(FxMod::Deform(de, amp.and_then(|a| a.parse().ok()))),
+            Some(de) => Ok(FxMod::Deform(de, amp.and_then(|a| a.parse().ok()), gated)),
             None => Err(format!("unknown deform '^{d}'")),
         });
     }
@@ -333,15 +339,19 @@ mod tests {
         );
         assert_eq!(
             parse_fx_modifier("^wave"),
-            Some(Ok(FxMod::Deform(Deform::Wave, None)))
+            Some(Ok(FxMod::Deform(Deform::Wave, None, false)))
         );
         assert_eq!(
             parse_fx_modifier("^wave:0.5"),
-            Some(Ok(FxMod::Deform(Deform::Wave, Some(0.5))))
+            Some(Ok(FxMod::Deform(Deform::Wave, Some(0.5), false)))
         );
         assert_eq!(
             parse_fx_modifier("^wave:nope"), // bad amp → None (deform still applies)
-            Some(Ok(FxMod::Deform(Deform::Wave, None)))
+            Some(Ok(FxMod::Deform(Deform::Wave, None, false)))
+        );
+        assert_eq!(
+            parse_fx_modifier("^turbulence@morph:1.5"), // @morph → gated envelope
+            Some(Ok(FxMod::Deform(Deform::Turbulence, Some(1.5), true)))
         );
         assert_eq!(
             parse_fx_modifier("tint:fry"),

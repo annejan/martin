@@ -96,6 +96,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         let mut raster = None;
         let mut flash = None;
         let mut deform_amp = None;
+        let mut deform_gated = false;
         let mut beat = None;
         let mut tint = None;
         let mut ease = crate::scene::effects::Ease::Smoothstep;
@@ -168,9 +169,10 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                     use crate::scene::effects::FxMod;
                     match res {
                         Ok(FxMod::Entrance(tr)) => entrance = Some(tr),
-                        Ok(FxMod::Deform(d, a)) => {
+                        Ok(FxMod::Deform(d, a, gated)) => {
                             deform = Some(d);
                             deform_amp = a;
+                            deform_gated = gated;
                         }
                         Ok(FxMod::Tint(x)) => tint = Some(x),
                         Ok(FxMod::Ease(e)) => ease = e,
@@ -222,6 +224,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
             raster,
             flash,
             deform_amp,
+            deform_gated,
             beat,
             tint,
             ease,

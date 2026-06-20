@@ -32,6 +32,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   pre-parse `--mcp` special-case is gone from `main`. `$MARTIN_MCP` still works for parity.
 
 ### Engine
+- **`^name@morph` — morph-gated deform** (reel): append `@morph` to a per-Shot `^deform` and its
+  amplitude becomes a half-sine over the morph-in (0 at the ends, peak at the midpoint, 0 through the
+  rest of the hold) instead of running the whole time. A wobble that builds as the shape transforms then
+  goes limp — the guinea cavia **writhes/boils as it cooks** into the cuy, then settles. `director.rs`.
+- **Slab re-orient for extruded-logo splats** (deFEEST): ~half an extruded logo's triangles are
+  edge-on extrusion walls → sampled as round disks they become slivers speckling the outline. Detect
+  the slab axis (dominant normal, power-iterated) and, for slab-like meshes only (self-gating), face
+  every disk along it → the walls fill the stroke as clean front-facing disks. `src/mesh.rs`.
 - **Jittered mesh sampling (no weave)**: the R2 low-discrepancy sample sequence is even but *regular* —
   a faint grid weave shows in dense fills. Surface sampling now adds a deterministic per-sample jitter
   (~one local cell) — "jittered low-discrepancy": R2's even coverage without the grid pattern, and

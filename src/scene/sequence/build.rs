@@ -382,6 +382,7 @@ fn build_shots(
             entrance: tr,
             deform: deforms[idx],
             deform_amp: shot.deform_amp,
+            deform_gated: shot.deform_gated,
             // a hard cut with no explicit flash gets an automatic white-flash pop on its frame.
             flash: shot.flash.or((tr == Entrance::Cut).then_some(0.8)),
             beat: shot.beat,
