@@ -33,16 +33,17 @@ splat:star.ply      @3.0,1.5,-8    *0.2   alpha:0.3   spin 3,7,2  bob 0.12  ^pul
 splat:tent.ply      @-2.8,-1.11,0.7  *0.85  sway 0,4,0   ~fade  in build  count:9000
 splat:tent.ply      @4.0,-1.08,1.2   *0.55  rot 0,30,0  sway 0,3,0  ~fade  in drop  count:5000
 
-# ── CAMPFIRE: flame in the centre, embers fly ──
-splat:flame.ply     @0.0,-0.44,0.3   *0.7   bob 0.08  ^turbulence:0.55  ~fade  in drop  count:3000
+# ── CAMPFIRE: flame in the centre, embers fly. ^turbulence churns it + beat: makes it FLICKER/leap on
+#    the kick (a live fire, not a static cone); bob lifts it, more splats = a fuller flame body. ──
+splat:flame.ply     @0.0,-0.44,0.3   *0.72  bob 0.11  ^turbulence:0.72  ~fade  in drop  count:3600
 
 # ── GROVE: spaced wide, well clear of tents ──
-splat:pine.ply      @3.0,-0.31,0.5   *0.9   sway 0,8,0  bob 0.04   ~fade  in build  count:6000
-splat:pine.ply      @3.8,-0.56,-0.6  *0.7   sway 0,11,0  bob 0.03  ~fade  in build  count:6000
+splat:pine.ply      @3.0,-0.31,0.5   *1.2   sway 0,8,0  bob 0.04   ~fade  in build  count:7000  # tall front
+splat:pine.ply      @3.8,-0.56,-0.6  *0.55  sway 0,13,0  bob 0.03  ~fade  in build  count:4000  # short sapling
 splat:pine.ply      @1.7,-0.44,-1.7  *0.8   sway 0,5,0  bob 0.05   ~fade  in climax  count:6000
-splat:pine.ply      @-1.5,-0.38,-1.9 *0.85  sway 0,9,0  bob 0.04   ~fade  in climax  count:6000
-splat:pine.ply      @-3.5,-0.31,-0.9 *0.9   sway 0,7,0  bob 0.03   ~fade  in climax  count:6000
-splat:pine.ply      @-4.0,-0.48,1.2  *0.75  sway 0,6,0  bob 0.04   ~fade  in drop   count:5000
+splat:pine.ply      @-1.5,-0.38,-1.9 *1.15  sway 0,9,0  bob 0.04   ~fade  in climax  count:7000  # tall back-left
+splat:pine.ply      @-3.5,-0.31,-0.9 *0.65  sway 0,7,0  bob 0.03   ~fade  in climax  count:4500  # short
+splat:pine.ply      @-4.0,-0.48,1.2  *0.9   sway 0,6,0  bob 0.04   ~fade  in drop   count:6000
 
 # ── WORDMARK ──
 text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build
@@ -74,25 +75,29 @@ t=@@bar:45     pos=0.6,-0.40,0.3   dist=3.8   yaw=1.35   pitch=0.14
 t=@@bar:52     pos=-0.4,-0.30,0.2  dist=4.5   yaw=1.80   pitch=0.16
 t=@@breakdown  pos=-1.3,-0.35,0.4  dist=6.8   yaw=2.05   pitch=0.14
 t=@@bar:65     pos=-1.5,-0.30,0.3  dist=7.5   yaw=2.10   pitch=0.12
-t=@@climax     pos=-1.2,0.30,-3.0  dist=11.0  yaw=1.62   pitch=0.10
-t=@@bar:85     pos=-0.8,0.20,-2.5  dist=9.5   yaw=1.80   pitch=0.13
-t=@@bar:95     pos=-0.2,0.10,-1.5  dist=7.2   yaw=1.50   pitch=0.16
+t=@@climax     pos=-0.6,0.05,-1.2  dist=5.0   yaw=1.55   pitch=0.12   cut   # CUT INTO the party — the snacks erupt
+t=@@bar:85     pos=0.5,-0.15,-0.3  dist=3.6   yaw=1.10   pitch=0.16         # dive among the bouncing bitterballen
+t=@@bar:95     pos=-0.6,0.25,-2.2  dist=8.0   yaw=1.85   pitch=0.18         # pull WIDE — the whole camp raves
 t=@@bar:105    pos=0.5,0.00,-0.8   dist=5.0   yaw=1.35   pitch=0.20
 t=@@outro      pos=0.2,0.05,-0.6   dist=6.6   yaw=1.45   pitch=0.16
 t=@@bar:120    pos=-0.3,0.10,-1.5  dist=8.0   yaw=1.55   pitch=0.14
 t=225          pos=-1.2,0.30,-3.0  dist=11.0  yaw=1.62   pitch=0.10
 
 [sync]
-t=@@intro      flash=0.08  bg_dim=0.80  beat=0.25  bg=aurora
-t=@@build      flash=0.15  bg_dim=0.60  beat=0.7   exposure=1.0
-t=@@drop       flash=0.7   bg_dim=0.45  beat=1.8   exposure=1.2
-t=@@bar:50     flash=0.5   bg_dim=0.50  beat=1.4   exposure=1.1
-t=@@breakdown  flash=0.2   bg_dim=0.65  beat=0.7   exposure=0.9
-t=@@bar:65     flash=0.1   bg_dim=0.70  beat=0.4   exposure=0.8
-t=@@climax     flash=0.8   bg_dim=0.40  beat=2.0   exposure=1.5  bg=aurora
-t=@@bar:95     flash=0.6   bg_dim=0.45  beat=1.7   exposure=1.3
-t=@@outro      flash=0.35  bg_dim=0.55  beat=1.2   exposure=1.1  bg=fractal
-t=@@bar:125    flash=0.0   bg_dim=0.10  beat=0.5   exposure=0.8
+# An ENERGY ARC with palette shifts so each act FEELS different: cold hush → the fire ignites the
+# night (plasma) → hush as the horse walks in → THE PARTY ERUPTS (fractal rave glow) → warm afterglow
+# back to the night sky for the credits. bg_dim drops (brighter) on the peaks, climbs on the hushes.
+t=@@intro      flash=0.06  bg_dim=0.85  beat=0.20  exposure=0.85  bg=aurora   # cold moonlit hush
+t=@@build      flash=0.15  bg_dim=0.62  beat=0.6   exposure=1.0                # the camp assembles, warming
+t=@@drop       flash=0.85  bg_dim=0.38  beat=1.9   exposure=1.35  bg=plasma    # FIRE lights — the night ignites
+t=@@bar:50     flash=0.45  bg_dim=0.48  beat=1.4   exposure=1.15               # riding the drop
+t=@@breakdown  flash=0.15  bg_dim=0.72  beat=0.5   exposure=0.85  bg=aurora    # hush — the horse ambles in
+t=@@bar:65     flash=0.08  bg_dim=0.80  beat=0.3   exposure=0.80               # quietest — anticipation
+t=@@climax     flash=0.95  bg_dim=0.28  beat=2.3   exposure=1.75  bg=fractal   # THE PARTY ERUPTS — rave glow
+t=@@bar:95     flash=0.70  bg_dim=0.34  beat=2.0   exposure=1.55  bg=fractal   # peak sustains
+t=@@bar:105    flash=0.55  bg_dim=0.40  beat=1.7   exposure=1.40               # party rolls on
+t=@@outro      flash=0.30  bg_dim=0.58  beat=1.0   exposure=1.05  bg=aurora    # warm afterglow → night for the credits
+t=@@bar:125    flash=0.0   bg_dim=0.22  beat=0.4   exposure=0.85               # fade to close
 
 [caption]
 # Scrolling credits — each starts below-screen (fy=1.2), scrolls upward centred
