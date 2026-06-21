@@ -10,6 +10,8 @@ bg_dim       = 0.5
 beat         = 0.5
 cam_pump     = 0.0
 pair         = match
+morph_stagger = 0.6   # logo→cavia→cuy DISSOLVE instead of sliding (no streaks). NB: the cuy uses
+                      # ease:hold-snap — render-check the cook still slams (stagger spreads the snap).
 post           = chroma          # RGB-shear on the cook slam (killshot pattern)
 particles      = embers          # warm rising specks = sizzle/steam off the hot dish
 particle_count = 120
