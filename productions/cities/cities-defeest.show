@@ -22,6 +22,8 @@ score = productions/cities/score.txt   # moody A-minor synthwave night-drive (th
 flash = 0.25
 bg_dim = 0.4
 post = chroma                 # the kill-shot screen-tear: RGB-split on the kick (beat-gated, deterministic)
+morph_stagger = 0.6           # per-splat staggered morph timing — the cities DISSOLVE + reform instead of
+                              # sliding as a block (kills the straight-line streaks). 0 = off, ~0.6 = cloudy.
 pw_step = 0.35
 pw_splat = 0.004
 

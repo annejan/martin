@@ -11,6 +11,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **`MARTIN_MORPH_STAGGER` / `.show` `morph_stagger =`** (0..1, default 0) — per-particle staggered
+  morph timing. At 0 a morph slides the whole cloud in lockstep (straight-line streaks); higher spreads
+  each splat's transition over its own sub-window so the cloud **dissolves + reforms** — a soft, cloudy
+  transition. Drives a new `morph_stagger` uniform in the splat fork (§8). The cities-deFEEST show uses
+  `morph_stagger = 0.6`.
 - **`tint:white`** (alias `albino`/`snow`) — an albino recolour: near-white with a soft top-down
   falloff so a textured asset reads as a pure-white animal (the *shape* carries it). Used for the
   white peacock in the camping demo.

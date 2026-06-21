@@ -31,6 +31,9 @@ pub(crate) fn shot_director(
     // (amp_scale, speed) for the persistent deform — read from env once. MARTIN_DEFORM_AMP scales the
     // wobble strength (e.g. 0.3 = gentle on a whole scene), MARTIN_DEFORM_SPEED its rate.
     mut deform_tune: Local<Option<(f32, f32)>>,
+    // MARTIN_MORPH_STAGGER (0..1): per-particle staggered morph timing — the cloud DISSOLVES + reforms
+    // instead of sliding (kills the straight-line streaks). Read from env once. 0 = synchronized.
+    mut stagger_tune: Local<Option<f32>>,
     // MARTIN_PAIR=match → splats are pre-paired to nearest same-colour neighbours for a STRAIGHT
     // morph; the beat-driven ball-pulse (below) would fight that, so it's suppressed. Read once.
     mut pair_match: Local<Option<bool>>,
@@ -131,6 +134,11 @@ pub(crate) fn shot_director(
     } else {
         0.0
     };
+    // MARTIN_MORPH_STAGGER: per-particle staggered morph timing — each splat morphs over its own
+    // sub-window so the cloud dissolves + reforms instead of sliding (no straight-line streaks). Safe
+    // to set always: the fork shader no-ops it when the shape is held (factor 0 or 1).
+    cs.morph_stagger =
+        *stagger_tune.get_or_insert_with(|| crate::envvar::or("MARTIN_MORPH_STAGGER", 0.0));
     // per-particle shader transitions (typewriter/sparkle/…): drive the fork's uniforms only
     // while morphing in; otherwise mode 0 = off (held shape renders plain, fully sort-safe).
     let (mode, soft, axis) = arriving

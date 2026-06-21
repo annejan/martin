@@ -952,7 +952,7 @@ dependencies = [
 [[package]]
 name = "bevy_gaussian_splatting"
 version = "7.0.2"
-source = "git+https://github.com/annejan/bevy_gaussian_splatting?branch=martin#57a03eef2228678e670208f385c3556d6f3f854e"
+source = "git+https://github.com/annejan/bevy_gaussian_splatting?branch=martin#3554f7d2e6287051e547ff443f485f1afdca9063"
 dependencies = [
  "base64 0.22.1",
  "bevy",
