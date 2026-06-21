@@ -440,7 +440,21 @@ const SEG_SECS: f32 = 0.5;
 
 /// Render the whole score in time order, calling `sink(chunk)` with each finalized stereo chunk.
 /// Single-threaded + deterministic. Updates the global produced-frames counter for the loader.
-pub(crate) fn produce(score: &Score, mut sink: impl FnMut(&[f32])) {
+/// Live streaming render: fire events segment-by-segment so playback can start ~1 s after launch.
+pub(crate) fn produce(score: &Score, sink: impl FnMut(&[f32])) {
+    produce_impl(score, sink, false);
+}
+
+/// Batch render (for `synth_track`): pre-render the 10 lanes' note voices IN PARALLEL (rayon) into
+/// per-lane buffers, then run the (sequential, stateful) finisher chain once. Same computation as
+/// `produce`, just the note-ticking spread across cores — output matches to float epsilon (the only
+/// difference is accumulation order; see `parallel_matches_sequential`). No streaming latency win, so
+/// it's the batch path only; live playback stays on `produce`.
+pub(crate) fn produce_parallel(score: &Score, sink: impl FnMut(&[f32])) {
+    produce_impl(score, sink, true);
+}
+
+fn produce_impl(score: &Score, mut sink: impl FnMut(&[f32]), parallel: bool) {
     let oversample = score.param("oversample", 0.0) > 0.5;
     set_oversampling(oversample);
     let sr = SAMPLE_RATE as f32;
@@ -486,25 +500,67 @@ pub(crate) fn produce(score: &Score, mut sink: impl FnMut(&[f32])) {
     let atmo_amt = score.param("atmosphere", 1.0);
     let mut master = MasterChain::new(score, sr);
 
+    // Batch path: render every lane's note voices into its own buffer ACROSS CORES, then fold the
+    // results into bed/echo/arp/kickbuf in lane order (deterministic) and mark the cursors consumed so
+    // the loop below skips firing and only runs the finishers. Same samples, accumulation order differs
+    // by lane-vs-segment interleave → matches the sequential path to float epsilon.
+    if parallel {
+        use rayon::prelude::*;
+        let rendered: Vec<(Vec<f32>, Vec<f32>)> = lanes
+            .as_mut_slice()
+            .par_iter_mut()
+            .map(|lane| {
+                let mut buf = vec![0f32; stereo];
+                let mut kb = vec![0f32; stereo];
+                for ev in lane.iter_mut() {
+                    let render = std::mem::replace(
+                        &mut ev.render,
+                        Box::new(|_: &mut [f32], _: &mut [f32]| {}),
+                    );
+                    render(&mut buf, &mut kb);
+                }
+                (buf, kb)
+            })
+            .collect();
+        for (li, (buf, kb)) in rendered.into_iter().enumerate() {
+            for (d, s) in kickbuf.iter_mut().zip(kb.iter()) {
+                *d += *s;
+            }
+            match li {
+                L_ECHO => echo_buf = buf,
+                L_ARP => arp_buf = buf,
+                _ => {
+                    for (d, s) in bed.iter_mut().zip(buf.iter()) {
+                        *d += *s;
+                    }
+                }
+            }
+            cursors[li] = lanes[li].len();
+        }
+    }
+
     let seg_frames = (SEG_SECS * sr) as usize;
     let mut f0 = 0usize;
     while f0 < total {
         let f1 = (f0 + seg_frames).min(total);
         let seg_end_t = f1 as f32 / sr;
-        // 1. fire due events, fixed lane order (Echo/Arp into their own buffers)
-        for (li, lane) in lanes.iter_mut().enumerate() {
-            let target: &mut [f32] = match li {
-                L_ECHO => &mut echo_buf,
-                L_ARP => &mut arp_buf,
-                _ => &mut bed,
-            };
-            while cursors[li] < lane.len() && lane[cursors[li]].t < seg_end_t {
-                let render = std::mem::replace(
-                    &mut lane[cursors[li]].render,
-                    Box::new(|_: &mut [f32], _: &mut [f32]| {}),
-                );
-                render(target, &mut kickbuf);
-                cursors[li] += 1;
+        // 1. fire due events, fixed lane order (Echo/Arp into their own buffers) — skipped when the
+        //    parallel prefill above already rendered every lane.
+        if !parallel {
+            for (li, lane) in lanes.iter_mut().enumerate() {
+                let target: &mut [f32] = match li {
+                    L_ECHO => &mut echo_buf,
+                    L_ARP => &mut arp_buf,
+                    _ => &mut bed,
+                };
+                while cursors[li] < lane.len() && lane[cursors[li]].t < seg_end_t {
+                    let render = std::mem::replace(
+                        &mut lane[cursors[li]].render,
+                        Box::new(|_: &mut [f32], _: &mut [f32]| {}),
+                    );
+                    render(target, &mut kickbuf);
+                    cursors[li] += 1;
+                }
             }
         }
         // 2. resumable finishers over [f0, f1)
@@ -677,6 +733,26 @@ mod tests {
         );
     }
 
+    /// The parallel batch render (`produce_parallel`, used by `synth_track`) must match the sequential
+    /// streamer to float epsilon — same samples, only the lane-vs-segment accumulation order differs.
+    #[test]
+    fn parallel_matches_sequential() {
+        let score = tiny_score();
+        let seq = render_stream(&score);
+        let mut par = Vec::new();
+        produce_parallel(&score, |c| par.extend_from_slice(c));
+        assert_eq!(seq.len(), par.len(), "same length");
+        let max_diff = seq
+            .iter()
+            .zip(&par)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
+        assert!(
+            max_diff < 1e-4,
+            "parallel render must match sequential to epsilon (max diff {max_diff})"
+        );
+    }
+
     /// The decoder reads pushed segments in order, pads silence on underrun (producer behind), and
     /// ends once the full track is finalized.
     #[test]
@@ -695,10 +771,11 @@ mod tests {
         assert_eq!(d.next(), None); // finalized == total → done
     }
 
-    /// `synth_track` (the batch entry recordings use) is now a thin wrapper that just collects
-    /// `produce` to completion — there is ONE engine. This guards that it stays byte-for-byte the
-    /// streamed signal (so a recording is exactly what live playback renders); if someone reintroduces
-    /// a divergent batch DSP, this fails immediately.
+    /// `synth_track` (the batch entry recordings use) renders the SAME computation as the live `produce`
+    /// stream — but across cores (`produce_parallel`), so the per-sample accumulation order differs and
+    /// the two match to float epsilon, not bit-for-bit (exact reproducibility isn't required — a hair of
+    /// float/noise is fine). This guards against a genuinely DIVERGENT batch DSP (the samples must stay
+    /// the streamed signal, within epsilon); a real divergence blows well past the tolerance.
     #[test]
     fn batch_is_the_collected_stream() {
         let score = tiny_score();
@@ -706,12 +783,14 @@ mod tests {
         let batch = crate::audio::synth_track(&score);
         let batch = &*batch.samples; // private field — visible to this descendant module
         assert_eq!(stream.len(), batch.len(), "length must match");
+        let max_diff = stream
+            .iter()
+            .zip(batch)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
         assert!(
-            stream
-                .iter()
-                .zip(batch)
-                .all(|(a, b)| a.to_bits() == b.to_bits()),
-            "synth_track must be the byte-identical collected stream"
+            max_diff < 1e-4,
+            "synth_track must be the collected stream to epsilon (max diff {max_diff})"
         );
     }
 }

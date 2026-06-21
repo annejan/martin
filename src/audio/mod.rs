@@ -232,7 +232,8 @@ pub(super) fn section_window(score: &Score, name: &str) -> Option<(f32, f32)> {
 /// to within a single 16-bit LSB, so the streamer is now the sole source of truth.)
 pub fn synth_track(score: &Score) -> Track {
     let mut samples = Vec::new();
-    stream::produce(score, |chunk| samples.extend_from_slice(chunk));
+    // batch render → spread the 10 lanes' note voices across cores (live playback uses `produce`).
+    stream::produce_parallel(score, |chunk| samples.extend_from_slice(chunk));
     Track {
         samples: Arc::new(samples),
     }
