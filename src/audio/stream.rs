@@ -4,10 +4,11 @@
 //! reverb, master), with all effect state carried across boundaries — so segment size provably does
 //! not change the output (`segmenting_is_deterministic`).
 //!
-//! Batch recordings (`synth_track`, the bundle) run this same `produce` to completion with a
-//! collecting sink, so a recording is byte-for-byte what live playback streams (`batch_is_the_
-//! collected_stream`) — there is no second DSP implementation to keep in sync. The note scheduling
-//! lives in `render::collect_events`.
+//! Batch recordings (`synth_track`) run the SAME DSP, but via `produce_parallel` — the 10 note lanes
+//! rendered across cores, then the shared sequential finisher chain — so a recording matches the live
+//! stream to float epsilon (`batch_is_the_collected_stream`), not byte-for-byte. Live playback itself
+//! stays on the segmented `produce` (low start latency; recording is the edge case). The note
+//! scheduling lives in `render::collect_events`.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
