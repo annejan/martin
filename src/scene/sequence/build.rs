@@ -148,6 +148,7 @@ pub(crate) fn build_sequence(
                 &root.0,
                 part.disk,
                 part.aniso,
+                None, // reel meshes keep the 60k sample default (parts are paired at full count)
             )
         })
         .collect();

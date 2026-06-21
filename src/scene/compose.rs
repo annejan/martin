@@ -508,6 +508,15 @@ pub(crate) fn build_composition(
         }
         // `~outline`/`~pen-write` text builds the special stroke gaussians (shared with the reel via
         // `sample_content`) so the per-particle reveal traces real handwriting; else `part_gaussians`.
+        // `count:N` overrides the scene-wide density for THIS object; `field:N` splits it across N swarm
+        // copies. Sample a MESH at this final per-object count (passed into sample_content) so its disk
+        // size matches the eventual density — sampling high then downsampling left mesh disks too small
+        // for the thinned spacing → holes (most visible on the big props, e.g. the horses, at 1080p).
+        let obj_count = obj.count.unwrap_or(count);
+        let sample_n = match obj.field {
+            Some(n) => (obj_count / n.max(1)).max(2_000),
+            None => obj_count,
+        };
         let mut raw = sample_content(
             &obj.content,
             obj.entrance,
@@ -516,6 +525,7 @@ pub(crate) fn build_composition(
             &root.0,
             None,
             None,
+            Some(sample_n),
         );
         if raw.is_empty() {
             continue;
@@ -523,8 +533,6 @@ pub(crate) fn build_composition(
         crate::morph::normalize_to(&mut raw, NORMALIZE_EXTENT); // centre + ~2 units across
         // `field:N` scatters the object into N seeded copies (a swarm), sized to frame as one — the
         // reel's `flock:` for the stage. Downsample per copy to keep the total near the budget.
-        // `count:N` overrides the scene-wide density for THIS object (a tent is denser than a tree than fire).
-        let obj_count = obj.count.unwrap_or(count);
         let mut shaped = match obj.field {
             Some(n) => {
                 let per = (obj_count / n.max(1)).max(2_000);

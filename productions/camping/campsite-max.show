@@ -52,7 +52,7 @@ text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build  out b
 text:deFEEST        @-1.4,0.9,1.0 *0.55  ~explode    tint:brand  bob 0.05  in climax
 
 # ── STORY: horse walks in, party erupts with flying bitterballen ──
-mesh:paard.glb  @-9.0,-0.5,-4.5  *0.9  rot 0,180,0  travel:-2.2,-0.868,-4.5@breakdown,16  sway 0,4,0  bob 0.05  ^pulse:0.4  ~fade  in breakdown
+mesh:paard.glb  @-9.0,-0.5,-4.5  *0.9  count:40000  rot 0,180,0  travel:-2.2,-0.868,-4.5@breakdown,16  sway 0,4,0  bob 0.05  ^pulse:0.4  ~fade  in breakdown
 mesh:bier.glb       @1.6,-0.55,0.9  *0.45  alpha:0.16  bob 0.04  spin 0,45,0  ~fade  in climax
 # ── 5 bitterballen: a BOUNDED Lissajous weave near the fire (was `drift` — constant velocity from
 #    t=0, so by the climax entry (~128s) they'd flown right out of frame; path:liss stays put + tumbles).
@@ -61,8 +61,8 @@ mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  path:liss:0.3,0.3,0.25,3,1,2,0.50   b
 mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  path:liss:0.28,0.22,0.32,1,3,2,0.40 bob 0.12  ^pulse:0.6  spin 31,13,41  tint:fry  ~fade  in climax
 mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  path:liss:0.32,0.28,0.3,2,1,3,0.55  bob 0.10  ^pulse:0.5  spin 11,23,7   tint:fry  ~fade  in climax
 mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  path:liss:0.3,0.26,0.28,3,2,1,0.48  bob 0.12  ^pulse:0.7  spin 17,43,29  tint:fry  ~fade  in climax
-mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   rot 0,200,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax
-splat:doggo.ply     @0.9,-1.181,1.5  *0.5   sway 0,7,0  bob 0.04  travel:1.8,-1.0,1.2@climax,14  ~fade  in climax
+mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   count:40000  rot 0,200,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax
+splat:doggo.ply     @1.96,-1.16,1.2  *0.5   rot 0,-16,0  sway 0,7,0  bob 0.04  travel:1.8,-1.0,1.2@climax,14  ~fade  in climax
 text:PonyCamp 2026  @1.4,1.5,1.0   *0.5   ~pen-write  tint:brand  bob 0.06  in climax
 
 # ── BARNYARD: the camp's resident animals finish off PonyCamp. Two goats graze as the camp assembles
@@ -70,10 +70,10 @@ text:PonyCamp 2026  @1.4,1.5,1.0   *0.5   ~pen-write  tint:brand  bob 0.06  in c
 #    albino, the shape carries it) parades for the party on the climax. Grazing = sway+bob; the peacocks
 #    strut (slow yaw-spin) + bounce on the kick (^pulse). All front-foreground + grounded, clear of the
 #    tents/pines/snacks. ──
-mesh:geit.glb  @-2.4,-1.0,2.1  *0.5   rot 0,35,0   sway 0,5,0  bob 0.05               ~fade  in build
-mesh:geit.glb  @2.6,-1.0,2.0   *0.45  rot 0,-30,0  sway 0,6,0  bob 0.06               ~fade  in build
-mesh:pauw.glb  @-1.3,-0.9,2.3  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~fade  in drop
-mesh:pauw.glb  @1.7,-0.9,2.3   *0.6   rot 0,-55,0  spin 0,12,0  bob 0.06  ^pulse:0.6  tint:white  ~fade  in drop
+mesh:geit.glb  @-2.4,-1.05,2.1  *0.5   rot 0,-4,0   sway 0,5,0  bob 0.05               ~fade  in build
+mesh:geit.glb  @2.6,-1.24,2.0   *0.45  rot 0,-74,0  sway 0,6,0  bob 0.06               ~fade  in build
+mesh:pauw.glb  @-1.79,-1.3,-0.57  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~fade  in drop
+mesh:pauw.glb  @0.75,-1.33,-1.98  *0.6   rot 0,-55,0  spin 0,12,0  bob 0.06  ^pulse:0.6  tint:white  ~fade  in drop
 
 # ── CREDITS: Bevy UI scrolling captions (see [caption] below) ──
 

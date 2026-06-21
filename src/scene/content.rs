@@ -136,6 +136,7 @@ pub(crate) fn part_gaussians(
     root: &std::path::Path,
     disk: Option<f32>,
     aniso: Option<f32>,
+    count: Option<usize>,
 ) -> Vec<Gaussian3d> {
     match content {
         PartContent::Text(s) => build_text_gaussians(s, TEXT_RGB, 3.0, 2, 0.012),
@@ -163,9 +164,12 @@ pub(crate) fn part_gaussians(
             let splat = disk.unwrap_or(1.2);
             // `aniso:<f>` (>1) stretches each sample into an ellipsoid along the surface grain
             // (area-preserving) for a streaky/painterly read; 1.0 = round disks (the default).
+            // Sample at the FINAL per-object count (not a fixed 60k) so the disk size — which is
+            // computed from this count — matches the cloud's eventual density. Sampling high then
+            // downsampling in compose left the disks too small for the thinned spacing → holes.
             mesh::build_mesh_gaussians(
                 &root.join(name),
-                60_000,
+                count.unwrap_or(60_000),
                 splat,
                 0.3,
                 0.6,
@@ -205,6 +209,7 @@ pub(crate) fn part_gaussians(
 /// `~outline` traces filled-letter outlines and `~pen-write` builds single-stroke handwriting (both
 /// drive the per-particle reveal shader). Everything else falls through to [`part_gaussians`]. Shared
 /// by the reel (`build_sequence`) and the stage (`compose`) so the text-effect handling can't drift.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn sample_content(
     content: &PartContent,
     entrance: Option<crate::scene::effects::Entrance>,
@@ -213,6 +218,7 @@ pub(crate) fn sample_content(
     root: &std::path::Path,
     disk: Option<f32>,
     aniso: Option<f32>,
+    count: Option<usize>,
 ) -> Vec<Gaussian3d> {
     use crate::scene::effects::Entrance;
     use crate::text::{build_text_outline_gaussians, build_text_penwrite_gaussians};
@@ -225,7 +231,7 @@ pub(crate) fn sample_content(
             let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
             build_text_penwrite_gaussians(s, TEXT_RGB, 3.0, pw_step, pw_splat)
         }
-        _ => part_gaussians(content, state, assets, root, disk, aniso),
+        _ => part_gaussians(content, state, assets, root, disk, aniso, count),
     }
 }
 
