@@ -22,6 +22,9 @@ pub enum Tint {
     Rainbow,
     /// deFEEST brand gradient: blue → gold, left→right (coherent + on-brand).
     Brand,
+    /// Albino white: near-white with a soft top-down falloff, so a textured asset (e.g. the peacock)
+    /// reads as a pure-white animal — the *shape* carries it without the original feather colours.
+    White,
 }
 
 impl Tint {
@@ -30,6 +33,7 @@ impl Tint {
             "fry" | "bitterbal" | "deepfry" | "deep-fry" | "brown" => Some(Self::Fry),
             "rainbow" | "candy" | "psych" | "psychedelic" => Some(Self::Rainbow),
             "brand" | "defeest" | "bluegold" | "blue-gold" => Some(Self::Brand),
+            "white" | "albino" | "snow" => Some(Self::White),
             _ => None,
         }
     }
@@ -70,6 +74,7 @@ pub fn apply(splats: &mut [Gaussian3d], tint: Tint) {
             Tint::Fry => fry(l),
             Tint::Rainbow => rainbow(l),
             Tint::Brand => brand(l),
+            Tint::White => white(l),
         };
         let sh = &mut g.spherical_harmonic.coefficients;
         sh[0] = dc(rgb[0]);
@@ -112,6 +117,13 @@ fn brand(l: [f32; 3]) -> [f32; 3] {
         blue[1] + (gold[1] - blue[1]) * t,
         blue[2] + (gold[2] - blue[2]) * t,
     ]
+}
+
+/// Albino white: near-white with a gentle top-lit vertical falloff (top ~0.95 → underside ~0.78) so the
+/// bird's volume still reads instead of flattening to one dead blob; a hair warm so it isn't clinical.
+fn white(l: [f32; 3]) -> [f32; 3] {
+    let v = (0.78 + 0.17 * smoothstep(l[1] * 0.4 + 0.5)).clamp(0.0, 1.0);
+    [v, v, v * 0.985]
 }
 
 fn smoothstep(x: f32) -> f32 {
@@ -169,6 +181,7 @@ mod tests {
         assert_eq!(Tint::parse("fry"), Some(Tint::Fry));
         assert_eq!(Tint::parse("RAINBOW"), Some(Tint::Rainbow));
         assert_eq!(Tint::parse("bitterbal"), Some(Tint::Fry));
+        assert_eq!(Tint::parse("albino"), Some(Tint::White));
         assert_eq!(Tint::parse("nope"), None);
     }
 

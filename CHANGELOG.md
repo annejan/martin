@@ -10,6 +10,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ## [Unreleased]
 
+### Added
+- **`tint:white`** (alias `albino`/`snow`) — an albino recolour: near-white with a soft top-down
+  falloff so a textured asset reads as a pure-white animal (the *shape* carries it). Used for the
+  white peacock in the camping demo.
+- **Camping demo barnyard** — `productions/camping/campsite-max.show` gains two grazing goats
+  (`geit.glb`, build) and a pair of peacocks (`pauw.glb`): a colourful one (drop) and a rare white one
+  (`tint:white`, drop), strutting front-of-camp to finish off PonyCamp.
+
 ### Removed
 - **Pruned ~23 never-used global `MARTIN_*` env vars** — mesh-sampling (`MESH_COUNT`/`MESH_SPLAT`/
   `MESH_THIN`/`MESH_OPACITY`/`MESH_RGB`/`MESH_JITTER`/`MESH_ANISO`/`MESH_RANDOM`), image
