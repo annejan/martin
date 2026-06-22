@@ -3,8 +3,8 @@
 //
 //! Procedural demo splats — the Rust port (and replacement) of the old `pipeline/gen-demo-splats.py`.
 //! `build.rs` calls [`ensure_splats`] to synthesize any referenced `.ply` that's missing, so a fresh
-//! `git clone` builds + runs the default show with no python/numpy step. The eleven shapes all morph
-//! cleanly into one another (similar counts, vivid colours).
+//! `git clone` builds + runs the default show with no python/numpy step. The shapes (see [`SHAPES`])
+//! all morph cleanly into one another (similar counts, vivid colours).
 //!
 //! Not bit-exact with the python (a different RNG) — it doesn't need to be: martin morton-resamples
 //! each cloud on load, so only the SHAPE + colour matter, not point order. Deterministic per shape
@@ -42,6 +42,8 @@ pub const SHAPES: &[&str] = &[
     "pine",
     "flame",
     "rocket",
+    "saturn",
+    "ufo",
     "terrain",
     "moon",
     "mountains",
@@ -473,6 +475,70 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
                     col = [1.0, (0.3 + 0.7 * heat).min(1.0), 0.1 * heat];
                 }
                 pos.push([p[0], -p[1], p[2]]); // -Y: nose points up after martin's load-flip
+                rgb.push(col);
+            }
+        }
+        "saturn" => {
+            // A ringed gas giant: a banded cream sphere body + a wide flat ring system tilted off-axis
+            // (the silhouette that instantly says "planet"). Not directional → no load-flip needed.
+            let tilt = 0.42f32; // ring tilt about X (radians)
+            for _ in 0..N {
+                let p: [f32; 3];
+                let col: [f32; 3];
+                if rng.unit() < 0.55 {
+                    // planet body: a sphere surface (radius 0.55), cream/tan latitude bands.
+                    let d = norm(rng.normal3());
+                    let band = (d[1] * 8.0).sin();
+                    p = [d[0] * 0.55, d[1] * 0.55, d[2] * 0.55];
+                    col = hsv(
+                        0.09 + 0.04 * band,
+                        0.5,
+                        (0.72 + 0.18 * band).clamp(0.0, 1.0),
+                    );
+                } else {
+                    // ring: a flat annulus (radius 0.72..1.18) tilted about X, faint radial banding.
+                    let a = rng.uniform(0.0, tau);
+                    let rr = rng.uniform(0.72, 1.18);
+                    let (x, z0) = (rr * a.cos(), rr * a.sin());
+                    let jit = rng.normal(0.0, 0.01);
+                    p = [x, z0 * tilt.sin() + jit, z0 * tilt.cos()];
+                    let rb = (rr - 0.72) / 0.46;
+                    col = hsv(
+                        0.10,
+                        0.28,
+                        (0.5 + 0.35 * (rb * 9.0).sin().abs()).clamp(0.0, 1.0),
+                    );
+                }
+                pos.push(p);
+                rgb.push(col);
+            }
+        }
+        "ufo" => {
+            // A flying saucer: a flat metallic disc (double-cone profile), a cyan glass dome on top, and
+            // a ring of alternating coloured rim lights. Dome on +Y (place/rotate via the show).
+            for _ in 0..N {
+                let p: [f32; 3];
+                let col: [f32; 3];
+                let s = rng.unit();
+                if s < 0.55 {
+                    // saucer body: a disc thinning to the rim (thickest at the centre).
+                    let a = rng.uniform(0.0, tau);
+                    let rr = rng.unit().sqrt(); // uniform over the disc
+                    let edge = 1.0 - rr;
+                    p = [rr * a.cos(), (rng.unit() - 0.5) * 0.24 * edge, rr * a.sin()];
+                    col = [0.62, 0.64, 0.70]; // brushed metal
+                } else if s < 0.80 {
+                    // glass dome: the upper hemisphere of a small sphere, sat on the disc.
+                    let d = norm(rng.normal3());
+                    p = [d[0] * 0.40, 0.05 + d[1].abs() * 0.34, d[2] * 0.40];
+                    col = [0.45, 0.75, 0.95]; // cyan glass
+                } else {
+                    // rim lights: a ring of 8 alternating-hue glowing dots around the saucer edge.
+                    let a = rng.uniform(0.0, tau);
+                    p = [0.82 * a.cos(), 0.0, 0.82 * a.sin()];
+                    col = hsv(((a / tau) * 8.0).floor() / 8.0, 0.9, 1.0);
+                }
+                pos.push([p[0], -p[1], p[2]]); // -Y: dome rides on TOP after martin's load-flip
                 rgb.push(col);
             }
         }
