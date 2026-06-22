@@ -53,6 +53,7 @@ splat:galaxy.ply              @@bar:36   @1.5,1    ~vortex                ^turbu
 text:deFEEST                  @@outro    @10,2     ~pen-write               backdrop:stars     beat:1.0
 
 # ── STAGE OBJECTS (parallel compose layer) — DEEP-SPACE COMPOSITION ─────────────
+[stage]
 # The reel morph is the HERO at origin (spans ~±1). Everything here lives FAR out in distinct Z layers
 # so the void reads as vast 3D space, not a cluttered pile on the centre. The bg=stars / backdrop:* are
 # fullscreen SHADERS (no cloud depth-sort), so props are free to sit anywhere in Z. Rule: keep every
@@ -60,16 +61,17 @@ text:deFEEST                  @@outro    @10,2     ~pen-write               back
 
 # DEEP LANDMARKS — big + clearly visible, distant enough for parallax. Saturn (early) back-LEFT and the
 # Moon (later) back-RIGHT anchor the cosmos behind the hero on opposite sides without crowding it.
-splat:saturn.ply  @-2.6,1.1,3.0   *2.1   rot 0,0,0   spin 0,3,0   alpha:0.92   ~fade   in @@build    out @@bar:22
-splat:moon.ply    @2.4,1.2,3.0    *1.6   spin 0,4,0  alpha:0.9                ~fade   in @@drop     out @@outro
+splat:saturn.ply  @-3.2,1.6,3.6   *1.4   rot 0,0,0   spin 0,3,0   alpha:0.92   ~fade   in @@build    out @@bar:22
+splat:moon.ply    @3.2,1.5,3.6    *1.2   spin 0,4,0  alpha:0.9                ~fade   in @@drop     out @@outro
 
-# ROCKET LAUNCHES — fire up from the lower CORNERS and arc UP + BACK; brought in close enough to STREAK
-# visibly at the frame edges (still clear of the hero at ±1). rocket nose points +Y; rot 0,0,deg tilts
-# it along the arc. travel: eases @pos→target over `dur` s then holds.
-splat:rocket.ply  @-2.0,-1.8,0.6  *0.65  rot 0,0,22   travel:-2.6,3.2,-1.8@drop,7     spin 0,0,-8   ^turbulence:0.2   beat:1.6  in @@drop     out @@bar:22
-splat:rocket.ply  @2.0,-2.0,0.8   *0.6   rot 0,0,-24  travel:2.8,3.0,-2.0@bar:13,6    spin 0,0,9    beat:1.6  in @@bar:13   out @@bar:22
-splat:rocket.ply  @2.2,-2.0,0.8   *0.65  rot 0,0,-26  travel:3.0,3.2,-2.2@climax,8    spin 0,0,10   ^turbulence:0.25  beat:1.8  in @@climax   out @@outro
-splat:rocket.ply  @-2.2,-2.2,1.0  *0.6   rot 0,0,28   travel:-2.8,3.4,-2.4@bar:31,7   spin 0,0,-9   beat:1.8  in @@bar:31   out @@outro
+# ROCKET LAUNCHES — streak UP past the hero: start low in frame (y -2.5) just BESIDE the morph (x ±1.4
+# = clear of the hero at ±1, no overlap), climb straight up + slightly back, out the top. The small x
+# offset keeps them on-screen as the camera orbits while the big vertical travel is the readable action.
+# rocket nose points +Y (no rot needed for a vertical climb). travel: eases @pos→target over `dur` s.
+splat:rocket.ply  @-1.4,-2.5,0.2  *0.7   travel:-1.6,3.5,-0.6@drop,6.5     spin 0,0,-6   ^turbulence:0.2   beat:1.6  in @@drop     out @@bar:18
+splat:rocket.ply  @1.5,-2.6,0.3   *0.65  travel:1.8,3.4,-0.7@bar:13,6      spin 0,0,7    beat:1.6  in @@bar:13   out @@bar:22
+splat:rocket.ply  @1.4,-2.6,0.2   *0.7   travel:1.7,3.5,-0.7@climax,7      spin 0,0,8    ^turbulence:0.25  beat:1.8  in @@climax   out @@bar:34
+splat:rocket.ply  @-1.5,-2.6,0.3  *0.65  travel:-1.8,3.4,-0.6@bar:31,7     spin 0,0,-7   beat:1.8  in @@bar:31   out @@outro
 
 # UFOs — crossing the mid-background behind the hero: close enough to read as visible deep-space traffic,
 # far enough never to overlap the centre.
