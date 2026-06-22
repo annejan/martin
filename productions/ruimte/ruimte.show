@@ -27,15 +27,15 @@ beat         = 1.0
 splat:galaxy.ply              @@intro    @4,1.5    ~fade                    backdrop:stars     rot:0,-0.12,0
 
 # ── BUILD (bars 4-9, 11.6s) ── Vorming: snaps into a star, twisting hard
-splat:star.ply                @@build    @4,2      ~morph   ^twist:0.6      backdrop:aurora   beat:1.4   rot:0,0.2,0   flash:0.3
+splat:star.ply                @@build    @4,2      ~morph   ^twist:0.6      backdrop:stars   beat:1.4   rot:0,0.2,0   flash:0.3
 
 # ── DROP (bars 10-21, 23.2s) ── EXPLOSIE: each shape BLASTS in and SLAMS on the kick (ease:snap),
 # discrete bursts instead of slow flowing morphs — fast, punchy, a new shape every ~2 bars.
-splat:helix.ply               @@bar:10   @1.5,0.9  ~shockwave  ease:snap  ^spiral:0.4     backdrop:rings    tint:brand    beat:1.7   flash:0.7
-splat:knot.ply                @@bar:12   @1.5,0.8  ~explode    ease:snap  ^turbulence:0.6 backdrop:warp     tint:fry      beat:1.9   flash:0.6
-splat:supershape.ply          @@bar:14   @1.5,0.9  ~shatter    ease:snap  ^wave:0.4       backdrop:kaleido  tint:rainbow  beat:1.8   flash:0.6
-splat:mobius.ply              @@bar:16   @1.5,0.8  ~vortex     ease:snap  ^twist:0.5      backdrop:bolt     tint:brand    beat:1.8   flash:0.5
-splat:sphere.ply              @@bar:18   @1,0.7    ~implode    ease:snap                  backdrop:bolt     tint:rainbow  beat:1.7   flash:0.6
+splat:helix.ply               @@bar:10   @1.5,0.9  ~shockwave  ease:snap  ^spiral:0.4     backdrop:stars    tint:brand    beat:1.7   flash:0.7
+splat:knot.ply                @@bar:12   @1.5,0.8  ~explode    ease:snap  ^turbulence:0.6 backdrop:tunnel   tint:fry      beat:1.9   flash:0.6
+splat:supershape.ply          @@bar:14   @1.5,0.9  ~shatter    ease:snap  ^wave:0.4       backdrop:stars   tint:rainbow  beat:1.8   flash:0.6
+splat:mobius.ply              @@bar:16   @1.5,0.8  ~vortex     ease:snap  ^twist:0.5      backdrop:stars    tint:brand    beat:1.8   flash:0.5
+splat:sphere.ply              @@bar:18   @1,0.7    ~implode    ease:snap                  backdrop:stars   tint:rainbow  beat:1.7   flash:0.6
 splat:galaxy.ply              @@bar:20   @1.5,0.9  ~explode               ^turbulence:0.8 backdrop:stars                  flash:1.0  beat:2.3
 
 # ── BREAKDOWN (bars 22-25, 7.7s) ── Stilte: black, the title SLAMS in (the one breather)
@@ -43,54 +43,42 @@ text:RUIMTE                   @@bar:22   @5,1      ~pen-write               back
 
 # ── CLIMAX (bars 26-37, 23.2s) ── GROOTS: a grand explosive parade (was ONE held galaxy = saai).
 # Five shapes blast in on the kick across the finale — the energy keeps climbing, not coasting.
-splat:galaxy.ply              @@climax   @2,1.2    ~shockwave  ease:snap  ^turbulence:0.8 backdrop:fractal  tint:brand    flash:0.9  beat:2.1
-splat:supershape.ply          @@bar:28   @2,1      ~explode    ease:snap  ^wave:0.5       backdrop:kaleido  tint:rainbow  beat:2.1   flash:0.7
-splat:knot.ply                @@bar:31   @2,1      ~shatter    ease:snap  ^turbulence:0.7 backdrop:warp     tint:fry      beat:2.2   flash:0.7
-splat:star.ply                @@bar:34   @2,1      ~explode    ease:snap  ^twist:0.7      backdrop:rings    tint:brand    beat:2.3   flash:1.0
-splat:galaxy.ply              @@bar:36   @1.5,1    ~vortex                ^turbulence:0.9 backdrop:fractal  tint:rainbow  beat:2.1
+splat:galaxy.ply              @@climax   @2,1.2    ~shockwave  ease:snap  ^turbulence:0.8 backdrop:stars    tint:brand    flash:0.9  beat:2.1
+splat:supershape.ply          @@bar:28   @2,1      ~explode    ease:snap  ^wave:0.5       backdrop:stars   tint:rainbow  beat:2.1   flash:0.7
+splat:knot.ply                @@bar:31   @2,1      ~shatter    ease:snap  ^turbulence:0.7 backdrop:stars   tint:fry      beat:2.2   flash:0.7
+splat:star.ply                @@bar:34   @2,1      ~explode    ease:snap  ^twist:0.7      backdrop:stars    tint:brand    beat:2.3   flash:1.0
+splat:galaxy.ply              @@bar:36   @1.5,1    ~vortex                ^turbulence:0.9 backdrop:stars   tint:rainbow  beat:2.1
 
 # ── OUTRO (bars 38-45, 15.5s) ── Vertrek: signature, credits scroll, fade
 text:deFEEST                  @@outro    @10,2     ~pen-write               backdrop:stars     beat:1.0
 
-# ── STAGE OBJECTS (parallel compose layer) ─────────────────────────────────────
-[stage]
-# Build: a single bitterbal on a lissajous orbit around the star, front-right
-mesh:bitterbal.glb   @1.8,0.5,1.5   *0.35   path:liss:2.0,1.0,1.5,0.8,0.5,0.6   spin 0,30,0   alpha:0.7   ~fade   in @@build   out @@drop
+# ── STAGE OBJECTS (parallel compose layer) — DEEP-SPACE COMPOSITION ─────────────
+# The reel morph is the HERO at origin (spans ~±1). Everything here lives FAR out in distinct Z layers
+# so the void reads as vast 3D space, not a cluttered pile on the centre. The bg=stars / backdrop:* are
+# fullscreen SHADERS (no cloud depth-sort), so props are free to sit anywhere in Z. Rule: keep every
+# prop's centre ≥ ~3 units from the origin (clear of the hero) and trajectories OUT of frame-centre.
 
-# Drop: bitterballen swarm flies in with explode, orbits the morphs
-mesh:bitterbal.glb   @-1.2,0.3,1.5   *0.25   path:liss:2.5,1.2,1.0,0.6,0.4,0.5   count:6   ~explode   tint:brand   beat:1.5   in @@drop   out @@bar:22
+# DEEP LANDMARKS — big + clearly visible, distant enough for parallax. Saturn (early) back-LEFT and the
+# Moon (later) back-RIGHT anchor the cosmos behind the hero on opposite sides without crowding it.
+splat:saturn.ply  @-2.6,1.1,3.0   *2.1   rot 0,0,0   spin 0,3,0   alpha:0.92   ~fade   in @@build    out @@bar:22
+splat:moon.ply    @2.4,1.2,3.0    *1.6   spin 0,4,0  alpha:0.9                ~fade   in @@drop     out @@outro
 
-# Breakdown: a small, calm sphere floats upward in black
-splat:sphere.ply     @0,-0.3,0     *0.4    drift 0,0.08,0   rot:0.1,0.2,0   alpha:0.4   ~fade   in @@bar:22   out @@climax
+# ROCKET LAUNCHES — fire up from the lower CORNERS and arc UP + BACK; brought in close enough to STREAK
+# visibly at the frame edges (still clear of the hero at ±1). rocket nose points +Y; rot 0,0,deg tilts
+# it along the arc. travel: eases @pos→target over `dur` s then holds.
+splat:rocket.ply  @-2.0,-1.8,0.6  *0.65  rot 0,0,22   travel:-2.6,3.2,-1.8@drop,7     spin 0,0,-8   ^turbulence:0.2   beat:1.6  in @@drop     out @@bar:22
+splat:rocket.ply  @2.0,-2.0,0.8   *0.6   rot 0,0,-24  travel:2.8,3.0,-2.0@bar:13,6    spin 0,0,9    beat:1.6  in @@bar:13   out @@bar:22
+splat:rocket.ply  @2.2,-2.0,0.8   *0.65  rot 0,0,-26  travel:3.0,3.2,-2.2@climax,8    spin 0,0,10   ^turbulence:0.25  beat:1.8  in @@climax   out @@outro
+splat:rocket.ply  @-2.2,-2.2,1.0  *0.6   rot 0,0,28   travel:-2.8,3.4,-2.4@bar:31,7   spin 0,0,-9   beat:1.8  in @@bar:31   out @@outro
 
-# Climax: torus travels across space with spiral deform, rainbow tint
-splat:torus.ply      @-1.2,0.6,0.8   *0.5    travel:1.5,0.2,-0.5   ^spiral:0.4   rot:0.5,0.3,0.1   tint:rainbow   beat:1.8   in @@climax   out @@outro
+# UFOs — crossing the mid-background behind the hero: close enough to read as visible deep-space traffic,
+# far enough never to overlap the centre.
+splat:ufo.ply     @-3.2,1.6,3.2   *0.85  travel:3.2,1.3,3.2@bar:11,9     spin 0,40,0   beat:1.0  in @@bar:10   out @@bar:22
+splat:ufo.ply     @3.4,1.7,3.4    *0.85  travel:-3.4,1.4,3.4@bar:30,9    spin 0,45,0   beat:1.0  in @@bar:30   out @@outro
 
-# Climax: aegg logo subtly present, bottom-right
-mesh:aegg.glb        @1.0,-0.5,0.5   *0.18   drift -0.02,0,0     alpha:0.5   ~fade   in @@climax   out @@outro
-
-# Outro: bitterbal drifts by as credits appear
-mesh:bitterbal.glb   @-2,0,0.5       *0.2    travel:2.5,-0.3,-0.5   path:liss:1.0,0.5,0.3,0.3,0.2,0.2   alpha:0.4   ~fade   in @@outro   out @@outro+7bar
-
-# ── SPACE OBJECTS + ACTION ─────────────────────────────────────────────────────
-# Procedural splatgen props (rocket/saturn/ufo/moon). rocket nose points +Y, so a +Y travel target =
-# a launch; tilt the nose along an arc with `rot 0,0,deg`. travel: eases @pos→target over `dur` s
-# (default one bar) then HOLDS at the target — perfect for a blast-off / a saucer streaking past.
-# Build: a ringed SATURN hangs back-right — establishes the cosmos early (this is space).
-splat:saturn.ply  @1.7,0.8,2.3    *0.9   rot 0,0,0   spin 0,4,0   alpha:0.9   ~fade   in @@build   out @@bar:22
-# Drop: a HERO rocket blasts off straight up through the morph parade, exhaust blazing.
-splat:rocket.ply  @0.3,-1.4,0.4   *0.8   travel:0.6,3.4,-0.5@drop,7      spin 0,0,6    ^turbulence:0.25  beat:1.7  in @@drop    out @@bar:18
-# Drop: a second rocket streaks up the far side, tilted along its arc.
-splat:rocket.ply  @-1.7,-1.2,0.9  *0.5   rot 0,0,26   travel:1.5,3.0,-0.4@bar:13,6   spin 0,0,-10  beat:1.6  in @@bar:13   out @@bar:22
-# Drop: a UFO zips across the parade, spinning — a fun cameo (left → right).
-splat:ufo.ply     @-2.3,0.6,1.0   *0.45  travel:2.5,0.2,0.8@bar:11,7     spin 0,45,0   beat:1.4  in @@bar:10   out @@bar:18
-# Climax: a MOON hangs in the deep void — a second body, gives the cosmos scale.
-splat:moon.ply    @-1.7,1.0,1.9   *0.7   spin 0,5,0   alpha:0.85   ~fade   in @@climax   out @@outro
-# Climax: rockets streak across the grand finale, beat-reactive, deforming as they tear past.
-splat:rocket.ply  @1.9,-1.3,0.6   *0.55  rot 0,0,-22  travel:-1.0,3.2,-0.5@climax,8  spin 0,0,9   ^turbulence:0.3  beat:1.9  in @@climax  out @@outro
-splat:rocket.ply  @-1.3,-1.5,1.0  *0.45  travel:0.8,3.6,-0.6@bar:30,7    spin 5,0,5    beat:1.8  in @@bar:30   out @@outro
-# Climax: a UFO swoops the other way across the finale, spinning fast.
-splat:ufo.ply     @2.3,0.9,1.2    *0.4   travel:-2.6,-0.2,0.7@bar:31,8   spin 0,55,0   beat:1.6  in @@bar:31   out @@outro
+# deFEEST MOTIF — a lone bitterbal drifts through the mid-void on a slow lissajous (small, distant).
+mesh:bitterbal.glb @-2.4,-1.0,2.6  *0.2   path:liss:1.2,0.7,0.9,0.5,0.4,0.4  spin 0,30,0  alpha:0.65  ~fade  in @@drop  out @@bar:22
+mesh:bitterbal.glb @2.4,-0.9,2.4   *0.18  travel:3.0,1.0,3.2   alpha:0.55  ~fade  in @@outro  out @@outro+7bar
 
 # ── CAPTIONS (2D screen text overlay) ──────────────────────────────────────────
 [caption]
@@ -102,36 +90,39 @@ screentext:Annex                 in @@outro+4bar  out @@outro+7bar  at 0,1.2  ce
 screentext:BEDANKT               in @@outro+5bar  out @@outro+7bar  at 0,1.2  center  size 28  scroll 0.04  fade 1.0
 
 # ── CAMERA TRACK ───────────────────────────────────────────────────────────────
+# Framed WIDE so the void reads as deep 3D space: the hero morph sits centre with room around it, the
+# rockets streak the edges, and the distant landmarks (saturn/moon) + UFOs give parallax depth. Cuts +
+# yaw swings keep it vlot/explosive without diving so close the morph becomes abstract mush.
 [camera]
-# Intro: galaxy fills the view, a FAST push begins (no slow drift)
-t=@@bar:0     pos=0,0,0   dist=7    yaw=0.2    pitch=0.12
-t=@@bar:2     pos=0,0,0   dist=5.5  yaw=0.5    pitch=0.08
+# Intro: WIDE — the galaxy a small light in a vast void, slow push
+t=@@bar:0     pos=0,0,0   dist=9    yaw=0.2    pitch=0.12
+t=@@bar:2     pos=0,0,0   dist=7.5  yaw=0.5    pitch=0.10
 
-# Build: push in hard, arc as the star twists
-t=@@bar:4     pos=0,0,0   dist=4.5  yaw=-0.3   pitch=0.22
-t=@@bar:7     pos=0,0,0   dist=3.5  yaw=0.2    pitch=0.18
+# Build: push to medium, saturn looms far behind
+t=@@bar:4     pos=0,0,0   dist=6.0  yaw=-0.2   pitch=0.18
+t=@@bar:7     pos=0,0,0   dist=5.0  yaw=0.3    pitch=0.16
 
-# Drop: HARD CUT on every shape — fast whip-orbit through the blasting parade
-t=@@bar:10    pos=0,0,0       dist=2.6  yaw=-0.2   pitch=0.12  cut
-t=@@bar:12    pos=0.3,0.1,0   dist=3.2  yaw=0.6    pitch=0.18  cut
-t=@@bar:14    pos=-0.3,0.1,0  dist=2.8  yaw=-0.7   pitch=0.10  cut
-t=@@bar:16    pos=0.2,-0.1,0  dist=3.4  yaw=0.4    pitch=0.22  cut
-t=@@bar:18    pos=0,0,0       dist=2.3  yaw=-0.3   pitch=0.14  cut
-t=@@bar:20    pos=0,0.1,0     dist=2.8  yaw=0.5    pitch=0.16  cut
+# Drop: medium framing with CUTS — hero centre, rockets streak the edges, void all around
+t=@@bar:10    pos=0,0,0       dist=4.5  yaw=-0.2   pitch=0.14  cut
+t=@@bar:12    pos=0.2,0.1,0   dist=5.0  yaw=0.6    pitch=0.20  cut
+t=@@bar:14    pos=-0.2,0.1,0  dist=4.5  yaw=-0.7   pitch=0.12  cut
+t=@@bar:16    pos=0.2,0,0     dist=5.2  yaw=0.4    pitch=0.22  cut
+t=@@bar:18    pos=0,0,0       dist=4.0  yaw=-0.3   pitch=0.16  cut
+t=@@bar:20    pos=0,0.1,0     dist=4.8  yaw=0.5    pitch=0.18  cut
 
-# Breakdown: pull back to wide, centered on the title
-t=@@bar:22    pos=0,0,0   dist=6    yaw=0      pitch=0.05   cut
+# Breakdown: pull WIDE to the title in the void
+t=@@bar:22    pos=0,0,0   dist=7    yaw=0      pitch=0.06   cut
 
-# Climax: DIVE in, hard cut on each new shape, big yaw swings
-t=@@bar:26    pos=0,0.2,0     dist=2.3   yaw=0.3    pitch=0.10   cut
-t=@@bar:28    pos=0.4,0.2,0   dist=3.0   yaw=-0.5   pitch=0.24   cut
-t=@@bar:31    pos=-0.4,0.1,0  dist=2.6   yaw=0.7    pitch=0.14   cut
-t=@@bar:34    pos=0.2,0.3,0   dist=3.2   yaw=-0.6   pitch=0.28   cut
-t=@@bar:36    pos=0,0,0       dist=2.4   yaw=0.4    pitch=0.16   cut
+# Climax: medium-wide parade, big swings; a PULL-BACK reveal of the deep field at the end
+t=@@bar:26    pos=0,0.2,0     dist=4.2   yaw=0.3    pitch=0.12   cut
+t=@@bar:28    pos=0.3,0.2,0   dist=5.0   yaw=-0.5   pitch=0.24   cut
+t=@@bar:31    pos=-0.3,0.1,0  dist=4.5   yaw=0.7    pitch=0.16   cut
+t=@@bar:34    pos=0.2,0.3,0   dist=5.2   yaw=-0.6   pitch=0.26   cut
+t=@@bar:36    pos=0,0.2,0     dist=6.5   yaw=0.4    pitch=0.20   cut   # PULL BACK — hero + rockets + moon + UFO in the void
 
-# Outro: pull back to the signature, drift out
-t=@@bar:38    pos=0,0,0   dist=4.5  yaw=0.2    pitch=0.06   cut
-t=@@bar:43    pos=0,0,0   dist=8    yaw=0.4    pitch=0.10
+# Outro: wide drift out into deep space
+t=@@bar:38    pos=0,0,0   dist=6    yaw=0.2    pitch=0.08   cut
+t=@@bar:43    pos=0,0,0   dist=10   yaw=0.4    pitch=0.12
 
 # ── SYNC TRACK (mood keyframes) ────────────────────────────────────────────────
 [sync]
