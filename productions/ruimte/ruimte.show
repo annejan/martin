@@ -14,7 +14,7 @@ ply          = assets/galaxy.ply
 budget       = 150000
 bg           = stars
 post         = chroma
-cam_pump     = 0.3
+cam_pump     = 0.45              # bigger kick-lunge — the camera punches on every kick
 flash        = 0.0
 bg_dim       = 0.5
 beat         = 1.0
@@ -23,27 +23,34 @@ beat         = 1.0
 # Each part is a shot in the sequence: one cloud morphs into the next.
 #   @@anchor  @hold,morph[,bulge]  ~entrance  ^deform  backdrop:TYPE  tokens
 [reel]
-# ── INTRO (bars 0-3, 7.7s) ── Ontwaken: a galaxy rises from black, stars wake
-splat:galaxy.ply              @@intro    @6,1.5    ~fade              backdrop:stars     rot:0,-0.12,0
+# ── INTRO (bars 0-3, 7.7s) ── Ontwaken: a galaxy IGNITES from black, camera already pushing
+splat:galaxy.ply              @@intro    @4,1.5    ~fade                    backdrop:stars     rot:0,-0.12,0
 
-# ── BUILD (bars 4-9, 11.6s) ── Vorming: the galaxy tightens into a star with a twist
-splat:star.ply                @@build    @8,3      ~morph   ^twist:0.5   backdrop:aurora   beat:1.3   rot:0,0.2,0
+# ── BUILD (bars 4-9, 11.6s) ── Vorming: snaps into a star, twisting hard
+splat:star.ply                @@build    @4,2      ~morph   ^twist:0.6      backdrop:aurora   beat:1.4   rot:0,0.2,0   flash:0.3
 
-# ── DROP (bars 10-21, 23.2s) ── Explosie: a morph parade through abstract shapes
-splat:helix.ply               @@bar:10   @2,1.5    ~morph   ^spiral:0.3    backdrop:rings       tint:brand    beat:1.5   flash:0.5
-splat:knot.ply                @@bar:12   @3,1      ~morph   ^turbulence:0.5 backdrop:warp       tint:fry      beat:1.8
-splat:supershape.ply          @@bar:15   @3,1.5    ~morph   ^wave:0.3      backdrop:kaleido     tint:rainbow  beat:1.6
-splat:sphere.ply              @@bar:18   @2,1      ~rain                    backdrop:bolt                      beat:1.4
-splat:galaxy.ply              @@bar:20   @2,1      ~morph   ^turbulence:0.7 backdrop:stars                     flash:0.8   beat:2.0
+# ── DROP (bars 10-21, 23.2s) ── EXPLOSIE: each shape BLASTS in and SLAMS on the kick (ease:snap),
+# discrete bursts instead of slow flowing morphs — fast, punchy, a new shape every ~2 bars.
+splat:helix.ply               @@bar:10   @1.5,0.9  ~shockwave  ease:snap  ^spiral:0.4     backdrop:rings    tint:brand    beat:1.7   flash:0.7
+splat:knot.ply                @@bar:12   @1.5,0.8  ~explode    ease:snap  ^turbulence:0.6 backdrop:warp     tint:fry      beat:1.9   flash:0.6
+splat:supershape.ply          @@bar:14   @1.5,0.9  ~shatter    ease:snap  ^wave:0.4       backdrop:kaleido  tint:rainbow  beat:1.8   flash:0.6
+splat:mobius.ply              @@bar:16   @1.5,0.8  ~vortex     ease:snap  ^twist:0.5      backdrop:bolt     tint:brand    beat:1.8   flash:0.5
+splat:sphere.ply              @@bar:18   @1,0.7    ~implode    ease:snap                  backdrop:bolt     tint:rainbow  beat:1.7   flash:0.6
+splat:galaxy.ply              @@bar:20   @1.5,0.9  ~explode               ^turbulence:0.8 backdrop:stars                  flash:1.0  beat:2.3
 
-# ── BREAKDOWN (bars 22-25, 7.7s) ── Stilte: black, title appears in handwriting
-text:RUIMTE                   @@bar:22   @6,1.5    ~pen-write             backdrop:off       beat:0.5   rot:0,0,0
+# ── BREAKDOWN (bars 22-25, 7.7s) ── Stilte: black, the title SLAMS in (the one breather)
+text:RUIMTE                   @@bar:22   @5,1      ~pen-write               backdrop:off       beat:0.6   rot:0,0,0
 
-# ── CLIMAX (bars 26-37, 23.2s) ── Groots: the galaxy returns, grand and turbulent
-splat:galaxy.ply              @@climax   @12,3     ~morph   ^turbulence:0.8 backdrop:fractal   tint:brand  flash:0.7   beat:1.9
+# ── CLIMAX (bars 26-37, 23.2s) ── GROOTS: a grand explosive parade (was ONE held galaxy = saai).
+# Five shapes blast in on the kick across the finale — the energy keeps climbing, not coasting.
+splat:galaxy.ply              @@climax   @2,1.2    ~shockwave  ease:snap  ^turbulence:0.8 backdrop:fractal  tint:brand    flash:0.9  beat:2.1
+splat:supershape.ply          @@bar:28   @2,1      ~explode    ease:snap  ^wave:0.5       backdrop:kaleido  tint:rainbow  beat:2.1   flash:0.7
+splat:knot.ply                @@bar:31   @2,1      ~shatter    ease:snap  ^turbulence:0.7 backdrop:warp     tint:fry      beat:2.2   flash:0.7
+splat:star.ply                @@bar:34   @2,1      ~explode    ease:snap  ^twist:0.7      backdrop:rings    tint:brand    beat:2.3   flash:1.0
+splat:galaxy.ply              @@bar:36   @1.5,1    ~vortex                ^turbulence:0.9 backdrop:fractal  tint:rainbow  beat:2.1
 
 # ── OUTRO (bars 38-45, 15.5s) ── Vertrek: signature, credits scroll, fade
-text:deFEEST                  @@outro    @10,2     ~pen-write             backdrop:stars     beat:1.0
+text:deFEEST                  @@outro    @10,2     ~pen-write               backdrop:stars     beat:1.0
 
 # ── STAGE OBJECTS (parallel compose layer) ─────────────────────────────────────
 [stage]
@@ -96,46 +103,51 @@ screentext:BEDANKT               in @@outro+5bar  out @@outro+7bar  at 0,1.2  ce
 
 # ── CAMERA TRACK ───────────────────────────────────────────────────────────────
 [camera]
-# Intro: wide, slow drift, galaxy fills the view
-t=@@bar:0     pos=0,0,0   dist=8    yaw=0.2    pitch=0.10
-t=@@bar:2     pos=0,0,0   dist=9    yaw=0.3    pitch=0.06
+# Intro: galaxy fills the view, a FAST push begins (no slow drift)
+t=@@bar:0     pos=0,0,0   dist=7    yaw=0.2    pitch=0.12
+t=@@bar:2     pos=0,0,0   dist=5.5  yaw=0.5    pitch=0.08
 
-# Build: push in, arc right as star twists
-t=@@bar:4     pos=0,0,0   dist=6    yaw=-0.3   pitch=0.20
-t=@@bar:7     pos=0,0,0   dist=4.5  yaw=0.1    pitch=0.25
+# Build: push in hard, arc as the star twists
+t=@@bar:4     pos=0,0,0   dist=4.5  yaw=-0.3   pitch=0.22
+t=@@bar:7     pos=0,0,0   dist=3.5  yaw=0.2    pitch=0.18
 
-# Drop: CUT close, orbit the morph parade
-t=@@bar:10    pos=0,0,0   dist=3    yaw=-0.1   pitch=0.15   cut
-t=@@bar:13    pos=0.3,0,0     dist=3.5  yaw=0.5    pitch=0.10
-t=@@bar:17    pos=-0.2,0.2,0  dist=4    yaw=-0.6   pitch=0.20
-t=@@bar:20    pos=0,0,0       dist=2.5  yaw=0.2    pitch=0.15
+# Drop: HARD CUT on every shape — fast whip-orbit through the blasting parade
+t=@@bar:10    pos=0,0,0       dist=2.6  yaw=-0.2   pitch=0.12  cut
+t=@@bar:12    pos=0.3,0.1,0   dist=3.2  yaw=0.6    pitch=0.18  cut
+t=@@bar:14    pos=-0.3,0.1,0  dist=2.8  yaw=-0.7   pitch=0.10  cut
+t=@@bar:16    pos=0.2,-0.1,0  dist=3.4  yaw=0.4    pitch=0.22  cut
+t=@@bar:18    pos=0,0,0       dist=2.3  yaw=-0.3   pitch=0.14  cut
+t=@@bar:20    pos=0,0.1,0     dist=2.8  yaw=0.5    pitch=0.16  cut
 
-# Breakdown: pull back to wide, centered on text
-t=@@bar:22    pos=0,0,0   dist=7    yaw=0      pitch=0.05   cut
+# Breakdown: pull back to wide, centered on the title
+t=@@bar:22    pos=0,0,0   dist=6    yaw=0      pitch=0.05   cut
 
-# Climax: dive in, arc up and over the galaxy+torus
-t=@@bar:26    pos=0,0.2,0     dist=2.5   yaw=0.3    pitch=0.10   cut
-t=@@bar:30    pos=0.5,0.3,0   dist=3.5   yaw=-0.4   pitch=0.30
-t=@@bar:34    pos=-0.3,0,0.2  dist=4     yaw=0.7    pitch=0.20
-t=@@bar:37    pos=0,0,0       dist=2.8   yaw=0.4    pitch=0.15
+# Climax: DIVE in, hard cut on each new shape, big yaw swings
+t=@@bar:26    pos=0,0.2,0     dist=2.3   yaw=0.3    pitch=0.10   cut
+t=@@bar:28    pos=0.4,0.2,0   dist=3.0   yaw=-0.5   pitch=0.24   cut
+t=@@bar:31    pos=-0.4,0.1,0  dist=2.6   yaw=0.7    pitch=0.14   cut
+t=@@bar:34    pos=0.2,0.3,0   dist=3.2   yaw=-0.6   pitch=0.28   cut
+t=@@bar:36    pos=0,0,0       dist=2.4   yaw=0.4    pitch=0.16   cut
 
-# Outro: pull back to show the full signature, then drift
-t=@@bar:38    pos=0,0,0   dist=5    yaw=0.2    pitch=0.05   cut
-t=@@bar:43    pos=0,0,0   dist=9    yaw=0.4    pitch=0.10
+# Outro: pull back to the signature, drift out
+t=@@bar:38    pos=0,0,0   dist=4.5  yaw=0.2    pitch=0.06   cut
+t=@@bar:43    pos=0,0,0   dist=8    yaw=0.4    pitch=0.10
 
 # ── SYNC TRACK (mood keyframes) ────────────────────────────────────────────────
 [sync]
-t=@@bar:0       flash=0.0   bg_dim=0.5   beat=0.8
-t=@@bar:4       flash=0.1   bg_dim=0.45  beat=1.2
-t=@@bar:10      flash=0.6   bg_dim=0.3   beat=1.8
-t=@@bar:12      flash=0.3   bg_dim=0.25  beat=1.6
-t=@@bar:15      flash=0.5   bg_dim=0.3   beat=1.7
-t=@@bar:18      flash=0.4   bg_dim=0.35  beat=1.5
-t=@@bar:20      flash=0.7   bg_dim=0.3   beat=2.0
+t=@@bar:0       flash=0.0   bg_dim=0.5   beat=0.9
+t=@@bar:4       flash=0.2   bg_dim=0.42  beat=1.3
+t=@@bar:10      flash=0.7   bg_dim=0.28  beat=2.0
+t=@@bar:12      flash=0.6   bg_dim=0.22  beat=2.1
+t=@@bar:14      flash=0.6   bg_dim=0.25  beat=2.0
+t=@@bar:16      flash=0.6   bg_dim=0.22  beat=2.0
+t=@@bar:18      flash=0.6   bg_dim=0.28  beat=1.9
+t=@@bar:20      flash=0.9   bg_dim=0.25  beat=2.4
 t=@@bar:22      flash=0.0   bg_dim=0.0   beat=0.4
-t=@@bar:26      flash=0.5   bg_dim=0.25  beat=1.9
-t=@@bar:30      flash=0.6   bg_dim=0.2   beat=1.8
-t=@@bar:34      flash=0.7   bg_dim=0.25  beat=1.9
-t=@@bar:37      flash=0.3   bg_dim=0.3   beat=1.5
+t=@@bar:26      flash=0.7   bg_dim=0.22  beat=2.2
+t=@@bar:28      flash=0.7   bg_dim=0.2   beat=2.2
+t=@@bar:31      flash=0.7   bg_dim=0.22  beat=2.3
+t=@@bar:34      flash=1.0   bg_dim=0.2   beat=2.4
+t=@@bar:36      flash=0.6   bg_dim=0.25  beat=2.1
 t=@@bar:38      flash=0.0   bg_dim=0.5   beat=1.0
 t=@@bar:44      flash=0.0   bg_dim=0.7   beat=0.6
