@@ -27,15 +27,15 @@ beat         = 1.0
 splat:galaxy.ply              @@intro    @4,1.5    ~fade                    backdrop:stars     rot:0,-0.12,0
 
 # ── BUILD (bars 4-9, 11.6s) ── Vorming: snaps into a star, twisting hard
-splat:star.ply                @@build    @4,2      ~morph   ^twist:0.6      backdrop:stars   beat:1.4   rot:0,0.2,0   flash:0.3
+splat:star.ply                @@build    @4,2      ~morph   ^twist:0.6      backdrop:aurora   beat:1.4   rot:0,0.2,0   flash:0.3
 
 # ── DROP (bars 10-21, 23.2s) ── EXPLOSIE: each shape BLASTS in and SLAMS on the kick (ease:snap),
 # discrete bursts instead of slow flowing morphs — fast, punchy, a new shape every ~2 bars.
-splat:helix.ply               @@bar:10   @1.5,0.9  ~shockwave  ease:snap  ^spiral:0.4     backdrop:stars    tint:brand    beat:1.7   flash:0.7
+splat:helix.ply               @@bar:10   @1.5,0.9  ~shockwave  ease:snap  ^spiral:0.4     backdrop:rings    tint:brand    beat:1.7   flash:0.7
 splat:knot.ply                @@bar:12   @1.5,0.8  ~explode    ease:snap  ^turbulence:0.6 backdrop:tunnel   tint:fry      beat:1.9   flash:0.6
-splat:supershape.ply          @@bar:14   @1.5,0.9  ~shatter    ease:snap  ^wave:0.4       backdrop:stars   tint:rainbow  beat:1.8   flash:0.6
-splat:mobius.ply              @@bar:16   @1.5,0.8  ~vortex     ease:snap  ^twist:0.5      backdrop:stars    tint:brand    beat:1.8   flash:0.5
-splat:sphere.ply              @@bar:18   @1,0.7    ~implode    ease:snap                  backdrop:stars   tint:rainbow  beat:1.7   flash:0.6
+splat:supershape.ply          @@bar:14   @1.5,0.9  ~shatter    ease:snap  ^wave:0.4       backdrop:kaleido   tint:rainbow  beat:1.8   flash:0.6
+splat:mobius.ply              @@bar:16   @1.5,0.8  ~vortex     ease:snap  ^twist:0.5      backdrop:warp    tint:brand    beat:1.8   flash:0.5
+splat:sphere.ply              @@bar:18   @1,0.7    ~implode    ease:snap                  backdrop:bolt   tint:rainbow  beat:1.7   flash:0.6
 splat:galaxy.ply              @@bar:20   @1.5,0.9  ~explode               ^turbulence:0.8 backdrop:stars                  flash:1.0  beat:2.3
 
 # ── BREAKDOWN (bars 22-25, 7.7s) ── Stilte: black, the title SLAMS in (the one breather)
@@ -43,11 +43,11 @@ text:RUIMTE                   @@bar:22   @5,1      ~pen-write               back
 
 # ── CLIMAX (bars 26-37, 23.2s) ── GROOTS: a grand explosive parade (was ONE held galaxy = saai).
 # Five shapes blast in on the kick across the finale — the energy keeps climbing, not coasting.
-splat:galaxy.ply              @@climax   @2,1.2    ~shockwave  ease:snap  ^turbulence:0.8 backdrop:stars    tint:brand    flash:0.9  beat:2.1
-splat:supershape.ply          @@bar:28   @2,1      ~explode    ease:snap  ^wave:0.5       backdrop:stars   tint:rainbow  beat:2.1   flash:0.7
-splat:knot.ply                @@bar:31   @2,1      ~shatter    ease:snap  ^turbulence:0.7 backdrop:stars   tint:fry      beat:2.2   flash:0.7
-splat:star.ply                @@bar:34   @2,1      ~explode    ease:snap  ^twist:0.7      backdrop:stars    tint:brand    beat:2.3   flash:1.0
-splat:galaxy.ply              @@bar:36   @1.5,1    ~vortex                ^turbulence:0.9 backdrop:stars   tint:rainbow  beat:2.1
+splat:galaxy.ply              @@climax   @2,1.2    ~shockwave  ease:snap  ^turbulence:0.8 backdrop:fractal    tint:brand    flash:0.9  beat:2.1
+splat:supershape.ply          @@bar:28   @2,1      ~explode    ease:snap  ^wave:0.5       backdrop:kaleido   tint:rainbow  beat:2.1   flash:0.7
+splat:knot.ply                @@bar:31   @2,1      ~shatter    ease:snap  ^turbulence:0.7 backdrop:warp   tint:fry      beat:2.2   flash:0.7
+splat:star.ply                @@bar:34   @2,1      ~explode    ease:snap  ^twist:0.7      backdrop:rings    tint:brand    beat:2.3   flash:1.0
+splat:galaxy.ply              @@bar:36   @1.5,1    ~vortex                ^turbulence:0.9 backdrop:fractal   tint:rainbow  beat:2.1
 
 # ── OUTRO (bars 38-45, 15.5s) ── Vertrek: signature, credits scroll, fade
 text:deFEEST                  @@outro    @10,2     ~pen-write               backdrop:stars     beat:1.0
@@ -59,28 +59,33 @@ text:deFEEST                  @@outro    @10,2     ~pen-write               back
 # fullscreen SHADERS (no cloud depth-sort), so props are free to sit anywhere in Z. Rule: keep every
 # prop's centre ≥ ~3 units from the origin (clear of the hero) and trajectories OUT of frame-centre.
 
-# DEEP LANDMARKS — big + clearly visible, distant enough for parallax. Saturn (early) back-LEFT and the
-# Moon (later) back-RIGHT anchor the cosmos behind the hero on opposite sides without crowding it.
-splat:saturn.ply  @-3.2,1.6,3.6   *1.4   rot 0,0,0   spin 0,3,0   alpha:0.92   ~fade   in @@build    out @@bar:22
-splat:moon.ply    @3.2,1.5,3.6    *1.2   spin 0,4,0  alpha:0.9                ~fade   in @@drop     out @@outro
+# SCREEN-SPACE NOTE: the camera orbits at yaw ~0.3 (almost on +X looking toward −X), so world-Z is the
+# screen-HORIZONTAL axis and world-X is mostly DEPTH (screen_x ∝ x·sin yaw − z·cos yaw ≈ −z here). To
+# push a prop to a screen EDGE, offset its Z (not X): −Z → screen-right, +Z → screen-left. Y is the
+# stable screen-vertical (small camera pitch). So: landmarks high + Z-split, rockets streak up a Z-side,
+# UFOs cross the upper third along Z.
 
-# ROCKET LAUNCHES — streak UP past the hero: start low in frame (y -2.5) just BESIDE the morph (x ±1.4
-# = clear of the hero at ±1, no overlap), climb straight up + slightly back, out the top. The small x
-# offset keeps them on-screen as the camera orbits while the big vertical travel is the readable action.
-# rocket nose points +Y (no rot needed for a vertical climb). travel: eases @pos→target over `dur` s.
-splat:rocket.ply  @-1.4,-2.5,0.2  *0.7   travel:-1.6,3.5,-0.6@drop,6.5     spin 0,0,-6   ^turbulence:0.2   beat:1.6  in @@drop     out @@bar:18
-splat:rocket.ply  @1.5,-2.6,0.3   *0.65  travel:1.8,3.4,-0.7@bar:13,6      spin 0,0,7    beat:1.6  in @@bar:13   out @@bar:22
-splat:rocket.ply  @1.4,-2.6,0.2   *0.7   travel:1.7,3.5,-0.7@climax,7      spin 0,0,8    ^turbulence:0.25  beat:1.8  in @@climax   out @@bar:34
-splat:rocket.ply  @-1.5,-2.6,0.3  *0.65  travel:-1.8,3.4,-0.6@bar:31,7     spin 0,0,-7   beat:1.8  in @@bar:31   out @@outro
+# STATIC PLACEMENT (no travel): travel-based splat compose props render at the ORIGIN and ignore their
+# in/out timing (an engine bug — only NON-travel ~fade splat props place + time correctly, like Saturn).
+# So every prop here is a STATIC ~fade cloud at a fixed off-centre spot with `spin` for life. MINIMAL +
+# STAGGERED: at most one prop shares a window with the hero so nothing piles on the centre.
 
-# UFOs — crossing the mid-background behind the hero: close enough to read as visible deep-space traffic,
-# far enough never to overlap the centre.
-splat:ufo.ply     @-3.2,1.6,3.2   *0.85  travel:3.2,1.3,3.2@bar:11,9     spin 0,40,0   beat:1.0  in @@bar:10   out @@bar:22
-splat:ufo.ply     @3.4,1.7,3.4    *0.85  travel:-3.4,1.4,3.4@bar:30,9    spin 0,45,0   beat:1.0  in @@bar:30   out @@outro
+# Landmarks: Saturn far top-LEFT through build/drop; the Moon far top-RIGHT through the climax.
+splat:saturn.ply  @-2.6,2.6,3.2   *0.9   rot 0,0,0   spin 0,3,0   alpha:0.9   ~fade   in @@build    out @@bar:20
+splat:moon.ply    @2.6,2.6,-3.2   *0.8   spin 0,4,0  alpha:0.9               ~fade   in @@climax   out @@outro
 
-# deFEEST MOTIF — a lone bitterbal drifts through the mid-void on a slow lissajous (small, distant).
-mesh:bitterbal.glb @-2.4,-1.0,2.6  *0.2   path:liss:1.2,0.7,0.9,0.5,0.4,0.4  spin 0,30,0  alpha:0.65  ~fade  in @@drop  out @@bar:22
-mesh:bitterbal.glb @2.4,-0.9,2.4   *0.18  travel:3.0,1.0,3.2   alpha:0.55  ~fade  in @@outro  out @@outro+7bar
+# DROP: a UFO hangs upper-RIGHT early (bars 10-14), THEN a rocket hangs lower-LEFT (bars 15-20). Spin
+# gives them life; staggered so only one is up with the hero at a time.
+splat:ufo.ply     @2.8,1.8,1.8    *0.5   spin 0,45,0   ~fade  in @@bar:10   out @@bar:14
+splat:rocket.ply  @-2.6,-1.6,2.6  *0.45  rot 0,0,0  spin 0,30,0  alpha:0.9  ~fade  in @@drop  out @@breakdown
+
+# CLIMAX: a rocket hangs lower-RIGHT early (bars 26-31), THEN a UFO hangs upper-LEFT (bars 32-37).
+splat:rocket.ply  @2.6,-1.6,-2.6  *0.45  spin 0,30,0   ~fade  in @@climax   out @@bar:31
+splat:ufo.ply     @-2.8,1.8,-1.8  *0.5   spin 0,45,0   ~fade  in @@bar:32   out @@outro
+
+# deFEEST MOTIF — a small bitterbal (a MESH, which DOES honor travel) drifts the far lower void.
+mesh:bitterbal.glb @-2.2,-2.0,2.8  *0.14  path:liss:1.0,0.6,0.8,0.4,0.3,0.3  spin 0,30,0  alpha:0.6  ~fade  in @@drop  out @@bar:14
+mesh:bitterbal.glb @2.2,-1.6,3.0   *0.14  travel:3.0,0.4,3.6   alpha:0.5  ~fade  in @@outro  out @@outro+7bar
 
 # ── CAPTIONS (2D screen text overlay) ──────────────────────────────────────────
 [caption]

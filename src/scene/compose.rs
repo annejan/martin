@@ -386,7 +386,8 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     Vec3::splat(v.parse().unwrap_or(1.0))
                 };
                 i += step;
-            } else {
+            } else if kw(t) {
+                // a space-separated keyword that takes the NEXT token as its value (`rot 0,0,0`).
                 let val = rest.get(i + 1).copied().unwrap_or("");
                 match t {
                     "rot" => rot = vec3_csv(val),
@@ -399,6 +400,12 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     _ => {}
                 }
                 i += 2;
+            } else {
+                // An unrecognized stray token (a typo, or a token only valid in `[reel]` like `beat:`).
+                // Skip just IT — advancing by 2 here would swallow the following token, and if that was
+                // `in`/`out` the next `@anchor` got mis-read as an `@pos` → the object snapped to the
+                // ORIGIN, stacking dead-centre. Skip-by-one keeps stray tokens harmless.
+                i += 1;
             }
         }
         // resolve `travel:` now that @pos (`pos`) and the `in` cue (`appear`) are final. Start = the
