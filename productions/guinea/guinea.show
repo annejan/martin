@@ -30,7 +30,7 @@ mesh:defeest.glb  @@bar:0    @3,3    ~fade    rot:180,0,0   backdrop:off   disk:
 # Part 1: cavia (live guinea pig) — morphs in from the logo; ground: seats it ON the plate.
 # ^jitter: a nervous per-particle twitch while it holds (6.4→12.8s) — the live pet is ALIVE (and the
 # bar-7 drum fill reads as a death-twitch), so the cook lands as a transformation, not a swap.
-mesh:cavia.glb    @@bar:4    @3,3,0  ~morph   ^jitter:1.2   aniso:2.5   rot:0,0,0   ground:-0.65
+mesh:cavia.glb    @@bar:4    @3,3,0  ~morph   ^jitter:0.4   aniso:2.5   rot:0,0,0   ground:-0.65
 # Part 2: cuy (the cooked dish). ease:hold-snap HANGS the live cavia through the morph then SLAMS the
 # cooked dish in over the last 20% — landing fully revealed on the 16.0s kick (bar:10). @18,3.2,0 =
 # hold 18 / morph 3.2 / bulge 0 (KEEP bulge 0 + pair=match: bulge balloons to a cloud = wrong gag).
