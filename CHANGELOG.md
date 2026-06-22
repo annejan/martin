@@ -11,6 +11,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **`rocket` procedural splat shape** (`splatgen`) — a cartoon rocket: white hull with red bands, a red
+  nose cone, three swept tail fins, a cyan porthole, and a hot exhaust plume (the plume reads as
+  translucent fire like `flame`). Nose points +Y, so a `travel:` toward +Y reads as a launch. The
+  RUIMTE show now flies rockets through the drop + climax (with a cratered `moon` hanging in the void)
+  so the cosmic journey reads as *space*, not just abstract morphs.
 - **`MARTIN_MORPH_STAGGER` / `.show` `morph_stagger =`** (0..1, default 0) — per-particle staggered
   morph timing. At 0 a morph slides the whole cloud in lockstep (straight-line streaks); higher spreads
   each splat's transition over its own sub-window so the cloud **dissolves + reforms** — a soft, cloudy

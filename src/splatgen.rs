@@ -41,6 +41,7 @@ pub const SHAPES: &[&str] = &[
     "tent",
     "pine",
     "flame",
+    "rocket",
     "terrain",
     "moon",
     "mountains",
@@ -408,6 +409,73 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
                 rgb.push([1.0, (0.3 + 0.7 * heat).min(1.0), 0.1 * heat]);
             }
         }
+        "rocket" => {
+            // A cartoon rocket pointing UP: white cylindrical body with red bands, a red nose cone,
+            // three swept red tail fins, a cyan porthole, and a hot exhaust plume firing below. yu is
+            // the up-axis (tail -1 → nose +1), stored NEGATED — martin flips Y-down .ply upright on
+            // load, so build inverted to render nose-up (same trick as tent/pine/flame above).
+            let body_r = 0.24f32;
+            for _ in 0..N {
+                let s = rng.unit();
+                let p: [f32; 3];
+                let col: [f32; 3];
+                if s < 0.40 {
+                    // body: a cylinder shell, yu in [-0.55, 0.45], with the odd red band for read.
+                    let yu = rng.uniform(-0.55, 0.45);
+                    let a = rng.uniform(0.0, tau);
+                    let r = body_r * (1.0 + 0.02 * rng.normal(0.0, 1.0));
+                    p = [r * a.cos(), yu, r * a.sin()];
+                    col = if (yu * 6.0).sin() > 0.85 {
+                        [0.85, 0.12, 0.10]
+                    } else {
+                        [0.88, 0.89, 0.93]
+                    };
+                } else if s < 0.58 {
+                    // nose cone: yu in [0.45, 1.05], radius tapering to a point. Red.
+                    let t = rng.unit();
+                    let yu = 0.45 + t * 0.60;
+                    let a = rng.uniform(0.0, tau);
+                    let r = body_r * (1.0 - t) * (1.0 + 0.02 * rng.normal(0.0, 1.0));
+                    p = [r * a.cos(), yu, r * a.sin()];
+                    col = [0.85, 0.12, 0.10];
+                } else if s < 0.73 {
+                    // three fins at 120°: a triangle from the body root swept out to a tail tip.
+                    let fin = (rng.int(3) as f32) * tau / 3.0;
+                    let t = rng.unit(); // 0 = root (upper), 1 = tail tip
+                    let yu = -0.15 - t * 0.45; // fin spans yu -0.15 → -0.60
+                    let rad = body_r + t * 0.34 * rng.unit(); // fill the swept triangle
+                    let thick = 0.02 * rng.normal(0.0, 1.0);
+                    let (c, sn) = (fin.cos(), fin.sin());
+                    p = [rad * c - thick * sn, yu, rad * sn + thick * c];
+                    col = [0.80, 0.12, 0.10];
+                } else if s < 0.77 {
+                    // cyan porthole, a disc on the +Z body face around yu 0.12.
+                    let a = rng.uniform(0.0, tau);
+                    let rr = 0.07 * rng.unit().sqrt();
+                    let yu = 0.12 + rr * a.sin();
+                    let off = rr * a.cos();
+                    p = [
+                        off,
+                        yu,
+                        (body_r * body_r - off * off).max(0.0).sqrt() + 0.005,
+                    ];
+                    col = [0.30, 0.70, 0.95];
+                } else {
+                    // exhaust plume below the tail: yu -0.6 → -1.2, a hot tapering tongue (red=1.0
+                    // exactly marks it as flame for opacity_of/size_of below).
+                    let h = rng.unit().powf(0.7);
+                    let a = rng.uniform(0.0, tau);
+                    let tongue = 1.0 + 0.2 * (3.0 * a).sin();
+                    let r = body_r * (1.0 - h) * tongue * (0.6 + 0.4 * rng.unit());
+                    let yu = -0.6 - h * 0.6;
+                    p = [r * a.cos(), yu, r * a.sin()];
+                    let heat = (1.0 - h).clamp(0.0, 1.0);
+                    col = [1.0, (0.3 + 0.7 * heat).min(1.0), 0.1 * heat];
+                }
+                pos.push([p[0], -p[1], p[2]]); // -Y: nose points up after martin's load-flip
+                rgb.push(col);
+            }
+        }
         "terrain" => {
             // A ROUND field (disc) so scenes have a floor instead of floating in the void — reads as
             // a clean diorama base, not a square slab with corners. The show can stretch it to an
@@ -675,7 +743,15 @@ fn opacity_of(name: &str, rgb: &[f32; 3]) -> f32 {
                 0.85
             }
         }
-        "tent" => 0.82,      // canvas (near-solid)
+        "tent" => 0.82, // canvas (near-solid)
+        // rocket: the exhaust plume (red==1.0, low blue) glows translucent like fire; the hull is solid.
+        "rocket" => {
+            if rgb[0] > 0.97 && rgb[2] < 0.25 {
+                0.14 + 0.44 * ((rgb[1] - 0.3) / 0.7).clamp(0.0, 1.0)
+            } else {
+                0.88
+            }
+        }
         "moon" => 0.92,      // solid rock
         "terrain" => 0.60,   // the ground reads, but a touch translucent helps it sit behind props
         "mountains" => 0.40, // hazy, distant
@@ -698,8 +774,16 @@ fn size_of(name: &str, rgb: &[f32; 3]) -> f32 {
             }
         }
         "mountains" => 0.060, // big hazy blobs (distant)
-        "terrain" => 0.030,   // soft ground
-        "tent" => 0.020,      // crisp canvas
+        // rocket: big soft plume at the tail, crisp small splats on the hull.
+        "rocket" => {
+            if rgb[0] > 0.97 && rgb[2] < 0.25 {
+                0.040 + 0.030 * ((rgb[1] - 0.3) / 0.7).clamp(0.0, 1.0)
+            } else {
+                0.016
+            }
+        }
+        "terrain" => 0.030, // soft ground
+        "tent" => 0.020,    // crisp canvas
         "moon" => 0.022,
         _ => SPLAT, // the default
     }
