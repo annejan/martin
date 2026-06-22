@@ -285,11 +285,18 @@ pub(crate) fn build_sequence(
     }
 
     let built_n = shots.len();
+    // Peak resident = every shot's shape cloud + any `origin`/`exit` source cloud (all held in
+    // BuiltShot handles for the whole show), each `n` gaussians. Warn if that risks a GPU OOM.
+    let resident: usize = shots
+        .iter()
+        .map(|s| (1 + usize::from(s.origin.is_some()) + usize::from(s.exit_cloud.is_some())) * n)
+        .sum();
     state.starts = shots.iter().map(|s| s.start).collect(); // cache the cue timeline once (immutable after)
     state.shots = shots;
     state.entity = Some(entity);
     state.built = true;
     info!("sequence built: {built_n} shots × {n} gaussians");
+    crate::scene::warn_splat_budget("sequence", resident);
 }
 
 /// Build each shot's `BuiltShot` (consuming `raws`) — its shape (resampled to the shared budget `n`,

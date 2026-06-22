@@ -11,6 +11,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **GPU-OOM heads-up (`MARTIN_SPLAT_WARN`, default 2.0M)** — at build martin estimates a scene's PEAK
+  resident gaussians (every reel shot's shape + `~entrance`/`exit:` source clouds, plus every compose
+  prop ×2 for an `~entrance`) and logs a `WARN` if it exceeds the soft cap. The dev iGPU renders ~2M
+  fine but OOMs ~2.5M — a long record would die mid-render with a wgpu buffer *Validation Error* (no
+  panic, frames just stop). The warning fires before the slow render so you can lower
+  `MARTIN_MORPH_COUNT` / the `.show` `budget` first. Pure heads-up; never clamps or changes output.
 - **`rocket` / `saturn` / `ufo` procedural splat shapes** (`splatgen`) — a space set:
   - `rocket` — a cartoon rocket: white hull with red bands, a red nose cone, three swept tail fins, a
     cyan porthole, and a hot exhaust plume (the plume reads as translucent fire like `flame`). Nose

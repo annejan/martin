@@ -25,6 +25,32 @@ use crate::capture::RecordState;
 
 const NORMALIZE_EXTENT: f32 = 2.0; // each part is centered + scaled so its largest dim = this
 
+/// Warn when a scene's estimated PEAK resident gaussian count is high enough to risk a GPU OOM on the
+/// dev iGPU (Radeon 860M OOMs ~2.5M; safe ~1.2M). The build holds every reel shot's clouds (shape +
+/// `origin`/`exit` source clouds) AND every compose prop (+ its entrance source cloud) resident at
+/// once — so a big `budget`/`MARTIN_MORPH_COUNT` × many parts silently crosses the line and a long
+/// record dies mid-render with a wgpu buffer "Validation Error" (no panic, frames just stop). This is
+/// a pure heads-up logged at build (before the slow render) so the author can lower the count first.
+/// Soft cap defaults to 2.0M (the 860M renders ~2M fine but OOMs ~2.5M, so this flags the danger zone
+/// without false-alarming working scenes); override with `MARTIN_SPLAT_WARN`.
+pub(crate) fn warn_splat_budget(label: &str, splats: usize) {
+    let cap = crate::envvar::or("MARTIN_SPLAT_WARN", 2_000_000usize);
+    if splats > cap {
+        warn!(
+            "{label}: ~{:.2}M gaussians resident — over the {:.2}M soft cap (MARTIN_SPLAT_WARN). A long \
+             record may OOM the GPU mid-render; lower MARTIN_MORPH_COUNT or the .show `budget`.",
+            splats as f32 / 1e6,
+            cap as f32 / 1e6,
+        );
+    } else {
+        info!(
+            "{label}: ~{:.2}M gaussians resident (cap {:.2}M)",
+            splats as f32 / 1e6,
+            cap as f32 / 1e6
+        );
+    }
+}
+
 /// The env vars that request specific content. With none of them set (and no `MARTIN_SHOW`), martin
 /// plays the bundled intro. (`MARTIN_PLY` is NOT here — it's only the asset ROOT now, not content, so a
 /// bare `MARTIN_PLY` still falls through to the intro.)

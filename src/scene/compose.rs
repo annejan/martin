@@ -488,6 +488,7 @@ pub(crate) fn build_composition(
     let count = crate::envvar::or("MARTIN_MORPH_COUNT", 120_000);
     let mut placed: Vec<(Vec3, f32)> = Vec::new(); // (centre, radius) per object, for framing
     let mut any_model = false;
+    let mut resident = 0usize; // running estimate of peak resident gaussians (for the OOM warning)
     for obj in &comp.objects {
         // A real glTF mesh prop: rendered as PBR geometry alongside the splats (no flip — glTF is
         // Y-up native; the splats are flipped to match). It shares the camera + depth buffer, so it
@@ -520,6 +521,8 @@ pub(crate) fn build_composition(
         // size matches the eventual density — sampling high then downsampling left mesh disks too small
         // for the thinned spacing → holes (most visible on the big props, e.g. the horses, at 1080p).
         let obj_count = obj.count.unwrap_or(count);
+        // Peak resident for this prop: its shape cloud + (for a `~entrance`) its source cloud → ×2.
+        resident += obj_count * if obj.entrance.is_some() { 2 } else { 1 };
         let sample_n = match obj.field {
             Some(n) => (obj_count / n.max(1)).max(2_000),
             None => obj_count,
@@ -656,6 +659,7 @@ pub(crate) fn build_composition(
         center.z,
         dist
     );
+    crate::scene::warn_splat_budget("composition", resident);
 }
 
 /// Animate the stage from the show clock: spin + bob + drift each object, fade it in (and out, if
