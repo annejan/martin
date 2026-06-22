@@ -118,7 +118,7 @@ t=@@bar:18    pos=0,0,0       dist=4.0  yaw=-0.3   pitch=0.16  cut
 t=@@bar:20    pos=0,0.1,0     dist=4.8  yaw=0.5    pitch=0.18  cut
 
 # Breakdown: pull WIDE to the title in the void
-t=@@bar:22    pos=0,0,0   dist=7    yaw=0      pitch=0.06   cut
+t=@@bar:22    pos=0,0,0   dist=6    yaw=1.57   pitch=0.06   cut
 
 # Climax: medium-wide parade, big swings; a PULL-BACK reveal of the deep field at the end
 t=@@bar:26    pos=0,0.2,0     dist=4.2   yaw=0.3    pitch=0.12   cut
