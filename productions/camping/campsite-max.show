@@ -46,13 +46,13 @@ splat:pine.ply      @-3.5,-0.31,-0.9 *0.65  sway 0,7,0  bob 0.03   ~fade  in cli
 splat:pine.ply      @-4.0,-0.48,1.2  *0.9   sway 0,6,0  bob 0.04   ~fade  in drop
 # caravan.glb (PD, AJB) — the camper parked in the camp; assembles with the tent in the build. rot/scale
 # render-checked per the new-asset rule.
-mesh:caravan.glb    @-2.7,-0.55,-0.4 *0.7   rot 0,35,0  ~fade  in build   count:6000
+mesh:caravan.glb    @-2.7,-0.55,-0.4 *0.7   rot 0,35,0  disk:0.4  ~fade  in build   count:35000
 
 # ── WORDMARK: the emotional spine. deFEEST opens the camp (build), then LEAVES at the breakdown
 #    (the "zonder deFEEST is het kut" dip — the camp goes dark + empty), then RETURNS bigger + bright
 #    on the climax (~explode = the joyful comeback) — the party only erupts WITH deFEEST back. ──
 text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build  out breakdown
-text:deFEEST        @-1.4,0.9,1.0 *0.55  ~explode    tint:brand  bob 0.05  in climax
+text:deFEEST        @-1.4,0.9,1.0 *0.55  ~outline    font:defeest  tint:brand  bob 0.05  in climax  # the SECOND coming — outline draw-on
 
 # ── STORY: horse walks in, party erupts with flying bitterballen ──
 mesh:paard.glb  @-9.0,-0.5,-4.5  *0.9  count:40000  rot 0,180,0  travel:-2.2,-0.868,-4.5@breakdown,16  sway 0,4,0  bob 0.05  ^pulse:0.4  ~fade  in breakdown
@@ -68,8 +68,8 @@ mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   count:40000  rot 0,200,0  sway 0,5,0
 splat:doggo.ply     @1.96,-1.16,1.2  *0.5   rot 0,-16,0  sway 0,7,0  bob 0.04  travel:1.8,-1.0,1.2@climax,14  ~fade  in climax
 # Festival title card — drawn EARLY (from the drop, as the camp comes alive) in OUTLINE (neon draw-on),
 # held to the outro. Title + subtitle stacked, centre-upper, clear of the deFEEST wordmark (left).
-text:PonyCamp       @0,1.25,1.0    *0.5   ~outline  font:defeest  tint:brand  bob 0.05  in build  out outro
-text:Fun en Games   @0,0.78,1.0   *0.3   ~outline  font:defeest  tint:brand  bob 0.04  in build  out outro
+text:PonyCamp       @0,1.25,1.0    *0.5   ~fade  font:defeest  tint:brand  bob 0.05  in build  out outro  # filled deFEEST font (not outline)
+text:Fun en Games   @0,0.78,1.0   *0.3   ~fade  font:defeest  tint:brand  bob 0.04  in build  out outro
 
 # ── BARNYARD: the camp's resident animals finish off PonyCamp. Two goats graze as the camp assembles
 #    (build); a peacock struts in when the fire lights (drop); and a rare WHITE peacock (tint:white —
@@ -80,6 +80,9 @@ mesh:geit.glb  @-2.4,-1.05,2.1  *0.5   rot 0,-4,0   sway 0,5,0  bob 0.05        
 mesh:geit.glb  @2.6,-1.24,2.0   *0.45  rot 0,-74,0  sway 0,6,0  bob 0.06               ~fade  in build
 mesh:pauw.glb  @-1.79,-1.3,-0.57  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~fade  in drop
 mesh:pauw.glb  @0.75,-1.33,-1.98  *0.6   rot 0,-55,0  spin 0,12,0  bob 0.06  ^pulse:0.6  tint:white  ~fade  in drop
+# cavia's (guinea pigs) — tiny camp critters near the tent, social pair; nervous twitch via ^jitter.
+mesh:cavia.glb @-1.15,-1.12,1.45  *0.26  rot 0,28,0   sway 0,10,0  bob 0.035  ^jitter:0.4  ~fade  in build
+mesh:cavia.glb @-0.78,-1.10,1.55  *0.22  rot 0,-18,0  sway 0,12,0  bob 0.04   ^jitter:0.4  ~fade  in build
 
 # ── CREDITS: Bevy UI scrolling captions (see [caption] below) ──
 
