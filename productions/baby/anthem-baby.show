@@ -28,6 +28,7 @@ text:ANTHEM BABY  @-0.9,-1.4,1.4  *0.7  ~pen-write  in refrain  out outro       
 [camera]
 t=0.0   pos=0,0,0   dist=4.4   yaw=1.57   pitch=0.05
 t=20.0  pos=0,0,0   dist=4.0   yaw=1.50   pitch=0.08
-t=45.0  pos=0,0,0   dist=3.6   yaw=1.64   pitch=0.10   # push in on the refrain soar (head stays in frame)
-t=70.0  pos=0,0,0   dist=3.9   yaw=1.57   pitch=0.06
-t=85.0  pos=0,0,0   dist=4.3   yaw=1.57   pitch=0.05
+t=38.0  pos=0,0,0   dist=3.7   yaw=1.64   pitch=0.10   # refrain begins — start the push-in
+t=54.0  pos=0,0,0   dist=3.4   yaw=1.57   pitch=0.10   # deepest on the F5 peak ("…держа́ва")
+t=68.0  pos=0,0,0   dist=3.9   yaw=1.57   pitch=0.06
+t=76.0  pos=0,0,0   dist=4.3   yaw=1.57   pitch=0.05

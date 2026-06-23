@@ -1,7 +1,8 @@
-# martin score — "ANTHEM BABY": a stately, brass-and-choir take on the Soviet/Russian state-anthem
-# melody (Alexandrov) for the parametric spinning baby. PUBLIC-DOMAIN-ish folk-anthem theme, recast
-# as a slow demoscene hymn (NOT the official recording — a synth approximation, our own arrangement).
-# The signature soar up to the high `la` on "наша держава" lands on the climax. ~85s.
+# martin score — "ANTHEM BABY": the actual State Anthem of the USSR / Russia melody (Alexandrov),
+# transcribed note-for-note from a public MIDI (Internet Archive item `ussr-1`), quantised to martin's
+# 16-slot grid by pipeline tooling — NOT a from-memory guess. C major, stately ~76 BPM. The signature
+# dotted-eighth→sixteenth "long–short" swing and the soaring refrain (the high F5 on "…держа́ва") are
+# intact. Our own synth arrangement (choir + sub + brass lead), not the official recording. ~76s.
 #
 #   live:    MARTIN_SHOW=productions/baby/anthem-baby.show cargo +nightly run --release
 #   preview: TMPDIR=~/.cache/martin-render MARTIN_RES=480x270 MARTIN_PREVIEW_FPS=8 \
@@ -10,27 +11,30 @@ bpm 76
 chords C G Am F
 
 # big, warm, hymn-like: choir + sub + a little lead brass, generous reverb, slow swell. No party donk.
-set lead=0.7 sub=0.55 choir=0.6 supersaw=0.18 reverb=0.6 sidechain=0.3 widen=1.4 makeup=1.1 ceiling=0.94 woozbass=0 shimmer=0.16 reverbauto=1 hats=0.18 snares=0.3 atmosphere=0.4
+set lead=0.72 sub=0.55 choir=0.62 supersaw=0.16 reverb=0.6 sidechain=0.28 widen=1.4 makeup=1.1 ceiling=0.94 woozbass=0 shimmer=0.16 reverbauto=1 hats=0.16 snares=0.3 atmosphere=0.4
 
 section intro 4 4
 section verse 8 8
 section refrain 8 8
 section outro 4 4
 
-# --- drums: a slow ceremonial march — kick on the strong beats, a snare tap, no hats clutter ---
-intro.kick p0:  x... .... x... ....
-verse.kick p0:  x... .... x... ....
-verse.snare p0: .... x... .... x...
+# --- drums: a slow ceremonial march — kick on the strong beats, a soft snare on 3, fill into refrain ---
+intro.kick p0:    x... .... x... ....
+verse.kick p0:    x... .... x... ....
+verse.snare p0:   .... .... x... ....
 refrain.kick p0:  x... .... x... ....
 refrain.snare p0: .... x... .... x...
 refrain.kick fill: x... x... x... x.xx
-outro.kick p0:  x... .... .... ....
+outro.kick p0:    x... .... .... ....
 
-# --- melody: the anthem theme (our transcription, C major). Stately quarter notes; the high A5 leap
-#     in the refrain ("наша держава") is the soaring kill-shot. Held with ties for the legato hymn feel.
-verse.lead p0:    G4 - - -  C5 - - -  C5 - - -  E5 - - -   D5 - - -  C5 - - -  F5 - - -  E5 - - -   D5 - - -  C5 - - -  D5 - - -  E5 - - -   E5 - - -  - - - -  E5 - - -  - - - -
-refrain.lead p0:  E5 - - -  A5 - - -  G5 - - -  F5 - - -   E5 - - -  D5 - - -  D5 - - -  - - - -   D5 - - -  G5 - - -  F5 - - -  E5 - - -   D5 - - -  C5 - - -  - - - -  - - - -
+# --- melody: Alexandrov's anthem theme (real transcription). Pickup G4 lands at the end of the intro;
+#     verse = the two opening lines ("Сою́з неруши́мый…"), refrain = the soaring "Сла́вься…" with the F5 peak.
+intro.lead p0:    . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . G4 -
+verse.lead p0:    C5 - - -  G4 - - A4  B4 - - -  E4 - - E4   A4 - - -  G4 - - F4  G4 - - -  C4 - - C4   D4 - - -  D4 - - E4  F4 - - -  F4 - - G4   A4 - - -  B4 - - C5  D5 - - -  - - G4 -   E5 - - -  D5 - - C5  D5 - - -  G4 - - G4   C5 - - -  B4 - - A4  B4 - - -  E4 - - E4   A4 - - -  G4 - - F4  G4 - - -  C4 - - C4   C5 - - -  B4 - - A4  G4 - B4 -  C5 - D5 -
+refrain.lead p0:  E5 - - -  - - - -  D5 - C5 -  B4 - C5 -   D5 - - -  - - G4 -  G4 - B4 -  C5 - D5 -   C5 - - -  - - - -  B4 - A4 -  G4 - A4 -   B4 - - -  - - E4 -  E4 - G4 -  A4 - B4 -   C5 - - -  A4 - - B4  C5 - - -  A4 - - B4   C5 - - -  A4 - - C5  F5 - - -  - - - -   F5 - - -  - - - -  E5 - D5 -  C5 - D5 -   E5 - - -  - - C5 -  C5 - - -  - - - -
+outro.lead p0:    C5 - - -  - - - -  - - - -  - - - -   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
 
-# --- bass: roots under the hymn, long sustained tones ---
-verse.bass p0:    C3 - - -  - - - -  G3 - - -  - - - -   C3 - - -  - - - -  F3 - - -  - - - -   C3 - - -  - - - -  G3 - - -  - - - -   C3 - - -  - - - -  G3 - - -  - - - -
-refrain.bass p0:  C3 - - -  - - - -  F3 - - -  - - - -   C3 - - -  - - - -  G3 - - -  - - - -   C3 - - -  - - - -  G3 - - -  - - - -   C3 - - -  - - - -  C3 - - -  - - - -
+# --- bass: the anthem's own root motion, per bar, pulled from the MIDI bass track (octave 2) ---
+verse.bass p0:    C2 - - -  - - - -  - - - -  - - - -   F2 - - -  - - - -  - - - -  - - - -   C2 - - -  - - - -  - - - -  - - - -   C2 - - -  - - - -  - - - -  - - - -   G2 - - -  - - - -  - - - -  - - - -   A2 - - -  - - - -  - - - -  - - - -   E2 - - -  - - - -  - - - -  - - - -   D2 - - -  - - - -  - - - -  - - - -
+refrain.bass p0:  E2 - - -  - - - -  - - - -  - - - -   G2 - - -  - - - -  - - - -  - - - -   C2 - - -  - - - -  - - - -  - - - -   E2 - - -  - - - -  - - - -  - - - -   F2 - - -  - - - -  - - - -  - - - -   F2 - - -  - - - -  - - - -  - - - -   G2 - - -  - - - -  - - - -  - - - -   C2 - - -  - - - -  - - - -  - - - -
+outro.bass p0:    C2 - - -  - - - -  - - - -  - - - -   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
