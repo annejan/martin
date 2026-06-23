@@ -676,6 +676,9 @@ pub(crate) fn build_composition(
 pub(crate) fn animate_composition(
     clock: Res<SeqClock>,
     beat: Res<crate::scene::beat::Beat>,
+    // MARTIN_SIDECHAIN: the kick DUCKS the whole stage (the classic sidechain pump) — every prop's
+    // brightness dips on the hit + swells back between hits. Read once; 0 = off (byte-identical).
+    mut sidechain: Local<Option<f32>>,
     // CloudSettings is optional: splat objects have it (opacity fade/flare), mesh props don't (they
     // still spin/bob/drift via Transform).
     mut q: Query<(&ComposeAnim, &mut Transform, Option<&mut CloudSettings>)>,
@@ -685,6 +688,9 @@ pub(crate) fn animate_composition(
     let osc = (t * 0.6).sin(); // same for all objects — lift out of loop
     let beat_pulse = 1.0 + (beat.snare * 0.4 + beat.hat * 0.12) * k;
     let beat_pulse_kick = beat.kick * 0.06 * k;
+    // visual sidechain: one duck factor for the whole stage (the kick pumps the camp).
+    let sc = *sidechain.get_or_insert_with(|| crate::envvar::or("MARTIN_SIDECHAIN", 0.0_f32));
+    let duck = if sc > 0.0 { beat.duck(sc) } else { 1.0 };
     for (a, mut tf, cs) in &mut q {
         // spin = continuous rotation; sway = a gentle oscillation around the base orientation
         // (swings a hollow-back single-image splat left/right without ever facing away).
@@ -748,7 +754,7 @@ pub(crate) fn animate_composition(
                     1.0
                 };
                 let op = if started { dep } else { 0.0 }; // hold opaque, fade as it scatters out
-                cs.global_opacity = op * beat_pulse;
+                cs.global_opacity = op * beat_pulse * duck;
                 cs.time = a.ease.apply(asm.min(dep)); // formed = min(assembled, not-yet-departed)
                 // per-particle reveal (pen-write tracing) only while ASSEMBLING in, not on the exit scatter.
                 let (mode, soft, axis) = if asm < 1.0 {
@@ -760,7 +766,7 @@ pub(crate) fn animate_composition(
                 cs.transition_softness = soft;
                 cs.transition_axis = axis;
             } else {
-                cs.global_opacity = vis * beat_pulse;
+                cs.global_opacity = vis * beat_pulse * duck;
             }
             if let Some((mode, amp, freq)) = a.deform {
                 cs.deform_mode = mode;
