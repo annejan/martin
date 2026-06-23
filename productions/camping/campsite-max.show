@@ -48,7 +48,7 @@ splat:pine.ply      @-3.5,-0.31,-0.9 *0.65  sway 0,7,0  bob 0.03   ~fade  in cli
 splat:pine.ply      @-4.0,-0.48,1.2  *0.9   sway 0,6,0  bob 0.04   ~fade  in drop
 # caravan.glb (PD, AJB) — the camper parked in the camp; assembles with the tent in the build. rot/scale
 # render-checked per the new-asset rule.
-mesh:caravan.glb    @-2.7,-0.55,-0.4 *0.7   rot 0,35,0  disk:0.4  ~fade  in build   count:35000
+mesh:caravan.glb    @-2.7,-0.55,-0.4 *0.7   rot -0,122.7,-0  disk:0.4  ~fade  in build   count:35000
 
 # ── WORDMARK: the emotional spine. deFEEST opens the camp (build), then LEAVES at the breakdown
 #    (the "zonder deFEEST is het kut" dip — the camp goes dark + empty), then RETURNS bigger + bright
@@ -67,7 +67,7 @@ mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  path:liss:0.28,0.22,0.32,1,3,2,0.40 b
 mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  path:liss:0.32,0.28,0.3,2,1,3,0.55  bob 0.10  ^pulse:0.5  spin 11,23,7   tint:fry  ~fade  in climax
 mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  path:liss:0.3,0.26,0.28,3,2,1,0.48  bob 0.12  ^pulse:0.7  spin 17,43,29  tint:fry  ~fade  in climax
 mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   count:40000  rot 0,200,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax
-splat:doggo.ply     @1.96,-1.16,1.2  *0.5   rot 0,-16,0  sway 0,7,0  bob 0.04  travel:1.8,-1.0,1.2@climax,14  ~fade  in climax
+splat:doggo.ply     @1.96,-1.16,1.2  *0.5   rot 0,-16,0  sway 0,7,0  bob 0.04  travel:1.8,-1.1562,1.2@climax,14  ~fade  in climax
 # Festival title card — drawn EARLY (from the drop, as the camp comes alive) in OUTLINE (neon draw-on),
 # held to the outro. Title + subtitle stacked, centre-upper, clear of the deFEEST wordmark (left).
 text:PonyCamp       @0,1.25,1.0    *0.5   ~fade  font:defeest  tint:brand  bob 0.05  in build  out outro  # filled deFEEST font (not outline)
@@ -79,9 +79,9 @@ text:Fun en Games   @0,0.78,1.0   *0.3   ~fade  font:defeest  tint:brand  bob 0.
 #    strut (slow yaw-spin) + bounce on the kick (^pulse). All front-foreground + grounded, clear of the
 #    tents/pines/snacks. ──
 mesh:geit.glb  @-2.4,-1.05,2.1  *0.5   rot 0,-4,0   sway 0,5,0  bob 0.05               ~fade  in build
-mesh:geit.glb  @2.6,-1.24,2.0   *0.45  rot 0,-74,0  sway 0,6,0  bob 0.06               ~fade  in build
-mesh:pauw.glb  @-1.79,-1.3,-0.57  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~fade  in drop
-mesh:pauw.glb  @0.75,-1.33,-1.98  *0.6   rot 0,-55,0  spin 0,12,0  bob 0.06  ^pulse:0.6  tint:white  ~fade  in drop
+mesh:geit.glb  @2.6,-1.24,2   *0.45  rot -0,-101.2,-0  sway 0,6,0  bob 0.06               ~fade  in build
+mesh:pauw.glb  @-1.8241,-1.3,-0.4451  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~fade  in drop
+mesh:pauw.glb  @1.0301,-1.33,-1.98  *0.6   rot 0,-55,0  spin 0,12,0  bob 0.06  ^pulse:0.6  tint:white  ~fade  in drop
 # cavia's (guinea pigs) — tiny camp critters near the tent, social pair; nervous twitch via ^jitter.
 mesh:cavia.glb @-1.15,-1.12,1.45  *0.26  rot 0,28,0   sway 0,10,0  bob 0.035  ^jitter:0.4  ~fade  in build
 mesh:cavia.glb @-0.78,-1.10,1.55  *0.22  rot 0,-18,0  sway 0,12,0  bob 0.04   ^jitter:0.4  ~fade  in build
