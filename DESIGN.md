@@ -97,7 +97,7 @@ this doc warns against.
 
 ### 1.1 The engine in 30 seconds
 
-martin is a standalone Bevy 0.18 + `bevy_gaussian_splatting` 7.0.2 (our fork, a git
+martin is a standalone Bevy 0.18 + `bevy_gaussian_splatting` 7.1.0 (our fork, a git
 dep). CUDA-free: wgpu → Vulkan / Mesa RADV on AMD. It flies an orbit camera around
 3D Gaussian splats while they morph into one another.
 
@@ -718,13 +718,17 @@ slot itself is a fresh open item, added to §9.2 #16).
 
 ---
 
-## 5. The one deliberate fork edit — per-particle phase (blueprint sketch only)
+## 5. The fork's shader edits — per-particle phase + friends (LANDED; this is the original blueprint)
 
-> **This is gated behind OQ#12 — the decision to do step 8 at all.** The shader edit
-> is martin's *single deliberate fork edit*, the thing to **co-design**, not arrive
-> pre-written. So this section is a one-page sketch; the full WGSL helper, the gated
-> branch, the 4-spot Rust plumbing, the risk table, and the upstream-PR shape live in
-> **`SHADER-BLUEPRINT.md`**, marked "reference for when we decide to do step 8."
+> **STATUS (2026-06): this landed and then some.** What began as a single co-designed edit is now the
+> fork's **§1–8** on the `martin` branch (upstream **7.1.0**): explode/ball-pulse, the `bulge` uniform,
+> the per-particle **transition phase** (this section), persistent **deform**, **swarm**, **shockwave**
+> (transition mode 8), and **morph_stagger** (§8). The sort speedup (§3) went **upstream** (merged as
+> #229; #231/#232/#233 are further upstream fixes). The authoritative, current list is the fork's
+> **`CHANGES.md`**; this section is kept as the original design sketch. The deeper WGSL/Rust plumbing +
+> upstream-PR shape live in **`SHADER-BLUEPRINT.md`**. Each edit stays gated default-off (default ==
+> upstream), so the fork remains rebasable + the bigger shader-hook PR (the real un-vendor enabler) is
+> still the open architectural move.
 
 **The idea (covers B1–B5 with one uniform group, default-off, ~`bulge`-sized
 footprint).** Today `gaussian_uniforms.time` is one blend factor `t∈[0,1]`, identical

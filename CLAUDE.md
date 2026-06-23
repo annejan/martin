@@ -11,7 +11,7 @@ deeper doc disagree, the deeper doc wins — keep this one short and link out.
 ## What martin is
 
 A music-synced **Gaussian-splat demoscene engine** built on **Bevy 0.18 + `bevy_gaussian_splatting`
-7.0.2**, rendering through **wgpu → Vulkan** with **no CUDA/ROCm**. It flies a camera around 3D
+7.1.0** (our `martin` fork branch), rendering through **wgpu → Vulkan** with **no CUDA/ROCm**. It flies a camera around 3D
 splats while they **morph into one another** (per-Gaussian, on the GPU), with HDR bloom on black,
 all driven by a synth track. A show is a **`.show` file** (run it: `martin <show>` / `--production
 <name>`); it expands into `MARTIN_*` env vars — the internal IR — which a **CLI** layers run-mode flags
@@ -30,7 +30,7 @@ Two ways to stage content (both in `src/scene/`):
 | `README.md` | Project overview, the splat-creation pipeline, build profiles. Start here. |
 | `DOMAIN.md` | The domain model + canonical vocabulary (Reel, Stage, Shot, Score, Show, anchor/cue, Showbook). |
 | `USAGE.md` | **The CLI + `MARTIN_*` env reference** + the `.show` file format. The single source of truth for knobs. |
-| `DESIGN.md` | Engine architecture, design decisions, the one deliberate fork edit, refactor debt. |
+| `DESIGN.md` | Engine architecture, design decisions, the splat-renderer fork edits, refactor debt. |
 | `CONTRIBUTING.md` | Build deps, the CI gates, the SH profiles, commit style. |
 | `AGENTS.md` | Demoscene authoring + audio/score tuning + the Blender bridge + common pitfalls. |
 | `ART-DIRECTION.md` | How to shoot/prep good splats and the **scene design language** (read before composing scenes). |

@@ -19,7 +19,7 @@ cargo +nightly run --release     # a splat assembles out of a ball cloud
 It's **one sequence engine**: every run is a timeline of *parts* (splat-text or splats) that
 each assemble out of a ball cloud, then morph into the next (per-Gaussian, on the GPU), with
 HDR bloom on black. The `MARTIN_*` env vars compose the show — there's no config file. Built on
-Bevy 0.18 + `bevy_gaussian_splatting` 7.0.2 (our fork — the `martin` branch of
+Bevy 0.18 + `bevy_gaussian_splatting` 7.1.0 (our fork — the `martin` branch of
 [`annejan/bevy_gaussian_splatting`](https://github.com/annejan/bevy_gaussian_splatting),
 a git dep), wgpu → Vulkan, nightly toolchain (the `nightly` channel, unpinned — we ride
 current nightly).
