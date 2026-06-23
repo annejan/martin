@@ -14,6 +14,20 @@ static FONT: &[u8] = include_bytes!("../assets/font.ttf");
 /// one gives a pen *stroke*, not an outline.
 static STROKE_FONT: &[u8] = include_bytes!("../assets/relief-singleline.ttf");
 
+/// The deFEEST brand display font (a Hardpixel-based blocky face). Selectable on a `text:` part via
+/// `font:defeest` for branded titles. (Personal-use licence — fine for this non-commercial demo.)
+static DEFEEST_FONT: &[u8] = include_bytes!("../assets/deFEEST.ttf");
+
+/// Map a `font:` name to bundled font bytes for the FILLED text builders (`build_text_gaussians` +
+/// `build_text_outline_gaussians`). Unknown / `None` → the default bold `font.ttf`. The single-line
+/// `~pen-write` builder always uses `STROKE_FONT` (a normal font has no centerline strokes to trace).
+pub fn font_bytes(name: Option<&str>) -> &'static [u8] {
+    match name.map(|n| n.trim().to_ascii_lowercase()).as_deref() {
+        Some("defeest" | "brand" | "hardpixel") => DEFEEST_FONT,
+        _ => FONT,
+    }
+}
+
 /// Glowing cyan for splat-text (sub-1 so HDR bloom doesn't blow it into a blob).
 pub const TEXT_RGB: [f32; 3] = [0.40 * 0.8, 0.85 * 0.8, 1.0 * 0.8];
 
@@ -30,8 +44,9 @@ pub fn build_text_gaussians(
     world_width: f32,
     stride: usize,
     splat: f32,
+    font_name: Option<&str>,
 ) -> Vec<Gaussian3d> {
-    let font = FontRef::try_from_slice(FONT).expect("font.ttf");
+    let font = FontRef::try_from_slice(font_bytes(font_name)).expect("font");
     let px = 64.0_f32;
     let sf = font.as_scaled(PxScale::from(px));
     let line_h = sf.height() + sf.line_gap();
@@ -265,8 +280,9 @@ pub fn build_text_outline_gaussians(
     world_width: f32,
     step_px: f32,
     splat: f32,
+    font_name: Option<&str>,
 ) -> Vec<Gaussian3d> {
-    pen_gaussians(FONT, s, rgb, world_width, step_px, splat)
+    pen_gaussians(font_bytes(font_name), s, rgb, world_width, step_px, splat)
 }
 
 /// Collects a glyph's contours as polylines in font units, flattening curves but **ignoring
@@ -422,7 +438,7 @@ mod tests {
 
     #[test]
     fn text_rasterizes_to_finite_coloured_gaussians() {
-        let g = build_text_gaussians("AB", TEXT_RGB, 3.0, 2, 0.012);
+        let g = build_text_gaussians("AB", TEXT_RGB, 3.0, 2, 0.012, None);
         assert!(!g.is_empty(), "text should produce gaussians");
         assert!(
             g.iter()
@@ -439,6 +455,6 @@ mod tests {
         );
         assert!(hi - lo > 0.5 && hi - lo <= 3.5);
         // empty string → no gaussians (no panic).
-        assert!(build_text_gaussians("", TEXT_RGB, 3.0, 2, 0.012).is_empty());
+        assert!(build_text_gaussians("", TEXT_RGB, 3.0, 2, 0.012, None).is_empty());
     }
 }

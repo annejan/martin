@@ -121,6 +121,7 @@ pub(crate) struct Prop {
     path: Option<PathMotion>, // `path:orbit/liss:…`: independent travel path (each object does its own thing)
     alpha: Option<f32>, // `alpha:V`: per-object translucency (0..1) baked into the cloud's splat opacity
     travel: Option<Travel>, // `travel:x,y,z[@anchor[,dur]]`: ease @pos→target over a window, then hold
+    font: Option<String>, // `font:<name>`: pick a `text:` font (e.g. `defeest`); None = default font.ttf
 }
 
 impl Prop {
@@ -261,6 +262,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let mut count_override = None;
         let mut path = None;
         let mut alpha = None;
+        let mut font = None;
         // travel: parsed raw here (needs `score` + the object's `in` cue, both resolved after the loop)
         let mut travel_raw: Option<(Vec3, Option<String>, Option<f32>)> = None;
         let toks: Vec<&str> = s
@@ -283,6 +285,11 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                         Ok(c) => count_override = Some(c),
                         Err(_) => eprintln!("compose: bad 'count:{n}' (need an integer) — ignored"),
                     }
+                    return false;
+                }
+                // `font:<name>` — pick a `text:` font (e.g. `defeest`); default = bold font.ttf.
+                if let Some(f) = t.strip_prefix("font:") {
+                    font = Some(f.to_string());
                     return false;
                 }
                 // `alpha:V` — per-object translucency (0..1), baked into the cloud's splat opacity at
@@ -439,6 +446,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             path,
             alpha,
             travel,
+            font,
         });
     }
     out
@@ -536,6 +544,7 @@ pub(crate) fn build_composition(
             None,
             None,
             Some(sample_n),
+            obj.font.as_deref(),
         );
         if raw.is_empty() {
             continue;

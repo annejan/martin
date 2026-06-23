@@ -348,6 +348,11 @@ the whole show's default with **`MARTIN_RASTER=<mode>`**; a part's `raster:` tok
 `position` looks great on anything — e.g. `text:deFEEST ~outline raster:position` = outline-revealed
 letters in a position-colour rainbow.
 
+**`font:<name>`** (on a `text:` part) — pick the glyph font for filled text (`text:` and `~outline`).
+Built in: the default bold `font.ttf`, and **`defeest`** (aliases `brand`/`hardpixel`) = the blocky
+deFEEST display font for branded titles, e.g. `text:PonyCamp ~outline font:defeest`. Unknown name →
+the default. (`~pen-write` ignores it — it always traces the single-line stroke font.)
+
 **Per-part background** (`bg:<name>`): switches the fullscreen background shader **from that part
 on** (sticky until the next `bg:` token): `plasma` / `tunnel` / `stars` / `warp` / `rings` / `grid` /
 `kaleido` / `bolt` / `fractal` / `clouds`, or **`bg:off`** for pure black. This makes the background a second energy curve

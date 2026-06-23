@@ -68,6 +68,14 @@ path = "assets/relief-singleline.ttf"
 SPDX-FileCopyrightText = "2022 The Relief SingleLine Project Authors"
 SPDX-License-Identifier = "OFL-1.1"
 
+# deFEEST display font — based on "Hardpixel" (fontmirror.com/hardpixel), "Free for personal use".
+# Embedded metadata also credits Anton Kudin & Jovanny Lemonad (jovanny.ru). Used only for the
+# non-commercial deFEEST/PonyCamp titles → within personal use. See LICENSES/LicenseRef-Hardpixel.txt.
+[[annotations]]
+path = "assets/deFEEST.ttf"
+SPDX-FileCopyrightText = "Hardpixel (fontmirror.com/hardpixel); deFEEST edit by Anne Jan Brouwer"
+SPDX-License-Identifier = "LicenseRef-Hardpixel"
+
 # ── Branded mesh assets (provenance + permissions in USAGE "Asset provenance") ──
 # deFEEST logo — official vector defeest.svg (via Iconape); .dae/.glb are extruded from it
 # (pipeline/svg_extrude_logo.py). defeest-logo.png from defeest.nl. deFEEST = Anne Jan.
@@ -199,6 +207,12 @@ SPDX-License-Identifier = "CC-BY-4.0"
 
 [[annotations]]
 path = "assets/bier.glb"
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "CC0-1.0"
+
+# caravan.glb — the camper for PonyCamp. Anne Jan Brouwer's own model, released public-domain.
+[[annotations]]
+path = "assets/caravan.glb"
 SPDX-FileCopyrightText = "NONE"
 SPDX-License-Identifier = "CC0-1.0"
 

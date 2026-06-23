@@ -11,6 +11,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **`font:<name>` for `text:` parts** — pick the glyph font for filled text (`text:` + `~outline`).
+  Adds the blocky **deFEEST** display font (`font:defeest` / `brand` / `hardpixel`) alongside the
+  default bold font, for branded titles (e.g. PonyCamp's `text:PonyCamp ~outline font:defeest`).
+  `~pen-write` still traces the single-line stroke font. The deFEEST font (Hardpixel-based, free for
+  personal use) is bundled + REUSE-annotated.
+- **`caravan.glb`** asset (PD/CC0) — a camper for the PonyCamp camp scene.
 - **`record.sh` disk pre-flight** — a full 60 fps PNG dump is many GB and used to overflow a RAM-backed
   `/tmp` (or a near-full disk) MID-render with a cryptic "Disk quota exceeded (os error 122)" that looks
   like the shell broke. `record.sh` now reports the scratch space + per-frame size + how many frames/

@@ -43,7 +43,10 @@ splat:pine.ply      @3.8,-0.56,-0.6  *0.55  sway 0,13,0  bob 0.03  ~fade  in bui
 splat:pine.ply      @1.7,-0.44,-1.7  *0.8   sway 0,5,0  bob 0.05   ~fade  in climax  count:6000
 splat:pine.ply      @-1.5,-0.38,-1.9 *1.15  sway 0,9,0  bob 0.04   ~fade  in climax  count:7000  # tall back-left
 splat:pine.ply      @-3.5,-0.31,-0.9 *0.65  sway 0,7,0  bob 0.03   ~fade  in climax  count:4500  # short
-splat:pine.ply      @-4.0,-0.48,1.2  *0.9   sway 0,6,0  bob 0.04   ~fade  in drop   count:6000
+splat:pine.ply      @-4.0,-0.48,1.2  *0.9   sway 0,6,0  bob 0.04   ~fade  in drop
+# caravan.glb (PD, AJB) — the camper parked in the camp; assembles with the tent in the build. rot/scale
+# render-checked per the new-asset rule.
+mesh:caravan.glb    @-2.7,-0.55,-0.4 *0.7   rot 0,35,0  ~fade  in build   count:6000
 
 # ── WORDMARK: the emotional spine. deFEEST opens the camp (build), then LEAVES at the breakdown
 #    (the "zonder deFEEST is het kut" dip — the camp goes dark + empty), then RETURNS bigger + bright
@@ -63,7 +66,10 @@ mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  path:liss:0.32,0.28,0.3,2,1,3,0.55  b
 mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  path:liss:0.3,0.26,0.28,3,2,1,0.48  bob 0.12  ^pulse:0.7  spin 17,43,29  tint:fry  ~fade  in climax
 mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   count:40000  rot 0,200,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax
 splat:doggo.ply     @1.96,-1.16,1.2  *0.5   rot 0,-16,0  sway 0,7,0  bob 0.04  travel:1.8,-1.0,1.2@climax,14  ~fade  in climax
-text:PonyCamp 2026  @1.4,1.5,1.0   *0.5   ~pen-write  tint:brand  bob 0.06  in climax
+# Festival title card — drawn EARLY (from the drop, as the camp comes alive) in OUTLINE (neon draw-on),
+# held to the outro. Title + subtitle stacked, centre-upper, clear of the deFEEST wordmark (left).
+text:PonyCamp       @0,1.25,1.0    *0.5   ~outline  font:defeest  tint:brand  bob 0.05  in build  out outro
+text:Fun en Games   @0,0.78,1.0   *0.3   ~outline  font:defeest  tint:brand  bob 0.04  in build  out outro
 
 # ── BARNYARD: the camp's resident animals finish off PonyCamp. Two goats graze as the camp assembles
 #    (build); a peacock struts in when the fire lights (drop); and a rare WHITE peacock (tint:white —

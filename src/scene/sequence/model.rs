@@ -39,7 +39,8 @@ pub(crate) struct Shot {
     pub disk: Option<f32>, // `disk:<f>` → per-part mesh splat-disk overlap (overrides MARTIN_MESH_SPLAT);
     // smaller = crisper edges on a sharp graphic (the logo), None = global default
     pub aniso: Option<f32>, // `aniso:<f>` → per-part anisotropic mesh splats (>1 stretches each sample
-                            // into an ellipsoid along the surface grain, area-preserving), None = round
+    // into an ellipsoid along the surface grain, area-preserving), None = round
+    pub font: Option<String>, // `font:<name>` → pick a `text:` font (e.g. `defeest`); None = default font.ttf
 }
 
 impl Shot {
@@ -71,6 +72,7 @@ impl Shot {
             ground: None,
             disk: None,
             aniso: None,
+            font: None,
         }
     }
 }

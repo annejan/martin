@@ -129,6 +129,7 @@ pub(crate) fn side_by_side<'a>(names: impl Iterator<Item = &'a str>) -> Vec<(Str
 
 /// Read a part's gaussians (text rasterized, a PNG logo rasterized, or splats loaded + offset
 /// + combined). `root` is the asset folder PNG `image:` parts are read from.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn part_gaussians(
     content: &PartContent,
     state: &SeqState,
@@ -137,9 +138,10 @@ pub(crate) fn part_gaussians(
     disk: Option<f32>,
     aniso: Option<f32>,
     count: Option<usize>,
+    font: Option<&str>,
 ) -> Vec<Gaussian3d> {
     match content {
-        PartContent::Text(s) => build_text_gaussians(s, TEXT_RGB, 3.0, 2, 0.012),
+        PartContent::Text(s) => build_text_gaussians(s, TEXT_RGB, 3.0, 2, 0.012, font),
         PartContent::Image(name) => match std::fs::read(root.join(name)) {
             Ok(bytes) => build_image_gaussians(&bytes, 3.0, 0.5, 0.85),
             Err(e) => {
@@ -219,19 +221,22 @@ pub(crate) fn sample_content(
     disk: Option<f32>,
     aniso: Option<f32>,
     count: Option<usize>,
+    font: Option<&str>,
 ) -> Vec<Gaussian3d> {
     use crate::scene::effects::Entrance;
     use crate::text::{build_text_outline_gaussians, build_text_penwrite_gaussians};
     match (content, entrance) {
         (PartContent::Text(s), Some(Entrance::Outline)) => {
-            build_text_outline_gaussians(s, TEXT_RGB, 3.0, 0.7, 0.012)
+            build_text_outline_gaussians(s, TEXT_RGB, 3.0, 0.7, 0.012, font)
         }
         (PartContent::Text(s), Some(Entrance::PenWrite)) => {
+            // `~pen-write` traces the single-line STROKE_FONT (a `font:` choice doesn't apply — a normal
+            // font has no centerline strokes), so font is intentionally ignored here.
             let pw_step = crate::envvar::or("MARTIN_PW_STEP", 0.5_f32);
             let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
             build_text_penwrite_gaussians(s, TEXT_RGB, 3.0, pw_step, pw_splat)
         }
-        _ => part_gaussians(content, state, assets, root, disk, aniso, count),
+        _ => part_gaussians(content, state, assets, root, disk, aniso, count, font),
     }
 }
 

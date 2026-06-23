@@ -1,0 +1,15 @@
+Hardpixel font — Free for personal use
+=======================================
+
+assets/deFEEST.ttf is the deFEEST display font, based on the "Hardpixel" typeface
+(source: https://www.fontmirror.com/hardpixel). Per the distributor, Hardpixel is
+"Free for personal use".
+
+Embedded font metadata also credits the upstream authors:
+  Copyright (c) 2010 by Anton Kudin & Jovanny Lemonad (prod.). All rights reserved.
+  http://www.jovanny.ru/  ·  http://www.abstrukt.com/
+
+martin uses it only for the deFEEST / PonyCamp branded titles in a non-commercial
+demoscene production, which falls within "personal use". This is NOT a permissive
+licence: do not use this font in a commercial work without obtaining the proper
+licence from the rights holder.

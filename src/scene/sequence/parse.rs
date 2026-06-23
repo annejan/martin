@@ -104,6 +104,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         let mut ground = None;
         let mut disk = None;
         let mut aniso = None;
+        let mut font = None;
         // Pull each modifier token out of the line by its sigil/prefix. A token carrying a known
         // prefix is ALWAYS consumed (never leaks into the head/text) — if it fails to parse we warn,
         // so a typo (`~explod`, `^wave2`) is a visible error, not a silently-dropped effect.
@@ -170,6 +171,8 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                         Ok(v) => aniso = Some(v),
                         Err(_) => eprintln!("seq: bad 'aniso:{a}' (need a number) — ignored"),
                     }
+                } else if let Some(f) = tok.strip_prefix("font:") {
+                    font = Some(f.to_string()); // `font:<name>` → a `text:` font (defeest/…)
                 } else if let Some(res) = crate::scene::effects::parse_fx_modifier(tok) {
                     // the shared `~entrance` / `^deform[:amp]` / `tint:` modifiers (see effects.rs).
                     use crate::scene::effects::FxMod;
@@ -238,6 +241,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
             ground,
             disk,
             aniso,
+            font,
         });
     }
     parts
