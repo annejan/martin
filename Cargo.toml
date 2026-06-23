@@ -10,7 +10,7 @@ default-run = "martin"
 [dependencies]
 # `wav` enables rodio's WAV decoder — the live synth playback feeds bevy_audio a hand-rolled WAV,
 # and Bevy's default audio features are vorbis-only (without this, playback panics UnrecognizedFormat).
-bevy = { version = "0.18", features = ["wav"] }
+bevy = { version = "0.19", features = ["wav"] }
 # Select features explicitly (mirrors the crate's defaults). The **SH degree** is NOT pinned here —
 # it's a one-hot crate feature selected via martin's own `sh0`/`sh3` features (see [features] below),
 # so you can build either profile. Needs nightly (nightly_generic_alias); io_ply + planar load our .ply.
