@@ -11,6 +11,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **`record.sh` disk pre-flight** — a full 60 fps PNG dump is many GB and used to overflow a RAM-backed
+  `/tmp` (or a near-full disk) MID-render with a cryptic "Disk quota exceeded (os error 122)" that looks
+  like the shell broke. `record.sh` now reports the scratch space + per-frame size + how many frames/
+  seconds fit, aborts before the slow build below a hard floor (`MARTIN_DISK_FLOOR_GB`, default 3), and —
+  once the synth pass reveals the show length — aborts before the long capture if the dump won't fit,
+  with the `TMPDIR=…` / lower-fps/res hint. Catches the overflow up front instead of failing half-way.
 - **GPU-OOM heads-up (`MARTIN_SPLAT_WARN`, default 2.0M)** — at build martin estimates a scene's PEAK
   resident gaussians (every reel shot's shape + `~entrance`/`exit:` source clouds, plus every compose
   prop ×2 for an `~entrance`) and logs a `WARN` if it exceeds the soft cap. The dev iGPU renders ~2M

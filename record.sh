@@ -23,6 +23,25 @@ if [ "${SS}" -gt 1 ]; then
   echo "==> supersample ${SS}x: rendering ${MARTIN_RES} → ${RES}"
 fi
 
+# --- disk pre-flight (fail fast, before the slow build) ---------------------------------------------
+# A full 60 fps PNG dump is many GB; a RAM-backed /tmp (or a near-full disk) overflows MID-render with
+# a cryptic "Disk quota exceeded (os error 122)" that looks like the shell broke. Report the scratch
+# space + per-frame size + how much fits, and abort early (with the TMPDIR hint) below a hard floor.
+DUMP_W=$((TW * SS)); DUMP_H=$((TH * SS))   # PNGs are dumped at the (super-sampled) render res
+AVAIL_KB=$(df -Pk "$FR" | awk 'NR==2{print $4}')
+AVAIL_GB=$(awk "BEGIN{printf \"%.1f\", $AVAIL_KB/1048576}")
+PERFRAME_MB=$(awk "BEGIN{printf \"%.2f\", $DUMP_W*$DUMP_H*1.5/1048576}")   # ~1.5 B/px PNG (splat content)
+FIT_FRAMES=$(awk "BEGIN{printf \"%d\", ($AVAIL_KB/1024)/$PERFRAME_MB}")
+FIT_SECS=$(awk "BEGIN{printf \"%d\", $FIT_FRAMES/${MARTIN_PREVIEW_FPS:-60}}")
+echo "==> scratch $FR: ${AVAIL_GB} GB free · ~${PERFRAME_MB} MB/frame @ ${DUMP_W}x${DUMP_H} · fits ~${FIT_FRAMES} frames (~${FIT_SECS}s @ ${MARTIN_PREVIEW_FPS:-60}fps)"
+FLOOR_GB="${MARTIN_DISK_FLOOR_GB:-3}"
+if awk "BEGIN{exit !($AVAIL_GB < $FLOOR_GB)}"; then
+  echo "==> ERROR: only ${AVAIL_GB} GB free in the scratch dir (< ${FLOOR_GB} GB floor)." >&2
+  echo "    A full render dumps PNGs there first; point TMPDIR at a disk with room:" >&2
+  echo "    TMPDIR=/path/with/space ./record.sh $OUT" >&2
+  rm -rf "$FR"; exit 1
+fi
+
 echo "==> building martin (release — debug can render the splats black, and release is far"
 echo "    faster for big .ply clouds)"
 cargo +nightly build --release --manifest-path "$HERE/Cargo.toml"
@@ -35,8 +54,20 @@ AUDIO=()
 if [ -z "${MARTIN_MUTE:-}" ]; then
   WAV="$FR/track.wav"
   echo "==> rendering synth -> $WAV"
-  MARTIN_SYNTH_WAV="$WAV" BEVY_ASSET_ROOT="$HERE" "$BIN"
+  # capture the synth log so we can read the show duration (it prints "(89.0s)") for the fit-check;
+  # `|| true` so a shutdown-panic exit doesn't abort under `set -e`.
+  SYNTH_LOG=$(MARTIN_SYNTH_WAV="$WAV" BEVY_ASSET_ROOT="$HERE" "$BIN" 2>&1 || true)
+  echo "$SYNTH_LOG" | tail -3
   AUDIO=(-i "$WAV" -c:a aac -shortest)
+  # Will the whole PNG dump fit? Now that we know the show length, abort BEFORE the long capture if it
+  # won't (the case the GB floor misses: plenty free generally, but not enough for THIS long render).
+  SHOW_SECS=$(echo "$SYNTH_LOG" | grep -oE '\([0-9]+\.[0-9]+s\)' | head -1 | tr -dc '0-9.')
+  if [ -n "$SHOW_SECS" ] && awk "BEGIN{exit !($SHOW_SECS > $FIT_SECS)}"; then
+    NEED_GB=$(awk "BEGIN{printf \"%.0f\", $SHOW_SECS*${MARTIN_PREVIEW_FPS:-60}*$PERFRAME_MB/1024}")
+    echo "==> ERROR: this ${SHOW_SECS}s show needs ~${NEED_GB} GB of frames but only ${AVAIL_GB} GB is free (~${FIT_SECS}s fits)." >&2
+    echo "    Point TMPDIR at a bigger disk, or lower MARTIN_PREVIEW_FPS / MARTIN_RES / MARTIN_SS." >&2
+    rm -rf "$FR"; exit 1
+  fi
 fi
 
 echo "==> recording the timeline -> $FR"
