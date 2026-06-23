@@ -1,0 +1,36 @@
+# martin score — "ANTHEM BABY": a stately, brass-and-choir take on the Soviet/Russian state-anthem
+# melody (Alexandrov) for the parametric spinning baby. PUBLIC-DOMAIN-ish folk-anthem theme, recast
+# as a slow demoscene hymn (NOT the official recording — a synth approximation, our own arrangement).
+# The signature soar up to the high `la` on "наша держава" lands on the climax. ~85s.
+#
+#   live:    MARTIN_SHOW=productions/baby/anthem-baby.show cargo +nightly run --release
+#   preview: TMPDIR=~/.cache/martin-render MARTIN_RES=480x270 MARTIN_PREVIEW_FPS=8 \
+#            MARTIN_SHOW=productions/baby/anthem-baby.show ./record.sh /tmp/anthem-baby.mp4
+bpm 76
+chords C G Am F
+
+# big, warm, hymn-like: choir + sub + a little lead brass, generous reverb, slow swell. No party donk.
+set lead=0.7 sub=0.55 choir=0.6 supersaw=0.18 reverb=0.6 sidechain=0.3 widen=1.4 makeup=1.1 ceiling=0.94 woozbass=0 shimmer=0.16 reverbauto=1 hats=0.18 snares=0.3 atmosphere=0.4
+
+section intro 4 4
+section verse 8 8
+section refrain 8 8
+section outro 4 4
+
+# --- drums: a slow ceremonial march — kick on the strong beats, a snare tap, no hats clutter ---
+intro.kick p0:  x... .... x... ....
+verse.kick p0:  x... .... x... ....
+verse.snare p0: .... x... .... x...
+refrain.kick p0:  x... .... x... ....
+refrain.snare p0: .... x... .... x...
+refrain.kick fill: x... x... x... x.xx
+outro.kick p0:  x... .... .... ....
+
+# --- melody: the anthem theme (our transcription, C major). Stately quarter notes; the high A5 leap
+#     in the refrain ("наша держава") is the soaring kill-shot. Held with ties for the legato hymn feel.
+verse.lead p0:    G4 - - -  C5 - - -  C5 - - -  E5 - - -   D5 - - -  C5 - - -  F5 - - -  E5 - - -   D5 - - -  C5 - - -  D5 - - -  E5 - - -   E5 - - -  - - - -  E5 - - -  - - - -
+refrain.lead p0:  E5 - - -  A5 - - -  G5 - - -  F5 - - -   E5 - - -  D5 - - -  D5 - - -  - - - -   D5 - - -  G5 - - -  F5 - - -  E5 - - -   D5 - - -  C5 - - -  - - - -  - - - -
+
+# --- bass: roots under the hymn, long sustained tones ---
+verse.bass p0:    C3 - - -  - - - -  G3 - - -  - - - -   C3 - - -  - - - -  F3 - - -  - - - -   C3 - - -  - - - -  G3 - - -  - - - -   C3 - - -  - - - -  G3 - - -  - - - -
+refrain.bass p0:  C3 - - -  - - - -  F3 - - -  - - - -   C3 - - -  - - - -  G3 - - -  - - - -   C3 - - -  - - - -  G3 - - -  - - - -   C3 - - -  - - - -  C3 - - -  - - - -

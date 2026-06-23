@@ -11,6 +11,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **`baby` procedural splat shape** — a chubby cartoon baby (round skin head with dark eyes, rosy
+  cheeks + a little mouth, a hair curl, pastel-blue onesie body, stubby arms/legs) synthesized by
+  `splatgen`/`build.rs`. Faces +Z; head rides on top after the load-flip. Drives the new
+  **`productions/baby/`** demo (`anthem-baby.show`): the baby pirouettes on a pedestal of light to a
+  stately Soviet/Russian-anthem hymn (`productions/baby/score.txt`, our own synth arrangement).
 - **`font:<name>` for `text:` parts** — pick the glyph font for filled text (`text:` + `~outline`).
   Adds the blocky **deFEEST** display font (`font:defeest` / `brand` / `hardpixel`) alongside the
   default bold font, for branded titles (e.g. PonyCamp's `text:PonyCamp ~outline font:defeest`).

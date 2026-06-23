@@ -1,0 +1,33 @@
+# martin — ANTHEM BABY 👶: a parametric (procedural-splat) cartoon baby slowly pirouettes on a pedestal
+# of light while a stately Soviet/Russian-anthem hymn swells. ONE hero object on the stage, dead-centre
+# and Z-safe, spinning on its vertical axis with a gentle bob — comradely, solemn, a touch absurd.
+# The baby cloud is synthesized at build time by splatgen (`baby` shape); no capture needed.
+#
+#   live:    MARTIN_SHOW=productions/baby/anthem-baby.show cargo +nightly run --release
+#   preview: TMPDIR=~/.cache/martin-render MARTIN_RES=480x270 MARTIN_PREVIEW_FPS=8 \
+#            MARTIN_SHOW=productions/baby/anthem-baby.show ./record.sh /tmp/anthem-baby.mp4
+
+[settings]
+kind     = demo
+score    = productions/baby/score.txt   # our anthem arrangement (~85s)
+ply      = assets/baby.ply              # asset root = assets/ ; baby.ply synthesized by splatgen
+budget   = 160000
+bg       = aurora                        # solemn red-tinged sky
+post     = bloom
+cam_pump = 0.18
+bg_dim   = 0.55
+
+# THE STAGE — one baby, centred, spinning. spin = deg/sec around Y (the pirouette); a slow bob lifts
+# it on the swell. Fades in on the intro, holds for the whole hymn.
+[stage]
+splat:baby.ply  @0,0.2,0  *1.6  spin 0,28,0  bob 0,0.12,0  ~fade  in intro     # 👶 pirouetting on its pedestal
+text:ANTHEM BABY  @-0.9,-1.4,1.4  *0.7  ~pen-write  in refrain  out outro       # title handwrites in on the soar
+
+# THE CAMERA — a slow reverent push-in, eyes level with the baby, drifting just enough to read the
+# spin. t = show-time seconds (anthem ≈ 85s).
+[camera]
+t=0.0   pos=0,0,0   dist=4.4   yaw=1.57   pitch=0.05
+t=20.0  pos=0,0,0   dist=4.0   yaw=1.50   pitch=0.08
+t=45.0  pos=0,0,0   dist=3.6   yaw=1.64   pitch=0.10   # push in on the refrain soar (head stays in frame)
+t=70.0  pos=0,0,0   dist=3.9   yaw=1.57   pitch=0.06
+t=85.0  pos=0,0,0   dist=4.3   yaw=1.57   pitch=0.05

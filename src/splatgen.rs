@@ -44,6 +44,7 @@ pub const SHAPES: &[&str] = &[
     "rocket",
     "saturn",
     "ufo",
+    "baby",
     "terrain",
     "moon",
     "mountains",
@@ -539,6 +540,85 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
                     col = hsv(((a / tau) * 8.0).floor() / 8.0, 0.9, 1.0);
                 }
                 pos.push([p[0], -p[1], p[2]]); // -Y: dome rides on TOP after martin's load-flip
+                rgb.push(col);
+            }
+        }
+        "baby" => {
+            // A chubby cartoon baby: a big round HEAD (rosy cheeks, two dark eyes, a hair curl) on a
+            // smaller pot-belly BODY in a pastel onesie, with two stubby arms + two stubby legs. yu is
+            // the up-axis (legs −1 → head crown +1), stored NEGATED so the head rides on TOP after
+            // martin flips the Y-down .ply upright on load (same trick as rocket/ufo above). Built to
+            // FACE +Z (eyes/cheeks on the +Z hemisphere) — point the camera down −Z, or yaw via the show.
+            let skin = [0.98f32, 0.80, 0.68]; // warm baby skin
+            let onesie = [0.55f32, 0.78, 0.95]; // pastel-blue onesie
+            let head_c = 0.50f32; // head centre (yu)
+            let head_r = 0.40f32;
+            let body_c = -0.18f32;
+            let body_r = 0.34f32;
+            for _ in 0..N {
+                let s = rng.unit();
+                let p: [f32; 3];
+                let col: [f32; 3];
+                if s < 0.42 {
+                    // HEAD: a sphere. Eyes = two dark discs on the +Z face; cheeks = two rosy patches
+                    // flanking+below; a small mouth; otherwise skin.
+                    let d = norm(rng.normal3());
+                    let pt = [d[0] * head_r, head_c + d[1] * head_r, d[2] * head_r];
+                    let front = d[2] > 0.45; // facing the camera (+Z)
+                    let eye_l = ((pt[0] + 0.15).powi(2) + (pt[1] - head_c - 0.06).powi(2)) < 0.0045;
+                    let eye_r = ((pt[0] - 0.15).powi(2) + (pt[1] - head_c - 0.06).powi(2)) < 0.0045;
+                    let cheek =
+                        ((pt[0].abs() - 0.20).powi(2) + (pt[1] - head_c + 0.07).powi(2)) < 0.006;
+                    col = if front && (eye_l || eye_r) {
+                        [0.10, 0.08, 0.10] // dark eyes
+                    } else if front && (pt[1] - head_c + 0.16).abs() < 0.025 && pt[0].abs() < 0.07 {
+                        [0.85, 0.30, 0.32] // little mouth
+                    } else if front && cheek {
+                        [0.99, 0.62, 0.60] // rosy cheeks
+                    } else {
+                        skin
+                    };
+                    p = pt;
+                } else if s < 0.50 {
+                    // HAIR CURL: a tiny tuft sphere on the crown (+yu).
+                    let d = norm(rng.normal3());
+                    p = [
+                        d[0] * 0.10,
+                        head_c + head_r + 0.04 + d[1].abs() * 0.10,
+                        d[2] * 0.10,
+                    ];
+                    col = [0.45, 0.30, 0.18]; // brown wisp
+                } else if s < 0.78 {
+                    // BODY: a fat ellipsoid pot-belly in the onesie.
+                    let d = norm(rng.normal3());
+                    p = [d[0] * body_r, body_c + d[1] * body_r * 1.05, d[2] * body_r];
+                    col = onesie;
+                } else if s < 0.90 {
+                    // ARMS: two stubby cylinders out from the upper body at ±x, angled slightly down.
+                    let side = if rng.unit() < 0.5 { -1.0 } else { 1.0 };
+                    let t = rng.unit(); // 0 = shoulder, 1 = hand
+                    let r = 0.10 * (1.0 - 0.3 * t);
+                    let d = norm(rng.normal3());
+                    p = [
+                        side * (body_r * 0.7 + t * 0.26) + d[0] * r,
+                        body_c + 0.10 - t * 0.16 + d[1] * r,
+                        d[2] * r,
+                    ];
+                    col = if t > 0.82 { skin } else { onesie }; // bare little hands
+                } else {
+                    // LEGS: two stubby cylinders down from the lower body at ±x.
+                    let side = if rng.unit() < 0.5 { -1.0 } else { 1.0 };
+                    let t = rng.unit(); // 0 = hip, 1 = foot
+                    let r = 0.12 * (1.0 - 0.25 * t);
+                    let d = norm(rng.normal3());
+                    p = [
+                        side * 0.15 + d[0] * r,
+                        body_c - body_r * 0.7 - t * 0.30 + d[1] * r,
+                        d[2] * r,
+                    ];
+                    col = if t > 0.80 { skin } else { onesie }; // bare little feet
+                }
+                pos.push([p[0], -p[1], p[2]]); // -Y: head on top after martin's load-flip
                 rgb.push(col);
             }
         }

@@ -1059,7 +1059,7 @@ runs everywhere; the GPU/audio/window libs are dlopen'd and present on any deskt
 `cargo install cargo-zigbuild` + put `zig` on `PATH`. Native fallback (+ a warning) otherwise.
 
 The procedural demo shapes (`sphere`/`cube`/`torus`/`helix`/`galaxy`/`star`/`wave`/`ring`/`knot`/
-`mobius`/`supershape`) are synthesized by **`build.rs`** (`build/gen_splats.rs`) — any one a show
+`mobius`/`supershape`/`rocket`/`saturn`/`ufo`/`baby`/…) are synthesized by **`build.rs`** (`build/gen_splats.rs`) — any one a show
 references is generated on build if its `.ply` is missing, so no separate step is needed.
 Mesh → "proper" splat (offline Blender→Brush bake, all-AMD): `pipeline/mesh-splat.sh`.
 Export a score to a standard MIDI file (to share an arrangement with a DAW / notation tool):
