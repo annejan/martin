@@ -58,7 +58,7 @@ fn pulse(times: &[f32], t: f32, tau: f32, beat_dur: f32, seed: u32) -> f32 {
 
 fn setup_beat_track(score: Res<ScoreRes>, mut commands: Commands) {
     let s = &score.0;
-    let intensity = std::env::var("MARTIN_BEAT")
+    let intensity = crate::env::var("MARTIN_BEAT")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(1.0);

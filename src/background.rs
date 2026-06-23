@@ -120,7 +120,7 @@ fn spawn_bg(
     if *done {
         return;
     }
-    let env_mode = std::env::var("MARTIN_BG").ok().map(|s| mode_index(&s));
+    let env_mode = crate::env::var("MARTIN_BG").ok().map(|s| mode_index(&s));
     let seq_uses_bg = seq
         .map(|s| s.parts.iter().any(|p| p.backdrop.is_some()))
         .unwrap_or(false);
@@ -130,7 +130,7 @@ fn spawn_bg(
     }
     let Ok(cam) = cam.single() else { return };
     let d = 90.0_f32; // far plane, behind the interlude layer (88) so the interlude wins when active
-    let dim = std::env::var("MARTIN_BG_DIM")
+    let dim = crate::env::var("MARTIN_BG_DIM")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(1.0);
@@ -205,7 +205,7 @@ fn update_bg(
         * duck;
     // Harmonic tint (`warmth`): a `[sync] tint_music` keyframe wins; else, when MARTIN_TINT_MUSIC is
     // on, derive it from the score (minor/low → cool, major/high → warm); else 0 = neutral (no-op).
-    let tint_on = *tint_music.get_or_insert_with(|| std::env::var("MARTIN_TINT_MUSIC").is_ok());
+    let tint_on = *tint_music.get_or_insert_with(|| crate::env::var("MARTIN_TINT_MUSIC").is_ok());
     let warmth = sync
         .as_ref()
         .and_then(|s| s.tint_music_at(clock.t))

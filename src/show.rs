@@ -24,7 +24,7 @@ pub struct Show {
 /// `MARTIN_SHOW` is unset or unreadable. Call this **first** in `main`, before anything reads the
 /// env (the score, the sequence, the composition).
 pub fn apply() -> Show {
-    let Ok(spec) = std::env::var("MARTIN_SHOW") else {
+    let Ok(spec) = crate::env::var("MARTIN_SHOW") else {
         return Show::default();
     };
     // A path OR inline show text (same convention as MARTIN_SEQ/_COMPOSE) — so the bundled build can
@@ -240,9 +240,9 @@ fn parse_and_apply(text: &str) -> Show {
     }
     // An inline `[camera]` section is a track → make sure it actually plays (`MARTIN_FLY` may still
     // override the pace; for a timed track the value is ignored anyway, see `flypath`).
-    if !camera.is_empty() && std::env::var("MARTIN_FLY").is_err() {
+    if !camera.is_empty() && crate::env::var("MARTIN_FLY").is_err() {
         // SAFETY: the show is parsed at startup, single-threaded, before the Bevy app spawns threads.
-        unsafe { std::env::set_var("MARTIN_FLY", "1") };
+        unsafe { crate::env::set_var("MARTIN_FLY", "1") };
     }
     Show {
         camera,
@@ -268,9 +268,9 @@ fn set_if_absent(key: &str, value: &str) {
         return;
     }
     let var = format!("MARTIN_{}", canonical_key(key).to_ascii_uppercase());
-    if std::env::var(&var).is_err() {
+    if crate::env::var(&var).is_err() {
         // SAFETY: show settings are applied at startup, single-threaded, before any threads spawn.
-        unsafe { std::env::set_var(var, value) };
+        unsafe { crate::env::set_var(var, value) };
     }
 }
 
@@ -295,13 +295,13 @@ mod tests {
         let key = "test_show_precedence_xyz";
         let var = "MARTIN_TEST_SHOW_PRECEDENCE_XYZ";
         // SAFETY: unique-named var, set + read within this single test.
-        unsafe { std::env::set_var(var, "from_cli") };
+        unsafe { crate::env::set_var(var, "from_cli") };
         set_if_absent(key, "from_show"); // the .show should LOSE to the already-set env
-        assert_eq!(std::env::var(var).unwrap(), "from_cli");
-        unsafe { std::env::remove_var(var) };
+        assert_eq!(crate::env::var(var).unwrap(), "from_cli");
+        unsafe { crate::env::remove_var(var) };
         set_if_absent(key, "from_show"); // now unset → the .show value lands
-        assert_eq!(std::env::var(var).unwrap(), "from_show");
-        unsafe { std::env::remove_var(var) };
+        assert_eq!(crate::env::var(var).unwrap(), "from_show");
+        unsafe { crate::env::remove_var(var) };
     }
 
     #[test]

@@ -26,7 +26,7 @@ fn spawn_4d_test(
     if *done {
         return;
     }
-    let n: usize = std::env::var("MARTIN_4D_TEST")
+    let n: usize = crate::env::var("MARTIN_4D_TEST")
         .ok()
         .and_then(|s| s.parse().ok())
         .filter(|&n| n > 1)
@@ -61,7 +61,7 @@ pub(crate) struct FourDTestPlugin;
 
 impl Plugin for FourDTestPlugin {
     fn build(&self, app: &mut App) {
-        if std::env::var_os("MARTIN_4D_TEST").is_some() {
+        if crate::env::var_os("MARTIN_4D_TEST").is_some() {
             app.add_systems(Update, spawn_4d_test);
         }
     }

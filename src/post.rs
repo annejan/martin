@@ -48,7 +48,7 @@ pub(crate) struct PostSettings {
 
 /// Parse `MARTIN_POST` (`chroma` / `chroma:1.5`) into the camera's settings, or `None` if unset/off.
 pub(crate) fn settings_from_env() -> Option<PostSettings> {
-    let v = std::env::var("MARTIN_POST").ok()?;
+    let v = crate::env::var("MARTIN_POST").ok()?;
     let (name, strength) = v.split_once(':').map_or((v.as_str(), 1.0), |(n, s)| {
         (n, s.trim().parse().unwrap_or(1.0))
     });

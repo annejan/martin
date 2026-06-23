@@ -26,7 +26,7 @@ fn spawn_glb_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut d
     if *done {
         return;
     }
-    let Ok(path) = std::env::var("MARTIN_GLB") else {
+    let Ok(path) = crate::env::var("MARTIN_GLB") else {
         return;
     };
     *done = true;
@@ -75,7 +75,7 @@ pub(crate) struct GlbScenePlugin;
 
 impl Plugin for GlbScenePlugin {
     fn build(&self, app: &mut App) {
-        if std::env::var_os("MARTIN_GLB").is_some() {
+        if crate::env::var_os("MARTIN_GLB").is_some() {
             app.add_systems(Startup, spawn_glb_scene)
                 .add_systems(Update, glb_ready);
         }

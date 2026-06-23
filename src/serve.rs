@@ -34,7 +34,7 @@ const DEFAULT_PORT: u16 = 7878;
 
 /// The port `MARTIN_SERVE` asks for (`1`/`on`/empty → the default), or `None` when serving is off.
 pub(crate) fn serve_port() -> Option<u16> {
-    let v = std::env::var("MARTIN_SERVE").ok()?;
+    let v = crate::env::var("MARTIN_SERVE").ok()?;
     let v = v.trim();
     if v.is_empty() || v == "1" || v.eq_ignore_ascii_case("on") {
         return Some(DEFAULT_PORT);

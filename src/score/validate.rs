@@ -6,7 +6,7 @@ use super::types::{NoteLane, Section};
 /// `MARTIN_SCORE_STRICT` set (and not `0`/empty) → treat score warnings as fatal (for authoring + CI,
 /// so a phase/bar typo can't silently ship). Unset → warnings are logged but the show still plays.
 pub(super) fn strict_scores() -> bool {
-    std::env::var("MARTIN_SCORE_STRICT")
+    crate::env::var("MARTIN_SCORE_STRICT")
         .map(|v| !v.is_empty() && v != "0")
         .unwrap_or(false)
 }

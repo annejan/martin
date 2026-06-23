@@ -115,12 +115,12 @@ impl Waypoints {
     }
 
     fn build(inline: Option<Vec<Key>>) -> Self {
-        let path = std::env::var("MARTIN_WAYPOINTS").unwrap_or_else(|_| "waypoints.json".into());
+        let path = crate::env::var("MARTIN_WAYPOINTS").unwrap_or_else(|_| "waypoints.json".into());
         Self {
             // inline wins; else seed from the file so M *continues* a path and MARTIN_FLY replays it.
             list: inline.unwrap_or_else(|| load(&path)),
             path,
-            fly: std::env::var("MARTIN_FLY")
+            fly: crate::env::var("MARTIN_FLY")
                 .ok()
                 .map(|s| s.trim().parse::<f32>().unwrap_or(2.0).max(0.05)),
         }

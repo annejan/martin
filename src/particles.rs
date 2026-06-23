@@ -106,7 +106,7 @@ fn spawn_particles(
     mut mats: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    let kind = match std::env::var("MARTIN_PARTICLES") {
+    let kind = match crate::env::var("MARTIN_PARTICLES") {
         Ok(v) if !v.is_empty() => Kind::parse(&v),
         _ => return, // unset → no particle layer (off by default)
     };
@@ -133,7 +133,7 @@ fn spawn_particles(
         .collect();
 
     // When does the glow ramp in? `MARTIN_PARTICLE_AT` (seconds or `@@anchor`); unset → 0 (on from t0).
-    let start = std::env::var("MARTIN_PARTICLE_AT")
+    let start = crate::env::var("MARTIN_PARTICLE_AT")
         .ok()
         .filter(|s| !s.is_empty())
         .and_then(|s| score.0.anchor_seconds(s.trim_start_matches("@@")))
@@ -145,7 +145,7 @@ fn spawn_particles(
 
     // Localize the field: re-centre (e.g. on the campfire) + tighten the spread so embers cluster
     // around the fire instead of filling the whole scene.
-    let origin = std::env::var("MARTIN_PARTICLE_ORIGIN")
+    let origin = crate::env::var("MARTIN_PARTICLE_ORIGIN")
         .ok()
         .map(|s| {
             let v: Vec<f32> = s.split(',').filter_map(|x| x.trim().parse().ok()).collect();
@@ -157,7 +157,7 @@ fn spawn_particles(
         })
         .unwrap_or(Vec3::ZERO);
     // spread: a single value (all axes) or per-axis `x,y,z` (wide x/z, shorter y for a fire spread).
-    let spread = std::env::var("MARTIN_PARTICLE_SPREAD")
+    let spread = crate::env::var("MARTIN_PARTICLE_SPREAD")
         .ok()
         .map(|s| {
             let v: Vec<f32> = s.split(',').filter_map(|x| x.trim().parse().ok()).collect();

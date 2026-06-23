@@ -63,7 +63,7 @@ pub(crate) const CONTENT_VARS: [&str; 4] = [
 
 /// True when the user requested no specific content — the cue to play the default demo.
 pub(crate) fn no_content_requested() -> bool {
-    CONTENT_VARS.iter().all(|k| std::env::var(k).is_err())
+    CONTENT_VARS.iter().all(|k| crate::env::var(k).is_err())
 }
 
 /// `.ply` splats are Y-down → rotate the cloud 180° about X for Y-up. Text is built Y-down
@@ -135,7 +135,7 @@ fn advance_seq_clock(
         clock.t += time.delta_secs();
         // resolve the loop length once the reel exists: the cue-timeline end (last shot + hold).
         let len = *loop_len.get_or_insert_with(|| {
-            (std::env::var("MARTIN_LOOP").is_ok())
+            (crate::env::var("MARTIN_LOOP").is_ok())
                 .then(|| {
                     seq.as_ref().map(|s| {
                         let starts = crate::scene::sequence::shot_starts(&s.parts);
@@ -210,7 +210,7 @@ impl Plugin for ScenePlugin {
         spectrum::plugin(app); // FFT of the rendered track → band table, read by the bg + interlude layers
         app.init_resource::<SeqClock>()
             .insert_resource(sequence::FlashStrength(
-                std::env::var("MARTIN_FLASH")
+                crate::env::var("MARTIN_FLASH")
                     .ok()
                     .and_then(|s| s.parse().ok())
                     .unwrap_or(0.0),

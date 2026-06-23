@@ -57,14 +57,14 @@ struct Music {
 /// Startup: kick off the streamed synth render (unless recording / screenshotting / muted — the
 /// recorder muxes the WAV separately), or load the pre-rendered `MARTIN_MUSIC` WAV.
 fn spawn_synth(mut commands: Commands, asset_server: Res<AssetServer>, score_res: Res<ScoreRes>) {
-    let want_audio = std::env::var("MARTIN_RECORD").is_err()
-        && std::env::var("MARTIN_SHOT").is_err()
-        && std::env::var("MARTIN_MUTE").is_err();
+    let want_audio = crate::env::var("MARTIN_RECORD").is_err()
+        && crate::env::var("MARTIN_SHOT").is_err()
+        && crate::env::var("MARTIN_MUTE").is_err();
     if !want_audio {
         return;
     }
     commands.insert_resource(AudioGate::default());
-    if let Ok(path) = std::env::var("MARTIN_MUSIC") {
+    if let Ok(path) = crate::env::var("MARTIN_MUSIC") {
         // Pre-rendered (bundled) audio — load instantly so it plays in sync, no synth render.
         let handle = asset_server.load::<AudioSource>(path.clone());
         commands.insert_resource(Music {

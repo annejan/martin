@@ -34,6 +34,7 @@ mod bundle;
 mod camera;
 mod capture;
 mod cli;
+mod env;
 mod envvar;
 mod fourd;
 mod glb;
@@ -102,8 +103,8 @@ fn main() {
         console_error_panic_hook::set_once();
         // SAFETY: top of main(), single-threaded, before the Bevy app (and its threads) start.
         unsafe {
-            std::env::set_var("MARTIN_SHOW", include_str!("../web/show.show"));
-            std::env::set_var("MARTIN_MUSIC", "web_music.wav");
+            crate::env::set_var("MARTIN_SHOW", include_str!("../web/show.show"));
+            crate::env::set_var("MARTIN_MUSIC", "web_music.wav");
         }
     }
 
@@ -114,12 +115,12 @@ fn main() {
     if let Some(cli::Commands::Mcp { port }) = &cli.command {
         if let Some(p) = port {
             // SAFETY: top of main(), single-threaded, before any threads spawn.
-            unsafe { std::env::set_var("MARTIN_MCP_PORT", p.to_string()) };
+            unsafe { crate::env::set_var("MARTIN_MCP_PORT", p.to_string()) };
         }
         mcp::run();
         return;
     }
-    if std::env::var_os("MARTIN_MCP").is_some() {
+    if crate::env::var_os("MARTIN_MCP").is_some() {
         mcp::run();
         return;
     }
@@ -129,7 +130,7 @@ fn main() {
     // rule: CLI flag > env > .show [settings] > built-in default.
     for (key, value) in cli::apply_cli(&cli) {
         // SAFETY: top of main(), single-threaded, before the Bevy app (and its threads) start.
-        unsafe { std::env::set_var(key, value) };
+        unsafe { crate::env::set_var(key, value) };
     }
 
     // Bundled single-binary build: self-extract the embedded assets + seed the baked-in show into
@@ -141,9 +142,9 @@ fn main() {
     // binary, so a fresh `git clone && cargo run` plays exactly the showcase the download does. Its
     // procedural splats are synthesized by build.rs if absent (see DEFAULT_SHOW there), so the clone
     // needs no python/numpy step. Set it as MARTIN_SHOW so it flows through the unified-show path below.
-    if std::env::var("MARTIN_SHOW").is_err() && scene::no_content_requested() {
+    if crate::env::var("MARTIN_SHOW").is_err() && scene::no_content_requested() {
         // SAFETY: top of main(), single-threaded, before the Bevy app (and its threads) start.
-        unsafe { std::env::set_var("MARTIN_SHOW", "productions/intro/intro.show") };
+        unsafe { crate::env::set_var("MARTIN_SHOW", "productions/intro/intro.show") };
     }
 
     // MARTIN_SHOW=<file>.show: a unified scene file — expand it INTO the env (settings → MARTIN_*,
@@ -153,7 +154,7 @@ fn main() {
 
     // MARTIN_SCORE_DUMP=path: export the built-in score as an editable tracker file, then exit —
     // a ready-to-edit starting point (round-trips through MARTIN_SCORE).
-    if let Ok(path) = std::env::var("MARTIN_SCORE_DUMP") {
+    if let Ok(path) = crate::env::var("MARTIN_SCORE_DUMP") {
         match std::fs::write(&path, score::Score::builtin().to_dsl()) {
             Ok(()) => eprintln!("score: built-in written to {path}"),
             Err(e) => eprintln!("score dump error: {e}"),
@@ -166,7 +167,7 @@ fn main() {
 
     // MARTIN_SYNTH_WAV=path: render the synth to a WAV and exit (record.sh muxes it onto the
     // frames). Done before the Bevy app so it needs no window/GPU.
-    if let Ok(path) = std::env::var("MARTIN_SYNTH_WAV") {
+    if let Ok(path) = crate::env::var("MARTIN_SYNTH_WAV") {
         let track = audio::synth_track(&score);
         match audio::write_wav(&track, &path) {
             Ok(()) => eprintln!(
@@ -183,12 +184,13 @@ fn main() {
     // timeline — the morph track is the "hero", the compose objects are placed around it (tracks).
     // Compose ALONE (no explicit MARTIN_SEQ/_TEXT/_PLY*) → no morph track. So:
     //   compose + an explicit seq → both;  compose only → compose;  neither → the default demo.
-    let composition = std::env::var("MARTIN_COMPOSE")
+    let composition = crate::env::var("MARTIN_COMPOSE")
         .ok()
         .map(|spec| parse_compose(&spec, &score));
     // a morph reel is requested by MARTIN_SEQ (the .show `[reel]`/`[seq]` body, expanded by show::apply).
-    let explicit_seq = std::env::var("MARTIN_SEQ").is_ok();
-    let glb_or_4d = std::env::var("MARTIN_GLB").is_ok() || std::env::var("MARTIN_4D_TEST").is_ok();
+    let explicit_seq = crate::env::var("MARTIN_SEQ").is_ok();
+    let glb_or_4d =
+        crate::env::var("MARTIN_GLB").is_ok() || crate::env::var("MARTIN_4D_TEST").is_ok();
     let (sequence, asset_root) = match choose_mode(glb_or_4d, explicit_seq, composition.is_some()) {
         ContentMode::GlbAlone => {
             // MARTIN_GLB alone: a standalone KHR_gaussian_splatting scene (glb::GlbScenePlugin spawns
@@ -201,7 +203,7 @@ fn main() {
                     parts: Vec::new(),
                     budget: 0,
                 },
-                std::env::var("MARTIN_GLB").ok().and_then(parent_dir),
+                crate::env::var("MARTIN_GLB").ok().and_then(parent_dir),
             )
         }
         ContentMode::Seq => sequence_from_env(&score), // the morph track (or the default demo)
@@ -211,7 +213,7 @@ fn main() {
                 parts: Vec::new(),
                 budget: 0,
             },
-            std::env::var("MARTIN_PLY").ok().and_then(parent_dir),
+            crate::env::var("MARTIN_PLY").ok().and_then(parent_dir),
         ),
     };
     // The camera waypoints: a `.show` inline `[camera]` track (parsed now the score exists, so its
@@ -229,7 +231,7 @@ fn main() {
 
     // MARTIN_VALIDATE=1: a dry run — print the parsed timeline (with the parse diagnostics already
     // on stderr) and exit, no window/render. A fast authoring check.
-    if std::env::var_os("MARTIN_VALIDATE").is_some() {
+    if crate::env::var_os("MARTIN_VALIDATE").is_some() {
         validate::report(
             &sequence,
             composition.as_deref().unwrap_or(&[]),
@@ -259,12 +261,12 @@ fn main() {
     // recording, the perf bench, AND single/contact-sheet screenshots all need it (the RADV window
     // renders black / panics acquiring its swapchain when unfocused). Live runs keep a normal window.
     let headless = is_headless(
-        std::env::var("MARTIN_RECORD").is_ok(),
-        std::env::var("MARTIN_BENCH").is_ok(),
-        std::env::var("MARTIN_SHOT").is_ok(),
-        std::env::var("MARTIN_SHOTS").is_ok(),
+        crate::env::var("MARTIN_RECORD").is_ok(),
+        crate::env::var("MARTIN_BENCH").is_ok(),
+        crate::env::var("MARTIN_SHOT").is_ok(),
+        crate::env::var("MARTIN_SHOTS").is_ok(),
     );
-    let fullscreen = std::env::var("MARTIN_FULLSCREEN").is_ok() && !headless;
+    let fullscreen = crate::env::var("MARTIN_FULLSCREEN").is_ok() && !headless;
     let mut plugins = DefaultPlugins.set(WindowPlugin {
         primary_window: (!headless).then(|| Window {
             title: "martin — splat fly-around".into(),

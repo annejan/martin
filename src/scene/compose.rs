@@ -489,7 +489,7 @@ pub(crate) fn build_composition(
     let base = cloud_base_rotation();
     // MARTIN_DEFORM = a scene-wide FIELD: it wobbles every object on the stage (a per-object
     // `^deform` overrides it), the same default the morph timeline uses — wind over the whole scene.
-    let field = std::env::var("MARTIN_DEFORM")
+    let field = crate::env::var("MARTIN_DEFORM")
         .ok()
         .and_then(|s| Deform::parse(&s));
     // cap each object's splats so a stage of big splats stays performant on the iGPU.

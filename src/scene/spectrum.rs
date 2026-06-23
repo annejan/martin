@@ -63,7 +63,7 @@ fn setup_spectrum(score: Res<ScoreRes>, mut commands: Commands) {
     let rows: Arc<OnceLock<Vec<[f32; BANDS]>>> = Arc::new(OnceLock::new());
     if intensity > 0.0 {
         let recording =
-            std::env::var("MARTIN_RECORD").is_ok() || std::env::var("MARTIN_SHOT").is_ok();
+            crate::env::var("MARTIN_RECORD").is_ok() || crate::env::var("MARTIN_SHOT").is_ok();
         if recording {
             // Must be ready before the first captured frame — bake on the spot (we're offline anyway).
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| bake(&score.0)));

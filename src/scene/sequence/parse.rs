@@ -27,7 +27,7 @@ pub(crate) fn parse_raster(s: &str) -> Option<RasterizeMode> {
 
 /// The global default raster mode (`MARTIN_RASTER`), applied to any part without its own `raster:`.
 pub(crate) fn global_raster() -> RasterizeMode {
-    std::env::var("MARTIN_RASTER")
+    crate::env::var("MARTIN_RASTER")
         .ok()
         .and_then(|s| {
             let m = parse_raster(&s);
@@ -265,8 +265,8 @@ pub(crate) fn parse_euler_deg(s: &str) -> Option<Quat> {
 /// resolve). No `MARTIN_SEQ` → an empty reel (a compose-only show, or nothing): `build_sequence` is then
 /// a no-op and the stage stands alone — never a synthesized fallback cloud.
 pub(crate) fn sequence_from_env(score: &score::Score) -> (Sequence, Option<String>) {
-    let root = std::env::var("MARTIN_PLY").ok().and_then(parent_dir);
-    let spec = std::env::var("MARTIN_SEQ").unwrap_or_default();
+    let root = crate::env::var("MARTIN_PLY").ok().and_then(parent_dir);
+    let spec = crate::env::var("MARTIN_SEQ").unwrap_or_default();
     let budget = crate::envvar::or(
         "MARTIN_MORPH_COUNT",
         if spec.is_empty() { 0 } else { 200_000 },

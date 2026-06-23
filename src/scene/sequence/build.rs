@@ -91,7 +91,7 @@ pub(crate) fn build_sequence(
     let global_tr: Option<Entrance> = None;
     // persistent per-part deform: explicit `^name` > MARTIN_DEFORM > none. Runs while the part is
     // held (a waving wall of text etc.), independent of the arrival entrance above.
-    let global_deform = std::env::var("MARTIN_DEFORM")
+    let global_deform = crate::env::var("MARTIN_DEFORM")
         .ok()
         .and_then(|s| Deform::parse(&s));
     let deforms: Vec<Option<Deform>> = seq
@@ -210,7 +210,7 @@ pub(crate) fn build_sequence(
     // MARTIN_ROT="rx,ry,rz" (euler degrees) orients the whole cloud; default = cloud_base_rotation
     // (Rx180 — .ply splats are Y-down). Computed BEFORE build_shots so `ground:` can seat parts in the
     // WORLD frame (this rotation flips Y, so grounding the un-rotated local cloud would seat the ceiling).
-    let entity_rot = std::env::var("MARTIN_ROT")
+    let entity_rot = crate::env::var("MARTIN_ROT")
         .ok()
         .and_then(|s| parse_euler_deg(&s))
         .unwrap_or_else(cloud_base_rotation);
@@ -320,7 +320,7 @@ fn build_shots(
     base_rot: Quat,
     assets: &mut Assets<PlanarGaussian3d>,
 ) -> Vec<BuiltShot> {
-    let pair_match = std::env::var("MARTIN_PAIR")
+    let pair_match = crate::env::var("MARTIN_PAIR")
         .map(|v| v.eq_ignore_ascii_case("match"))
         .unwrap_or(false);
     let pair_color_w = 0.5_f32; // colour weight in nearest-match pairing (was MARTIN_PAIR_COLOR)

@@ -206,7 +206,7 @@ pub(crate) fn shot_director(
     // cloud's scale; the snare flares the bloom; kick+snare swell any active deform so a ^wave /
     // ^ripple part pumps with the track. During a morph we add a little bulge punch too.
     let pair_match = *pair_match.get_or_insert_with(|| {
-        std::env::var("MARTIN_PAIR").is_ok_and(|v| v.eq_ignore_ascii_case("match"))
+        crate::env::var("MARTIN_PAIR").is_ok_and(|v| v.eq_ignore_ascii_case("match"))
     });
     // per-shot `beat:<scale>` dials this shot's reaction (0 = still through the drop, >1 = punchier),
     // so the bounce can ride only on *some* shots instead of the whole show.

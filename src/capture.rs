@@ -25,7 +25,7 @@ pub(crate) struct RecordTarget(pub Handle<Image>);
 /// **Keep it 16:9** — the fullscreen background/interlude quads and the camera framing assume that
 /// aspect; a non-16:9 size warns and renders letterboxed/cropped. Shared by record + the serve view.
 pub(crate) fn render_size() -> (u32, u32) {
-    let Ok(spec) = std::env::var("MARTIN_RES") else {
+    let Ok(spec) = crate::env::var("MARTIN_RES") else {
         return (1280, 720);
     };
     let parsed = spec
@@ -49,9 +49,9 @@ pub(crate) fn render_size() -> (u32, u32) {
 /// is retargeted to it — so `MARTIN_SHOT`/`MARTIN_SHOTS` grab the image (truly headless) instead of the
 /// OS window (which renders black / panics acquiring its swapchain on RADV when unfocused).
 fn setup_record_target(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    if std::env::var_os("MARTIN_RECORD").is_none()
-        && std::env::var_os("MARTIN_SHOT").is_none()
-        && std::env::var_os("MARTIN_SHOTS").is_none()
+    if crate::env::var_os("MARTIN_RECORD").is_none()
+        && crate::env::var_os("MARTIN_SHOT").is_none()
+        && crate::env::var_os("MARTIN_SHOTS").is_none()
     {
         return;
     }
@@ -320,7 +320,7 @@ fn live_end(
 ) {
     if rec.dir.is_some()
         || shot.path.is_some()
-        || std::env::var("MARTIN_LOOP").is_ok()
+        || crate::env::var("MARTIN_LOOP").is_ok()
         || crate::serve::is_serving()
     {
         return; // recorder/screenshot exit on their own; MARTIN_LOOP / the serve bridge stay up
@@ -377,30 +377,30 @@ impl Plugin for CapturePlugin {
         // MARTIN_PREVIEW_FPS=<n>: render at n fps instead of 60 — fewer frames for a FAST preview
         // (n=6 → 1/10 the frames, full-length but choppy). Timing + sway period stay constant (both
         // dt and yaw_step scale with fps). record.sh muxes at the same fps. Default 60 (full quality).
-        let fps: f32 = std::env::var("MARTIN_PREVIEW_FPS")
+        let fps: f32 = crate::env::var("MARTIN_PREVIEW_FPS")
             .ok()
             .and_then(|s| s.parse().ok())
             .filter(|&f: &f32| f >= 1.0)
             .unwrap_or(60.0);
         app.insert_resource(RecordState {
-            dir: std::env::var("MARTIN_RECORD").ok(),
+            dir: crate::env::var("MARTIN_RECORD").ok(),
             dt: 1.0 / fps,
             yaw_step: 2.0 * PI / (8.0 * fps), // ~8s gentle sway period at any fps
             // a pinned yaw, a parked capture pose, or a flown waypoint path → hold/drive it, no sway
-            sway: std::env::var("MARTIN_YAW").is_err()
-                && std::env::var("MARTIN_CAMERAS").is_err()
-                && std::env::var("MARTIN_FLY").is_err()
-                && std::env::var("MARTIN_COMPOSE").is_err(),
+            sway: crate::env::var("MARTIN_YAW").is_err()
+                && crate::env::var("MARTIN_CAMERAS").is_err()
+                && crate::env::var("MARTIN_FLY").is_err()
+                && crate::env::var("MARTIN_COMPOSE").is_err(),
             i: 0,
             grace: 0,
-            bench: std::env::var("MARTIN_BENCH")
+            bench: crate::env::var("MARTIN_BENCH")
                 .ok()
                 .and_then(|s| s.parse().ok()),
             bench_t0: 0.0,
         })
         .insert_resource(ShotConfig {
-            path: std::env::var("MARTIN_SHOT").ok(),
-            ats: std::env::var("MARTIN_SHOTS")
+            path: crate::env::var("MARTIN_SHOT").ok(),
+            ats: crate::env::var("MARTIN_SHOTS")
                 .ok()
                 .map(|s| {
                     s.split(',')
@@ -410,7 +410,7 @@ impl Plugin for CapturePlugin {
                 .filter(|v| !v.is_empty())
                 .unwrap_or_else(|| {
                     vec![
-                        std::env::var("MARTIN_SHOT_AT")
+                        crate::env::var("MARTIN_SHOT_AT")
                             .ok()
                             .and_then(|s| s.parse().ok())
                             .unwrap_or(6.0),
@@ -420,7 +420,7 @@ impl Plugin for CapturePlugin {
             done: false,
         })
         .insert_resource(FpsLog {
-            enabled: std::env::var("MARTIN_FPS").is_ok(),
+            enabled: crate::env::var("MARTIN_FPS").is_ok(),
             accum: 0.0,
             frames: 0,
         })

@@ -64,12 +64,12 @@ pub(crate) fn seed_orbit_framing(
         env("MARTIN_PITCH", DEFAULT_PITCH),
         content_radius * frame_factor / zoom,
     );
-    if let Ok(cpath) = std::env::var("MARTIN_CAMERAS") {
+    if let Ok(cpath) = crate::env::var("MARTIN_CAMERAS") {
         let positions = crate::scene::sequence::load_camera_positions(&cpath);
         if positions.is_empty() {
             warn!("MARTIN_CAMERAS: no camera positions in {cpath}");
         } else {
-            let idx = std::env::var("MARTIN_CAM_INDEX")
+            let idx = crate::env::var("MARTIN_CAM_INDEX")
                 .ok()
                 .and_then(|s| s.parse::<usize>().ok())
                 .unwrap_or(0)

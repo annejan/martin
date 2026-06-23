@@ -20,7 +20,7 @@ impl Score {
     pub fn from_env() -> Score {
         // MARTIN_SCORE override, else the editable default file (edit it → no recompile), else the
         // embedded built-in (a bundled binary with no assets/ folder).
-        let path = std::env::var("MARTIN_SCORE")
+        let path = crate::env::var("MARTIN_SCORE")
             .ok()
             .filter(|p| !p.is_empty())
             .or_else(|| {

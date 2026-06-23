@@ -38,7 +38,7 @@ fn logo_handle(
     images: &mut Assets<Image>,
     root: &std::path::Path,
 ) -> Option<Handle<Image>> {
-    let logo = std::env::var("MARTIN_LOGO").ok()?;
+    let logo = crate::env::var("MARTIN_LOGO").ok()?;
     if logo.to_ascii_lowercase().ends_with(".svg") {
         let bytes = std::fs::read(root.join(&logo)).ok()?;
         let rgba = crate::splat_image::rasterize_svg(&bytes, 1024)?;
@@ -205,11 +205,11 @@ pub(crate) struct LoaderPlugin;
 
 impl Plugin for LoaderPlugin {
     fn build(&self, app: &mut App) {
-        let synth_wait = std::env::var("MARTIN_RECORD").is_err()
-            && std::env::var("MARTIN_SHOT").is_err()
-            && std::env::var("MARTIN_MUTE").is_err()
-            && std::env::var("MARTIN_MUSIC").is_err();
-        if std::env::var_os("MARTIN_LOADER").is_some() || synth_wait {
+        let synth_wait = crate::env::var("MARTIN_RECORD").is_err()
+            && crate::env::var("MARTIN_SHOT").is_err()
+            && crate::env::var("MARTIN_MUTE").is_err()
+            && crate::env::var("MARTIN_MUSIC").is_err();
+        if crate::env::var_os("MARTIN_LOADER").is_some() || synth_wait {
             app.add_systems(Startup, spawn_loader)
                 .add_systems(Update, update_loader);
         }

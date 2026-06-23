@@ -18,8 +18,8 @@ use serde_json::{Value, json};
 const PROTOCOL: &str = "2025-06-18";
 
 fn bridge_port() -> u16 {
-    std::env::var("MARTIN_MCP_PORT")
-        .or_else(|_| std::env::var("MARTIN_SERVE"))
+    crate::env::var("MARTIN_MCP_PORT")
+        .or_else(|_| crate::env::var("MARTIN_SERVE"))
         .ok()
         .and_then(|s| s.trim().parse().ok())
         .unwrap_or(7878)
