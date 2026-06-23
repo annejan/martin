@@ -74,10 +74,15 @@ fn setup_spectrum(score: Res<ScoreRes>, mut commands: Commands) {
             }
         } else {
             // Live: bake off-thread (~7× realtime); the spectrum stays zero until it lands.
-            let (rows, score) = (rows.clone(), score.0.clone());
-            std::thread::spawn(move || {
-                let _ = rows.set(bake(&score));
-            });
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let (rows, score) = (rows.clone(), score.0.clone());
+                std::thread::spawn(move || {
+                    let _ = rows.set(bake(&score));
+                });
+            }
+            // wasm: no background threads — leave the table unbaked (zero spectrum, so the FFT-reactive
+            // backdrops just don't pulse). Beat-driven reactivity (sidechain/cam_pump/^pulse) is separate.
         }
     }
     commands.insert_resource(SpectrumTable { rows, intensity });

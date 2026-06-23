@@ -4001,7 +4001,9 @@ dependencies = [
  "bevy",
  "bevy_gaussian_splatting",
  "clap",
+ "console_error_panic_hook",
  "fundsp",
+ "getrandom 0.3.4",
  "gltf",
  "image",
  "lz4_flex",
@@ -4010,6 +4012,7 @@ dependencies = [
  "resvg",
  "serde_json",
  "ttf-parser",
+ "wasm-bindgen",
 ]
 
 [[package]]

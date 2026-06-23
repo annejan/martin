@@ -93,6 +93,20 @@ fn is_headless(record: bool, bench: bool, shot: bool, shots: bool) -> bool {
 }
 
 fn main() {
+    // wasm/web build: no CLI, no env, no filesystem-config — so bake the chosen show (web/show.show,
+    // include_str!) + a pre-rendered WAV into the env before anything reads it. Panic→console for
+    // debuggability. The .show is splat+text only (web-safe assets); the WAV + .ply are served next to
+    // the page (fetched by Bevy's web AssetReader). See pipeline/wasm-build.sh.
+    #[cfg(target_arch = "wasm32")]
+    {
+        console_error_panic_hook::set_once();
+        // SAFETY: top of main(), single-threaded, before the Bevy app (and its threads) start.
+        unsafe {
+            std::env::set_var("MARTIN_SHOW", include_str!("../web/show.show"));
+            std::env::set_var("MARTIN_MUSIC", "web_music.wav");
+        }
+    }
+
     let cli = <cli::Cli as clap::Parser>::parse();
 
     // `martin mcp` (or $MARTIN_MCP) → run the stdio MCP server (proxy to a --serve bridge) and exit —

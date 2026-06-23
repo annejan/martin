@@ -1,0 +1,20 @@
+# martin WEB proof-of-life — splat + text ONLY (web-safe: .ply via AssetServer/web_asset,
+# fonts via include_bytes). No mesh:/image:/svg: (those load via std::fs → no filesystem in a browser).
+# The wasm build bakes THIS file in (include_str! in main.rs) + a pre-rendered WAV. Builtin score drives @@bar.
+[settings]
+kind     = demo
+budget   = 120000
+bg       = aurora
+post     = chroma
+cam_pump = 0.2
+
+[reel]
+text:deFEEST     @@intro   @3,2  ~outline  font:defeest  tint:brand  backdrop:aurora
+splat:doggo.ply  @@bar:4   @3,2  ~morph                  backdrop:plasma
+text:PonyCamp    @@bar:8   @3,2  ~fade     font:defeest  tint:brand  backdrop:aurora
+splat:doggo.ply  @@bar:12  @3,3  ~morph                  backdrop:fractal
+
+[camera]
+t=@@bar:0   pos=0,0,0  dist=4.0  yaw=0.30  pitch=0.10
+t=@@bar:6   pos=0,0,0  dist=4.5  yaw=0.90  pitch=0.12
+t=@@bar:12  pos=0,0,0  dist=4.0  yaw=1.40  pitch=0.10

@@ -165,6 +165,12 @@ path = ".claude/skills/**"
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
+# wasm/web build inputs (the baked-in demo show; index.html carries its own SPDX header).
+[[annotations]]
+path = ["web/show.show", "web/index.html"]
+SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
+SPDX-License-Identifier = "MIT"
+
 [[annotations]]
 path = [
     "AGENTS.md",

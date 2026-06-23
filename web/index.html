@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!-- SPDX-FileCopyrightText: 2026 Anne Jan Brouwer <brouwer@annejan.com> -->
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>martin — deFEEST (WebGPU)</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    #msg {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #8fd3ff; font-family: system-ui, sans-serif; font-size: 1.3rem; text-align: center;
+      cursor: pointer; padding: 1rem; z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="msg">▶ click to start &nbsp;·&nbsp; needs WebGPU (Chrome / Edge / Firefox Nightly) + audio on</div>
+  <script type="module">
+    import init from './martin.js';
+    const msg = document.getElementById('msg');
+    async function run() {
+      if (!navigator.gpu) { msg.textContent = 'WebGPU not available — open in Chrome or Edge'; return; }
+      msg.textContent = 'loading…';
+      try {
+        await init();                 // runs martin's main() → Bevy spawns its canvas
+        msg.remove();
+      } catch (e) {
+        // Bevy/winit throws a benign "control flow" exception to yield to the event loop — ignore it.
+        if (String(e).includes('control flow') || String(e).includes('Using exceptions')) { msg.remove(); }
+        else { msg.textContent = 'error: ' + e; console.error(e); }
+      }
+    }
+    msg.addEventListener('click', run, { once: true });   // user gesture → WebGPU + audio allowed
+  </script>
+</body>
+</html>

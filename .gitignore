@@ -104,3 +104,8 @@ productions/*/captures/*.glb
 /.agents/
 /.openhands/
 /skills-lock.json
+
+# wasm/web build artifacts
+web/dist/
+web/*.zip
+web/*.wav

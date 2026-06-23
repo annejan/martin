@@ -84,9 +84,16 @@ fn spawn_synth(mut commands: Commands, asset_server: Res<AssetServer>, score_res
     let buf = Arc::new(StreamBuf::new(total_frames));
     let producer_buf = buf.clone();
     let score = score_res.0.clone();
+    // Native: render the synth in time-ordered segments on a background thread (playback starts at the
+    // lead buffer). wasm has no threads → render inline at startup (blocks ~synth-time). The web build
+    // normally bakes a pre-rendered WAV (MARTIN_MUSIC) so the WAV path above is taken and this inline
+    // fallback isn't reached; it's here so a web build with no baked WAV still plays (just stalls first).
+    #[cfg(not(target_arch = "wasm32"))]
     std::thread::spawn(move || {
         audio::stream::produce(&score, |chunk| producer_buf.push(chunk));
     });
+    #[cfg(target_arch = "wasm32")]
+    audio::stream::produce(&score, |chunk| producer_buf.push(chunk));
     commands.insert_resource(Music {
         stream: Some(buf),
         wav: None,

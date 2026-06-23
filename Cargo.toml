@@ -53,8 +53,20 @@ fundsp = { version = "0.23.0", default-features = false, features = ["std"] }
 # (no C toolchain → clean cross-compiles), only pulled in for bundled builds.
 lz4_flex = { version = "0.13", default-features = false, features = ["std"], optional = true }
 
+# wasm/web build only (a `--target wasm32-unknown-unknown --features web` build of ONE production →
+# a static site). getrandom needs its JS backend on wasm; the panic hook + bindgen wire the canvas.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1"
+getrandom = { version = "0.3", default-features = false, features = ["wasm_js"] }
+
 [features]
 default = ["sh0"]
+
+# `--features web` (with `--target wasm32-unknown-unknown`) = the WebGPU browser build. Turns on the
+# splat crate's webgpu path (= bevy/webgpu) so the demo renders in Chrome/Edge. Pair with `sh0`. See
+# pipeline/wasm-build.sh, which bakes one production into a static site (wasm + js + assets + index.html).
+web = ["sh0", "bevy/webgpu", "bevy_gaussian_splatting/webgpu"]
 
 # SH degree is a one-hot compile-time choice in the splat crate, so it can't be a runtime switch.
 # `sh0` (default) = one flat colour per splat: lean + fast, ideal for our synthetic text/morph demo.
