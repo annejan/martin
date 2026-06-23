@@ -50,7 +50,9 @@ greetings-logos/
 /waypoints.json
 
 # ── Local agent / editor / OS state ───────────────────────────────────
-.claude/
+# version-control shared project skills (render, reuse, …); keep the rest (settings.local.json) local
+.claude/*
+!.claude/skills/
 .DS_Store
 *~
 *.swp

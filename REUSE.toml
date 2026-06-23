@@ -150,6 +150,13 @@ path = ["pipeline/svg_extrude_logo.py", "pipeline/svg_import.py", "pipeline/bitt
 SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
 SPDX-License-Identifier = "MIT"
 
+# Shared project skills (Claude Code) — render/reuse workflow guides. Markdown with YAML frontmatter
+# (no room for an SPDX header), so licensed here.
+[[annotations]]
+path = ".claude/skills/**"
+SPDX-FileCopyrightText = "2026 Anne Jan Brouwer <brouwer@annejan.com>"
+SPDX-License-Identifier = "MIT"
+
 [[annotations]]
 path = [
     "AGENTS.md",
