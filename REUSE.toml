@@ -117,6 +117,26 @@ path = ["assets/bornhack-2026-square.svg", "assets/bornhack-2026-wide.svg", "ass
 SPDX-FileCopyrightText = "BornHack <https://bornhack.dk>"
 SPDX-License-Identifier = "LicenseRef-BornHack"
 
+# BornHack "creatures" font (added 2026-06-23): a glyph set where each letter is a BornHack creature.
+# The creature vector art is community work by the BornHack artists (handles ankhate / lilium /
+# nightowlnl); no formal licence is attached to the art (same situation as the other BornHack assets),
+# so it carries LicenseRef-BornHack. The font is built on URW++ Nimbus Mono (GPL-2.0, the bundled
+# "GNU General Public License.txt" = GPL v2; OTF internal copyright "(URW)++ Design & Development").
+[[annotations]]
+path = "assets/bornhack_creatures_font/*.svg"
+SPDX-FileCopyrightText = "BornHack creature-font contributors (ankhate, lilium, nightowlnl) <https://bornhack.dk>"
+SPDX-License-Identifier = "LicenseRef-BornHack"
+
+[[annotations]]
+path = "assets/bornhack_creatures_font/nimbus-mono/*.otf"
+SPDX-FileCopyrightText = "2014 (URW)++ Design & Development GmbH"
+SPDX-License-Identifier = "GPL-2.0-only"
+
+[[annotations]]
+path = "assets/bornhack_creatures_font/nimbus-mono/GNU General Public License.txt"
+SPDX-FileCopyrightText = "1989, 1991 Free Software Foundation, Inc."
+SPDX-License-Identifier = "GPL-2.0-only"
+
 # BornHack logo — the host camp. Wordmark from the bornhack-website repo (BSD-3-Clause);
 # .glb/.dae are extruded from bornhack.svg (pipeline/svg_import.py) so they carry the same licence.
 [[annotations]]
