@@ -374,4 +374,61 @@ mod tests {
         assert_eq!(i16::from_le_bytes([w[44], w[45]]), 32767);
         assert_eq!(i16::from_le_bytes([w[46], w[47]]), 32767);
     }
+
+    // ---- synth-DSP end-to-end sanity (voices → effects → render → master via produce_parallel) -----
+    // A small score keeps these fast; they guard the whole synth path against silent corruption — the
+    // failure mode unit tests on the helpers alone can't catch (a NaN/blow-up/silence/non-determinism
+    // only emerging once the full lane mix runs).
+
+    /// A short, valid score (~8 s of audio) so the full-synth tests render quickly.
+    fn short_score() -> Score {
+        Score::from_str("bpm 120\nchords C Am F G\nsection drop 4 4\n").expect("valid score")
+    }
+
+    #[test]
+    fn synth_track_is_finite_bounded_and_non_silent() {
+        let track = synth_track(&short_score());
+        assert!(track.len() > 0, "empty track");
+        let mut peak = 0f32;
+        for &s in track.samples.iter() {
+            assert!(s.is_finite(), "non-finite sample in the synth output: {s}");
+            peak = peak.max(s.abs());
+        }
+        // The WAV encoder clamps to ±1, but the float bus may ride a little hot through the master
+        // chain — a sane mix still stays well under a few full-scales (catches a runaway feedback/gain).
+        assert!(peak < 4.0, "peak {peak} — the master bus blew up");
+        // …and there IS signal (not silence / all-DC) — the chords drive the pad/bass voices.
+        assert!(peak > 0.02, "peak {peak} — the track is ~silent");
+    }
+
+    #[test]
+    fn synth_track_duration_matches_the_score() {
+        let score = short_score();
+        let secs = synth_track(&score).len() as f32 / SAMPLE_RATE as f32;
+        let want = score.demo_len();
+        assert!(
+            (secs - want).abs() < 2.0,
+            "rendered {secs:.2}s vs score demo_len {want:.2}s"
+        );
+    }
+
+    #[test]
+    fn synth_track_is_deterministic_within_epsilon() {
+        // produce_parallel sums the lanes across threads, so it isn't bit-identical run-to-run, but it
+        // must stay within a tiny epsilon — recordings + live playback must not audibly drift.
+        let score = short_score();
+        let a = synth_track(&score);
+        let b = synth_track(&score);
+        assert_eq!(a.len(), b.len(), "length drift between runs");
+        let max_diff = a
+            .samples
+            .iter()
+            .zip(b.samples.iter())
+            .map(|(x, y)| (x - y).abs())
+            .fold(0f32, f32::max);
+        assert!(
+            max_diff < 1e-3,
+            "max sample diff {max_diff} — synth not deterministic enough"
+        );
+    }
 }
