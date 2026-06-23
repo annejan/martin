@@ -78,6 +78,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   pre-parse `--mcp` special-case is gone from `main`. `$MARTIN_MCP` still works for parity.
 
 ### Engine
+- **`MARTIN_SIDECHAIN` now pumps the composition stage too** — the visual sidechain (the kick DUCKS the
+  frame, the classic pump) was reel-only; `animate_composition` now honours it as well, so every placed
+  prop breathes with the track. One duck factor × each prop's opacity; `0` = off (byte-identical). The
+  camping demo (`campsite-max`) turns it on (`sidechain=0.5`) alongside a punchier `cam_pump=0.30`,
+  `fft=1.6` (harder FFT-reactive backdrops), and hard beat-CUTS on the drop/climax camera waypoints.
 - **`aniso:<f>` — anisotropic mesh splats** (reel per-part token): `>1` stretches each sampled `mesh:`
   splat into an **ellipsoid along the surface grain** (the triangle's longest in-plane edge),
   area-preserving, so the cloud follows the mesh's contours for a streaky/painterly read instead of round
