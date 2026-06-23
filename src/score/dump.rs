@@ -236,3 +236,31 @@ fn ramp_str(r: &Ramp) -> String {
         format!("{}>{}", fnum(r.a), fnum(r.b))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::score::Score;
+
+    /// The full, real builtin score (`assets/score.txt`) must survive a `to_dsl → from_str` round-trip
+    /// with its structure intact, and the formatter must be idempotent. This exercises `to_dsl` on
+    /// genuinely complex data (vs. the per-field round-trips in `mod.rs`) — a formatter regression that
+    /// drops/reorders/mangles a section is caught here.
+    #[test]
+    fn builtin_score_round_trips_through_to_dsl() {
+        let a = Score::builtin();
+        let dsl = a.to_dsl();
+        let b = Score::from_str(&dsl).expect("to_dsl output must re-parse");
+
+        assert_eq!(a.bpm, b.bpm, "bpm drifted through to_dsl");
+        assert_eq!(a.sections.len(), b.sections.len(), "section count drifted");
+        for (x, y) in a.sections.iter().zip(b.sections.iter()) {
+            assert_eq!(x.name, y.name, "section name drifted");
+            assert_eq!(x.bars, y.bars, "section '{}' bar count drifted", x.name);
+            assert_eq!(x.phases, y.phases, "section '{}' phases drifted", x.name);
+            assert_eq!(x.fill, y.fill, "section '{}' fill drifted", x.name);
+        }
+
+        // the formatter is a fixed point: re-dumping the re-parsed score is byte-identical.
+        assert_eq!(dsl, b.to_dsl(), "to_dsl is not idempotent");
+    }
+}
