@@ -1,0 +1,53 @@
+# martin score — "SKYLINE" — an ORIGINAL uplifting-trance composition (NOT a cover, no transcription):
+# our own melody + chords, for the 4-cities fly-through (NYC · Chicago · Austin · Seattle). A-minor
+# uplifting progression (Am F C G), 138 BPM, supersaw wall + bell arp + a hoover lead hook.
+bpm 138
+chords Am F C G
+
+set lead=0.85 leadsw=5 arp=0.7 arpsw=2 bass=0.72 sub=0.5 stab=0.8 stabsw=2 supersaw=0.5 choir=0.5 reverb=0.42 sidechain=0.5 widen=1.6 makeup=1.12 ceiling=0.94 hats=0.42 snares=0.55
+
+section intro 8 8
+section build 8 8
+section drop 8 8
+section breakdown 8 8
+section climax 8 8
+section outro 8 8
+
+# the wall (supersaw+choir) defaults to drop/climax/outro; add it to build for a continuous lift.
+build.fx: wall riser
+breakdown.fx: wall shimmer
+
+# ── drums: 4-on-floor trance — kick every beat, clap on 2&4, offbeat open-hat ──
+build.kick p0:   x... .... x... ....
+build.hat p0:    .... ..x. .... ..x.
+build.kick fill: x... x... x.x. xxxx
+drop.kick p0:    x... x... x... x...
+drop.snare p0:   .... x... .... x...
+drop.hat p0:     ..x. ..x. ..x. ..x.
+drop.kick fill:  x.x. x.x. xxxx xxxx
+breakdown.kick p0: x... .... x... ....
+breakdown.snare p0: .... x... .... x...
+climax.kick p0:  x... x... x... x...
+climax.snare p0: .... x... .... x...
+climax.hat p0:   ..x. ..x. ..x. ..x.
+climax.kick fill: x.x. x.x. xxxx xxxx
+outro.kick p0:   x... .... x... ....
+
+# ── bass: rolling trance bass — root on the "and" of each beat (roots track Am F C G) ──
+drop.bass p0:    A1 . A2 .  A1 . A2 .  F1 . F2 .  F1 . F2 .   C1 . C2 .  C1 . C2 .  G1 . G2 .  G1 . G2 .   A1 . A2 .  A1 . A2 .  F1 . F2 .  F1 . F2 .   C1 . C2 .  C1 . C2 .  G1 . G2 .  G1 . G2 .
+climax.bass p0:  A1 . A2 .  A1 . A2 .  F1 . F2 .  F1 . F2 .   C1 . C2 .  C1 . C2 .  G1 . G2 .  G1 . G2 .   A1 . A2 .  A1 . A2 .  F1 . F2 .  F1 . F2 .   C1 . C2 .  C1 . C2 .  G1 . G2 .  G1 . G2 .
+breakdown.bass p0: A1 - - -  - - - -  F1 - - -  - - - -   C1 - - -  - - - -  G1 - - -  - - - -   A1 - - -  - - - -  F1 - - -  - - - -   C1 - - -  - - - -  G1 - - -  - - - -
+
+# ── lead: the ORIGINAL hook — an emotive rising/falling phrase over Am F C G (one bar each), with a
+#    lifted variation in the 2nd half. Carried by the hoover (leadsw=5). ──
+drop.lead p0:    E5 - - -  C5 - - -  A4 - - -  B4 - C5 -   C5 - - -  A4 - - -  F4 - - -  G4 - A4 -   E5 - - -  G5 - - -  E5 - - -  D5 - C5 -   D5 - - -  B4 - - -  G4 - - -  A4 - B4 -
+climax.lead p0:  E5 - - -  C5 - E5 -  A4 - C5 -  B4 - C5 -   C5 - - -  A4 - C5 -  F4 - A4 -  G4 - A4 -   E5 - - -  G5 - A5 -  E5 - G5 -  D5 - C5 -   D5 - - -  B4 - D5 -  G4 - B4 -  A4 - B4 -
+breakdown.lead p0: A4 - - -  - - C5 -  E5 - - -  - - - -   F4 - - -  - - A4 -  C5 - - -  - - - -   E4 - - -  - - G4 -  C5 - - -  - - - -   D4 - - -  - - G4 -  B4 - - -  - - - -
+
+# ── arp: an 8th-note bell arpeggio of the chord (uplifting trance sparkle) ──
+drop.arp p0:     A4 C5 E5 C5  A4 C5 E5 C5  F4 A4 C5 A4  F4 A4 C5 A4   C4 E4 G4 E4  C4 E4 G4 E4  G4 B4 D5 B4  G4 B4 D5 B4   A4 C5 E5 C5  A4 C5 E5 C5  F4 A4 C5 A4  F4 A4 C5 A4   C4 E4 G4 E4  C4 E4 G4 E4  G4 B4 D5 B4  G4 B4 D5 B4
+climax.arp p0:   A4 C5 E5 C5  A4 C5 E5 C5  F4 A4 C5 A4  F4 A4 C5 A4   C4 E4 G4 E4  C4 E4 G4 E4  G4 B4 D5 B4  G4 B4 D5 B4   A4 C5 E5 C5  A4 C5 E5 C5  F4 A4 C5 A4  F4 A4 C5 A4   C4 E4 G4 E4  C4 E4 G4 E4  G4 B4 D5 B4  G4 B4 D5 B4
+
+# ── stab: chord hits on the off-beats (saw stab) in the energetic sections ──
+drop.stab p0:    .... x... .... x...
+climax.stab p0:  ..x. x.x. ..x. x.x.
