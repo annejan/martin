@@ -11,6 +11,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **More synth voice characters (generic, additive)** — the voice-switch palette grows so any score can
+  pick its sound: `arpsw=2` an FM **bell**, `arpsw=3` a bright **glass pluck**, and a new **`stabsw`**
+  for the chord-stab voice (`1` a fat **rave-organ**, `2` a bright **saw stab**). All default to the
+  original voices (`0`) → existing tracks byte-identical; benefits every production.
 - **Pan-flute arp voice (`arpsw=1`) + arp gain knob (`set arp=`)** — a breathy hollow flute (sine +
   soft harmonics + highpassed breath noise + a chiff attack + swelling vibrato) for melodic lines on
   the arp lane; the arp lane now respects a `set arp=<gain>` level (was a fixed 0.20). Used for the

@@ -5,7 +5,7 @@
 bpm 135
 chords Am G F E
 
-set lead=0.85 leadsw=5 arp=0.85 arpsw=1 bass=0.7 sub=0.5 stab=0.9 supersaw=0.5 choir=0.45 reverb=0.35 sidechain=0.5 hats=0.45 snares=0.55
+set lead=0.85 leadsw=5 arp=0.85 arpsw=1 bass=0.7 sub=0.5 stab=0.9 stabsw=2 supersaw=0.5 choir=0.45 reverb=0.35 sidechain=0.5 hats=0.45 snares=0.55
 
 section s1 8 8
 section s2 8 8

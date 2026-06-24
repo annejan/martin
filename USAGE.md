@@ -990,8 +990,8 @@ mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
   these are the **palette knobs** that swap a voice's CHARACTER without touching code — `leadsw`
   (1 vocal-saw · 2 breathy-sung · 3 brass-cut/Brut · 4 FM-bell · 5 **hoover** — the Alpha-Juno rave
   lead: detuned saw stack + fifth + sub + a pitch-dive on attack), `basssw` (2 Kavinsky-sub · 3 Brut-Reese
-  · 4 acid-303), `arpsw` (1 **pan-flute** — breathy hollow flute for melodic lines, e.g. the Dance 2
-  Trance chant), `padsw` (2 Juno · 3 PWM-string · 4 dark-wash), `drumsw` (1 analog/808 kit). `0` (default)
+  · 4 acid-303), `arpsw` (1 **pan-flute** · 2 **FM bell** · 3 **glass pluck**), `stabsw` (1 **rave-organ**
+  · 2 **saw stab**), `padsw` (2 Juno · 3 PWM-string · 4 dark-wash), `drumsw` (1 analog/808 kit). `0` (default)
   = the original voices, so existing tracks are unchanged. They resolve **per note**, so a
   `breakdown.set leadsw=2` gives a section its own instruments — e.g. softer voices in a calm interlude,
   harder ones in the crescendo. (See `productions/camping/score.txt` for a worked example.)

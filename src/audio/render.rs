@@ -111,11 +111,21 @@ fn lead_pick(n: i32, f: f32, v: f32) -> Unit {
         _ => lead(f, v),
     }
 }
-// arpsw: the arp lane's voice — 0 the plucky default arp · 1 a breathy pan-flute (melodic lines).
+// arpsw: the arp lane's voice — 0 default arp · 1 pan-flute · 2 FM bell · 3 glass pluck.
 fn arp_pick(n: i32, f: f32, v: f32) -> Unit {
     match n {
         1 => flute(f, v),
+        2 => bell(f, v),
+        3 => pluck(f, v),
         _ => arp(f, v),
+    }
+}
+// stabsw: the stab/chord-hit voice — 0 default plucky stab · 1 fat rave-organ · 2 bright saw stab.
+fn stab_pick(n: i32) -> fn(f32) -> Unit {
+    match n {
+        1 => stab_organ,
+        2 => stab_saw,
+        _ => stab,
     }
 }
 // bass also has CHARACTERS: basssw = 0 orig · 1 *_sw clean-split Reese · 2 Kavinsky clean sub ·
@@ -275,8 +285,9 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let gt = groove(t, beat, 0x6E, 0.004, 0.0);
         let amp = (0.10 + 0.10 * m) * vel(t, beat, 0x6E);
         let tri = score.chord_at(t).triad();
+        let stabv = stab_pick(isw(gt, "stabsw"));
         ev(&mut lanes[L_DRUMS], gt, move |b, _| {
-            chord_spread(b, gt, 0.5, amp, 0.75, tri, stab)
+            chord_spread(b, gt, 0.5, amp, 0.75, tri, stabv)
         });
     }
 

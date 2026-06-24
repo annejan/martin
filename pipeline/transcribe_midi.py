@@ -134,7 +134,7 @@ def main():
     # a default chord set (overridden per-section below); fall back to Am if a bar has no bass
     L.append("chords Am G F E")
     L.append("")
-    L.append("set lead=0.85 leadsw=5 arp=0.85 arpsw=1 bass=0.7 sub=0.5 stab=0.9 supersaw=0.5 choir=0.45 reverb=0.35 sidechain=0.5 hats=0.45 snares=0.55")
+    L.append("set lead=0.85 leadsw=5 arp=0.85 arpsw=1 bass=0.7 sub=0.5 stab=0.9 stabsw=2 supersaw=0.5 choir=0.45 reverb=0.35 sidechain=0.5 hats=0.45 snares=0.55")
     # mids automation drives the pad/wall/stab body — ramp it up out of the intro so the bed fills
     L.append("")
     nsec = (total_bars + a.bars_per_section - 1) // a.bars_per_section

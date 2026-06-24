@@ -50,6 +50,71 @@ pub(super) fn pad(freq: f32) -> Box<dyn AudioUnit> {
     )
 }
 
+/// Bell (`arpsw=2`): additive FM-ish bell — a fundamental + inharmonic partials, each on its own fast
+/// decay (a struck, glassy chime). Sine-only → cheap, no oversample needed.
+pub(super) fn bell(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    let par = move |mult: f32, amp: f32, dec: f32| {
+        sine_hz(freq * mult) * envelope(move |t: f32| amp * (-t * dec).exp())
+    };
+    Box::new(
+        (par(1.0, 0.5, 2.4) + par(2.0, 0.26, 3.4) + par(2.76, 0.18, 4.6) + par(5.4, 0.10, 6.2))
+            * envelope(|t: f32| {
+                let a = 0.003;
+                (t / a).min(1.0)
+            })
+            * (0.5 + 0.4 * vel),
+    )
+}
+
+/// Glass pluck (`arpsw=3`): a bright short saw/square pluck with a fast filter snap — crisp melodic
+/// motion (sharper + glassier than the default mellow `arp`).
+pub(super) fn pluck(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    let osc = saw_hz(freq) * 0.6 + square_hz(freq * 2.0) * 0.15;
+    let top = 3000.0 + 3000.0 * vel;
+    let cut = envelope(move |t: f32| 500.0 + top * (-t * 30.0).exp());
+    Box::new(
+        ((osc | cut) >> lowpass_q(0.9))
+            * envelope(|t: f32| {
+                let a = 0.002;
+                if t < a { t / a } else { (-(t - a) * 9.0).exp() }
+            })
+            * 0.5,
+    )
+}
+
+/// Organ stab (`stabsw=1`): saw + square with a sustained-ish body (slower decay) — a fat rave-organ
+/// hit rather than the default plucky stab.
+pub(super) fn stab_organ(freq: f32) -> Box<dyn AudioUnit> {
+    Box::new(
+        ((saw_hz(freq) * 0.5 + square_hz(freq) * 0.35 + square_hz(freq * 2.0) * 0.12)
+            >> lowpass_hz(2200.0, 0.7)
+            >> highpass_hz(200.0, 0.7))
+            * envelope(|t: f32| {
+                let a = 0.006;
+                if t < a {
+                    t / a
+                } else {
+                    0.6 + 0.4 * (-(t - a) * 5.0).exp()
+                }
+            })
+            * 0.28,
+    )
+}
+
+/// Saw stab (`stabsw=2`): a bright detuned-saw chord stab — the big supersaw-flavoured trance hit.
+pub(super) fn stab_saw(freq: f32) -> Box<dyn AudioUnit> {
+    Box::new(
+        (((saw_hz(freq) + saw_hz(freq * 1.007) + saw_hz(freq * 0.993)) * 0.2)
+            >> lowpass_hz(3200.0, 0.8)
+            >> highpass_hz(200.0, 0.7))
+            * envelope(|t: f32| {
+                let a = 0.008;
+                if t < a { t / a } else { (-(t - a) * 6.5).exp() }
+            })
+            * 0.3,
+    )
+}
+
 /// Bass: a moving Reese — a sub sine + two ±8-cent-detuned saws (the phasing growl) through a
 /// resonant low-pass that drops from ~1.4 kHz to ~900 Hz, with per-VOICE tanh drive so the grit
 /// lives on the bass itself, not smeared across the whole bus.
