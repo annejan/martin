@@ -2,7 +2,7 @@
 # pipeline/transcribe_midi.py (NOT a from-memory guess). An instrumental cover arrangement
 # on martin's synth voices; hand-tune the mix / sections / voice-switches after. Credit the
 # original composition in REUSE.toml (see the camping / d2t scores).
-bpm 87
+bpm 146
 chords Am G F E
 
 set lead=0.9 leadsw=6 arp=0.7 arpsw=4 bass=0.7 sub=0.45 stab=0.6 stabsw=1 drumsw=1 supersaw=0.28 choir=0.3 reverb=0.42 sidechain=0.25 hats=0.4 snares=0.5
