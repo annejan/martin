@@ -11,6 +11,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **"Op de camping" lyrics demo (`productions/camping/op-de-camping-lyrics.show`)** — a simple
+  karaoke cut: all of Ome Henk's 1995 lyrics on screen as a timed `[caption]` track over a lean
+  morphing-splat backbone with section-cued backdrops, ending on a **real explosion** — the splat
+  bursts apart (`exit:explode`) into a trailing `~shockwave` blast with a `bolt` lightning backdrop
+  on the outro bang, then dies out to black (the buildup finally pays off instead of resolving into
+  nothing).
 - **Cinematic post-FX (`MARTIN_POST=cine` / `grain` / `vignette`)** — the post pipeline grows beyond
   chroma: film **grain** (a deterministic per-pixel+frame hash, record-safe) and a **vignette**
   (darkened corners), composable with `+` (`chroma+vignette`) and scaled with `:<strength>`. The
@@ -90,6 +96,15 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 - **Camping demo barnyard** — `productions/camping/campsite-max.show` gains two grazing goats
   (`geit.glb`, build) and a pair of peacocks (`pauw.glb`): a colourful one (drop) and a rare white one
   (`tint:white`, drop), strutting front-of-camp to finish off PonyCamp.
+
+### Fixed
+- **Captions: a lyric word that is also an option keyword no longer truncates the line.** The
+  `[caption]` parser split text from options at the *first* keyword token, so a bare `in`/`at`/… inside
+  the text (e.g. "dooie beessies **in** me thee") cut the caption short and desynced its options. It
+  now splits at the first keyword that begins a *valid* trailing-options run, so stray keyword words
+  stay part of the text.
+- **Centred captions now centre multi-line text** (`Justify::Center` + edge padding) instead of a
+  wrapped second line hugging the left edge.
 
 ### Removed
 - **Pruned ~23 never-used global `MARTIN_*` env vars** — mesh-sampling (`MESH_COUNT`/`MESH_SPLAT`/

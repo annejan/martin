@@ -74,6 +74,26 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
             "in" | "out" | "at" | "size" | "fade" | "center" | "scroll"
         )
     };
+    // A trailing-options run: a contiguous block of `keyword [value]` pairs (`center` takes no value)
+    // that consumes to the end with no stray token left over. Used to split text from options so a
+    // lyric word that happens to BE a keyword (e.g. "beessies in me thee") doesn't truncate the text —
+    // "in me thee …" leaves "thee" stray, so it isn't a valid options run and stays part of the text.
+    let opts_valid = |s: &[&str]| {
+        let mut i = 0;
+        while i < s.len() {
+            match s[i] {
+                "center" => i += 1,
+                "in" | "out" | "at" | "size" | "fade" | "scroll" => {
+                    if i + 1 >= s.len() {
+                        return false; // keyword with no value
+                    }
+                    i += 2;
+                }
+                _ => return false, // stray non-keyword token
+            }
+        }
+        !s.is_empty()
+    };
     let mut out = Vec::new();
     for raw in lines {
         let line = raw.split('#').next().unwrap_or("").trim();
@@ -88,14 +108,20 @@ pub fn parse_captions(lines: &[String], score: &Score) -> Vec<CaptionSpec> {
             warn!("caption: line must start with screentext:/title: — skipped: {line}");
             continue;
         };
-        // text = head's first word + any following non-keyword tokens
-        let mut text = first.to_string();
-        let mut i = 1;
-        while i < toks.len() && !is_kw(toks[i]) {
-            text.push(' ');
-            text.push_str(toks[i]);
-            i += 1;
+        // Rebuild the token list with the `screentext:` prefix stripped from the head, then split it
+        // into text + options at the FIRST keyword that begins a valid trailing-options run (so a
+        // stray keyword word inside the lyric doesn't cut the text short — see `opts_valid`).
+        let mut words: Vec<&str> = toks.clone();
+        words[0] = first;
+        let mut i = words.len();
+        for k in 1..words.len() {
+            if is_kw(words[k]) && opts_valid(&words[k..]) {
+                i = k;
+                break;
+            }
         }
+        let text = words[..i].join(" ");
+        let toks = words; // options loop below indexes from `i`
         let (mut appear, mut out_t, mut fade, mut fx, mut fy, mut size, mut center, mut scroll) = (
             0.0_f32,
             f32::MAX,
@@ -182,6 +208,9 @@ fn spawn_captions(
                 top: Val::Percent(c.fy * 100.0),
                 display: Display::Flex,
                 justify_content: JustifyContent::Center,
+                // pad the edges so a long lyric line wraps WITHIN the frame (and the wrapped
+                // lines centre, via the child's `Justify::Center`) instead of hugging x=0.
+                padding: UiRect::horizontal(Val::Percent(6.0)),
                 ..default()
             }
         } else {
@@ -212,6 +241,11 @@ fn spawn_captions(
                     ..default()
                 },
                 TextColor(Color::srgba(0.96, 0.96, 1.0, 0.0)),
+                TextLayout::new_with_justify(if c.center {
+                    Justify::Center
+                } else {
+                    Justify::Left
+                }),
                 CaptionTag {
                     appear: c.appear,
                     out: c.out,
@@ -251,5 +285,48 @@ pub(crate) struct CaptionPlugin;
 impl Plugin for CaptionPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, (spawn_captions, animate_captions, scroll_captions));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::score::Score;
+
+    fn cap(line: &str) -> CaptionSpec {
+        let v = parse_captions(&[line.to_string()], &Score::builtin());
+        assert_eq!(v.len(), 1, "expected one caption from: {line}");
+        v.into_iter().next().unwrap()
+    }
+
+    #[test]
+    fn keyword_word_inside_lyric_is_kept_as_text() {
+        // a lyric containing the bare keyword "in" must not truncate the caption text — the real
+        // options run starts at the LAST "in 50 out 60 …" and the stray "in me thee" stays text.
+        let c = cap("screentext:dooie beessies in me thee in 50 out 60 center");
+        assert_eq!(c.text, "dooie beessies in me thee");
+        assert_eq!(c.appear, 50.0);
+        assert_eq!(c.out, 60.0);
+        assert!(c.center);
+    }
+
+    #[test]
+    fn normal_line_splits_text_and_options() {
+        let c = cap("screentext:Op de camping in 10 out 20 at 0.5,0.84 size 34 fade 0.3");
+        assert_eq!(c.text, "Op de camping");
+        assert_eq!(c.appear, 10.0);
+        assert_eq!(c.out, 20.0);
+        assert_eq!(c.fx, 0.5);
+        assert_eq!(c.fy, 0.84);
+        assert_eq!(c.size, 34.0);
+        assert_eq!(c.fade, 0.3);
+    }
+
+    #[test]
+    fn text_only_line_keeps_full_text_and_defaults() {
+        let c = cap("screentext:Op de camping tet tet");
+        assert_eq!(c.text, "Op de camping tet tet");
+        assert_eq!(c.appear, 0.0);
+        assert_eq!(c.out, f32::MAX);
     }
 }

@@ -883,6 +883,7 @@ A `.show` has four kinds of section — see [`assets/example.show`](assets/examp
 | `[seq]` | the **hero** morph timeline — verbatim [`.seq`](#sequences) syntax |
 | `[compose]` | the **stage** of placed objects — verbatim [`.compose`](#composition--the-stage-martin_compose) syntax |
 | `[camera]` | a music-timed **[camera track](#live-keyboard-controls)** — order-free `t=<s> pos=x,y,z dist= yaw= pitch=` lines. `t` is seconds **or `@@anchor`** (`t=@@drop` locks the keyframe to a music section, like a seq part). A bare **`cut`** token on a keyframe makes the camera **snap** to it (hold the previous pose, then jump) instead of gliding — an MTV-style hard cut on the beat: `t=@@drop pos=0,0,0 dist=0.6 cut` |
+| `[caption]` | a **screen-pinned lyric/title track** — `screentext:<text…>` lines pinned to screen space (unlike `text:`, which renders world-space gaussians the camera flies past). See [Screen captions](#screen-captions-caption) below. |
 | `[sync]` | a music-timed **look track** (automation) — same `t=<s\|@@anchor>` grammar, any knob name works. The well-known knobs (`flash`, `bg_dim`, `beat`, `exposure`, `fov`, `tint_music`, `bg`) have typed engine accessors, but you can keyframe **any** float-valued name — it's stored generically and read via `sync.at(name, t)`. Each is smoothstep-interpolated between keyframes (e.g. `t=@@drop flash=0.6 bg_dim=0.3 beat=1.3 exposure=1.4 fov=0.7 tint_music=0.8`), so the bloom swells into the drop, the backdrop dims through the climax, the beat-reactivity ramps to the peak, the exposure lifts on the hit, `fov` punches the lens in (`<1` = zoom in; clamped ≤1 so the backdrop quads stay covered), and `tint_music` warms/cools the backdrop palette (`-1`..`+1`) — instead of one static value all show. `bg`/`backdrop` takes a mode **name** (plasma/stars/fractal/…) and switches discretely (step, no lerp). Per-Shot `flash:`/`beat:` still layer on top; no `[sync]` = the static `MARTIN_*` values. |
 
 It's deliberately pure sugar: the file **expands into the env** (the settings become `MARTIN_*`, the
@@ -894,6 +895,33 @@ isn't an env var, the inline `[camera]` track, is handed straight to the camera 
 logged poses into the `[camera]` section, or hand-edit the `t`'s to lock moves to the beat. A
 keyframe time can also be a **`@@anchor`** (`t=@@drop`) so the move snaps to a music section even if
 you retune the tempo.
+
+### Screen captions (`[caption]`)
+
+On-screen text **pinned to screen space** (bevy-ui, baked into recordings) — lyrics, titles, credits —
+as opposed to `text:` reel parts, which are *world-space* gaussians the camera flies past. Each line:
+
+```
+screentext:<text…>  [in <anchor>] [out <anchor>] [at fx,fy] [size px] [fade s] [center] [scroll s]
+```
+
+- `in`/`out` — fade-in / fade-out start, any **`@@anchor`** the score accepts (`@@drop`, `@@bar:50`,
+  `@@outro+4bar`, raw seconds). Default `in` = 0, `out` = stick to the end. Timing is **musical**, not
+  wall-clock, so it stays locked when you retune the tempo.
+- `at fx,fy` — screen fractions (0..1) of the text's left edge (top edge for `fy`); `fy>1` parks it
+  below-screen for a scroll-up. Ignored when `center` is set (then it's horizontally centred).
+- `size` px (default 56), `fade` s (default 0.6), `center` (value-less flag — centres the line and
+  centres wrapped multi-line text), `scroll` = upward speed (fraction of screen / s, for credits).
+- `title:` is an alias for `screentext:`. `#` starts a comment; bad lines warn + skip.
+- A bare keyword **inside** the lyric is safe — "dooie beessies **in** me thee" keeps its text; the
+  options are only split off at the first keyword that begins a *complete* trailing-options run.
+
+```ini
+[caption]
+screentext:OP DE CAMPING                          in @@intro  out @@build   at 0.5,0.5   size 72  center  fade 1.0
+screentext:Op de camping — met z'n alle bij mekaar in @@bar:26 out @@bar:30 at 0.5,0.84  size 34  center  fade 0.3
+screentext:martin engine · 2026                    in @@outro  out @@bar:130 at 0,1.2     center  size 26  scroll 0.04
+```
 
 ### Validate a show without rendering (`MARTIN_VALIDATE`)
 
