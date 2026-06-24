@@ -80,16 +80,14 @@ pub(crate) fn shot_director(
         f32::MAX
     };
     let departing = t >= depart_at;
-    // streaming guarantees the active window {idx-1, idx, idx+1} is uploaded, so these unwraps hold.
-    let cur_shape = s
-        .shape
-        .as_ref()
-        .expect("active shot shape uploaded (ensure_window)");
-    let prev_shape = || {
-        shots[idx.saturating_sub(1)]
-            .shape
-            .as_ref()
-            .expect("previous shot shape uploaded (ensure_window)")
+    // streaming uploads the active window {idx-1, idx, idx+1} above, so these are Some. Defensive
+    // (compo-safe): if a cloud somehow isn't ready this frame, HOLD last frame (skip) instead of
+    // panicking — a live demo must never crash on a transient.
+    let (Some(cur_shape), Some(prev_shape)) = (
+        s.shape.as_ref(),
+        shots[idx.saturating_sub(1)].shape.as_ref(),
+    ) else {
+        return;
     };
     let (want_lhs, want_rhs, factor, arriving) = if departing {
         let f = ((t - depart_at) / DEPART_LEN).clamp(0.0, 1.0);
@@ -102,7 +100,7 @@ pub(crate) fn shot_director(
             Some(h) => h,
             None => {
                 debug_assert!(idx > 0, "Cut shot 0 must have an origin");
-                prev_shape()
+                prev_shape
             }
         };
         (lhs, cur_shape, if t >= s.start { 1.0 } else { 0.0 }, false)
@@ -114,7 +112,7 @@ pub(crate) fn shot_director(
             Some(h) => h,
             None => {
                 debug_assert!(idx > 0, "Morph shot 0 must have an origin");
-                prev_shape()
+                prev_shape
             }
         };
         (lhs, cur_shape, f, dt < s.morph)
