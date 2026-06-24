@@ -111,6 +111,13 @@ fn lead_pick(n: i32, f: f32, v: f32) -> Unit {
         _ => lead(f, v),
     }
 }
+// arpsw: the arp lane's voice — 0 the plucky default arp · 1 a breathy pan-flute (melodic lines).
+fn arp_pick(n: i32, f: f32, v: f32) -> Unit {
+    match n {
+        1 => flute(f, v),
+        _ => arp(f, v),
+    }
+}
 // bass also has CHARACTERS: basssw = 0 orig · 1 *_sw clean-split Reese · 2 Kavinsky clean sub ·
 // 3 Brut Reese growl · 4 acid/303 squelch. (held-note variant = the matching woozbass.)
 fn bass_pick(n: i32, f: f32, v: f32) -> Unit {
@@ -343,8 +350,10 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let v = vel(t, beat, 0x2B);
         let gt = groove(t, beat, 0x9C, 0.006, 0.0);
         let dur = 0.2 + hold;
+        let arpsw = isw(gt, "arpsw");
+        let ag = score.param_at(gt, "arp", 0.20); // arp-lane gain knob (`set arp=…`); default = old fixed level
         ev(&mut lanes[L_ARP], gt, move |bd, _| {
-            render_into(bd, gt, dur, 0.20 * v, pan, arp(f, v))
+            render_into(bd, gt, dur, ag * v, pan, arp_pick(arpsw, f, v))
         });
     }
 

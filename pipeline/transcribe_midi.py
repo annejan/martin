@@ -30,6 +30,7 @@ def main():
     ap.add_argument("inp"); ap.add_argument("out")
     ap.add_argument("--bpm", type=float, default=0)
     ap.add_argument("--lead", type=int, default=4)
+    ap.add_argument("--arp", type=int, default=-1)  # optional 2nd melodic lane (e.g. a riff)
     ap.add_argument("--bass", type=int, default=1)
     ap.add_argument("--stab", type=int, default=0)
     ap.add_argument("--drums", type=int, default=9)
@@ -92,6 +93,7 @@ def main():
     lead_g, lead_a = grid(a.lead, True)
     bass_g, bass_a = grid(a.bass, False)
     stab_g, stab_a = grid(a.stab, True)
+    arp_g, arp_a = grid(a.arp, True) if a.arp >= 0 else (None, None)
 
     def lane_str(g, att):
         out = []
@@ -111,6 +113,7 @@ def main():
 
     lead = lane_str(lead_g, lead_a)
     bass = lane_str(bass_g, bass_a)
+    arp = lane_str(arp_g, arp_a) if arp_g is not None else None
 
     def fmt_bar(tokens):  # 16 tokens → "x... .... .... ...." style groups of 4
         return "  ".join(" ".join(tokens[i:i + 4]) for i in range(0, 16, 4))
@@ -123,14 +126,16 @@ def main():
         return chord_of(collections.Counter(roots).most_common(1)[0][0])
 
     L = []
-    L.append(f"# martin score — USURA \"Open Your Mind\" (1992), transcribed from a public MIDI (bitmidi)")
-    L.append(f"# and quantised to martin's 16-slot grid by pipeline/transcribe_midi.py — NOT from memory.")
-    L.append(f"# Instrumental rave cover (no vocal sample — no sampler in the synth). Hand-tune after.")
+    L.append("# martin score — transcribed from a public MIDI + quantised to martin's 16-slot grid by")
+    L.append("# pipeline/transcribe_midi.py (NOT a from-memory guess). An instrumental cover arrangement")
+    L.append("# on martin's synth voices; hand-tune the mix / sections / voice-switches after. Credit the")
+    L.append("# original composition in REUSE.toml (see the camping / d2t scores).")
     L.append(f"bpm {bpm:g}")
     # a default chord set (overridden per-section below); fall back to Am if a bar has no bass
     L.append("chords Am G F E")
     L.append("")
-    L.append("set lead=0.8 bass=0.7 sub=0.5 stab=0.7 supersaw=0.3 reverb=0.35 sidechain=0.45 hats=0.4 snares=0.5")
+    L.append("set lead=0.85 leadsw=5 arp=0.85 arpsw=1 bass=0.7 sub=0.5 stab=0.9 supersaw=0.5 choir=0.45 reverb=0.35 sidechain=0.5 hats=0.45 snares=0.55")
+    # mids automation drives the pad/wall/stab body — ramp it up out of the intro so the bed fills
     L.append("")
     nsec = (total_bars + a.bars_per_section - 1) // a.bars_per_section
     for si in range(nsec):
@@ -146,6 +151,10 @@ def main():
         # chords per bar
         chs = [bar_chord(b0 + k) or "Am" for k in range(nb)]
         L.append(f"{name}.chords: " + " ".join(chs))
+        # fill the bed: the supersaw/choir trance WALL + a sparkle, on every section past the intro
+        # (the built-in `wall` default only fires on sections literally named drop/climax/outro).
+        if si > 0:
+            L.append(f"{name}.fx: wall shimmer house")
         # drums: DSL patterns are a SINGLE repeating 16-slot bar (not a multi-bar phrase) — collapse the
         # section's bars to the modal non-empty bar (the groove that recurs). Per-bar variation is lost;
         # that's the "transcribes notes, not structure" caveat — hand-add p1/fill afterwards.
@@ -163,7 +172,10 @@ def main():
             if cells:
                 L.append(f"{name}.{lane} p0: " + fmt_bar(cells))
         # melodic lanes
-        for lane, data in (("lead", lead), ("bass", bass)):
+        lanes = [("lead", lead), ("bass", bass)]
+        if arp is not None:
+            lanes.insert(1, ("arp", arp))
+        for lane, data in lanes:
             bars = [fmt_bar(data[(b0 + k) * 16:(b0 + k) * 16 + 16]) for k in range(nb)]
             if any(any(t not in (".", "-") for t in b.split()) for b in bars):
                 L.append(f"{name}.{lane} p0: " + "   ".join(bars))

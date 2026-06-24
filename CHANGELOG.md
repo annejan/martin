@@ -11,6 +11,15 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **Pan-flute arp voice (`arpsw=1`) + arp gain knob (`set arp=`)** — a breathy hollow flute (sine +
+  soft harmonics + highpassed breath noise + a chiff attack + swelling vibrato) for melodic lines on
+  the arp lane; the arp lane now respects a `set arp=<gain>` level (was a fixed 0.20). Used for the
+  Dance 2 Trance "American Natives" flute chant. Part of the growing voice-switch palette
+  (`leadsw`/`basssw`/`arpsw`/`padsw`/`drumsw`).
+- **`productions/d2t/`** — a Dance 2 Trance "Power of American Natives" (1993) cover: the score
+  transcribed from a public MIDI (`pipeline/transcribe_midi.py`, now with an `--arp` lane), the flute
+  chant on `arpsw=1`, lead on the hoover, trance supersaw `wall` + house stabs; a warm desert/native
+  abstract `.show` (sun/dreamcatcher/spirit-fire morphs, FFT-reactive sky). Composition credited in REUSE.
 - **Hoover lead voice (`leadsw=5`)** — the iconic Alpha-Juno "What the…"/Mentasm rave lead: a thick
   detuned saw stack + a fifth + a sub-octave through a resonant low-pass, with the signature short
   downward pitch-dive on attack + tanh drive. Plus **`pipeline/transcribe_midi.py`**, a MIDI→tracker-DSL

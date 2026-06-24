@@ -203,6 +203,38 @@ pub(super) fn hoover(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
     }
 }
 
+/// Pan-flute (`arpsw=1`): a breathy hollow flute — a sine fundamental + soft 2nd/3rd harmonics + a
+/// highpassed breath-noise bed + a quick noise "chiff" on attack + gentle vibrato that swells in.
+/// For melodic flute lines like the Dance 2 Trance "American Natives" intro chant on the arp lane.
+pub(super) fn flute(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    use std::f32::consts::TAU;
+    let mk = move || {
+        let vib = lfo(move |t: f32| {
+            let d = 0.006 * (t * 1.5).min(1.0); // vibrato swells in like a player leaning on the note
+            freq * (1.0 + d * (t * 5.2 * TAU).sin())
+        });
+        let tone = (vib >> sine()) * 0.8 + sine_hz(freq * 2.0) * 0.10 + sine_hz(freq * 3.0) * 0.04;
+        let breath = (noise() >> highpass_hz(2200.0, 0.6)) * 0.05;
+        let chiff =
+            (noise() >> highpass_hz(3500.0, 0.7)) * envelope(|t: f32| (-t * 45.0).exp()) * 0.10;
+        ((tone + breath + chiff) >> lowpass_hz(3600.0, 0.7))
+            * envelope(|t: f32| {
+                let a = 0.05;
+                if t < a {
+                    t / a
+                } else {
+                    0.72 + 0.28 * (-(t - a) * 0.7).exp()
+                }
+            })
+            * (0.55 + 0.3 * vel)
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
 /// Arp: short filtered pluck. Lower and quieter than the old bright square arp so it reads as
 /// motion in the groove, not late-90s game melody.
 pub(super) fn arp(freq: f32, vel: f32) -> Box<dyn AudioUnit> {

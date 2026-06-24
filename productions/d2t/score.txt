@@ -1,0 +1,166 @@
+# martin score — transcribed from a public MIDI + quantised to martin's 16-slot grid by
+# pipeline/transcribe_midi.py (NOT a from-memory guess). An instrumental cover arrangement
+# on martin's synth voices; hand-tune the mix / sections / voice-switches after. Credit the
+# original composition in REUSE.toml (see the camping / d2t scores).
+bpm 135
+chords Am G F E
+
+set lead=0.85 leadsw=5 arp=0.85 arpsw=1 bass=0.7 sub=0.5 stab=0.9 supersaw=0.5 choir=0.45 reverb=0.35 sidechain=0.5 hats=0.45 snares=0.55
+
+section s1 8 8
+section s2 8 8
+section s3 8 8
+section s4 8 8
+section s5 8 8
+section s6 8 8
+section s7 8 8
+section s8 8 8
+section s9 8 8
+section s10 8 8
+section s11 8 8
+section s12 8 8
+section s13 8 8
+section s14 8 8
+section s15 8 8
+section s16 8 8
+section s17 2 2
+
+s1.chords: Am Am Am Em Em Em Em Em
+s1.kick p0: x . . .  x . . .  x . . .  x . . .
+s1.arp p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   B4 . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 B4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 B4   . A4 B4 .  . . . .  . . . .  . . . .
+s1.bass p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+
+s2.chords: Em Em Em Em Em Em Em Em
+s2.fx: wall shimmer house
+s2.kick p0: x . . .  x . . .  x . . .  x . . .
+s2.snare p0: . . . .  x x x x  x x x x  x x x x
+s2.hat p0: x . x .  x . x .  x . x .  x . x .
+s2.arp p0: . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   B4 . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . B4 .  C5 . D5 B4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . B4 .  C5 . D5 B4   . A4 B4 .  . . . .  . . . .  . . . .
+s2.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+
+s3.chords: Em Em Em Em Em Em Em Em
+s3.fx: wall shimmer house
+s3.kick p0: x . . .  x . . .  x . . .  x . . .
+s3.snare p0: x x x x  x x x x  x x x x  x x x x
+s3.hat p0: x . x .  x . x .  x . x .  x . x .
+s3.arp p0: . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . B4 .  C5 . D5 B4   . . . .  . . . .  . . . .  . . . .
+s3.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+
+s4.chords: Em Em Em Em Em Em Am Em
+s4.fx: wall shimmer house
+s4.kick p0: x . . .  x . . .  x . . .  x . . .
+s4.snare p0: x x x x  x x x x  x x x x  x x x x
+s4.hat p0: x . x .  x . x .  x . x .  x . x .
+s4.lead p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  A4 . G4 .   B4 - - -  - - - -  - - - -  - - - -
+s4.arp p0: . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . D4 .  E4 . D4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . D4 .  E4 . D4 E4   . D4 E4 .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s4.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   . . . .  . . . .  . . . .  . . . .   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+
+s5.chords: Em Em Em Em Em Em Em Em
+s5.fx: wall shimmer house
+s5.kick p0: x . . .  x . . .  x . . .  x . . .
+s5.snare p0: x x x x  x x x x  x x x x  x x x x
+s5.hat p0: x . x .  x . x .  x . x .  x . x .
+s5.lead p0: . . . A4  - . G4 .  A4 - G4 .  G4 . E4 -   G4 . G4 .  E4 . G4 -  - . A4 -  - - . .   . . . .  . . . .  . . . .  A4 . G4 .   B4 - - -  - - - -  - - - -  - - - -   . . . A4  - . G4 .  A4 - G4 .  G4 . E4 -   G4 . G4 .  E4 . G4 -  - . A4 -  - - . .   . . . .  . . . .  . . . .  A4 . G4 .   B4 - - -  - - - -  - - - -  - - - -
+s5.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+
+s6.chords: Em Em Em Em Em Em Em Em
+s6.fx: wall shimmer house
+s6.kick p0: x . . .  x . . .  x . . .  x . . .
+s6.snare p0: x x x x  x x x x  x x x x  x x x x
+s6.hat p0: x x x x  x x x x  x x x x  x x x x
+s6.lead p0: . . . A4  - . G4 .  A4 - G4 .  G4 . E4 -   G4 . G4 .  E4 . G4 -  - . A4 -  - - . .   . . . .  . . . .  . . . .  A4 . G4 .   B4 - - -  - - - -  - - - -  - - - -   . . . A4  - . G4 .  A4 - G4 .  G4 . E4 -   G4 . G4 .  E4 . G4 -  - . A4 -  - - . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s6.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+s6.stab p0: x . . .  . . . .  . . . .  . . . .
+
+s7.chords: Em Em Em Dm Dm Dm Dm Em
+s7.fx: wall shimmer house
+s7.kick p0: x . . .  x . . .  x . . .  x . . .
+s7.snare p0: x x x x  x x x x  x x x x  x x x x
+s7.hat p0: x x x x  x x x x  x x x x  x x x x
+s7.arp p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   B4 . . .  . . . .  . . . .  . . . .
+s7.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   D2 . D2 .  D2 D2 . D2  D2 . D2 .  D2 D2 . D2   D2 . D2 .  D2 D2 . D2  D2 . D2 .  D2 D2 . D2   D2 . D2 .  D2 D2 . D2  D2 . D2 .  D2 D2 . D2   D2 . D2 .  D2 D2 . D2  D2 . D2 .  D2 D2 . D2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+s7.stab p0: x . . .  . . . .  . . . .  . . . .
+
+s8.chords: Em Em Em Em Em Em Em Em
+s8.fx: wall shimmer house
+s8.kick p0: x . . .  x . . .  x . . .  x . . .
+s8.snare p0: x x x x  x x x x  x x x x  x x x x
+s8.hat p0: x x x x  x x x x  x x x x  x x x x
+s8.arp p0: . . . .  . . . .  . . A4 .  B4 . A4 B4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 B4   . A4 B4 .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   B4 . . .  . . . .  . . . .  . . . .
+s8.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+s8.stab p0: x . . .  . . . .  . . . .  . . . .
+
+s9.chords: Em Em Em Em Em Em Em Am
+s9.fx: wall shimmer house
+s9.kick p0: x . . .  x . . .  x . . .  x . . .
+s9.snare p0: x x x x  x x x x  x x x x  x x x x
+s9.hat p0: x x x x  x x x x  x x x x  x x x x
+s9.arp p0: . . . .  . . . .  . . B4 .  C5 . D5 B4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . B4 .  C5 . D5 B4   . A4 B4 .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .
+s9.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   . . . .  . . . .  . . . .  . . . .
+s9.stab p0: x . . .  . . . .  . . . .  . . . .
+
+s10.chords: Am Am Am Am Am Am Am Am
+s10.fx: wall shimmer house
+s10.kick p0: x . . .  x . . .  x . . .  x . . .
+s10.hat p0: x . x .  x . x .  x . x .  x . x .
+s10.lead p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   E4 - . E4  - - . E4  . E4 - -  . E4 . E4   . E4 - -  . E4 - -  - - . .  . E4 . E4   - - . E4  . E4 . E4  . E4 - -  . E4 . E4
+s10.arp p0: . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s10.stab p0: x . . .  . . . .  . . . .  . . . .
+
+s11.chords: Am Em Em Em Em Em Em Em
+s11.fx: wall shimmer house
+s11.kick p0: x . . .  x . . .  x . . .  x . . .
+s11.hat p0: x . x .  x . x .  x . x .  x . x .
+s11.lead p0: - - . E4  . E4 . E4  - - - .  . . . .   E4 E4 . E4  . E4 - -  . . E4 E4  . E4 . E4   - - . .  E4 E4 . E4  - - - .  . . . .   E4 - . E4  - - . E4  - - . E4  . E4 . E4   . E4 . E4  . E4 - -  - - - .  . . . .   E4 - . E4  . E4 . E4  - - . E4  . E4 . E4   . E4 . E4  . E4 - -  - - - .  . . . .   E4 - . E4  - - . E4  . E4 . E4  . E4 E4 E4
+s11.bass p0: . . . .  . . . .  . . . .  . . . .   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+
+s12.chords: Em Em Em Em Am Em Em Em
+s12.fx: wall shimmer house
+s12.kick p0: x . . .  x . . .  x . . .  x . . .
+s12.hat p0: x . x .  x . x .  x . x .  x . x .
+s12.lead p0: . E4 . E4  - . . E4  - - - .  . . . .   E4 E4 - .  . E4 - -  . E4 . E4  . E4 . E4   - . . E4  - - . E4  - - - .  . E4 . E4   . E4 . E4  . E4 . E4  . E4 . E4  - - . E4   - - . .  D4 . D4 .  D4 - - -  A4 . G4 .   B4 - - -  - - - -  - - - -  - - - -   . . . A4  - . G4 .  A4 - G4 .  G4 . E4 -   G4 . G4 .  E4 . G4 -  - . A4 -  - - . .
+s12.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   . . . .  . . . .  . . . .  . . . .   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+s12.stab p0: x . . .  . . . .  . . . .  . . . .
+
+s13.chords: Em Em Em Em Em Em Em Em
+s13.fx: wall shimmer house
+s13.kick p0: x . . .  x . . .  x . . .  x . . .
+s13.snare p0: . . . .  x . . .  . . . .  x . . .
+s13.hat p0: x x x x  x x x x  x x x x  x x x x
+s13.lead p0: . . . .  . . . .  . . . .  A4 . G4 .   B4 - - -  - - - -  - - - -  - - - -   . . . A4  - . G4 .  A4 - G4 .  G4 . E4 -   G4 . G4 .  E4 . G4 -  - . A4 -  - - . .   . . . .  . . . .  . . . .  A4 . G4 .   B4 - - -  - - - -  - - - -  - - - -   . . . A4  - . G4 .  A4 - G4 .  G4 . E4 -   G4 . G4 .  E4 . G4 -  - . A4 -  - - . .
+s13.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+s13.stab p0: x . . .  . . . .  . . . .  . . . .
+
+s14.chords: Em Em Em Em Em Em Em Em
+s14.fx: wall shimmer house
+s14.kick p0: x . . .  x . . .  x . . .  x . . .
+s14.snare p0: x x x x  x x x x  x x x x  x x x x
+s14.hat p0: x x x x  x x x x  x x x x  x x x x
+s14.lead p0: . . . .  . . . .  . . . .  A4 . G4 .   B4 - - -  - - - -  - - - -  - - - -   . . . A4  - . G4 .  A4 - G4 .  G4 . E4 -   G4 . G4 .  E4 . G4 -  - . A4 -  - - . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s14.arp p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   B4 . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 B4   . . . .  . . . .  . . . .  . . . .
+s14.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+s14.stab p0: x . . .  . . . .  . . . .  . . . .
+
+s15.chords: Em Em Em Em Em Em Em Em
+s15.fx: wall shimmer house
+s15.kick p0: x . . .  x . . .  x . . .  x . . .
+s15.snare p0: x x x x  x x x x  x x x x  x x x x
+s15.hat p0: x x x x  x x x x  x x x x  x x x x
+s15.arp p0: . . . .  . . . .  . . A4 .  B4 . A4 B4   . A4 B4 .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   B4 . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . B4 .  C5 . D5 B4   . . . .  . . . .  . . . .  . . . .
+s15.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2
+s15.stab p0: x . . .  . . . .  . . . .  . . . .
+
+s16.chords: Em Em Em Em Em Em Em Am
+s16.fx: wall shimmer house
+s16.kick p0: x . . .  x . . .  x . . .  x . . .
+s16.snare p0: x x x x  x x x x  x x x x  x x x x
+s16.hat p0: x x x x  x x x x  x x x x  x x x x
+s16.arp p0: . . . .  . . . .  . . B4 .  C5 . D5 B4   . A4 B4 .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 E4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   B4 . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . A4 .  B4 . A4 B4   . . . .  . . . .  . . . .  . . . .
+s16.bass p0: E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   E2 . E2 .  E2 E2 . E2  E2 . E2 .  E2 E2 . E2   . . . .  . . . .  . . . .  . . . .
+s16.stab p0: x . . .  . . . .  . . . .  . . . .
+
+s17.chords: Am Am
+s17.fx: wall shimmer house
+s17.kick p0: x . . .  . . . .  . . . .  . . . .
+s17.arp p0: . . . .  . . . .  . . A4 .  B4 . A4 B4   . A4 B4 .  . . . .  . . . .  . . . .
+

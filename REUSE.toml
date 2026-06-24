@@ -70,6 +70,17 @@ SPDX-FileCopyrightText = [
 ]
 SPDX-License-Identifier = "MIT"
 
+# productions/d2t/score.txt — our tracker-DSL transcription/cover arrangement of Dance 2 Trance's
+# "Power of American Natives" (1993), quantised from a public MIDI. Composition credited alongside.
+[[annotations]]
+path = "productions/d2t/score.txt"
+precedence = "override"
+SPDX-FileCopyrightText = [
+    "2026 Anne Jan Brouwer <brouwer@annejan.com>",
+    "1993 Dance 2 Trance — Power of American Natives",
+]
+SPDX-License-Identifier = "MIT"
+
 [[annotations]]
 path = "assets/font.ttf"
 SPDX-FileCopyrightText = "2003 Bitstream, Inc."

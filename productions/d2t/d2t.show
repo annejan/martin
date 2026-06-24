@@ -1,0 +1,44 @@
+# martin — DANCE 2 TRANCE "Power of American Natives" (cover). A warm desert/native trance journey:
+# the flute-chant intro, a rising sun, a spinning dreamcatcher-mandala, spirit-fire, ascending helix,
+# a night-desert starfield — morphing on the music with an FFT-reactive sky + the kick pumping it all.
+# Abstract (no native/eagle splat assets) — warm palette (tint:fry) carries the theme.
+#   live:    MARTIN_SHOW=productions/d2t/d2t.show cargo +nightly run --release
+#   preview: TMPDIR=~/.cache/martin-render MARTIN_RES=854x480 MARTIN_PREVIEW_FPS=20 \
+#            MARTIN_SHOW=productions/d2t/d2t.show ./record.sh /tmp/d2t.mp4
+[settings]
+kind        = demo
+score       = productions/d2t/score.txt
+budget      = 200000
+bg          = aurora
+post        = chroma
+cam_pump    = 0.28
+sidechain   = 0.45
+fft         = 1.6
+morph_stagger = 0.6
+
+[reel]
+text:DANCE 2 TRANCE           @@s1   @9,4   ~outline  font:defeest  tint:brand  backdrop:aurora
+text:POWER OF\nAMERICAN NATIVES @@s2  @9,5   ~outline  tint:fry     backdrop:plasma
+splat:galaxy.ply              @@s4   @9,5   ~morph    tint:fry     backdrop:plasma     # sky vortex
+splat:saturn.ply              @@s6   @9,5   ~morph                 backdrop:fractal    # the rising sun
+splat:supershape.ply          @@s8   @9,5   ~morph    tint:fry     backdrop:aurora     # dreamcatcher mandala
+splat:flame.ply               @@s10  @9,5   ~explode  tint:fry     backdrop:fractal    # spirit fire
+splat:helix.ply               @@s12  @9,5   ~morph    tint:fry     backdrop:plasma     # ascending spiral
+splat:star.ply                @@s14  @9,5   ~morph                 backdrop:aurora     # night-desert sky
+splat:torus.ply               @@s16  @9,5   ~morph    tint:fry     backdrop:fractal    # the ring/sun-disc
+text:POWER OF\nAMERICAN NATIVES @@s17 @9,4   ~outline  tint:brand   backdrop:aurora
+
+[camera]
+t=@@s1   pos=0,0,0  dist=7.0  yaw=0.4   pitch=0.14
+t=@@s4   pos=0,0,0  dist=5.5  yaw=1.1   pitch=0.10
+t=@@s7   pos=0,0,0  dist=6.5  yaw=1.9   pitch=0.16
+t=@@s10  pos=0,0,0  dist=4.8  yaw=0.7   pitch=0.08
+t=@@s13  pos=0,0,0  dist=6.0  yaw=2.4   pitch=0.12
+t=@@s16  pos=0,0,0  dist=7.2  yaw=1.3   pitch=0.15
+
+[sync]
+t=@@s1   flash=0.10  bg_dim=0.7   beat=0.4   exposure=0.9   bg=aurora
+t=@@s4   flash=0.5   bg_dim=0.45  beat=1.6   exposure=1.25  bg=plasma
+t=@@s8   flash=0.7   bg_dim=0.35  beat=2.0   exposure=1.5   bg=fractal
+t=@@s12  flash=0.6   bg_dim=0.4   beat=1.8   exposure=1.35  bg=plasma
+t=@@s17  flash=0.3   bg_dim=0.6   beat=0.9   exposure=1.05  bg=aurora
