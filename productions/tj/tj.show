@@ -1,0 +1,51 @@
+# martin — "Turning Japanese" (The Vapors) cover. A Japan-themed abstract journey: a rising sun, a
+# Hokusai-style wave, cherry-blossom bursts + a paper fan — the koto melody up front, warm red/white
+# palette, flowing camera + petal sparks. Abstract (no torii/blossom splat assets); palette + shapes
+# carry the theme.
+#   live:    MARTIN_SHOW=productions/tj/tj.show cargo +nightly run --release
+#   preview: TMPDIR=~/.cache/martin-render MARTIN_RES=854x480 MARTIN_PREVIEW_FPS=20 \
+#            MARTIN_MORPH_COUNT=110000 MARTIN_SHOW=productions/tj/tj.show ./record.sh /tmp/tj.mp4
+[settings]
+kind          = demo
+score         = productions/tj/score.txt
+budget        = 150000
+bg            = aurora
+post          = chroma
+cam_pump      = 0.20
+sidechain     = 0.22
+fft           = 1.4
+morph_stagger = 0.5
+particles     = sparks
+particle_count = 420
+
+[reel]
+text:TURNING JAPANESE  @@s1   @9,3   *1.0  ~fade   font:defeest  tint:brand  backdrop:aurora
+splat:sphere.ply       @@s2   @9,4   ~fade      tint:fry              backdrop:plasma    # rising sun
+splat:wave.ply         @@s3   @9,4   ~morph     raster:position       backdrop:aurora    # the great wave
+splat:supershape.ply   @@s4   @9,4   ~vortex    tint:fry              backdrop:plasma    # paper fan
+splat:star.ply         @@s5   @9,4   ~shatter   raster:position       backdrop:aurora    # blossom petals
+splat:torus.ply        @@s6   @9,4   ~morph     tint:fry              backdrop:plasma    # sun disc
+splat:wave.ply         @@s7   @9,4   ~morph     raster:position       backdrop:aurora    # wave returns
+splat:supershape.ply   @@s8   @9,4   ~vortex    tint:rainbow          backdrop:plasma    # blossom fan
+splat:sphere.ply       @@s9   @9,4   ~fade      tint:fry              backdrop:aurora    # the sun
+splat:helix.ply        @@s10  @9,4   ~morph     raster:position       backdrop:plasma
+text:TURNING JAPANESE  @@s11  @9,4   *1.0  ~fade   font:defeest  tint:brand  backdrop:aurora
+
+[camera]
+t=@@s1   pos=0,0,0  dist=4.4  yaw=1.57  pitch=0.05
+t=@@s2   pos=0,0,0  dist=6.0  yaw=0.6   pitch=0.14
+t=@@s3   pos=0,0,0  dist=5.2  yaw=1.3   pitch=0.10  cut
+t=@@s4   pos=0,0,0  dist=6.5  yaw=2.0   pitch=0.16
+t=@@s5   pos=0,0,0  dist=4.6  yaw=0.9   pitch=0.08  cut
+t=@@s6   pos=0,0,0  dist=6.0  yaw=1.7   pitch=0.13
+t=@@s7   pos=0,0,0  dist=5.4  yaw=2.4   pitch=0.11  cut
+t=@@s8   pos=0,0,0  dist=6.6  yaw=1.0   pitch=0.16
+t=@@s9   pos=0,0,0  dist=5.0  yaw=0.4   pitch=0.10  cut
+t=@@s11  pos=0,0,0  dist=4.8  yaw=1.57  pitch=0.06
+
+[sync]
+t=@@s1   flash=0.10  bg_dim=0.65  beat=0.5   exposure=0.95  bg=aurora
+t=@@s3   flash=0.4   bg_dim=0.45  beat=1.3   exposure=1.2   bg=plasma
+t=@@s5   flash=0.55  bg_dim=0.4   beat=1.6   exposure=1.35  bg=aurora
+t=@@s8   flash=0.6   bg_dim=0.38  beat=1.7   exposure=1.4   bg=plasma
+t=@@s11  flash=0.3   bg_dim=0.6   beat=0.9   exposure=1.05  bg=aurora

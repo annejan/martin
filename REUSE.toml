@@ -81,6 +81,17 @@ SPDX-FileCopyrightText = [
 ]
 SPDX-License-Identifier = "MIT"
 
+# productions/tj/score.txt — our transcription/cover arrangement of The Vapors' "Turning Japanese"
+# (1980), from a public MIDI. Composition credited alongside our arrangement.
+[[annotations]]
+path = "productions/tj/score.txt"
+precedence = "override"
+SPDX-FileCopyrightText = [
+    "2026 Anne Jan Brouwer <brouwer@annejan.com>",
+    "1980 The Vapors — Turning Japanese",
+]
+SPDX-License-Identifier = "MIT"
+
 [[annotations]]
 path = "assets/font.ttf"
 SPDX-FileCopyrightText = "2003 Bitstream, Inc."

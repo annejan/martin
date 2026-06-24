@@ -108,6 +108,7 @@ fn lead_pick(n: i32, f: f32, v: f32) -> Unit {
         3 => lead_sw3(f, v),
         4 => lead_sw4(f, v),
         5 => hoover(f, v),
+        6 => koto(f, v),
         _ => lead(f, v),
     }
 }
@@ -117,6 +118,7 @@ fn arp_pick(n: i32, f: f32, v: f32) -> Unit {
         1 => flute(f, v),
         2 => bell(f, v),
         3 => pluck(f, v),
+        4 => koto(f, v),
         _ => arp(f, v),
     }
 }

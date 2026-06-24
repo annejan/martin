@@ -1,0 +1,126 @@
+# martin score — transcribed from a public MIDI + quantised to martin's 16-slot grid by
+# pipeline/transcribe_midi.py (NOT a from-memory guess). An instrumental cover arrangement
+# on martin's synth voices; hand-tune the mix / sections / voice-switches after. Credit the
+# original composition in REUSE.toml (see the camping / d2t scores).
+bpm 87
+chords Am G F E
+
+set lead=0.9 leadsw=6 arp=0.7 arpsw=4 bass=0.7 sub=0.45 stab=0.6 stabsw=1 drumsw=1 supersaw=0.28 choir=0.3 reverb=0.42 sidechain=0.25 hats=0.4 snares=0.5
+
+section s1 8 8
+section s2 8 8
+section s3 8 8
+section s4 8 8
+section s5 8 8
+section s6 8 8
+section s7 8 8
+section s8 8 8
+section s9 8 8
+section s10 8 8
+section s11 4 4
+
+s1.chords: Am Am Fm Gm Em Gm Em Cm
+s1.kick p0: x . . .  x . x x  . . . .  . x . x
+s1.snare p0: . . . .  . . . .  . . . .  . x x x
+s1.hat p0: x x x x  x . x x  x x x x  x x x x
+s1.bass p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   G2 G2 . G2  F2 F2 - D2  - . D2 .  F2 - . E1   G1 B1 E1 G1  G1 . E1 G1  - B1 E1 .  G1 B1 D1 E1   - G1 D1 E1  E1 . D1 E1  E1 G1 D1 E1  E1 G1 E1 G1   G1 B1 E1 G1  G1 . E1 G1  G1 . E1 G1  G1 B1 D1 .   E1 . D1 E1  E1 . D1 E1  E1 G1 D1 E1  E1 . . G1   C2 - - -  - - - E2  - - - D2  - - . E1
+s1.stab p0: x x x x  x . x .  x . x .  x . . .
+
+s2.chords: Gm Em Gm Em Cm Gm Em Gm
+s2.fx: wall shimmer house
+s2.kick p0: x . . .  x . x x  . . . .  . x . x
+s2.snare p0: . . x .  . x . .  . x . .  . x . .
+s2.hat p0: x x x x  x . x x  x x x x  x x x x
+s2.lead p0: . . . .  B4 B4 G4 D5  D5 B4 - -  - . . .   . . . .  B4 B4 A4 E4  - - - -  - - - .   . . . .  . B4 A4 .  D5 B4 - -  - - . .   . . . .  B4 B4 A4 E4  - - - -  - . . .   . . . .  B4 B4 A4 A4  B4 B4 A4 A4  B4 B4 G4 G4   - . . .  B4 B4 A4 D5  D5 B4 - -  - - . .   . . . .  B4 B4 A4 E4  - - - -  - . . .   . . . .  . B4 A4 D5  - B4 - -  - - . .
+s2.bass p0: G1 B1 E1 G1  G1 . E1 G1  - B1 E1 .  G1 B1 D1 E1   - G1 D1 E1  E1 . D1 E1  E1 G1 D1 E1  E1 G1 E1 G1   G1 B1 E1 G1  G1 . E1 G1  G1 . E1 G1  G1 B1 D1 .   E1 . D1 E1  E1 . D1 E1  E1 G1 D1 E1  E1 . . G1   C2 - - -  - - - E2  - - - D2  - - . E1   G1 B1 E1 G1  G1 . E1 G1  - B1 E1 .  G1 B1 D1 E1   - G1 D1 E1  E1 . D1 E1  E1 G1 D1 E1  E1 G1 E1 G1   G1 B1 E1 G1  G1 . E1 G1  G1 . E1 G1  G1 B1 D1 .
+s2.stab p0: x x . x  x x . x  x x . x  x x x x
+
+s3.chords: Em Cm Dm Dm Dm Dm Gm Em
+s3.fx: wall shimmer house
+s3.kick p0: x . . .  x x . x  . x . x  x . . x
+s3.snare p0: . . x .  . . x .  . . x .  . . x .
+s3.hat p0: x x x .  x . x x  x x x .  x x x x
+s3.lead p0: . . . .  . B4 A4 G4  E4 - - -  . . . .   . . . .  B4 B4 A4 A4  B4 B4 A4 A4  B4 B4 A4 G4   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . B4 A4 D5  D5 B4 . .   B4 B4 A4 D5  D5 B4 . .  B4 B4 G4 A4  B4 B4 G4 A4   B4 B4 G4 -  - - . .  B4 B4 G4 D5  D5 B4 . .
+s3.bass p0: E1 . D1 E1  E1 . D1 E1  E1 G1 D1 E1  E1 . . G1   C2 - - -  - - - E2  - - - D2  - - . .   G1 . D2 .  E2 D2 C2 .  . C2 . E2  E2 D2 . G2   - D2 - .  E2 . D2 C2  . C2 . E2  D2 - . C2   D2 - C2 D2  - - C2 D2  - - . C2  D2 - C2 D2   - . C2 .  D2 - . C2  D2 - . E1  G1 B1 E1 G1   G1 . E1 G1  - B1 E1 .  G1 B1 D1 E1  - G1 D1 E1   E1 . D1 E1  E1 G1 D1 E1  E1 G1 E1 G1  G1 B1 E1 G1
+s3.stab p0: x x . x  x x . x  x x . x  x x . x
+
+s4.chords: Gm Em Em Gm Dm Fm Cm Gm
+s4.fx: wall shimmer house
+s4.kick p0: . x . x  x . . .  . x . x  x . . .
+s4.snare p0: . . x .  . . x .  . x . .  . . x .
+s4.hat p0: x x x x  . x . .  x x x x  . . x .
+s4.lead p0: B4 B4 G4 D5  B4 - . .  B4 B4 G4 A4  B4 B4 G4 A4   . B4 G4 -  - - . .  B4 B4 A4 A4  B4 B4 A4 A4   B4 B4 A4 A4  B4 B4 A4 A4  B4 B4 A4 .  D5 D5 C5 B4   G4 D5 C5 B4  G4 D5 C5 B4  G4 D5 C5 D5  - D4 - -   . . . .  . . . .  . . . F4  C5 C5 B4 A4   C5 C5 B4 F4  C5 C5 B4 A4  . C5 B4 C5  - C4 - .   . . . .  . . . .  . . . .  G4 D5 C5 B4   G4 D5 C5 B4  D5 D5 C5 B4  D5 D5 C5 D5  - . D4 -
+s4.arp p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  D6 - - -   - - - -  - - - -  - - - .  D6 - - -   - - - -  - - - -  - - - .  C6 - - -   - - - -  - - - -  - - - .  C6 - - -   - - - -  - - - -  - - - .  D6 - - -   - - - -  - - - -  - - - B5  D6 - - -
+s4.bass p0: G1 . E1 G1  G1 . E1 G1  G1 B1 D1 .  E1 . D1 E1   E1 . D1 E1  E1 G1 D1 E1  E1 . . G1  C2 - - -   - - - E2  - - - D2  - - . .  G1 - . G1   G1 - . G1  G1 . G1 G1  . G1 G1 .  D2 - D2 D2   D2 - . D2  D2 - . D2  D2 D2 D2 F1  F1 . F1 F1   F1 - F1 F1  F1 - F1 F1  F1 . F1 C2  C2 - . C2   C2 - . C2  C2 - . C2  C2 - . G1  . . G1 G1   G1 - G1 G1  G1 - G1 G1  G1 . G1 .  D2 D2 . D2
+s4.stab p0: x x x x  x x x x  x x x x  x x x x
+
+s5.chords: Dm Fm Cm F#m Dm Dm Dm Em
+s5.fx: wall shimmer house
+s5.kick p0: x . . .  x . . .  x . . .  x . . .
+s5.snare p0: . . x .  . . x .  . . x .  . . x .
+s5.hat p0: x x x x  x x x x  x x x x  x x x x
+s5.lead p0: - . . .  . . . .  . . . F4  C5 C5 B4 A4   C5 C5 B4 A4  C5 C5 B4 A4  C5 C5 B4 C5  - - C4 .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  B4 B4 A4 G4  D5 B4 - -  B4 B4 G4 D5   D5 B4 - -  B4 B4 G4 A4  B4 B4 A4 A4  B4 B4 G4 -
+s5.arp p0: - - - -  - - - -  - - - .  C6 - - -   - - - -  - - - -  - - - .  C6 - - -   - - - -  - - - -  - - - .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s5.bass p0: D2 - . D2  D2 - . D2  D2 D2 . F1  F1 - . F1   F1 - F1 F1  F1 - . F1  F1 - F1 .  C2 . C2 .   C2 C2 . C2  C2 . C2 C2  . C2 C2 .  G2 - G2 F#2   - - F#2 F2  - - . F2  F#2 - F#2 G2  - . D2 .   E2 . . C2  C2 - E2 D2  - - - C2  D2 - . C2   D2 - . C2  D2 - C2 D2  - - . C2  D2 - . C2   D2 - . C2  D2 - . E1  G1 B1 E1 G1  G1 . E1 G1   - B1 E1 .  G1 B1 D1 E1  - G1 D1 E1  E1 . D1 E1
+s5.stab p0: x x x x  . x . x  . x . .  x x x x
+
+s6.chords: Gm Em Cm Gm Dm Fm Cm Gm
+s6.fx: wall shimmer house
+s6.kick p0: . . . .  . x . x  x . . .  . x . x
+s6.snare p0: . . x .  . x . .  . x . .  . x . .
+s6.hat p0: . x . .  x x x x  . . x .  x x x x
+s6.lead p0: - - - .  B4 - A4 D5  D5 - B4 -  B4 B4 G4 D5   D5 B4 - -  B4 B4 G4 A4  B4 B4 G4 A4  B4 A4 G4 -   - - . .  B4 - A4 A4  B4 B4 G4 A4  B4 B4 G4 A4   B4 B4 G4 A4  B4 B4 G4 G4  D5 - C5 B4  G4 D5 D5 B4   G4 D5 C5 B4  D5 D5 C5 D5  - D4 - -  - . . .   . . . .  . . . F4  C5 C5 B4 A4  C5 C5 B4 A4   . C5 B4 A4  C5 C5 B4 C5  - C4 - -  . . . .   . . . .  . . . G4  D5 D5 C5 B4  D5 D5 C5 G4
+s6.arp p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  A5 - - -  - - - .   G5 - - .  A5 - - .  D6 - - -  - - - -   - - - -  - - - .  D6 - - -  - - - -   - - - -  - - - .  C6 - - -  - - - -   - - - -  - - - .  C6 - - -  - - - -   - - - -  - - - .  D6 - - -  - - - -
+s6.bass p0: E1 G1 D1 E1  E1 G1 E1 G1  G1 B1 E1 G1  G1 . E1 G1   G1 . E1 G1  G1 B1 D1 .  E1 . D1 E1  E1 . D1 E1   E1 G1 D1 E1  E1 . . G1  C2 - - -  - - - E2   - - - D2  - - . .  G1 - . G1  G1 - . G1   G1 . G1 G1  . G1 G1 .  D2 - D2 D2  D2 - . D2   D2 - . D2  D2 D2 D2 F1  F1 . F1 F1  F1 - F1 F1   F1 - F1 F1  F1 . F1 C2  C2 - . C2  C2 - . C2   C2 - . C2  C2 - . G1  . . G1 G1  G1 - G1 G1
+s6.stab p0: x x x x  x x x x  x x x x  x x x x
+
+s7.chords: Gm Fm Fm Gm Gm Gm Dm Fm
+s7.fx: wall shimmer house
+s7.kick p0: x . . .  x . . .  x . . .  x . . .
+s7.snare p0: . . x .  . . x .  . . x .  . . x .
+s7.hat p0: . x . .  x x x x  . . x .  x x x .
+s7.lead p0: - D5 C5 B4  D5 D5 C5 D5  - . D4 -  . . . .   . . . .  . . . F4  - C5 B4 A4  C5 C5 B4 A4   C5 C5 B4 A4  C5 C5 B4 C5  - C5 C4 .  . . . .   . . . .  . D5 - .  B4 . B4 .  C5 . C5 .   D5 . D5 .  C5 C5 C5 .  B4 . B4 .  C5 C5 - D5   - . D5 .  D5 . B4 A4  - - . .  . . . .   . . . .  . . . .  C5 . C5 C5  C5 C5 C5 C5   - B4 - G4  - E4 - C5  C5 C5 C5 C5  C5 C5 C5 C5
+s7.arp p0: - - - -  - - - B5  D6 - - -  - - - -   - - - -  - - - .  C6 - - -  - - - -   - - - -  - - - .  C6 - - -  - - - -   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s7.bass p0: G1 - G1 G1  G1 . G1 .  D2 D2 . D2  D2 - . D2   D2 - . D2  D2 D2 . F1  F1 - . F1  F1 - F1 F1   F1 - . F1  F1 - F1 .  C2 . C2 .  C2 C2 . C2   C2 . . .  . . . .  G1 . . .  G1 . . .   G1 . . G1  - . . .  G1 . . G1  - . . G1   - - . G1  G1 A1 B1 .  D2 - . .  A1 - . D2   - . A1 .  D2 - E2 -  F2 - . .  C2 - . F2   - - . .  C2 - . .  F2 - . C2  - - . F2
+s7.stab p0: . . x .  . . x .  . . x .  . . x .
+
+s8.chords: Cm Gm Gm Fm Fm Gm Dm Fm
+s8.fx: wall shimmer house
+s8.kick p0: x . . .  x . . .  x . . .  x x . x
+s8.snare p0: . . x .  . . x .  . . x .  . . x .
+s8.hat p0: x . x .  x x . x  . x . x  . x . x
+s8.lead p0: - B4 - G4  - E4 - B4  - - A4 A4  G4 - - -   . . . .  . G4 G4 .  D5 D5 B4 G4  . D5 B4 G4   D5 D5 B4 B4  D5 D5 B4 .  D5 . D4 .  . . . .   . . . .  . . . F4  C5 C5 A4 F4  C5 C5 A4 F4   C5 C5 B4 F4  C5 C5 B4 C5  - C5 C4 .  . . . .   . . . .  . . . .  D5 D5 B4 G4  D5 D5 C5 G4   D5 D5 C5 B4  D5 D5 C5 D5  - . D4 -  . . . .   . . . .  . . . .  F4 C5 B4 F4  C5 C5 B4 F4
+s8.arp p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  D5 - - -  - - - -   - - - -  - - - .  D5 - - -  - - - -   - - - -  - - - .  C5 - - -  - - - -
+s8.bass p0: - - - C2  - . . C2  - - - .  G1 - - C2   - - - .  G1 - - G1  - . G1 G1  G1 G1 G1 G1   - G1 - G1  G1 G1 B1 D2  - - . A1  - - - .   D2 - . A1  - - . F1  - - - F1  F1 F1 F1 F1   - F1 F1 -  . F1 A1 C2  - - . .  G1 - . .   C2 - . G1  - - - G1  - - - G1  G1 G1 G1 G1   - - - G1  G1 G1 B1 D2  - - - D2  D2 . D2 D2   . D2 D2 -  . D2 D2 F1  - - . F1  F1 F1 F1 -
+s8.stab p0: . . x .  . . x .  x x x x  x x x x
+
+s9.chords: Fm Gm Dm Fm Cm Gm Dm Fm
+s9.fx: wall shimmer house
+s9.kick p0: x . . .  x x . x  x . . .  x x . x
+s9.snare p0: . . x .  . . x .  . . x .  . . x .
+s9.hat p0: . x x .  x x x x  x x x x  x x x .
+s9.lead p0: C5 C5 B4 F4  C5 C5 B4 C5  - . C4 .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s9.arp p0: - - - -  - - - .  C5 - - -  - - - -   - - - -  - - - .  D5 - - -  - - - -   - - - -  - - - B4  D5 - - -  - - - -   - - - -  - - - .  C5 - - -  - - - -   - - - -  - - - .  C5 - - -  - - - -   - - - -  - - - .  D5 - - -  - - - -   - - - -  - - - .  D5 - - -  - - - -   - - - -  - - - .  C5 - - -  - - - -
+s9.bass p0: F1 F1 - F1  F1 F1 F1 .  C2 - . C2  C2 - . C2   C2 E2 - F2  - F#2 - .  G1 . G1 G1  G1 G1 G1 G1   G1 A1 A1 .  B1 B1 C2 C2  D2 - . D2  D2 D2 D2 D2   . D2 C2 C2  B1 B1 A1 A1  F1 - F1 F1  F1 F1 F1 -   F1 . G1 A1  A1 B1 B1 C2  - - C2 C2  C2 C2 C2 .   C2 E2 E2 .  F2 . F#2 .  G2 . G2 G1  G1 . G1 -   G1 A1 A1 B1  B1 C2 C2 D2  - . D2 .  D2 . D2 D2   D2 . C2 C2  B1 B1 A1 F1  - - . F1  F1 . . F1
+s9.stab p0: x x x x  x x x x  x x x x  x x x x
+
+s10.chords: Cm Gm Dm Fm Cm Gm Dm Fm
+s10.fx: wall shimmer house
+s10.kick p0: . x . x  . x . x  x . . .  x x . x
+s10.snare p0: . . x .  . . x .  . . x .  . . x .
+s10.hat p0: . . . .  . . . .  x . x .  x . x .
+s10.lead p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . G4  - D5 C5 B4  G4 D5 C5 B4   G4 D5 C5 B4  D5 D5 C5 D5  - . D4 .  . . . .   . . . .  . . . F4  C5 C5 B4 A4  C5 C5 B4 A4   C5 C5 B4 A4  C5 C5 B4 C5  - C4 - .  . . . .   . . . .  . . . G4  D5 D5 C5 B4  D5 D5 C5 B4   D5 D5 C5 B4  D5 D5 C5 D5  - - D4 D5  - D4 - D5   - D4 - D5  - . D4 .  F4 C5 B4 A4  C5 C5 B4 A4
+s10.arp p0: - - - -  - - - .  C5 - - -  - - - -   - - - -  - - - .  D5 - - -  - - - -   - - - -  - - - B4  D5 - - -  - - - -   - - - -  - - - .  C5 - - -  - - - -   - - - -  - - - .  C5 - - -  - - - -   - - - -  - - - .  D5 - - -  - - - -   - - - -  - - - .  D5 - - -  - - - -   - - - -  - - - .  C5 - - -  - - - -
+s10.bass p0: F1 . G1 A1  A1 . B1 .  C2 - C2 C2  C2 C2 C2 .   C2 E2 E2 F2  - F#2 - G2  - - . G1  G1 - G1 -   . G1 G1 -  G1 G1 B1 D2  - - . D2  D2 - . D2   D2 . . D2  D2 . A1 F1  - - F1 F1  F1 F1 F1 -   F1 . F1 -  . F1 F1 C2  - - C2 C2  C2 C2 C2 -   . C2 C2 -  . C2 C2 .  G1 - . G1  G1 G1 G1 -   . G1 G1 -  G1 G1 B1 D2  - - - D2  D2 . D2 -   D2 D2 D2 -  . D2 D2 F1  - - . F1  F1 F1 F1 -
+s10.stab p0: x x x x  x x x x  x x x x  x x x x
+
+s11.chords: Cm Cm F#m Fm
+s11.fx: wall shimmer house
+s11.kick p0: x . . x  x . . x  x . . x  x . . x
+s11.snare p0: . . x .  . . x .  . . x .  . . x .
+s11.hat p0: . x . .  x . x x  . . x .  x . x x
+s11.lead p0: C5 - B4 A4  C5 C5 B4 A4  C5 - C4 .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s11.arp p0: - - - -  - - - .  C5 - - -  - - - -   - - - -  - - - .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s11.bass p0: . F1 F1 .  . F1 A1 C2  - . C2 .  C2 C2 C2 -   . C2 C2 .  C2 C2 C2 G2  - - G2 F#2  - - F#2 F2   - - F2 .  F#2 - . F#2  G2 - G2 F#2  - - F#2 F2   F2 F2 . F2  . . . .  . . . .  . . . .
+s11.stab p0: x x x x  x x x x  x x x x  x x x x
+

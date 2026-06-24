@@ -300,6 +300,34 @@ pub(super) fn flute(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
     }
 }
 
+/// Koto (`leadsw=6` / `arpsw=4`): a plucked-string voice — bright metallic attack, a fast string
+/// decay, harmonic body + a tiny downward pitch-blip on the pluck. Oriental colour for Japan-themed
+/// melodies (e.g. the "Turning Japanese" hook + its high arpeggio).
+pub(super) fn koto(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    let mk = move || {
+        // a tiny pluck bend: pitch starts ~+0.35 semitone and snaps to base in ~25 ms (string attack)
+        let p = lfo(move |t: f32| freq * (1.0 + 0.02 * (-t * 40.0).exp()));
+        let osc = (p >> saw()) * 0.45 + sine_hz(freq * 2.0) * 0.18 + sine_hz(freq * 3.0) * 0.10;
+        let top = 3800.0 + 3000.0 * vel;
+        let cut = envelope(move |t: f32| 700.0 + top * (-t * 18.0).exp());
+        ((osc | cut) >> lowpass_q(1.0))
+            * envelope(|t: f32| {
+                let a = 0.002;
+                if t < a {
+                    t / a
+                } else {
+                    (-(t - a) * 4.0).exp() // plucky string decay
+                }
+            })
+            * (0.5 + 0.4 * vel)
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
 /// Arp: short filtered pluck. Lower and quieter than the old bright square arp so it reads as
 /// motion in the groove, not late-90s game melody.
 pub(super) fn arp(freq: f32, vel: f32) -> Box<dyn AudioUnit> {

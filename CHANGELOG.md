@@ -11,6 +11,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **Koto voice (`leadsw=6` / `arpsw=4`)** — a plucked oriental string (bright metallic attack, fast
+  string decay, a tiny pluck-bend) for Japan-themed melodies. Drives the **`productions/tj/`** cover of
+  The Vapors' "Turning Japanese" (koto lead + high koto arpeggio, analog drum kit, warm red/white
+  Japan-abstract `.show`: rising sun, Hokusai wave, blossom bursts). Composition credited in REUSE.
 - **More synth voice characters (generic, additive)** — the voice-switch palette grows so any score can
   pick its sound: `arpsw=2` an FM **bell**, `arpsw=3` a bright **glass pluck**, and a new **`stabsw`**
   for the chord-stab voice (`1` a fat **rave-organ**, `2` a bright **saw stab**). All default to the
