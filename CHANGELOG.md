@@ -11,6 +11,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **Audio die-out tail (`[score] set endfade=<s>`)** — the master fade-out length is now a score knob
+  (default `0.025`, a click-guard near-hard-stop — unchanged for every existing track). A larger value
+  (e.g. `1.6`) lets the final impact + reverb **ring out into silence** instead of the mix hard-cutting
+  at the last sample. The camping lyrics demo uses it for a real explosive die-out.
+- **`MARTIN_FADE_OUT=<s>` (record.sh)** — the video fade-to-black length at the end of a render (default
+  `2.6`). A show with a late visual climax (an explosion that must stay lit through the final bang) sets
+  a shorter tail so the picture doesn't fade out *over* the payoff. Read by the mux step directly (the
+  `.show` `[settings]` block only reaches the martin binary, not ffmpeg — pass it on the record.sh CLI).
 - **"Op de camping" lyrics demo (`productions/camping/op-de-camping-lyrics.show`)** — a simple
   karaoke cut: all of Ome Henk's 1995 lyrics on screen as a timed `[caption]` track over a lean
   morphing-splat backbone with section-cued backdrops, ending on a **real explosion** — the splat

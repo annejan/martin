@@ -18,6 +18,10 @@ bg_dim = 0.35                         # keep backdrops behind the captions, read
 flash  = 0.5                          # bloom pop on the @@anchored cuts
 beat   = 0.3                          # subtle beat-reaction
 pw_splat = 0.004
+# RENDER THIS SHOW WITH:  MARTIN_FADE_OUT=1.7 ./record.sh out.mp4
+# — keeps the picture LIT through the ~226s boom then a fast 1.7s fade (pairs with the score's
+#   endfade=1.6 audio die-out). record.sh's ffmpeg is a separate process, so it reads the env directly
+#   (the [settings] block only reaches the martin binary, not the mux step).
 
 # --- the splat backbone: one cloud morphing through the sections, backdrop swapping per section.
 #     Last lyric shot EXPLODES (exit:explode) into the trailing shockwave blast = the finale. ---
@@ -27,8 +31,8 @@ splat:aegg.ply         @@build      @6,2     ~morph     ^twist         backdrop:
 splat:supershape.ply   @@drop       @8,1.5   ~morph     ^wave          backdrop:kaleido  # chorus 1 — party morph
 splat:doggo.ply        @@breakdown  @10,2.5  ~morph     ^ripple        backdrop:stars    # verse 2 — night, "tent staat in de brand"
 splat:supershape.ply   @@climax     @8,1.5   ~morph     ^wave          backdrop:kaleido  # chorus 2 — peak party
-splat:galaxy.ply       @@outro      @8,1.6   ~morph     ^turbulence  exit:explode  backdrop:bolt   # outro — spins up, then BURSTS (~bar128.5)
-splat:knot.ply         @@bar:130    @5,2     ~shockwave         flash:1.0  backdrop:bolt   # THE BLAST: shockwave ring + white flash, BEFORE the fade-out (st=225.4s) so it's seen, then dies out
+splat:galaxy.ply       @@outro      @8,1.6   ~morph     ^turbulence  exit:explode  backdrop:bolt   # outro — spins up, then BURSTS outward (peak spread ~226.0s, ON the audio boom)
+splat:knot.ply         @@bar:132    @5,2     ~shockwave         flash:1.0  backdrop:bolt   # trailing trigger: galaxy bursts 1.5s before this (224.8→226.3); shockwave ring + white flash on the bang
 
 # --- camera: front-facing (captions are screen-space; this frames the splats). Push in over the
 #     song, snap back + rattle on the explosion, then settle as it dies out. ---
@@ -41,16 +45,16 @@ t=99.4    pos=0,0,0    dist=3.0   yaw=1.45   pitch=0.08   # breakdown: fall back
 t=128.6   pos=0,0,0    dist=1.9   yaw=1.50   pitch=0.20   # climax: slam in
 t=160.0   pos=-0.3,0,0 dist=2.1   yaw=1.30   pitch=0.20   # ride the high
 t=185.1   pos=0,0,0    dist=2.4   yaw=1.45   pitch=0.12   # outro: hold on the spinning galaxy
-t=219.0   pos=0,0,0    dist=2.2   yaw=1.45   pitch=0.14   # tight on the galaxy spinning up
-t=222.4   pos=0,0,0    dist=3.4   yaw=1.45   pitch=0.12   # THE BLAST — snap WIDE so the burst scatters across the frame
-t=225.0   pos=0,0,0    dist=3.5   yaw=1.45   pitch=0.12   # hold wide as the debris disperses
+t=223.0   pos=0,0,0    dist=2.3   yaw=1.45   pitch=0.14   # tight as it spins up + starts to fling out
+t=225.8   pos=0,0,0    dist=3.5   yaw=1.45   pitch=0.12   # THE BLAST — snap WIDE on the peak spread (on the boom), screen still lit
 t=228.0   pos=0,0,0    dist=3.8   yaw=1.45   pitch=0.10   # die out to black over the dying debris
 
 # --- the finale pop: brighten the bolt backdrop + bloom on the blast, then settle for the die-out ---
 [sync]
-t=@@bar:108  flash=0.5  bg_dim=0.35  exposure=1.0
-t=@@bar:129  flash=1.0  bg_dim=0.85  exposure=1.6   # spike on the explosion
-t=@@bar:133  flash=0.0  bg_dim=0.20  exposure=0.8   # die out
+t=@@bar:108     flash=0.5  bg_dim=0.35  exposure=1.0
+t=@@bar:131     flash=0.7  bg_dim=0.6   exposure=1.3   # lift into the blast
+t=@@bar:132     flash=1.0  bg_dim=0.9   exposure=1.7   # SPIKE on the boom (~226.3s)
+t=@@bar:133     flash=0.0  bg_dim=0.15  exposure=0.7   # die out to black
 
 # --- ALL the lyrics (Ome Henk · "Op de camping" · 1995). Bottom-center, timed to the bars. ---
 [caption]
@@ -103,5 +107,5 @@ screentext:Op de camping — heb je nou je zin (ja leuk he)              in @@ba
 screentext:Op de camping — met z'n 12en in een caravan (la la la)      in @@bar:122  out @@bar:125    at 0.5,0.84  size 34  center  fade 0.3
 screentext:Lekker knus... gezellig... briljant idee van hooydonk       in @@bar:125  out @@bar:127    at 0.5,0.84  size 32  center  fade 0.3
 screentext:Ome Henk polonaise — blijf van me af!                       in @@bar:127  out @@bar:129    at 0.5,0.84  size 34  center  fade 0.3
-screentext:Ik doe niet mee aan die polonasie (la la la)                in @@bar:129  out @@bar:130    at 0.5,0.84  size 32  center  fade 0.3
-screentext:OP DE CAMPING                                               in @@bar:130  out @@bar:133    at 0.5,0.5   size 80  center  fade 0.15
+screentext:Ik doe niet mee aan die polonasie (la la la)                in @@bar:129  out @@bar:132    at 0.5,0.84  size 32  center  fade 0.3
+screentext:OP DE CAMPING                                               in @@bar:132  out @@bar:133    at 0.5,0.5   size 80  center  fade 0.12

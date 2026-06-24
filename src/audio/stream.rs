@@ -287,6 +287,7 @@ struct MasterChain {
     widen: f32,
     makeup: f32,
     ceiling: f32,
+    endfade: f32, // master die-out length (s); default 0.025 = click-guard near-hard-stop
     section: usize, // cached section index, re-resolved on boundary
 }
 
@@ -315,6 +316,7 @@ impl MasterChain {
             widen: score.param("widen", 1.55),
             makeup: score.param("makeup", 1.18),
             ceiling: score.param("ceiling", 0.93),
+            endfade: score.param("endfade", 0.025).max(0.001),
             section: usize::MAX,
         }
     }
@@ -369,7 +371,10 @@ impl MasterChain {
             bed[2 * i + 1] += delayed * 0.25;
 
             let fade_in = (t / 1.5).clamp(0.0, 1.0);
-            let fade_out = ((demo - t) / 0.025).clamp(0.0, 1.0);
+            // `endfade` = the master die-out length (s). Default 0.025 is a click-guard (a near-hard
+            // stop, unchanged for existing tracks); a larger value (e.g. 1.6) lets the final
+            // impact/reverb RING OUT into silence — a real "dies out" finale instead of a hard cut.
+            let fade_out = ((demo - t) / self.endfade).clamp(0.0, 1.0);
             let g = fade_in * fade_out * score.gain_at_cached(t, si);
             let mut lo = [0.0f32; 2];
             let mut hi = [0.0f32; 2];
