@@ -1,0 +1,131 @@
+# martin score — USURA "Open Your Mind" (1992), transcribed from a public MIDI (bitmidi)
+# and quantised to martin's 16-slot grid by pipeline/transcribe_midi.py — NOT from memory.
+# Instrumental rave cover (no vocal sample — no sampler in the synth). Hand-tune after.
+bpm 137
+chords Am G F E
+
+set lead=0.8 bass=0.7 sub=0.5 stab=0.7 supersaw=0.3 reverb=0.35 sidechain=0.45 hats=0.4 snares=0.5
+
+section s1 8 8
+section s2 8 8
+section s3 8 8
+section s4 8 8
+section s5 8 8
+section s6 8 8
+section s7 8 8
+section s8 8 8
+section s9 8 8
+section s10 8 8
+section s11 8 8
+section s12 8 8
+section s13 8 8
+section s14 8 8
+section s15 8 8
+section s16 8 8
+section s17 7 7
+
+s1.chords: Am Em Em Gm Gm Em Em Gm
+s1.kick p0: x . . .  x . . .  x . . .  x . . .
+s1.snare p0: . . . .  x . . .  . . . .  x . . .
+s1.hat p0: x x x .  x . x x  x x x .  x . x x
+s1.bass p0: . . . .  . . . .  . . . .  . . . .   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -
+
+s2.chords: Gm Em Em Gm Gm Em Em Gm
+s2.kick p0: x . . .  x . . .  x . . .  x . . .
+s2.snare p0: . . . .  x . . .  . . . .  x . . .
+s2.hat p0: x x x .  x . x x  x x x .  x . x x
+s2.bass p0: G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -
+
+s3.chords: Gm Em Em Gm Gm Em Em Gm
+s3.kick p0: x . . .  x . . .  x . . .  x . . .
+s3.snare p0: . . . .  x . . .  . . . .  x . . .
+s3.hat p0: x x x .  x . x x  x x x .  x . x x
+s3.lead p0: . . . .  . . . .  . . . .  . . . .   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3
+s3.bass p0: G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -
+
+s4.chords: Gm Em Em Gm Gm Em Em Gm
+s4.kick p0: x . . .  x . . .  x . . .  x . . .
+s4.snare p0: . . . .  x . . .  . . . .  x . . .
+s4.hat p0: x x x .  x . x x  x x x .  x . x x
+s4.lead p0: G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 .   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3
+s4.bass p0: G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -
+
+s5.chords: Gm Em Em Gm Gm Em Em Gm
+s5.kick p0: x . . .  x . . .  x . . .  x . . .
+s5.snare p0: . . . .  x . . .  . . . .  x . . .
+s5.hat p0: x x x .  x . x x  x x x .  x . x x
+s5.lead p0: G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 .   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3
+s5.bass p0: G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -
+
+s6.chords: Gm Am Am Am Am Am Am Am
+s6.kick p0: x . . .  x . . .  x . . .  x . . .
+s6.snare p0: . . . .  x . . .  . . . .  x . . .
+s6.hat p0: x x x .  x . x x  x x x .  x . x .
+s6.lead p0: G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s6.bass p0: G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .
+s6.stab p0: x . x .  x . x .  x . x .  x . x .
+
+s7.chords: Am Am Am Am Am Am Am Am
+s7.snare p0: . . . .  x . . .  . . . .  x . . .
+s7.stab p0: x . x .  x . x .  x . x .  x . x .
+
+s8.chords: Am Am Am Am Am Am Am Am
+s8.snare p0: . . . .  x . . .  . . . .  x . . .
+s8.hat p0: . . x .  . . x .  . . x .  . . x .
+s8.stab p0: x . x .  x . x .  x . x .  x . x .
+
+s9.chords: Am Am Am Am Am Am Am Am
+s9.snare p0: . . . .  x . . .  . . . .  x . . .
+s9.hat p0: . . x .  . . x .  . . x .  . . x .
+s9.stab p0: x . x .  x . x .  x . x .  x . x .
+
+s10.chords: Am Am Am Am Am Am Am Em
+s10.kick p0: x . . .  x . . .  x . . .  x . . .
+s10.snare p0: . . . .  x . . .  . . . .  x . . .
+s10.hat p0: . . x .  . . x .  . . x .  . . x .
+s10.bass p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -
+s10.stab p0: x . x .  x . x .  x . x .  x . x .
+
+s11.chords: Em Gm Gm Em Em Gm Gm Em
+s11.kick p0: x . . .  x . . .  x . . .  x . . .
+s11.snare p0: . . . .  x . . .  . . . .  x . . .
+s11.hat p0: x x x .  x . x x  x x x .  x . x x
+s11.bass p0: E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -
+
+s12.chords: Em Gm Gm Em Em Gm Gm Em
+s12.kick p0: x . . .  x . . .  x . . .  x . . .
+s12.snare p0: . . . .  x . . .  . . . .  x . . .
+s12.hat p0: x x x .  x . x x  x x x .  x . x x
+s12.bass p0: E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -
+
+s13.chords: Em Gm Gm Em Em Gm Gm Em
+s13.kick p0: x . . .  x . . .  x . . .  x . . .
+s13.snare p0: . . . .  x . . .  . . . .  x . . .
+s13.hat p0: x x x .  x . x x  x x x .  x . x x
+s13.bass p0: E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -
+
+s14.chords: Em Gm Gm Em Em Gm Gm Em
+s14.kick p0: x . . .  x . . .  x . . .  x . . .
+s14.snare p0: . . . .  x . . .  . . . .  x . . .
+s14.hat p0: x x x .  x . x x  x x x .  x . x x
+s14.bass p0: E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -
+
+s15.chords: Em Gm Gm Em Em Gm Gm Em
+s15.kick p0: x . . .  x . . .  x . . .  x . . .
+s15.snare p0: . . . .  x . . .  . . . .  x . . .
+s15.hat p0: x x x .  x . x x  x x x .  x . x x
+s15.lead p0: . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   . . . .  . . . .  . . . .  . . . .   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3
+s15.bass p0: E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -
+
+s16.chords: Em Gm Gm Em Em Gm Gm Am
+s16.kick p0: x . . .  x . . .  x . . .  x . . .
+s16.snare p0: . . . .  x . . .  . . . .  x . . .
+s16.hat p0: x x x .  x . x x  x x x .  x . x x
+s16.lead p0: E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3
+s16.bass p0: E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 -   E1 - E2 -  E1 - E2 -  E1 E1 E2 -  E1 - E2 .   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 . G2 -   G1 - G2 -  G1 - G2 -  G1 G1 G2 -  G1 - G2 -   . . . .  . . . .  . . . .  . . . .
+
+s17.chords: Am Am Am Am Am Am Am
+s17.snare p0: . . . .  x . . .  . . . .  x . . .
+s17.hat p0: . . x .  . . x .  . . x .  . . x .
+s17.lead p0: E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   E3 E3 E3 E3  E3 . E3 E3  E3 E3 E3 E3  E3 . E3 E3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3   G3 G3 G3 G3  G3 . G3 G3  G3 G3 G3 G3  G3 . G3 G3
+

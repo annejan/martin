@@ -58,6 +58,18 @@ SPDX-FileCopyrightText = [
 ]
 SPDX-License-Identifier = "MIT"
 
+# productions/usura/score.txt — our tracker-DSL transcription (an instrumental rave cover arrangement)
+# of U.S.U.R.A.'s "Open Your Mind" (1992), quantised from a public MIDI. The composition is credited
+# alongside our arrangement (same convention as the camping score).
+[[annotations]]
+path = "productions/usura/score.txt"
+precedence = "override"
+SPDX-FileCopyrightText = [
+    "2026 Anne Jan Brouwer <brouwer@annejan.com>",
+    "1992 U.S.U.R.A. — Open Your Mind",
+]
+SPDX-License-Identifier = "MIT"
+
 [[annotations]]
 path = "assets/font.ttf"
 SPDX-FileCopyrightText = "2003 Bitstream, Inc."
