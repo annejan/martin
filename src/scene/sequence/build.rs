@@ -214,7 +214,7 @@ pub(crate) fn build_sequence(
         .ok()
         .and_then(|s| parse_euler_deg(&s))
         .unwrap_or_else(cloud_base_rotation);
-    let shots = build_shots(
+    let mut shots = build_shots(
         &seq.parts,
         raws,
         &transitions,
@@ -224,8 +224,9 @@ pub(crate) fn build_sequence(
         n,
         content_radius,
         entity_rot,
-        &mut assets,
     );
+    // STREAMING: upload only the initial window {0,1} now; the director streams the rest in/out.
+    ensure_window(&mut shots, &mut assets, 0);
     let intro0 = shots[0]
         .origin
         .clone()
@@ -238,7 +239,12 @@ pub(crate) fn build_sequence(
         .spawn((
             GaussianInterpolate::<Gaussian3d> {
                 lhs: PlanarGaussian3dHandle(intro0.clone()),
-                rhs: PlanarGaussian3dHandle(shots[0].shape.clone()),
+                rhs: PlanarGaussian3dHandle(
+                    shots[0]
+                        .shape
+                        .clone()
+                        .expect("shot 0 shape loaded by ensure_window"),
+                ),
             },
             CloudSettings {
                 sort_mode: SortMode::Radix,
@@ -272,6 +278,12 @@ pub(crate) fn build_sequence(
     // sample_gl_mesh) so the mesh can dissolve into its own splats. Shares the cloud's base frame.
     for (idx, part) in seq.parts.iter().enumerate() {
         if let PartContent::GlMesh(name) = &part.content {
+            // gl_dissolve needs this shape uploaded now + holds its own clone (kept alive even when the
+            // streaming window later drops the BuiltShot's handle).
+            let shape = shots[idx]
+                .shape
+                .clone()
+                .unwrap_or_else(|| assets.add(shots[idx].shape_data.clone()));
             spawn_gl_dissolve(
                 &mut commands,
                 &asset_server,
@@ -279,19 +291,26 @@ pub(crate) fn build_sequence(
                 idx,
                 entity_rot,
                 part.rot.unwrap_or(Quat::IDENTITY),
-                shots[idx].shape.clone(),
+                shape,
                 n,
             );
         }
     }
 
     let built_n = shots.len();
-    // Peak resident = every shot's shape cloud + any `origin`/`exit` source cloud (all held in
-    // BuiltShot handles for the whole show), each `n` gaussians. Warn if that risks a GPU OOM.
-    let resident: usize = shots
-        .iter()
-        .map(|s| (1 + usize::from(s.origin.is_some()) + usize::from(s.exit_cloud.is_some())) * n)
-        .sum();
+    // PEAK resident with streaming = the heaviest active window {i-1, i, i+1} (shape + any origin/exit
+    // source per shot in it), NOT every shot at once. Warn only if that window risks a GPU OOM.
+    let per = |s: &BuiltShot| {
+        (1 + usize::from(s.origin_data.is_some()) + usize::from(s.exit_data.is_some())) * n
+    };
+    let resident: usize = (0..shots.len())
+        .map(|i| {
+            let lo = i.saturating_sub(1);
+            let hi = (i + 1).min(shots.len() - 1);
+            (lo..=hi).map(|j| per(&shots[j])).sum()
+        })
+        .max()
+        .unwrap_or(0);
     state.starts = shots.iter().map(|s| s.start).collect(); // cache the cue timeline once (immutable after)
     state.shots = shots;
     state.entity = Some(entity);
@@ -318,7 +337,6 @@ fn build_shots(
     n: usize,
     content_radius: f32,
     base_rot: Quat,
-    assets: &mut Assets<PlanarGaussian3d>,
 ) -> Vec<BuiltShot> {
     let pair_match = std::env::var("MARTIN_PAIR")
         .map(|v| v.eq_ignore_ascii_case("match"))
@@ -384,18 +402,21 @@ fn build_shots(
         };
         // `exit:` departure target cloud (faded + displaced) — the part morphs to this as it leaves.
         let exit = parts[idx].exit.map(|d| d.out_cloud(&shaped, r));
-        let origin = src.map(|s| assets.add(PlanarGaussian3d::from(s)));
-        let exit_cloud = exit.map(|o| assets.add(PlanarGaussian3d::from(o)));
         // keep this part's shape so the NEXT part can pair-match against it (only needed for
         // pair=match; the clone is gated to avoid copying a big cloud on every render otherwise).
         if pair_match {
             prev_shaped = Some(shaped.clone());
         }
         let shot = &parts[idx];
+        // STREAMING: build the CPU master clouds now; GPU handles stay None until `ensure_window`
+        // uploads them (so a long reel never holds every shot's cloud in VRAM at once).
         shots.push(BuiltShot {
-            shape: assets.add(PlanarGaussian3d::from(shaped)),
-            origin,
-            exit_cloud,
+            shape_data: PlanarGaussian3d::from(shaped),
+            origin_data: src.map(PlanarGaussian3d::from),
+            exit_data: exit.map(PlanarGaussian3d::from),
+            shape: None,
+            origin: None,
+            exit_cloud: None,
             entrance: tr,
             deform: deforms[idx],
             deform_amp: shot.deform_amp,
@@ -414,6 +435,42 @@ fn build_shots(
         });
     }
     shots
+}
+
+/// SPLAT STREAMING (core): keep only the shots in the active window `{idx-1, idx, idx+1}` uploaded as
+/// GPU assets; drop the rest (the `Handle` goes `None` → the asset is freed → VRAM released). The CPU
+/// master clouds stay in `*_data`, so re-entering the window just re-uploads. Uploads happen only on a
+/// shot change (cheap), so a long reel of big captures never holds more than a few clouds in VRAM.
+pub(crate) fn ensure_window(
+    shots: &mut [BuiltShot],
+    assets: &mut Assets<PlanarGaussian3d>,
+    idx: usize,
+) {
+    let lo = idx.saturating_sub(1);
+    let hi = (idx + 1).min(shots.len().saturating_sub(1));
+    for (i, s) in shots.iter_mut().enumerate() {
+        if i >= lo && i <= hi {
+            if s.shape.is_none() {
+                s.shape = Some(assets.add(s.shape_data.clone()));
+            }
+            if s.origin.is_none() {
+                if let Some(d) = &s.origin_data {
+                    s.origin = Some(assets.add(d.clone()));
+                }
+            }
+            if s.exit_cloud.is_none() {
+                if let Some(d) = &s.exit_data {
+                    s.exit_cloud = Some(assets.add(d.clone()));
+                }
+            }
+        } else {
+            // outside the window → drop the GPU handles (asset freed). A `glb:` shape also has a
+            // separate handle held by its gl_dissolve entity, so dropping here never breaks those.
+            s.shape = None;
+            s.origin = None;
+            s.exit_cloud = None;
+        }
+    }
 }
 
 /// Add `NoFrustumCulling` to the sequence entity once its Aabb exists, so morph/ball

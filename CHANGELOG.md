@@ -108,6 +108,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   pre-parse `--mcp` special-case is gone from `main`. `$MARTIN_MCP` still works for parity.
 
 ### Engine
+- **Splat streaming — windowed VRAM residency for reels (core)** — a morph reel used to upload EVERY
+  shot's cloud to the GPU at once, so N big captures × the budget blew past the iGPU's ~2.5M-splat
+  ceiling (a 6-city skyline at full density = OOM). Now each `BuiltShot` keeps its cloud on the CPU
+  (RAM is cheap) and the director uploads only the **active window `{idx-1, idx, idx+1}`** as GPU
+  assets, dropping the rest (freeing VRAM) as the timeline moves. Peak resident drops from *all shots*
+  to ~3, so per-shot density can go far higher (the cities jump from ~260k to ~600k+ each) and long
+  reels of large captures no longer OOM. Foundation for high-res capture content. `model.rs` (CPU
+  master clouds + lazy handles), `build.rs` (`ensure_window`), `director.rs` (stream per shot change).
 - **`MARTIN_SIDECHAIN` now pumps the composition stage too** — the visual sidechain (the kick DUCKS the
   frame, the classic pump) was reel-only; `animate_composition` now honours it as well, so every placed
   prop breathes with the track. One duck factor × each prop's opacity; `0` = off (byte-identical). The

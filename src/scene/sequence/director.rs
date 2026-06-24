@@ -20,7 +20,9 @@ const DEPART_LEN: f32 = 1.5; // `out:` departure time (s) — carved from the en
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub(crate) fn shot_director(
     seq: Option<Res<Sequence>>,
-    state: Option<Res<SeqState>>,
+    // ResMut: the director STREAMS shot clouds in/out of VRAM each shot change (ensure_window).
+    state: Option<ResMut<SeqState>>,
+    mut assets: ResMut<bevy::asset::Assets<bevy_gaussian_splatting::PlanarGaussian3d>>,
     clock: Res<crate::scene::SeqClock>,
     flash: Res<FlashStrength>,
     beat: Res<crate::scene::beat::Beat>,
@@ -45,7 +47,7 @@ pub(crate) fn shot_director(
         &mut Transform,
     )>,
 ) {
-    let (Some(seq), Some(state)) = (seq, state) else {
+    let (Some(seq), Some(mut state)) = (seq, state) else {
         return;
     };
     if !state.built {
@@ -55,18 +57,19 @@ pub(crate) fn shot_director(
     let Ok((mut interp, mut cs, mut tf)) = q.get_mut(entity) else {
         return;
     };
-    let shots = &state.shots;
-    let starts = state.starts();
 
     // The active shot is the last one whose absolute start time has arrived (starts come from
     // the cue timeline — `@@anchor` or laid end-to-end). It morphs in over `morph`, then holds
     // until the next shot starts. Before shot 0's start, `factor` clamps to 0 (its source state).
     let t = clock.t;
-    if shots.is_empty() {
+    if state.shots.is_empty() {
         return;
     }
-    debug_assert_eq!(shots.len(), starts.len());
-    let idx = active_shot(starts, t);
+    let idx = active_shot(state.starts(), t);
+    // STREAMING: make sure {idx-1, idx, idx+1} are uploaded (and the rest dropped) before we read them.
+    crate::scene::sequence::build::ensure_window(&mut state.shots, &mut assets, idx);
+    let starts = state.starts();
+    let shots = &state.shots;
     let s = &shots[idx];
     // Phase: ARRIVING (origin → shape), holding (shape), or DEPARTING (shape → its faded out-cloud
     // — a distinct step carved from the end of the hold, before the next shot arrives; see `out:`).
@@ -77,10 +80,21 @@ pub(crate) fn shot_director(
         f32::MAX
     };
     let departing = t >= depart_at;
+    // streaming guarantees the active window {idx-1, idx, idx+1} is uploaded, so these unwraps hold.
+    let cur_shape = s
+        .shape
+        .as_ref()
+        .expect("active shot shape uploaded (ensure_window)");
+    let prev_shape = || {
+        shots[idx.saturating_sub(1)]
+            .shape
+            .as_ref()
+            .expect("previous shot shape uploaded (ensure_window)")
+    };
     let (want_lhs, want_rhs, factor, arriving) = if departing {
         let f = ((t - depart_at) / DEPART_LEN).clamp(0.0, 1.0);
-        let exit = s.exit_cloud.as_ref().unwrap_or(&s.shape);
-        (&s.shape, exit, f, false)
+        let exit = s.exit_cloud.as_ref().unwrap_or(cur_shape);
+        (cur_shape, exit, f, false)
     } else if s.entrance == Entrance::Cut {
         // hard cut: the shot is simply PRESENT from its start — factor jumps to 1.0 in one frame
         // (the first frame where t >= start, already grid-aligned since clock.t = i*dt), no blend-in.
@@ -88,10 +102,10 @@ pub(crate) fn shot_director(
             Some(h) => h,
             None => {
                 debug_assert!(idx > 0, "Cut shot 0 must have an origin");
-                &shots[idx.saturating_sub(1)].shape
+                prev_shape()
             }
         };
-        (lhs, &s.shape, if t >= s.start { 1.0 } else { 0.0 }, false)
+        (lhs, cur_shape, if t >= s.start { 1.0 } else { 0.0 }, false)
     } else {
         let dt = t - s.start;
         let f = (dt / s.morph.max(1e-3)).clamp(0.0, 1.0);
@@ -100,10 +114,10 @@ pub(crate) fn shot_director(
             Some(h) => h,
             None => {
                 debug_assert!(idx > 0, "Morph shot 0 must have an origin");
-                &shots[idx.saturating_sub(1)].shape
+                prev_shape()
             }
         };
-        (lhs, &s.shape, f, dt < s.morph)
+        (lhs, cur_shape, f, dt < s.morph)
     };
     if interp.lhs.0.id() != want_lhs.id() {
         interp.lhs = PlanarGaussian3dHandle(want_lhs.clone());

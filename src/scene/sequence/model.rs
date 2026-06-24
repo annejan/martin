@@ -91,7 +91,14 @@ pub(crate) struct FlashStrength(pub f32);
 /// One fully-built shot: every per-frame input the director needs, collapsed into one record (vs the
 /// old index-parallel `Vec`s). Built by `build_sequence`; consumed by `shot_director`.
 pub(crate) struct BuiltShot {
-    pub shape: Handle<PlanarGaussian3d>,
+    // SPLAT STREAMING (core): the CPU master clouds are always held (RAM is cheap); the GPU `Handle`s
+    // are created on demand only while the shot is inside the director's active window and dropped
+    // (asset freed → VRAM released) when it leaves — so a long reel of big captures never uploads more
+    // than a few clouds at once. See `residency::ensure_window`.
+    pub shape_data: PlanarGaussian3d, // CPU master (always resident in RAM)
+    pub origin_data: Option<PlanarGaussian3d>,
+    pub exit_data: Option<PlanarGaussian3d>,
+    pub shape: Option<Handle<PlanarGaussian3d>>, // GPU asset — Some only while in the window
     pub origin: Option<Handle<PlanarGaussian3d>>, // lhs source cloud (None = morph from prev shape)
     pub exit_cloud: Option<Handle<PlanarGaussian3d>>, // `exit:` departure cloud (None = none)
     pub entrance: Entrance,
