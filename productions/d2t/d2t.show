@@ -1,44 +1,64 @@
-# martin — DANCE 2 TRANCE "Power of American Natives" (cover). A warm desert/native trance journey:
-# the flute-chant intro, a rising sun, a spinning dreamcatcher-mandala, spirit-fire, ascending helix,
-# a night-desert starfield — morphing on the music with an FFT-reactive sky + the kick pumping it all.
-# Abstract (no native/eagle splat assets) — warm palette (tint:fry) carries the theme.
+# martin — DANCE 2 TRANCE "Power of American Natives" (cover). A fast, varied trance journey: readable
+# title cards, then a new shape + a DIFFERENT entrance every section (vortex/explode/shockwave/shatter/
+# implode), cycling warm/rainbow palettes + backdrops, a beat-cutting camera + spark particles.
+# Abstract (no native/eagle splat assets) — energy + variety carry it, not a single slow morph.
 #   live:    MARTIN_SHOW=productions/d2t/d2t.show cargo +nightly run --release
 #   preview: TMPDIR=~/.cache/martin-render MARTIN_RES=854x480 MARTIN_PREVIEW_FPS=20 \
-#            MARTIN_SHOW=productions/d2t/d2t.show ./record.sh /tmp/d2t.mp4
+#            MARTIN_MORPH_COUNT=110000 MARTIN_SHOW=productions/d2t/d2t.show ./record.sh /tmp/d2t.mp4
 [settings]
-kind        = demo
-score       = productions/d2t/score.txt
-budget      = 200000
-bg          = aurora
-post        = chroma
-cam_pump    = 0.28
-sidechain   = 0.45
-fft         = 1.6
-morph_stagger = 0.6
+kind          = demo
+score         = productions/d2t/score.txt
+budget        = 150000
+bg            = aurora
+post          = chroma
+cam_pump      = 0.34
+sidechain     = 0.4
+fft           = 1.7
+morph_stagger = 0.4
+particles     = sparks
+particle_count = 500
 
 [reel]
-text:DANCE 2 TRANCE           @@s1   @9,4   ~outline  font:defeest  tint:brand  backdrop:aurora
-text:POWER OF\nAMERICAN NATIVES @@s2  @9,5   ~outline  tint:fry     backdrop:plasma
-splat:galaxy.ply              @@s4   @9,5   ~morph    tint:fry     backdrop:plasma     # sky vortex
-splat:saturn.ply              @@s6   @9,5   ~morph                 backdrop:fractal    # the rising sun
-splat:supershape.ply          @@s8   @9,5   ~morph    tint:fry     backdrop:aurora     # dreamcatcher mandala
-splat:flame.ply               @@s10  @9,5   ~explode  tint:fry     backdrop:fractal    # spirit fire
-splat:helix.ply               @@s12  @9,5   ~morph    tint:fry     backdrop:plasma     # ascending spiral
-splat:star.ply                @@s14  @9,5   ~morph                 backdrop:aurora     # night-desert sky
-splat:torus.ply               @@s16  @9,5   ~morph    tint:fry     backdrop:fractal    # the ring/sun-disc
-text:POWER OF\nAMERICAN NATIVES @@s17 @9,4   ~outline  tint:brand   backdrop:aurora
+# readable title cards: FILLED deFEEST font, big, plain fade (no outline/scatter), held front-on.
+text:DANCE 2 TRANCE    @@s1   @10,3  *1.1  ~fade      font:defeest  tint:brand  backdrop:aurora
+text:AMERICAN NATIVES  @@s2   @10,3  *1.0  ~fade      font:defeest  tint:fry    backdrop:plasma
+# then a NEW shape + a DIFFERENT entrance every section — variety is the point
+splat:saturn.ply       @@s3   @9,4   ~vortex    tint:fry              backdrop:fractal   # sun spins in
+splat:galaxy.ply       @@s4   @9,4   ~explode   raster:position       backdrop:plasma    # rainbow burst
+splat:supershape.ply   @@s5   @9,4   ~shockwave tint:fry              backdrop:aurora    # mandala blast
+splat:flame.ply        @@s6   @9,4   ~explode   tint:fry              backdrop:fractal   # spirit fire
+splat:helix.ply        @@s7   @9,4   ~vortex    raster:position       backdrop:plasma    # ascending spiral
+splat:knot.ply         @@s8   @9,4   ~morph     tint:rainbow          backdrop:fractal
+splat:star.ply         @@s9   @9,4   ~shatter                         backdrop:aurora    # starburst
+splat:torus.ply        @@s10  @9,4   ~shockwave tint:fry              backdrop:plasma    # ring/sun-disc
+splat:mobius.ply       @@s11  @9,4   ~implode   raster:normal         backdrop:fractal
+splat:supershape.ply   @@s12  @9,4   ~vortex    tint:rainbow          backdrop:plasma    # peak mandala
+splat:galaxy.ply       @@s13  @9,4   ~explode   raster:position       backdrop:fractal
+splat:flame.ply        @@s14  @9,4   ~shockwave tint:fry              backdrop:aurora
+splat:saturn.ply       @@s15  @9,4   ~vortex    tint:fry              backdrop:plasma    # the sun returns
+text:AMERICAN NATIVES  @@s16  @9,5   *1.0  ~fade      font:defeest  tint:brand  backdrop:aurora
 
 [camera]
-t=@@s1   pos=0,0,0  dist=7.0  yaw=0.4   pitch=0.14
-t=@@s4   pos=0,0,0  dist=5.5  yaw=1.1   pitch=0.10
-t=@@s7   pos=0,0,0  dist=6.5  yaw=1.9   pitch=0.16
-t=@@s10  pos=0,0,0  dist=4.8  yaw=0.7   pitch=0.08
-t=@@s13  pos=0,0,0  dist=6.0  yaw=2.4   pitch=0.12
-t=@@s16  pos=0,0,0  dist=7.2  yaw=1.3   pitch=0.15
+# dynamic + beat-cutting: close dives, wide pulls, hard cuts at the section turns
+t=@@s1   pos=0,0,0  dist=4.2  yaw=1.57  pitch=0.05
+t=@@s3   pos=0,0,0  dist=6.5  yaw=0.5   pitch=0.16  cut
+t=@@s4   pos=0,0,0  dist=4.0  yaw=1.2   pitch=0.08  cut
+t=@@s5   pos=0,0,0  dist=7.0  yaw=2.1   pitch=0.18  cut
+t=@@s6   pos=0,0,0  dist=3.6  yaw=0.8   pitch=0.06  cut
+t=@@s7   pos=0,0,0  dist=6.0  yaw=1.6   pitch=0.14  cut
+t=@@s8   pos=0,0,0  dist=4.4  yaw=2.6   pitch=0.10
+t=@@s9   pos=0,0,0  dist=5.5  yaw=0.3   pitch=0.16  cut
+t=@@s10  pos=0,0,0  dist=3.8  yaw=1.4   pitch=0.05  cut
+t=@@s11  pos=0,0,0  dist=6.8  yaw=2.2   pitch=0.18  cut
+t=@@s12  pos=0,0,0  dist=4.0  yaw=0.9   pitch=0.08  cut
+t=@@s13  pos=0,0,0  dist=6.2  yaw=1.8   pitch=0.15  cut
+t=@@s14  pos=0,0,0  dist=3.6  yaw=0.6   pitch=0.06  cut
+t=@@s16  pos=0,0,0  dist=4.6  yaw=1.57  pitch=0.06  cut
 
 [sync]
 t=@@s1   flash=0.10  bg_dim=0.7   beat=0.4   exposure=0.9   bg=aurora
-t=@@s4   flash=0.5   bg_dim=0.45  beat=1.6   exposure=1.25  bg=plasma
-t=@@s8   flash=0.7   bg_dim=0.35  beat=2.0   exposure=1.5   bg=fractal
-t=@@s12  flash=0.6   bg_dim=0.4   beat=1.8   exposure=1.35  bg=plasma
-t=@@s17  flash=0.3   bg_dim=0.6   beat=0.9   exposure=1.05  bg=aurora
+t=@@s3   flash=0.55  bg_dim=0.42  beat=1.7   exposure=1.3   bg=fractal
+t=@@s6   flash=0.8   bg_dim=0.32  beat=2.1   exposure=1.55  bg=plasma
+t=@@s9   flash=0.7   bg_dim=0.36  beat=2.0   exposure=1.45  bg=aurora
+t=@@s12  flash=0.85  bg_dim=0.3   beat=2.2   exposure=1.6   bg=fractal
+t=@@s16  flash=0.35  bg_dim=0.55  beat=1.0   exposure=1.1   bg=aurora
