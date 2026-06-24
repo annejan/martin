@@ -315,7 +315,13 @@ pub(crate) fn build_sequence(
     state.shots = shots;
     state.entity = Some(entity);
     state.built = true;
-    info!("sequence built: {built_n} shots × {n} gaussians");
+    // FREE THE SOURCE CAPTURES: the raw `.ply` clouds (held alive in `state.loads` until build) have
+    // now been sampled into each shot's cloud — drop them so a big multi-capture demo doesn't hold the
+    // huge source files in RAM on top of the built shots (the director reads `state.shots`, never loads).
+    let freed = state.loads.len();
+    state.loads.clear();
+    state.load_names.clear();
+    info!("sequence built: {built_n} shots × {n} gaussians (freed {freed} source clouds)");
     crate::scene::warn_splat_budget("sequence", resident);
 }
 

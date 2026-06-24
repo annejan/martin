@@ -113,6 +113,9 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   pre-parse `--mcp` special-case is gone from `main`. `$MARTIN_MCP` still works for parity.
 
 ### Engine
+- **Free source captures after build** — the raw `.ply` clouds (held alive until the reel is built)
+  are now dropped once sampled into the shots, so a big multi-capture demo doesn't keep the huge source
+  files (e.g. 4 city `.ply` ≈ 1.5 GB) in RAM on top of the built shots. Pairs with splat streaming.
 - **Splat streaming — windowed VRAM residency for reels (core)** — a morph reel used to upload EVERY
   shot's cloud to the GPU at once, so N big captures × the budget blew past the iGPU's ~2.5M-splat
   ceiling (a 6-city skyline at full density = OOM). Now each `BuiltShot` keeps its cloud on the CPU
