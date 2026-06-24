@@ -32,7 +32,7 @@ splat:supershape.ply   @@drop       @8,1.5   ~morph     ^wave          backdrop:
 splat:doggo.ply        @@breakdown  @10,2.5  ~morph     ^ripple        backdrop:stars    # verse 2 — night, "tent staat in de brand"
 splat:supershape.ply   @@climax     @8,1.5   ~morph     ^wave          backdrop:kaleido  # chorus 2 — peak party
 splat:galaxy.ply       @@outro      @8,1.6   ~morph     ^turbulence  exit:explode  backdrop:bolt   # outro — spins up, then BURSTS outward (peak spread ~226.0s, ON the audio boom)
-splat:knot.ply         @@bar:132    @5,2     ~shockwave         flash:1.0  backdrop:bolt   # trailing trigger: galaxy bursts 1.5s before this (224.8→226.3); shockwave ring + white flash on the bang
+splat:galaxy.ply       @@bar:132    @4,1.6   ~explode  ^turbulence          backdrop:bolt   # trailing galaxy ARRIVING from a burst as the first one DEPARTS in one → continuous debris field, no clean emblem; resolves to a fuzzy blob that fades under the video fade-out
 
 # --- camera: front-facing (captions are screen-space; this frames the splats). Push in over the
 #     song, snap back + rattle on the explosion, then settle as it dies out. ---
