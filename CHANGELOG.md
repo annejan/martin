@@ -11,6 +11,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **Hoover lead voice (`leadsw=5`)** — the iconic Alpha-Juno "What the…"/Mentasm rave lead: a thick
+  detuned saw stack + a fifth + a sub-octave through a resonant low-pass, with the signature short
+  downward pitch-dive on attack + tanh drive. Plus **`pipeline/transcribe_midi.py`**, a MIDI→tracker-DSL
+  transcriber (the inverse of `score_to_midi.py`), used to start a U.S.U.R.A. "Open Your Mind" rave cover
+  (`productions/usura/`, hoover approximates the vocal hook — no sampler in the synth).
 - **`baby` procedural splat shape** — a chubby cartoon baby (round skin head with dark eyes, rosy
   cheeks + a little mouth, a hair curl, pastel-blue onesie body, stubby arms/legs) synthesized by
   `splatgen`/`build.rs`. Faces +Z; head rides on top after the load-flip. Drives the new

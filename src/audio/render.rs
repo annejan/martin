@@ -107,6 +107,7 @@ fn lead_pick(n: i32, f: f32, v: f32) -> Unit {
         2 => lead_sw2(f, v),
         3 => lead_sw3(f, v),
         4 => lead_sw4(f, v),
+        5 => hoover(f, v),
         _ => lead(f, v),
     }
 }

@@ -160,6 +160,49 @@ pub(super) fn lead(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
     }
 }
 
+/// Hoover (`leadsw=5`): the iconic rave/hardcore lead — the Roland Alpha-Juno "What the…"/Mentasm
+/// sound. A thick stack of detuned saws + a fifth + a sub-octave (saw+square) through a RESONANT
+/// low-pass, plus the signature short downward PITCH-DIVE on attack (every osc swoops ~+1.2 semitone
+/// → base over ~80 ms) and tanh drive. Used to approximate U.S.U.R.A.'s "open your mind" vocal hook.
+pub(super) fn hoover(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    let mk = move || {
+        // the hoover "whoop": a fast downward pitch dive on attack, applied to every oscillator so the
+        // detuned stack swoops into pitch together (kept small so the melody stays on pitch).
+        let p = move |mult: f32| {
+            let fm = freq * mult;
+            lfo(move |t: f32| fm * (1.0 + 0.07 * (-t * 16.0).exp()))
+        };
+        // thick detuned saw body + a fifth — the Alpha-Juno stack
+        let saws = ((p(1.0) >> saw())
+            + (p(1.006) >> saw())
+            + (p(0.994) >> saw())
+            + (p(1.013) >> saw())
+            + (p(0.987) >> saw())
+            + (p(1.5) >> saw()) * 0.5)
+            * 0.14;
+        // buzzy sub-octave body (saw + a hollow square) under the stack
+        let sub = (p(0.5) >> saw()) * 0.18 + (p(0.501) >> square()) * 0.10;
+        // resonant filter env: opens bright then settles — the hoover's vowel-ish sweep
+        let top = 2600.0 + 2800.0 * vel;
+        let cut = envelope(move |t: f32| 900.0 + top * (-t * 3.0).exp());
+        (((saws + sub) | cut) >> lowpass_q(1.3) >> shape(Tanh(1.7)))
+            * envelope(|t: f32| {
+                let a = 0.012;
+                if t < a {
+                    t / a
+                } else {
+                    0.6 + 0.4 * (-(t - a) * 1.1).exp()
+                }
+            })
+            * 0.82
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
 /// Arp: short filtered pluck. Lower and quieter than the old bright square arp so it reads as
 /// motion in the groove, not late-90s game melody.
 pub(super) fn arp(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
