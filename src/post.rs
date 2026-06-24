@@ -36,44 +36,86 @@ use bevy::render::view::ViewTarget;
 
 const POST_SHADER: Handle<Shader> = uuid_handle!("d1f2e3c4-5a6b-7c8d-9e0f-1a2b3c4d5e6f");
 
-/// Per-camera post-FX settings, also the shader uniform. `mode` 0 = off (pass-through), 1 = chroma.
-/// `kick` is refreshed each frame from `Beat` (clock-driven → deterministic). Packed to 16 bytes.
+/// Per-camera post-FX settings + the shader uniform. `mode` is a BITFIELD: bit0 = chroma, bit1 = film
+/// grain, bit2 = vignette (so `cine` composes all three). `kick`/`time` refresh each frame from the
+/// clock-driven beat/clock → deterministic (record-safe). Packed to 32 bytes.
+pub(crate) const POST_CHROMA: u32 = 1;
+pub(crate) const POST_GRAIN: u32 = 2;
+pub(crate) const POST_VIGNETTE: u32 = 4;
+
 #[derive(Component, Clone, Copy, ExtractComponent, ShaderType)]
 pub(crate) struct PostSettings {
     pub mode: u32,
-    pub intensity: f32, // MARTIN_POST strength
+    pub intensity: f32, // chroma strength (MARTIN_POST)
     pub kick: f32,      // current beat kick (0..1), set each frame
-    pub _pad: f32,
+    pub time: f32,      // clock.t — deterministic film-grain animation
+    pub grain: f32,     // film-grain strength
+    pub vignette: f32,  // vignette strength
+    pub _pad: Vec2,
 }
 
-/// Parse `MARTIN_POST` (`chroma` / `chroma:1.5`) into the camera's settings, or `None` if unset/off.
+/// Parse `MARTIN_POST` into the camera's settings, or `None` if unset/off. Effects compose via `+`:
+/// `chroma` · `grain` · `vignette` · `cine` (= chroma+grain+vignette preset) · `chroma+grain` etc.,
+/// each optionally `:strength` (e.g. `cine:1.2`).
 pub(crate) fn settings_from_env() -> Option<PostSettings> {
     let v = std::env::var("MARTIN_POST").ok()?;
     let (name, strength) = v.split_once(':').map_or((v.as_str(), 1.0), |(n, s)| {
         (n, s.trim().parse().unwrap_or(1.0))
     });
-    let mode = match name.trim().to_ascii_lowercase().as_str() {
-        "chroma" | "rgb" | "rgb-split" | "rgbsplit" | "split" => 1u32,
-        "off" | "" => return None,
-        other => {
-            warn!("MARTIN_POST: unknown effect '{other}' — try chroma (or chroma:<strength>)");
-            return None;
+    let mut mode = 0u32;
+    let (mut grain, mut vignette) = (0.0f32, 0.0f32);
+    let mut chroma = 1.0f32;
+    for tok in name
+        .split(['+', ','])
+        .map(|t| t.trim().to_ascii_lowercase())
+    {
+        match tok.as_str() {
+            "chroma" | "rgb" | "rgb-split" | "rgbsplit" | "split" => mode |= POST_CHROMA,
+            "grain" | "film" => {
+                mode |= POST_GRAIN;
+                grain = 0.08;
+            }
+            "vignette" | "vig" => {
+                mode |= POST_VIGNETTE;
+                vignette = 0.4;
+            }
+            "cine" | "cinematic" => {
+                mode |= POST_CHROMA | POST_GRAIN | POST_VIGNETTE;
+                chroma = 0.7;
+                grain = 0.06;
+                vignette = 0.32;
+            }
+            "off" | "" => {}
+            other => warn!(
+                "MARTIN_POST: unknown effect '{other}' — try chroma / grain / vignette / cine"
+            ),
         }
-    };
+    }
+    if mode == 0 {
+        return None;
+    }
     Some(PostSettings {
         mode,
-        intensity: strength,
+        intensity: chroma * strength,
         kick: 0.0,
-        _pad: 0.0,
+        time: 0.0,
+        grain: grain * strength,
+        vignette: vignette * strength,
+        _pad: Vec2::ZERO,
     })
 }
 
 /// Refresh each camera's `kick` from the beat (clock-driven) so the shear lands on the drum. Scaled by
 /// the beat *intensity* (the `[sync] beat` / `MARTIN_BEAT` energy curve) so a hushed "breath" section
 /// (intensity 0) tears nothing and the drop (high intensity) punches — chroma rides the same curve.
-fn drive_post(beat: Res<crate::scene::beat::Beat>, mut q: Query<&mut PostSettings>) {
+fn drive_post(
+    beat: Res<crate::scene::beat::Beat>,
+    clock: Res<crate::scene::SeqClock>,
+    mut q: Query<&mut PostSettings>,
+) {
     for mut s in &mut q {
         s.kick = beat.kick * beat.intensity;
+        s.time = clock.t; // deterministic grain animation (record-safe)
     }
 }
 

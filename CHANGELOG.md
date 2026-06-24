@@ -11,6 +11,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **Cinematic post-FX (`MARTIN_POST=cine` / `grain` / `vignette`)** — the post pipeline grows beyond
+  chroma: film **grain** (a deterministic per-pixel+frame hash, record-safe) and a **vignette**
+  (darkened corners), composable with `+` (`chroma+vignette`) and scaled with `:<strength>`. The
+  **`cine`** preset = chroma+grain+vignette for an instant film look. `mode` is now a bitfield;
+  existing `chroma` shows are unchanged.
 - **`particles=petals` — cherry-blossom rain** — a new particle kind: pink/white petals drifting +
   tumbling slowly down the frame (aliases `blossom`/`sakura`), beat-nudged. A generic "rain of …"
   layer any production can use (the Turning Japanese demo rains blossoms). Additive — existing kinds
