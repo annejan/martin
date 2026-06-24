@@ -229,19 +229,24 @@ fn flypath(
     seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
     clock: Res<SeqClock>,
+    // MARTIN_CAM_SPLINE / `.show` `cam_spline=1`: Catmull-Rom through the [camera] keys (a flowing,
+    // never-stopping glide) instead of the default per-leg smoothstep (settles at each key). Read once.
+    mut spline: Local<Option<bool>>,
     mut q: Query<&mut OrbitCam>,
 ) {
     // the live control bridge drives the camera by hand — the authored track stands down.
     if crate::serve::is_serving() {
         return;
     }
+    let spline =
+        *spline.get_or_insert_with(|| crate::envvar::or("MARTIN_CAM_SPLINE", 0.0_f32) > 0.5);
     // A fully-timed `[camera]` TRACK is AUTHORITATIVE: play it straight off the show clock (same curve
     // live + recording), ALWAYS — no `MARTIN_FLY` needed. (`MARTIN_FLY` only replays an M-key waypoint
     // path: the part-window mode below.) This is how a `.show` `[camera]` (or a Blender-authored camera)
     // drives BOTH compose and reel shows; without it, the build_* auto-frame + record sway own the camera
     // and the authored pose is ignored.
     if waypoints::is_track(&marks.list) {
-        if let Some(w) = waypoints::pose_at_time(&marks.list, clock.t) {
+        if let Some(w) = waypoints::pose_at_time(&marks.list, clock.t, spline) {
             for mut cam in &mut q {
                 cam.target = w.target;
                 cam.dist = w.dist;

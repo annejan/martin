@@ -289,7 +289,7 @@ pub fn is_track(list: &[Key]) -> bool {
 /// Sample a *timed* track at absolute show-time `t` (seconds): find the bracketing pair by their
 /// anchors, smoothstep between them, clamp at the ends (hold the first pose before the track starts,
 /// the last after it ends). Assumes `is_track(list)` — anchors are taken as monotonically authored.
-pub fn pose_at_time(list: &[Key], t: f32) -> Option<Key> {
+pub fn pose_at_time(list: &[Key], t: f32, spline: bool) -> Option<Key> {
     if list.len() < 2 {
         return list.first().copied();
     }
@@ -304,7 +304,7 @@ pub fn pose_at_time(list: &[Key], t: f32) -> Option<Key> {
     let (a, b) = (list[i], list[i + 1]);
     if b.cut {
         // hard cut: hold the start pose for the whole leg, then jump to b exactly at its time
-        // (the next leg, bracket (b,c), resumes smoothstep). A redaction-style cut, not a glide.
+        // (the next leg, bracket (b,c), resumes the glide). A redaction-style cut, not a glide.
         return Some(Key {
             t: Some(t),
             cut: false,
@@ -313,6 +313,33 @@ pub fn pose_at_time(list: &[Key], t: f32) -> Option<Key> {
     }
     let span = (ta(&b) - ta(&a)).max(1e-4);
     let u = ((t - ta(&a)) / span).clamp(0.0, 1.0);
+    // SPLINE (opt-in): Catmull-Rom through the keys — continuous velocity, so the camera flows THROUGH
+    // each marker instead of settling at it. Neighbours clamp at the ends + don't cross a cut.
+    if spline {
+        let p0 = if i > 0 && !a.cut { list[i - 1] } else { a };
+        let p3 = if i + 2 < list.len() && !list[i + 2].cut {
+            list[i + 2]
+        } else {
+            b
+        };
+        // unwrap the four yaws into one continuous run (relative to a) so the short way is taken.
+        let y1 = a.yaw;
+        let y0 = y1 - shortest_angle(y1 - p0.yaw);
+        let y2 = y1 + shortest_angle(b.yaw - y1);
+        let y3 = y2 + shortest_angle(p3.yaw - y2);
+        return Some(Key {
+            target: Vec3::new(
+                catmull(p0.target.x, a.target.x, b.target.x, p3.target.x, u),
+                catmull(p0.target.y, a.target.y, b.target.y, p3.target.y, u),
+                catmull(p0.target.z, a.target.z, b.target.z, p3.target.z, u),
+            ),
+            dist: catmull(p0.dist, a.dist, b.dist, p3.dist, u),
+            yaw: catmull(y0, y1, y2, y3, u),
+            pitch: catmull(p0.pitch, a.pitch, b.pitch, p3.pitch, u),
+            t: Some(t),
+            cut: false,
+        });
+    }
     let e = u * u * (3.0 - 2.0 * u); // smoothstep — settle through each marker
     Some(Key {
         target: a.target.lerp(b.target, e),
@@ -322,6 +349,17 @@ pub fn pose_at_time(list: &[Key], t: f32) -> Option<Key> {
         t: Some(t),
         cut: false,
     })
+}
+
+/// Centripetal-ish Catmull-Rom basis (uniform): the spline value at `u`∈[0,1] on the segment p1→p2,
+/// with p0/p3 the neighbours setting the tangents — passes through p1,p2 with continuous velocity.
+fn catmull(p0: f32, p1: f32, p2: f32, p3: f32, u: f32) -> f32 {
+    let u2 = u * u;
+    let u3 = u2 * u;
+    0.5 * ((2.0 * p1)
+        + (-p0 + p2) * u
+        + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * u2
+        + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * u3)
 }
 
 /// Wrap an angle delta into [-π, π] so yaw interpolates the short way around.
@@ -385,9 +423,9 @@ mod tests {
     #[test]
     fn pose_at_time_clamps_ends_and_interpolates_middle() {
         let track = [wp(Some(0.0), 6.0, 0.0), wp(Some(4.0), 2.0, 0.0)];
-        assert_eq!(pose_at_time(&track, -1.0).unwrap().dist, 6.0); // before → first
-        assert_eq!(pose_at_time(&track, 10.0).unwrap().dist, 2.0); // after → last
-        let mid = pose_at_time(&track, 2.0).unwrap(); // halfway, smoothstep(0.5)=0.5
+        assert_eq!(pose_at_time(&track, -1.0, false).unwrap().dist, 6.0); // before → first
+        assert_eq!(pose_at_time(&track, 10.0, false).unwrap().dist, 2.0); // after → last
+        let mid = pose_at_time(&track, 2.0, false).unwrap(); // halfway, smoothstep(0.5)=0.5
         assert!((mid.dist - 4.0).abs() < 1e-4);
     }
 
@@ -450,11 +488,11 @@ mod tests {
             },
         ];
         // mid of the cut leg (t=3): still holding pose 1's dist (4.0), NOT interpolating toward 1.0.
-        assert!((pose_at_time(&track, 3.0).unwrap().dist - 4.0).abs() < 1e-4);
+        assert!((pose_at_time(&track, 3.0, false).unwrap().dist - 4.0).abs() < 1e-4);
         // at/after the cut key's time: snap to pose 2 (dist 1.0).
-        assert!((pose_at_time(&track, 4.0).unwrap().dist - 1.0).abs() < 1e-4);
+        assert!((pose_at_time(&track, 4.0, false).unwrap().dist - 1.0).abs() < 1e-4);
         // a normal (non-cut) leg still interpolates: t=1 on leg 0→1 is halfway (smoothstep(0.5)=0.5).
-        assert!((pose_at_time(&track, 1.0).unwrap().dist - 5.0).abs() < 1e-4);
+        assert!((pose_at_time(&track, 1.0, false).unwrap().dist - 5.0).abs() < 1e-4);
     }
 
     #[test]

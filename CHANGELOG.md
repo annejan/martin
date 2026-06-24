@@ -113,6 +113,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   pre-parse `--mcp` special-case is gone from `main`. `$MARTIN_MCP` still works for parity.
 
 ### Engine
+- **Catmull-Rom camera (`MARTIN_CAM_SPLINE` / `.show` `cam_spline=1`)** — opt-in: interpolate the
+  `[camera]` track THROUGH its keys with continuous velocity (a flowing, never-stopping glide) instead
+  of the default per-leg smoothstep that settles at each key. `cut` keys still snap; neighbours clamp at
+  the ends + don't cross a cut. Off by default → existing shows unchanged.
 - **Free source captures after build** — the raw `.ply` clouds (held alive until the reel is built)
   are now dropped once sampled into the shots, so a big multi-capture demo doesn't keep the huge source
   files (e.g. 4 city `.ply` ≈ 1.5 GB) in RAM on top of the built shots. Pairs with splat streaming.
