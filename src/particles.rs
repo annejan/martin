@@ -32,6 +32,7 @@ enum Kind {
     Sparks,
     Fireworks,
     Petals,
+    Meatballs,
 }
 
 impl Kind {
@@ -41,8 +42,14 @@ impl Kind {
             "sparks" => Kind::Sparks,
             "fireworks" => Kind::Fireworks,
             "petals" | "blossom" | "blossoms" | "sakura" => Kind::Petals,
+            "meatballs" | "bitterballen" | "bitterbal" => Kind::Meatballs,
             _ => Kind::Embers,
         }
+    }
+    /// Real falling 3D meshes (bitterbal.glb) instead of additive glow sprites — tumble freely (no
+    /// billboard) + carry their own lit material.
+    fn is_mesh(self) -> bool {
+        self == Kind::Meatballs
     }
 }
 
@@ -102,6 +109,8 @@ fn palette(kind: Kind) -> Vec<([f32; 3], [f32; 3])> {
             ([1.0, 0.86, 0.9], [1.3, 1.1, 1.15]),
             ([1.0, 0.6, 0.74], [1.3, 0.8, 0.94]),
         ],
+        // meatballs render as real glb meshes (their own material), so this palette is unused.
+        Kind::Meatballs => vec![([0.6, 0.4, 0.2], [0.0, 0.0, 0.0])],
     }
 }
 
@@ -110,6 +119,7 @@ fn palette(kind: Kind) -> Vec<([f32; 3], [f32; 3])> {
 fn spawn_particles(
     mut commands: Commands,
     score: Res<crate::music::ScoreRes>,
+    asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mats: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
@@ -179,19 +189,54 @@ fn spawn_particles(
         .max(Vec3::splat(0.01));
     commands.insert_resource(ParticleField { origin, spread });
 
-    for i in 0..count {
+    // mesh kinds (meatballs) spawn the real glb scene per particle + tumble freely; sprite kinds spawn
+    // the shared glow quad. Meshes are heavy → cap the count lower.
+    let scene: Option<Handle<Scene>> = kind.is_mesh().then(|| {
+        asset_server.load(bevy::gltf::GltfAssetLabel::Scene(0).from_asset("bitterbal.glb"))
+    });
+    let n = if kind.is_mesh() { count.min(70) } else { count };
+    // The demo scene is all emissive splats + shader backdrops → NO light. A lit PBR mesh (the
+    // bitterbal) would render pure black, so when meshes rain we add our own key + ambient fill.
+    if kind.is_mesh() {
+        commands.spawn((
+            DirectionalLight {
+                illuminance: 9000.0,
+                ..default()
+            },
+            Transform::from_xyz(4.0, 9.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+        ));
+        // a dimmer fill from the opposite side so the shadowed half isn't pitch black (no AmbientLight
+        // resource in this Bevy — two directionals do the job).
+        commands.spawn((
+            DirectionalLight {
+                illuminance: 3500.0,
+                ..default()
+            },
+            Transform::from_xyz(-5.0, 3.0, -4.0).looking_at(Vec3::ZERO, Vec3::Y),
+        ));
+    }
+    for i in 0..n {
         let s = [
             hash01(i as u32 * 3),
             hash01(i as u32 * 3 + 1),
             hash01(i as u32 * 3 + 2),
         ];
-        let mat = handles[i % handles.len()].0.clone(); // confetti spreads across its palette
-        commands.spawn((
-            Mesh3d(quad.clone()),
-            MeshMaterial3d(mat),
-            Transform::from_translation(origin + particle_xform(kind, s, 0.0, 0.0).0 * spread),
-            Particle { s, kind },
-        ));
+        let pos = origin + particle_xform(kind, s, 0.0, 0.0).0 * spread;
+        if let Some(scene) = &scene {
+            commands.spawn((
+                SceneRoot(scene.clone()),
+                Transform::from_translation(pos),
+                Particle { s, kind },
+            ));
+        } else {
+            let mat = handles[i % handles.len()].0.clone(); // confetti spreads across its palette
+            commands.spawn((
+                Mesh3d(quad.clone()),
+                MeshMaterial3d(mat),
+                Transform::from_translation(pos),
+                Particle { s, kind },
+            ));
+        }
     }
     let name = match kind {
         Kind::Embers => "embers",
@@ -199,8 +244,9 @@ fn spawn_particles(
         Kind::Sparks => "sparks",
         Kind::Fireworks => "fireworks",
         Kind::Petals => "petals",
+        Kind::Meatballs => "meatballs",
     };
-    info!("particles: {count} additive {name} (MARTIN_PARTICLES)");
+    info!("particles: {n} {name} (MARTIN_PARTICLES)");
 }
 
 /// Each frame: place + billboard every particle from its seed, the clock, and the beat. `burst` =
@@ -222,7 +268,8 @@ fn animate_particles(
     for (p, mut tf) in &mut q {
         let (pos, spin, scale) = particle_xform(p.kind, p.s, t, burst);
         tf.translation = origin + pos * spread; // re-centre + tighten the field (campfire embers)
-        tf.rotation = face * spin;
+        // sprite kinds billboard to the camera; mesh kinds (meatballs) tumble freely in 3D.
+        tf.rotation = if p.kind.is_mesh() { spin } else { face * spin };
         tf.scale = Vec3::splat(scale);
     }
 }
@@ -273,6 +320,19 @@ fn particle_xform(kind: Kind, s: [f32; 3], t: f32, burst: f32) -> (Vec3, Quat, f
             let axis = if axis == Vec3::ZERO { Vec3::Y } else { axis };
             let spin = Quat::from_axis_angle(axis, t * (0.8 + 1.5 * s[2]) + s[0] * TAU);
             (Vec3::new(x, y + burst * 0.25, z), spin, 1.0)
+        }
+        // MEATBALL rain ("cloudy with a chance of meatballs"): chunky bitterballen fall top→bottom
+        // (wraps), tumbling in 3D, a small sway + a kick nudge. `scale` sizes the glb mesh.
+        Kind::Meatballs => {
+            let fall = 0.35 + 0.30 * s[0];
+            let y = FIELD - (s[1] * span + t * fall).rem_euclid(span);
+            let sway = 0.2 * (1.0 + burst);
+            let x = (s[2] * span - FIELD) + (t * 0.6 + s[0] * TAU).sin() * sway;
+            let z = (s[0] * span - FIELD) + (t * 0.5 + s[1] * TAU).cos() * sway;
+            let axis = Vec3::new(s[0] - 0.5, s[1] - 0.5, s[2] - 0.5).normalize_or_zero();
+            let axis = if axis == Vec3::ZERO { Vec3::Y } else { axis };
+            let spin = Quat::from_axis_angle(axis, t * (1.5 + 2.0 * s[2]) + s[1] * TAU);
+            (Vec3::new(x, y + burst * 0.2, z), spin, 0.12) // small balls (raw glb is not normalized)
         }
         // fast hot specks: a short life loop, radial outward from a low core; fades + shrinks as it flies.
         Kind::Sparks => {

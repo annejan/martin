@@ -15,6 +15,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   tumbling slowly down the frame (aliases `blossom`/`sakura`), beat-nudged. A generic "rain of …"
   layer any production can use (the Turning Japanese demo rains blossoms). Additive — existing kinds
   (embers/confetti/sparks/fireworks) unchanged.
+- **`particles=meatballs` — falling bitterballen** ("cloudy with a chance of meatballs", aliases
+  `bitterballen`) — the first MESH particle kind: real `bitterbal.glb` scenes rain + tumble in 3D
+  (not glow sprites). Since the demo scene is all emissive splats/shaders with no light, the mesh-rain
+  spawns its own key + fill directional lights so the lit balls are visible. Count capped lower (meshes).
 - **Koto voice (`leadsw=6` / `arpsw=4`)** — a plucked oriental string (bright metallic attack, fast
   string decay, a tiny pluck-bend) for Japan-themed melodies. Drives the **`productions/tj/`** cover of
   The Vapors' "Turning Japanese" (koto lead + high koto arpeggio, analog drum kit, warm red/white
