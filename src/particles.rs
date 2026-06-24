@@ -1,4 +1,4 @@
-//! Additive **particle layer** (`MARTIN_PARTICLES=embers|confetti|sparks|fireworks`): glowing points
+//! Additive **particle layer** (`MARTIN_PARTICLES=embers|confetti|sparks|fireworks|petals`): glowing points
 //! drifting through the scene, in front of / among the splats — a second, independent motion layer
 //! that reads as instant "demo energy". The HDR `Bloom` makes the additive points glow. The KIND is
 //! the env value: `embers` (warm sparks rising, the default), `confetti` (tumbling coloured flakes
@@ -31,6 +31,7 @@ enum Kind {
     Confetti,
     Sparks,
     Fireworks,
+    Petals,
 }
 
 impl Kind {
@@ -39,6 +40,7 @@ impl Kind {
             "confetti" => Kind::Confetti,
             "sparks" => Kind::Sparks,
             "fireworks" => Kind::Fireworks,
+            "petals" | "blossom" | "blossoms" | "sakura" => Kind::Petals,
             _ => Kind::Embers,
         }
     }
@@ -93,6 +95,12 @@ fn palette(kind: Kind) -> Vec<([f32; 3], [f32; 3])> {
             ([0.5, 1.0, 0.5], [0.8, 1.6, 0.8]),
             ([0.85, 0.4, 1.0], [1.35, 0.6, 1.6]),
             ([1.0, 0.6, 0.85], [1.6, 0.95, 1.35]),
+        ],
+        // cherry-blossom petals: pale pink → near-white → a deeper pink, soft glow (they drift, not blaze).
+        Kind::Petals => vec![
+            ([1.0, 0.74, 0.84], [1.3, 0.92, 1.04]),
+            ([1.0, 0.86, 0.9], [1.3, 1.1, 1.15]),
+            ([1.0, 0.6, 0.74], [1.3, 0.8, 0.94]),
         ],
     }
 }
@@ -190,6 +198,7 @@ fn spawn_particles(
         Kind::Confetti => "confetti",
         Kind::Sparks => "sparks",
         Kind::Fireworks => "fireworks",
+        Kind::Petals => "petals",
     };
     info!("particles: {count} additive {name} (MARTIN_PARTICLES)");
 }
@@ -249,6 +258,21 @@ fn particle_xform(kind: Kind, s: [f32; 3], t: f32, burst: f32) -> (Vec3, Quat, f
             let axis = if axis == Vec3::ZERO { Vec3::Y } else { axis };
             let spin = Quat::from_axis_angle(axis, t * (2.0 + 4.0 * s[2]) + s[0] * TAU);
             (Vec3::new(x, y + burst * 0.4, z), spin, 1.0)
+        }
+        // cherry-blossom RAIN: like confetti but slower-falling + a wider, gentler sway and a lazy
+        // tumble — petals drift down (top→bottom, wraps), the kick nudges them sideways.
+        Kind::Petals => {
+            let fall = 0.22 + 0.20 * s[0]; // slow blossom drift
+            let y = FIELD - (s[1] * span + t * fall).rem_euclid(span);
+            let sway = 0.5 * (1.0 + 0.3 * burst);
+            let x = (s[2] * span - FIELD)
+                + (t * 0.7 + s[0] * TAU).sin() * sway
+                + (t * 0.3 + s[1] * TAU).cos() * 0.18;
+            let z = (s[0] * span - FIELD) + (t * 0.6 + s[1] * TAU).cos() * sway;
+            let axis = Vec3::new(s[0] - 0.5, s[1] - 0.5, s[2] - 0.5).normalize_or_zero();
+            let axis = if axis == Vec3::ZERO { Vec3::Y } else { axis };
+            let spin = Quat::from_axis_angle(axis, t * (0.8 + 1.5 * s[2]) + s[0] * TAU);
+            (Vec3::new(x, y + burst * 0.25, z), spin, 1.0)
         }
         // fast hot specks: a short life loop, radial outward from a low core; fades + shrinks as it flies.
         Kind::Sparks => {

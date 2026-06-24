@@ -15,8 +15,8 @@ cam_pump      = 0.20
 sidechain     = 0.22
 fft           = 1.4
 morph_stagger = 0.5
-particles     = sparks
-particle_count = 420
+particles     = petals
+particle_count = 900
 
 [reel]
 text:TURNING JAPANESE  @@s1   @9,3   *1.0  ~fade   font:defeest  tint:brand  backdrop:aurora

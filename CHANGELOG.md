@@ -11,6 +11,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Added
+- **`particles=petals` — cherry-blossom rain** — a new particle kind: pink/white petals drifting +
+  tumbling slowly down the frame (aliases `blossom`/`sakura`), beat-nudged. A generic "rain of …"
+  layer any production can use (the Turning Japanese demo rains blossoms). Additive — existing kinds
+  (embers/confetti/sparks/fireworks) unchanged.
 - **Koto voice (`leadsw=6` / `arpsw=4`)** — a plucked oriental string (bright metallic attack, fast
   string decay, a tiny pluck-bend) for Japan-themed melodies. Drives the **`productions/tj/`** cover of
   The Vapors' "Turning Japanese" (koto lead + high koto arpeggio, analog drum kit, warm red/white
