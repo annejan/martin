@@ -12,19 +12,21 @@ pair          = match          # nearest same-colour pairing → straight city�
 budget        = 1200000        # crisp; override MARTIN_MORPH_COUNT=260000 for previews
 score         = productions/skyline/score.txt
 post          = chroma
-morph_stagger = 0.6            # cities dissolve + reform instead of sliding (kills streaks)
+morph_stagger = 0.6            # per-splat staggered morph = DISSOLVE+reform → kills the stripey streaks
+                              # (NOT a camera/deform wobble; the clean look keeps cam_pump=0 + no ^deforms)
 flash         = 0.25
 bg_dim        = 0.4
 fft           = 1.5
-cam_pump      = 0.22
+cam_pump      = 0.0            # no beat-bounce on the camera — steady, clean moves
 
 [reel]
-text:SKYLINE             @@intro      @6,4    ~fade   font:defeest  tint:brand                       backdrop:stars
-splat:nyc_tight.ply      @@build      @6,7,0  ~morph     beat:1.2  raster:position                   backdrop:stars     # NEW YORK — rainbow grid
-splat:chicago_tight.ply  @@drop       @6,7,0  ~shockwave ease:snap  beat:1.6  flash:0.5  ^turbulence:0.15  backdrop:aurora  # CHICAGO — the drop blast
-splat:austin_tight.ply   @@breakdown  @6,7,0  ~morph     beat:1.0  ^wind:0.22                        backdrop:northern  # AUSTIN — calm interlude
-splat:seattle_tight.ply  @@climax     @14,7,0 ~morph     beat:1.7  flash:0.5  ^ripple:0.15           backdrop:rings     # SEATTLE — water, climax hero hold
-text:SKYLINE             @@outro      @5,5    ~morph  font:defeest  tint:brand                       backdrop:stars     # wrap
+# CLEAN: every city change is a straight ~morph — no ~shockwave blast, no ^deform wobble, no beat-pulse.
+text:SKYLINE             @@intro      @6,4    ~fade   font:defeest  tint:brand            backdrop:stars
+splat:nyc_tight.ply      @@build      @6,7,0  ~morph  raster:position                   backdrop:stars     # NEW YORK — rainbow grid
+splat:chicago_tight.ply  @@drop       @6,7,0  ~morph                                    backdrop:aurora    # CHICAGO
+splat:austin_tight.ply   @@breakdown  @6,7,0  ~morph                                    backdrop:northern  # AUSTIN — calm
+splat:seattle_tight.ply  @@climax     @14,7,0 ~morph                                    backdrop:rings     # SEATTLE — climax hold
+text:SKYLINE             @@outro      @5,5    ~morph  font:defeest  tint:brand            backdrop:stars     # wrap
 
 [stage]
 text:Imagery ©Google     @0,-0.42,0   *0.5    ~fade   tint:brand   in climax  out outro              # credit during Seattle
