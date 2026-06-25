@@ -194,7 +194,7 @@ fn spawn_captions(
     let Ok(cam) = cam_q.single() else { return };
     let font = font_h
         .get_or_insert_with(|| {
-            fonts.add(Font::try_from_bytes(FONT.to_vec()).expect("caption font"))
+            fonts.add(Font::from_bytes(FONT.to_vec())) // 0.19: from_bytes (no longer Result)
         })
         .clone();
 
@@ -236,12 +236,12 @@ fn spawn_captions(
             p.spawn((
                 Text::new(c.text.clone()),
                 TextFont {
-                    font: font.clone(),
-                    font_size: c.size,
+                    font: font.clone().into(), // 0.19: TextFont::font is FontSource
+                    font_size: c.size.into(),  // 0.19: TextFont::font_size is FontSize
                     ..default()
                 },
                 TextColor(Color::srgba(0.96, 0.96, 1.0, 0.0)),
-                TextLayout::new_with_justify(if c.center {
+                TextLayout::justify(if c.center {
                     Justify::Center
                 } else {
                     Justify::Left

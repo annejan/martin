@@ -36,7 +36,7 @@ pub(crate) struct AudioGate {
 struct StreamAudio(Arc<StreamBuf>);
 
 impl Decodable for StreamAudio {
-    type DecoderItem = f32;
+    // rodio 0.22 (Bevy 0.19): `DecoderItem` is gone — samples are always `rodio::Sample` (= f32).
     type Decoder = StreamDecoder;
     fn decoder(&self) -> StreamDecoder {
         StreamDecoder::new(self.0.clone())

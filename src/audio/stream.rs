@@ -690,14 +690,16 @@ pub(crate) const STREAM_SR: u32 = SAMPLE_RATE;
 // stream is unbounded-until-the-track-ends; `total_duration` reports the full length so the sink
 // knows when to stop.
 impl bevy::audio::Source for StreamDecoder {
-    fn current_frame_len(&self) -> Option<usize> {
+    // rodio 0.22 (Bevy 0.19): `current_frame_len` → `current_span_len`; `channels`/`sample_rate`
+    // now return `NonZero` (a stream always has ≥1 channel / >0 Hz).
+    fn current_span_len(&self) -> Option<usize> {
         None
     }
-    fn channels(&self) -> u16 {
-        2
+    fn channels(&self) -> std::num::NonZero<u16> {
+        std::num::NonZero::new(2).unwrap()
     }
-    fn sample_rate(&self) -> u32 {
-        STREAM_SR
+    fn sample_rate(&self) -> std::num::NonZero<u32> {
+        std::num::NonZero::new(STREAM_SR).unwrap()
     }
     fn total_duration(&self) -> Option<std::time::Duration> {
         Some(std::time::Duration::from_secs_f64(

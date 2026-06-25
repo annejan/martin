@@ -128,7 +128,7 @@ fn update_shader_parts(
         } else {
             Visibility::Hidden
         };
-        if let Some(m) = mats.get_mut(&h.0) {
+        if let Some(mut m) = mats.get_mut(&h.0) {
             m.data.time = clock.t;
             m.data.level = alpha;
             m.data.beat = beat.as_vec4();

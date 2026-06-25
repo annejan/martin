@@ -10,6 +10,19 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ## [Unreleased]
 
+### Changed
+- **Upgraded to Bevy 0.19** (was 0.18) + `bevy_gaussian_splatting` 8.0.0 (our `martin` fork rebased
+  onto upstream's Bevy-0.19 release with a zero-conflict replay of our shader edits). Mechanical API
+  churn handled across the engine: rodio-0.22 audio `Source` (`current_span_len`, `NonZero`
+  channels/rate, `Decodable` drops `DecoderItem`), `Hdr` moved to `bevy_camera`, glTF scenes spawn via
+  `WorldAssetRoot` (was `SceneRoot`), `DirectionalLight.shadow_maps_enabled`, the Parley text API
+  (`Font::from_bytes`, `TextFont` `FontSource`/`FontSize`, `TextLayout::justify`), and `Assets::get_mut`
+  returning a guard. Verified: 151 tests + clippy + all 42 shows render headless on 0.19. **Known
+  regression:** the `MARTIN_POST` fullscreen FX (chroma/grain/vignette screen-tear) is **temporarily
+  stubbed** — 0.19's "render graph as systems" overhaul removed the `ViewNode` API it was built on;
+  `post=…` still parses and the rest of the show is unaffected, the pass just draws nothing pending a
+  rewrite to the new API (TODO in `src/post.rs`).
+
 ### Added
 - **Live perf knobs (run on weak/party hardware).** Profiling showed the live render is overdraw- and
   splat-count-bound on a weak GPU (not a martin bug — per-cloud it matches upstream). New levers:

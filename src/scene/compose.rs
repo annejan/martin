@@ -510,7 +510,9 @@ pub(crate) fn build_composition(
                 obj.rot.z.to_radians(),
             );
             commands.spawn((
-                SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(name.clone()))),
+                WorldAssetRoot(
+                    asset_server.load(GltfAssetLabel::Scene(0).from_asset(name.clone())),
+                ), // bevy 0.19: SceneRoot → WorldAssetRoot
                 Transform {
                     translation: obj.pos,
                     rotation: rot,
@@ -629,7 +631,7 @@ pub(crate) fn build_composition(
         commands.spawn((
             DirectionalLight {
                 illuminance: 9000.0,
-                shadows_enabled: false,
+                shadow_maps_enabled: false,
                 ..default()
             },
             Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.9, 0.6, 0.0)),
@@ -637,7 +639,7 @@ pub(crate) fn build_composition(
         commands.spawn((
             DirectionalLight {
                 illuminance: 3500.0,
-                shadows_enabled: false,
+                shadow_maps_enabled: false,
                 ..default()
             },
             Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, 0.7, -0.8, 0.0)),

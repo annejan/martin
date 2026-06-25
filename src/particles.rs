@@ -191,7 +191,8 @@ fn spawn_particles(
 
     // mesh kinds (meatballs) spawn the real glb scene per particle + tumble freely; sprite kinds spawn
     // the shared glow quad. Meshes are heavy → cap the count lower.
-    let scene: Option<Handle<Scene>> = kind.is_mesh().then(|| {
+    let scene: Option<Handle<WorldAsset>> = kind.is_mesh().then(|| {
+        // 0.19: a glTF scene loads as WorldAsset (was Scene), spawned via WorldAssetRoot.
         asset_server.load(bevy::gltf::GltfAssetLabel::Scene(0).from_asset("bitterbal.glb"))
     });
     let n = if kind.is_mesh() { count.min(70) } else { count };
@@ -224,7 +225,7 @@ fn spawn_particles(
         let pos = origin + particle_xform(kind, s, 0.0, 0.0).0 * spread;
         if let Some(scene) = &scene {
             commands.spawn((
-                SceneRoot(scene.clone()),
+                WorldAssetRoot(scene.clone()), // bevy 0.19: SceneRoot → WorldAssetRoot
                 Transform::from_translation(pos),
                 Particle { s, kind },
             ));
@@ -427,7 +428,7 @@ fn fade_particles(
     let x = ((clock.t - ctl.start) / PARTICLE_FADE).clamp(0.0, 1.0);
     let f = x * x * (3.0 - 2.0 * x); // smoothstep
     for (h, base, emit) in &ctl.mats {
-        if let Some(m) = mats.get_mut(h) {
+        if let Some(mut m) = mats.get_mut(h) {
             m.base_color = Color::srgb(base[0] * f, base[1] * f, base[2] * f);
             m.emissive = LinearRgba::rgb(emit[0] * f, emit[1] * f, emit[2] * f);
         }

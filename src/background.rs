@@ -240,7 +240,7 @@ fn update_bg(
             Some(m) if m != BG_OFF => Visibility::Visible,
             _ => Visibility::Hidden,
         };
-        if let Some(m) = mats.get_mut(&h.0) {
+        if let Some(mut m) = mats.get_mut(&h.0) {
             if let Some(md) = mode
                 && md != BG_OFF
             {

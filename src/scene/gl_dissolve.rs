@@ -48,7 +48,7 @@ pub(crate) fn spawn_gl_dissolve(
     morph_n: usize,
 ) {
     commands.spawn((
-        SceneRoot(assets.load(GltfAssetLabel::Scene(0).from_asset(name.to_string()))),
+        WorldAssetRoot(assets.load(GltfAssetLabel::Scene(0).from_asset(name.to_string()))), // bevy 0.19: SceneRoot → WorldAssetRoot
         Transform::IDENTITY,
         Visibility::Hidden,
         SeqModel {
@@ -68,7 +68,7 @@ pub(crate) fn spawn_gl_dissolve(
     commands.spawn((
         DirectionalLight {
             illuminance: 9000.0,
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             ..default()
         },
         Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.6, 0.5, 0.0)),
@@ -76,7 +76,7 @@ pub(crate) fn spawn_gl_dissolve(
     commands.spawn((
         DirectionalLight {
             illuminance: 3500.0,
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             ..default()
         },
         Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, 0.5, -0.8, 0.0)),
@@ -173,7 +173,7 @@ pub(crate) fn sample_gl_mesh(
         // mesh + splats stay coincident at any orientation.
         crate::morph::rotate_gaussians(&mut raw, model.rot);
         let shaped = resample_morton(raw, model.morph_n);
-        if let Some(cloud) = clouds.get_mut(&model.shape) {
+        if let Some(mut cloud) = clouds.get_mut(&model.shape) {
             *cloud = PlanarGaussian3d::from(shaped);
         }
         // gaussian world = base_rot · rot · (k·(p − c)); match it on the mesh transform.
@@ -245,7 +245,7 @@ pub(crate) fn animate_seq_model(
     }
     let vis = gl_mesh_alpha(state.starts(), &seq.parts, m.part, clock.t);
     for h in &handles {
-        if let Some(mat) = mats.get_mut(&h.0) {
+        if let Some(mut mat) = mats.get_mut(&h.0) {
             mat.base_color.set_alpha(vis);
             // opaque while crisp (writes depth → occludes the splats behind); blend while dissolving
             // (no depth write → the splats show through as it fades).

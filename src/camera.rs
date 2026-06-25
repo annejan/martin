@@ -1,10 +1,10 @@
 //! The free-orbit inspection camera + its live controls, the waypoint flypath, and fullscreen
 //! toggle. `CameraPlugin` spawns the camera and runs these each frame.
 
+use bevy::camera::Hdr; // moved bevy_render → bevy_camera in 0.19
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::post_process::bloom::Bloom;
 use bevy::prelude::*;
-use bevy::render::view::Hdr;
 use bevy::window::{MonitorSelection, WindowMode};
 use bevy_gaussian_splatting::GaussianCamera;
 
