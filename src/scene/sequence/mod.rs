@@ -14,7 +14,7 @@ mod director;
 mod model;
 mod parse;
 
-pub(crate) use build::{build_sequence, seq_no_cull};
+pub(crate) use build::{SeqBuildTask, build_sequence, seq_no_cull};
 pub(crate) use director::shot_director;
 pub(crate) use model::{
     FlashStrength, SeqState, Sequence, Shot, active_shot, shot_starts, show_end,

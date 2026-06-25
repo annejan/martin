@@ -5,6 +5,13 @@ SPDX-License-Identifier: MIT
 
 # Plan — async / non-blocking reel build (startup-freeze)
 
+> **STATUS: SHIPPED (2026-06-25).** Both steps below landed: the per-part sampling fans across rayon,
+> and the whole heavy build (`build_cpu`) runs off-thread on `AsyncComputeTaskPool` for live/windowed
+> runs, finalizing (`finalize_build`) the frame it completes. Deterministic capture modes (record/shot/
+> bench, see `build_inline`) build inline before frame 0 — a record bakes byte-identically. Verified:
+> the camping reel renders byte-for-byte identical inline-vs-async; all 42 shows pass the headless smoke
+> test. This file is kept as the design record. See `src/scene/sequence/build.rs`.
+
 A design note for a future focused session. The goal: a reel of big captures should not freeze the
 frame for seconds at startup while it samples + resamples every shot. **High regression risk** — it
 touches the core build path that *every* reel show (camping, d2t, skyline, ruimte, baby, …) runs

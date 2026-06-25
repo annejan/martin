@@ -141,6 +141,43 @@ pub(crate) fn part_gaussians(
     font: Option<&str>,
 ) -> Vec<Gaussian3d> {
     match content {
+        // `splat:` reads the already-loaded `.ply` asset — the only content that needs the Bevy world
+        // (`&Assets`/`&SeqState`). Everything else is pure fs+compute → `sample_non_splat`, shared with
+        // the off-thread reel build (which pre-extracts splats on the main thread, see `build.rs`).
+        PartContent::Splats(list) => {
+            let mut out = Vec::new();
+            for (name, off) in list {
+                let Some(idx) = state.load_names.iter().position(|x| x == name) else {
+                    warn!("splat '{name}' not in load — check spelling / MARTIN_PLY paths");
+                    continue;
+                };
+                if let Some(cloud) = assets.get(&state.loads[idx]) {
+                    for mut g in cloud.iter() {
+                        let p = g.position_visibility.position;
+                        g.position_visibility.position = [p[0] + off.x, p[1] + off.y, p[2] + off.z];
+                        out.push(g);
+                    }
+                }
+            }
+            out
+        }
+        other => sample_non_splat(other, root, disk, aniso, count, font),
+    }
+}
+
+/// The asset-free part of part sampling: every `PartContent` except `Splats` (pure fs+compute, no Bevy
+/// world). Shared by [`part_gaussians`] (compose + the live path) and the off-thread reel build, so the
+/// two can't drift. `Splats` is handled by the caller (it needs the loaded asset / a pre-extract).
+pub(crate) fn sample_non_splat(
+    content: &PartContent,
+    root: &std::path::Path,
+    disk: Option<f32>,
+    aniso: Option<f32>,
+    count: Option<usize>,
+    font: Option<&str>,
+) -> Vec<Gaussian3d> {
+    match content {
+        PartContent::Splats(_) => Vec::new(), // caller resolves splats (asset / pre-extract)
         PartContent::Text(s) => build_text_gaussians(s, TEXT_RGB, 3.0, 2, 0.012, font),
         PartContent::Image(name) => match std::fs::read(root.join(name)) {
             Ok(bytes) => build_image_gaussians(&bytes, 3.0, 0.5, 0.85),
@@ -187,23 +224,6 @@ pub(crate) fn part_gaussians(
         // A shader interlude: no splats — transparent placeholder so the morph chain stays valid
         // (the splats simply clear), while scene::shader_part plays the fullscreen effect over it.
         PartContent::Shader(_) => mesh::transparent_placeholder(256),
-        PartContent::Splats(list) => {
-            let mut out = Vec::new();
-            for (name, off) in list {
-                let Some(idx) = state.load_names.iter().position(|x| x == name) else {
-                    warn!("splat '{name}' not in load — check spelling / MARTIN_PLY paths");
-                    continue;
-                };
-                if let Some(cloud) = assets.get(&state.loads[idx]) {
-                    for mut g in cloud.iter() {
-                        let p = g.position_visibility.position;
-                        g.position_visibility.position = [p[0] + off.x, p[1] + off.y, p[2] + off.z];
-                        out.push(g);
-                    }
-                }
-            }
-            out
-        }
     }
 }
 
@@ -223,20 +243,55 @@ pub(crate) fn sample_content(
     count: Option<usize>,
     font: Option<&str>,
 ) -> Vec<Gaussian3d> {
+    text_effect_sample(content, entrance, font)
+        .unwrap_or_else(|| part_gaussians(content, state, assets, root, disk, aniso, count, font))
+}
+
+/// Asset-free twin of [`sample_content`] for the off-thread reel build: `Splats` parts are pre-extracted
+/// on the main thread (`presample`); everything else samples from fs+compute via [`sample_non_splat`].
+/// Same text-effect head as `sample_content` (shared `text_effect_sample`) so the two can't drift.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn sample_content_owned(
+    content: &PartContent,
+    entrance: Option<crate::scene::effects::Entrance>,
+    presample: Option<Vec<Gaussian3d>>,
+    root: &std::path::Path,
+    disk: Option<f32>,
+    aniso: Option<f32>,
+    count: Option<usize>,
+    font: Option<&str>,
+) -> Vec<Gaussian3d> {
+    text_effect_sample(content, entrance, font).unwrap_or_else(|| match content {
+        PartContent::Splats(_) => presample.unwrap_or_default(),
+        other => sample_non_splat(other, root, disk, aniso, count, font),
+    })
+}
+
+/// The two text entrances that need a *different* builder than the filled-coverage default: `~outline`
+/// traces filled-letter outlines and `~pen-write` builds single-stroke handwriting (both drive the
+/// per-particle reveal shader). Returns `Some` only for those; `None` means "fall through to the normal
+/// content sampler". Shared by [`sample_content`] + [`sample_content_owned`] so the head can't drift.
+fn text_effect_sample(
+    content: &PartContent,
+    entrance: Option<crate::scene::effects::Entrance>,
+    font: Option<&str>,
+) -> Option<Vec<Gaussian3d>> {
     use crate::scene::effects::Entrance;
     use crate::text::{build_text_outline_gaussians, build_text_penwrite_gaussians};
     match (content, entrance) {
-        (PartContent::Text(s), Some(Entrance::Outline)) => {
-            build_text_outline_gaussians(s, TEXT_RGB, 3.0, 0.7, 0.012, font)
-        }
+        (PartContent::Text(s), Some(Entrance::Outline)) => Some(build_text_outline_gaussians(
+            s, TEXT_RGB, 3.0, 0.7, 0.012, font,
+        )),
         (PartContent::Text(s), Some(Entrance::PenWrite)) => {
             // `~pen-write` traces the single-line STROKE_FONT (a `font:` choice doesn't apply — a normal
             // font has no centerline strokes), so font is intentionally ignored here.
             let pw_step = crate::envvar::or("MARTIN_PW_STEP", 0.5_f32);
             let pw_splat = crate::envvar::or("MARTIN_PW_SPLAT", 0.006_f32);
-            build_text_penwrite_gaussians(s, TEXT_RGB, 3.0, pw_step, pw_splat)
+            Some(build_text_penwrite_gaussians(
+                s, TEXT_RGB, 3.0, pw_step, pw_splat,
+            ))
         }
-        _ => part_gaussians(content, state, assets, root, disk, aniso, count, font),
+        _ => None,
     }
 }
 

@@ -10,6 +10,16 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ## [Unreleased]
 
+### Changed
+- **Non-blocking reel build (startup-freeze fix).** A reel of big captures no longer freezes the frame
+  for seconds at startup while it samples + resamples every shot. Two steps: (1) the per-part sampling
+  now fans across **rayon** (each part is independent); (2) the whole heavy build moved **off the main
+  thread** onto `AsyncComputeTaskPool` — a live/windowed run keeps the loader animating while it builds,
+  then finalizes (GPU upload + camera framing) the frame it's ready. Deterministic capture modes
+  (`--record`/`--shot`/`--bench`) build **inline before frame 0**, so a record bakes byte-identically to
+  before. Verified: the camping reel renders byte-for-byte identical on both paths; all 42 shows pass
+  the headless smoke test. (See `ASYNC-BUILD-PLAN.md`, now shipped.)
+
 ### Added
 - **Audio die-out tail (`[score] set endfade=<s>`)** — the master fade-out length is now a score knob
   (default `0.025`, a click-guard near-hard-stop — unchanged for every existing track). A larger value

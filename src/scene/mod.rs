@@ -209,6 +209,7 @@ impl Plugin for ScenePlugin {
         beat::plugin(app); // score-driven beat pulses, read by the directors below
         spectrum::plugin(app); // FFT of the rendered track → band table, read by the bg + interlude layers
         app.init_resource::<SeqClock>()
+            .init_resource::<sequence::SeqBuildTask>()
             .insert_resource(sequence::FlashStrength(
                 std::env::var("MARTIN_FLASH")
                     .ok()

@@ -15,7 +15,7 @@ use super::model::{BuiltShot, SeqState, Sequence, Shot, shot_starts};
 use super::parse::{global_raster, parse_euler_deg};
 use crate::camera::OrbitCam;
 use crate::morph::{ball_of, resample_morton};
-use crate::scene::content::{PartContent, sample_content};
+use crate::scene::content::{PartContent, part_gaussians, sample_content_owned};
 use crate::scene::effects::{BALL_SHELL, Deform, Entrance, source_cloud};
 use crate::scene::gl_dissolve::spawn_gl_dissolve;
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, cloud_base_rotation};
@@ -63,26 +63,59 @@ fn arrival_entrance(idx: usize, explicit: Option<Entrance>, global: Option<Entra
     }
 }
 
-/// Once every referenced splat has loaded, build each part's shape (resampled to the fixed
-/// count) + the intro ball, spawn the single interpolate entity, and frame the union once.
-pub(crate) fn build_sequence(
-    mut commands: Commands,
-    mut assets: ResMut<Assets<PlanarGaussian3d>>,
-    seq: Option<Res<Sequence>>,
-    state: Option<ResMut<SeqState>>,
-    root: Res<AssetRoot>,
-    asset_server: Res<AssetServer>,
-    mut cam: Query<&mut OrbitCam>,
-) {
-    let (Some(seq), Some(mut state)) = (seq, state) else {
-        return;
-    };
-    if state.built || seq.parts.is_empty() {
-        return;
-    }
-    if state.loads.iter().any(|h| assets.get(h).is_none()) {
-        return; // wait for every referenced splat
-    }
+/// Owned, Bevy-free inputs for the off-thread reel build (`build_cpu`). The main thread pre-extracts
+/// the only asset-dependent content — `splat:` parts, copied out of `Assets` into `presampled` — so the
+/// worker never touches the Bevy world. Everything else (`parts`, `root`) is owned/cloned.
+struct BuildInputs {
+    parts: Vec<Shot>,
+    presampled: Vec<Option<Vec<Gaussian3d>>>, // Some only for `splat:` parts (extracted on main thread)
+    root: std::path::PathBuf,
+    budget: usize,
+}
+
+/// The pure-CPU result of `build_cpu` — the built shots (GPU handles still `None`, uploaded by
+/// `ensure_window` on the main thread) + the framing geometry the camera seeding needs. No Bevy world.
+struct BuildOutput {
+    shots: Vec<BuiltShot>,
+    frame_center: Vec3,
+    content_radius: f32,
+    frame_factor: f32,
+    scene_norm: (Vec3, f32),
+    n: usize,
+    entity_rot: Quat,
+}
+
+/// Holds the in-flight off-thread reel build (live/windowed only); `None` when idle or done. Record/
+/// shot/bench builds run inline (see `build_inline`) and never populate this.
+#[derive(Resource, Default)]
+pub(crate) struct SeqBuildTask(Option<bevy::tasks::Task<BuildOutput>>);
+
+/// A deterministic one-shot capture (record/shot/bench) must have the reel fully built **before** the
+/// first rendered/captured frame — so those modes build inline (same as before the off-thread split),
+/// which also keeps the build a pure function of the inputs regardless of scheduling. Only the live
+/// windowed run defers the build to a worker (the loader keeps animating instead of one frozen frame).
+fn build_inline() -> bool {
+    [
+        "MARTIN_RECORD",
+        "MARTIN_SHOT",
+        "MARTIN_SHOTS",
+        "MARTIN_BENCH",
+    ]
+    .iter()
+    .any(|k| std::env::var_os(k).is_some())
+}
+
+/// The heavy, pure-CPU reel build: sample → flock → normalize → frame → `build_shots`. Takes owned
+/// inputs (no Bevy world) so it can run on `AsyncComputeTaskPool` off the main thread. Deterministic —
+/// a record bakes identically whether this finished on frame 0 or 3. The GPU upload + entity spawn +
+/// camera seeding stay on the main thread (`finalize_build`).
+fn build_cpu(inputs: BuildInputs) -> BuildOutput {
+    let BuildInputs {
+        parts,
+        presampled,
+        root,
+        budget,
+    } = inputs;
 
     // resolve each part's entrance first (explicit ~name > MARTIN_TRANSITION > Ball for part
     // 0 / Morph after) — needed before building gaussians so a PenWrite text part is built as a
@@ -94,19 +127,13 @@ pub(crate) fn build_sequence(
     let global_deform = std::env::var("MARTIN_DEFORM")
         .ok()
         .and_then(|s| Deform::parse(&s));
-    let deforms: Vec<Option<Deform>> = seq
-        .parts
-        .iter()
-        .map(|p| p.deform.or(global_deform))
-        .collect();
+    let deforms: Vec<Option<Deform>> = parts.iter().map(|p| p.deform.or(global_deform)).collect();
     let global_raster = global_raster();
-    let rasters: Vec<RasterizeMode> = seq
-        .parts
+    let rasters: Vec<RasterizeMode> = parts
         .iter()
         .map(|p| p.raster.unwrap_or(global_raster))
         .collect();
-    let transitions: Vec<Entrance> = seq
-        .parts
+    let transitions: Vec<Entrance> = parts
         .iter()
         .enumerate()
         .map(|(idx, part)| {
@@ -130,26 +157,25 @@ pub(crate) fn build_sequence(
         .collect();
 
     // Absolute start time (s) of each shot — the cue timeline (anchors, else laid end-to-end).
-    let starts = shot_starts(&seq.parts);
+    let starts = shot_starts(&parts);
 
     // read every part's gaussians once, so count==0 can mean "size N to the largest part" (every part
-    // is then resampled to that single N — required by the shared morph output). `sample_content`
-    // applies the `~outline`/`~pen-write` text-effect builders, shared with the compose stage.
-    // PARALLEL: each part samples independently (mesh/text/svg rasterize is the multi-second cost);
-    // `&state`/`&assets`/`&root` are read-only `Sync` borrows, so rayon shares them safely. `par_iter`
-    // is index-ordered → `collect` preserves part order (the morph chain depends on it).
+    // is then resampled to that single N — required by the shared morph output). `sample_content_owned`
+    // applies the `~outline`/`~pen-write` text-effect builders and consumes the pre-extracted `splat:`
+    // clouds (no Bevy world here). PARALLEL: each part samples independently (mesh/text/svg rasterize is
+    // the multi-second cost). `par_iter` is index-ordered → `collect` preserves part order (the morph
+    // chain depends on it).
     use rayon::prelude::*;
-    let mut raws: Vec<Vec<Gaussian3d>> = seq
-        .parts
+    let mut raws: Vec<Vec<Gaussian3d>> = parts
         .par_iter()
         .zip(transitions.par_iter())
-        .map(|(part, &tr)| {
-            sample_content(
+        .zip(presampled.into_par_iter())
+        .map(|((part, &tr), pre)| {
+            sample_content_owned(
                 &part.content,
                 Some(tr),
-                &state,
-                &assets,
-                &root.0,
+                pre,
+                &root,
                 part.disk,
                 part.aniso,
                 None, // reel meshes keep the 60k sample default (parts are paired at full count)
@@ -161,9 +187,9 @@ pub(crate) fn build_sequence(
     // pile of bitterballen) BEFORE normalize, so the whole pile frames as one. Downsample per copy
     // to keep the total near the morph budget.
     // a shot's cluster needs a concrete per-copy budget; when `budget==0` (auto-size to the largest
-    // shot) fall back to 200k here rather than 0 — so this default is intentionally NOT `seq.budget`.
+    // shot) fall back to 200k here rather than 0 — so this default is intentionally NOT `budget`.
     let cluster_total = crate::envvar::or("MARTIN_MORPH_COUNT", 200_000usize);
-    for (raw, part) in raws.iter_mut().zip(&seq.parts) {
+    for (raw, part) in raws.iter_mut().zip(&parts) {
         if let Some(copies) = part.flock {
             let per = (cluster_total / copies.max(1)).max(2_000);
             let one = resample_morton(std::mem::take(raw), per);
@@ -175,7 +201,7 @@ pub(crate) fn build_sequence(
     // this they'd frame inconsistently and morph badly. We log the raw extent first.
     let normalize = true; // always frame each part to a common extent (parts vary wildly in raw scale)
     let mut scene_norm = (Vec3::ZERO, 1.0); // part 0's (center, scale) — to transform camera poses
-    for (i, (raw, part)) in raws.iter_mut().zip(&seq.parts).enumerate() {
+    for (i, (raw, part)) in raws.iter_mut().zip(&parts).enumerate() {
         let label = part.content.label();
         info!(
             "part {label}: raw extent {:.2} units ({} gaussians)",
@@ -193,8 +219,8 @@ pub(crate) fn build_sequence(
             }
         }
     }
-    let n = if seq.budget > 0 {
-        seq.budget
+    let n = if budget > 0 {
+        budget
     } else {
         raws.iter().map(Vec::len).max().unwrap_or(0).max(1)
     };
@@ -205,12 +231,6 @@ pub(crate) fn build_sequence(
     let (union_lo, union_hi) = union_bounds(&raws);
     let (frame_center, content_radius, frame_factor) = frame_of(normalize, union_lo, union_hi);
 
-    // Each part is resampled to the shared count N, then gets the *source* cloud it morphs in
-    // FROM, chosen by its entrance (`~name` per part > MARTIN_TRANSITION default > Ball for
-    // part 0 / Morph after). `Morph` has no source — it flows from the previous part's shape
-    // (with the ball-pulse bulge); the others build a source from the part's own shape.
-    // Build each part's `BuiltShot` directly (the only per-shot data the director reads) — shape +
-    // morph-in origin + out-cloud + the resolved entrance/deform/raster/cue, in one pass.
     // MARTIN_ROT="rx,ry,rz" (euler degrees) orients the whole cloud; default = cloud_base_rotation
     // (Rx180 — .ply splats are Y-down). Computed BEFORE build_shots so `ground:` can seat parts in the
     // WORLD frame (this rotation flips Y, so grounding the un-rotated local cloud would seat the ceiling).
@@ -218,8 +238,11 @@ pub(crate) fn build_sequence(
         .ok()
         .and_then(|s| parse_euler_deg(&s))
         .unwrap_or_else(cloud_base_rotation);
-    let mut shots = build_shots(
-        &seq.parts,
+    // Each part is resampled to the shared count N, then gets the *source* cloud it morphs in FROM,
+    // chosen by its entrance. Build each part's `BuiltShot` directly (the only per-shot data the
+    // director reads) — shape + morph-in origin + out-cloud + the resolved entrance/deform/raster/cue.
+    let shots = build_shots(
+        &parts,
         raws,
         &transitions,
         &deforms,
@@ -229,8 +252,133 @@ pub(crate) fn build_sequence(
         content_radius,
         entity_rot,
     );
+    BuildOutput {
+        shots,
+        frame_center,
+        content_radius,
+        frame_factor,
+        scene_norm,
+        n,
+        entity_rot,
+    }
+}
+
+/// Once every referenced splat has loaded, build each part's shape (resampled to the fixed count) + the
+/// intro ball off-thread (live) or inline (record/shot/bench — see `build_inline`), then `finalize_build`
+/// uploads the initial window, spawns the single interpolate entity, and frames the union once.
+#[allow(clippy::too_many_arguments)] // a Bevy system — params are injected, not a call-site burden
+pub(crate) fn build_sequence(
+    mut commands: Commands,
+    mut assets: ResMut<Assets<PlanarGaussian3d>>,
+    seq: Option<Res<Sequence>>,
+    state: Option<ResMut<SeqState>>,
+    root: Res<AssetRoot>,
+    asset_server: Res<AssetServer>,
+    mut cam: Query<&mut OrbitCam>,
+    mut task: ResMut<SeqBuildTask>,
+) {
+    let (Some(seq), Some(mut state)) = (seq, state) else {
+        return;
+    };
+    if state.built || seq.parts.is_empty() {
+        return;
+    }
+
+    // a build is already in flight (live, off-thread) — poll it; finalize the frame it's ready.
+    if let Some(t) = task.0.as_mut() {
+        if let Some(out) = bevy::tasks::block_on(bevy::tasks::poll_once(t)) {
+            task.0 = None;
+            finalize_build(
+                out,
+                &mut commands,
+                &mut assets,
+                &asset_server,
+                &mut cam,
+                &seq,
+                &mut state,
+            );
+        }
+        return;
+    }
+
+    if state.loads.iter().any(|h| assets.get(h).is_none()) {
+        return; // wait for every referenced splat
+    }
+
+    // Main thread, cheap: pre-extract the only asset-dependent content (`splat:` parts → an owned copy
+    // out of `Assets`), so the worker build never touches the Bevy world. Non-splat parts sample in the
+    // worker from fs+compute. `part_gaussians` ignores disk/aniso/count/font for `splat:`.
+    let presampled: Vec<Option<Vec<Gaussian3d>>> = seq
+        .parts
+        .iter()
+        .map(|p| {
+            matches!(p.content, PartContent::Splats(_)).then(|| {
+                part_gaussians(
+                    &p.content,
+                    &state,
+                    &assets,
+                    &root.0,
+                    p.disk,
+                    p.aniso,
+                    None,
+                    p.font.as_deref(),
+                )
+            })
+        })
+        .collect();
+    let inputs = BuildInputs {
+        parts: seq.parts.clone(),
+        presampled,
+        root: root.0.clone(),
+        budget: seq.budget,
+    };
+
+    if build_inline() {
+        // deterministic one-shot capture → build now, finalize this frame (no rendered frame before it).
+        info!("reel build: inline (deterministic capture)");
+        let out = build_cpu(inputs);
+        finalize_build(
+            out,
+            &mut commands,
+            &mut assets,
+            &asset_server,
+            &mut cam,
+            &seq,
+            &mut state,
+        );
+    } else {
+        // live: hand the heavy build to a worker; the next frames poll it while the loader animates.
+        info!("reel build: off-thread (loader animates while it builds)");
+        task.0 =
+            Some(bevy::tasks::AsyncComputeTaskPool::get().spawn(async move { build_cpu(inputs) }));
+    }
+}
+
+/// Main-thread finalize of a completed `build_cpu`: upload the initial window, spawn the single morph
+/// entity, frame the union, spawn any `glb:` dissolve meshes, and publish the shots into `SeqState`.
+/// Everything here needs the Bevy world (assets/commands/camera) — kept off the worker on purpose.
+#[allow(clippy::too_many_arguments)]
+fn finalize_build(
+    out: BuildOutput,
+    commands: &mut Commands,
+    assets: &mut Assets<PlanarGaussian3d>,
+    asset_server: &AssetServer,
+    cam: &mut Query<&mut OrbitCam>,
+    seq: &Sequence,
+    state: &mut SeqState,
+) {
+    let BuildOutput {
+        mut shots,
+        frame_center,
+        content_radius,
+        frame_factor,
+        scene_norm,
+        n,
+        entity_rot,
+    } = out;
+
     // STREAMING: upload only the initial window {0,1} now; the director streams the rest in/out.
-    ensure_window(&mut shots, &mut assets, 0);
+    ensure_window(&mut shots, assets, 0);
     let intro0 = shots[0]
         .origin
         .clone()
@@ -267,7 +415,7 @@ pub(crate) fn build_sequence(
     // so the camera looks at the post-transform world centre. The seeding itself (MARTIN_ZOOM/YAW/
     // PITCH and the MARTIN_CAMERAS capture-pose override) lives in `camera::seed_orbit_framing`.
     let center = entity_rot * frame_center;
-    for mut c in &mut cam {
+    for mut c in cam.iter_mut() {
         crate::camera::seed_orbit_framing(
             &mut c,
             center,
@@ -289,8 +437,8 @@ pub(crate) fn build_sequence(
                 .clone()
                 .unwrap_or_else(|| assets.add(shots[idx].shape_data.clone()));
             spawn_gl_dissolve(
-                &mut commands,
-                &asset_server,
+                commands,
+                asset_server,
                 name,
                 idx,
                 entity_rot,
