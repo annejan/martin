@@ -10,7 +10,27 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ## [Unreleased]
 
+### Added
+- **Live perf knobs (run on weak/party hardware).** Profiling showed the live render is overdraw- and
+  splat-count-bound on a weak GPU (not a martin bug — per-cloud it matches upstream). New levers:
+  `MARTIN_SPLAT_SCALE=<f>` (shrink every splat disk — cuts overdraw while keeping every splat: `0.8`
+  ≈ +27 % fps, `0.5` ≈ 2.2×), `MARTIN_SORT_BITS=16|24|32` (cheaper per-frame depth sort, synthetic-safe),
+  and `MARTIN_QUALITY=low|med|high` — a one-word preset stacking count + resolution (+ scale/sort on
+  `low`) for **~3× fps**, set-if-absent so it caps a show's budget but an explicit knob still wins.
+- **Window + profiling knobs.** `MARTIN_TITLE` (window title, also `.show [settings] title=`),
+  `MARTIN_WIDTH`/`MARTIN_HEIGHT` now size the live window too, `MARTIN_VSYNC=0` (uncapped present),
+  `MARTIN_BLOOM=0`, `MARTIN_HOLD_T=<s>` (pin the timeline for a deterministic sweep), `MARTIN_DIAG=1`
+  (Bevy diagnostics), and `pipeline/bench-sweep.sh` (repeatable, GPU-safe count×res×scale sweep). The old
+  `MARTIN_BENCH` measures CPU submit rate, not GPU completion — use the windowed `MARTIN_FPS`+`VSYNC=0`.
+
 ### Changed
+- **Live FFT-reactive visuals react from t=0 (no dead zone).** The spectrum band table that drives the
+  FFT-reactive backdrop/interludes is now filled by a **causal streaming analyser** (per-band AGC) that a
+  background thread appends front-to-back ahead of the playhead — instead of waiting ~9.8 s for the whole
+  track to render + normalise. First rows land in ~98 ms. Deterministic / record-safe (chunk-independent;
+  record still bakes the full table before frame 0). `MARTIN_FFT_NORM=track` keeps the legacy whole-track
+  normalisation (and its dead zone) for byte-identical-to-old output. The startup spectrum bake also
+  parallelised (rayon render + FFT).
 - **Non-blocking reel build (startup-freeze fix).** A reel of big captures no longer freezes the frame
   for seconds at startup while it samples + resamples every shot. Two steps: (1) the per-part sampling
   now fans across **rayon** (each part is independent); (2) the whole heavy build moved **off the main
