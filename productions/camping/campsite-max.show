@@ -84,6 +84,7 @@ mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  ~drop  path:liss:0.32,0.28,0.3,2,1,3,
 mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  ~drop  path:liss:0.3,0.26,0.28,3,2,1,0.48  bob 0.12  ^pulse:0.7  spin 17,43,29  tint:fry  in climax
 mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   count:40000  rot 0,200,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax
 splat:doggo.ply     @1.96,-1.16,1.2  *0.5   rot 0,-16,0  sway 0,7,0  bob 0.04  travel:1.8,-1.1562,1.2@climax,14  ~fade  in climax
+mesh:pauw.glb  @-1.8241,-1.3,-0.4451  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~drop  in climax  # the BLUE peacock struts back in for the party (it left at the breakdown)
 mesh:pauw.glb  @1.0301,-1.33,-1.98  *0.6   rot 0,-55,0  spin 0,12,0  bob 0.06  ^pulse:0.6  tint:white  ~drop  in climax  # the rare WHITE peacock parades for the party
 
 # Festival title card — TYPEWRITER-reveal on the build, held to the outro (the brand persists).
