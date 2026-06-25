@@ -23,6 +23,13 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   schedule's `PostProcess` set after tonemapping, fetching the view via `CurrentView` so non-`post`
   views skip cleanly. Chroma renders again (verified on campsite-max); the shader is unchanged.
 
+### Changed
+- **Splat fill-rate cut (fork §9): the quad extent tightened 3.0σ → 2.4σ.** The 2.4–3σ ring of every
+  splat is near-zero alpha (rasterised + blended for almost nothing); trimming it cuts the quad pixel
+  area ~36 % with no visible change (it does *not* shrink the gaussians, unlike `SPLAT_SCALE`). Lifts
+  every quality tier on an overdraw-bound GPU — the PonyCamp climax went **720p 30→40 fps (+32 %)**,
+  854×480 → 54 fps. Always-on (`bevy_gaussian_splatting` `martin` branch, `render/gaussian.wgsl`).
+
 ### Added
 - **Per-object `dscale:` compose token + `MARTIN_QUALITY=potato` tier.** `dscale:V` is a *local*
   `MARTIN_SPLAT_SCALE` (multiplies the global) so you can shrink a full-screen backdrop's overdraw-heavy
