@@ -21,7 +21,7 @@ pub(crate) enum PartContent {
     /// a PNG in the asset dir, rasterized to flat gaussians (a logo, etc.)
     Image(String),
     /// an SVG in the asset dir, rasterized (vector → pixels) then sampled to flat gaussians — any
-    /// vector logo/art as a morph source, crisp at any size you raster it to (`MARTIN_SVG_PX`).
+    /// vector logo/art as a morph source, crisp at any size you raster it to.
     Svg(String),
     /// a mesh in the asset dir (`.dae`/`.obj`/`.stl`/`.ply`), surface-sampled into gaussians
     Mesh(String),

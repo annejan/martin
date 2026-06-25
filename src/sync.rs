@@ -88,9 +88,9 @@ impl SyncTrack {
         pairs
     }
 
-    /// Insert a keyframe into the generic store. Public so other parsers (e.g. `[scenes]` → `[sync]`
-    /// expansion) can push keyframes without touching the parser. Keeps the knob's list sorted.
-    #[allow(dead_code)]
+    /// Insert a keyframe and keep the knob's list sorted (vs `insert` + a later `sort_all`). Test-only —
+    /// the parsers use `insert` then `sort_all` once; this is the convenience the unit tests want.
+    #[cfg(test)]
     pub fn push(&mut self, knob: impl Into<String>, time: f32, value: f32) {
         let name = knob.into();
         self.data

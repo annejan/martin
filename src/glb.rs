@@ -8,11 +8,10 @@
 //! crate's own `spawn_scene` system instantiate each cloud bundle as a child (`PlanarGaussian3dHandle`
 //! + `CloudSettings` + transform), which renders through martin's normal splat pipeline (bloom + sort).
 //!
-//! Runs in two modes. **Alone** (no other content vars): a standalone scene view — `MARTIN_GLB_DIST`
-//! (default 5.0) sets the orbit distance and this module frames the camera + starts the recorder.
-//! **Combined** with a seq/compose show: the scene is *set dressing* placed alongside the morphing
-//! splats — the show owns the camera/clock, and the .glb must live in the show's asset root.
-//! `MARTIN_GLB_SCALE` (default 1.0) sizes the scene; `MARTIN_GLB_POS=x,y,z` (default origin) places it.
+//! Runs in two modes. **Alone** (no other content vars): a standalone scene view — this module
+//! auto-frames the camera on the loaded scene + starts the recorder. **Combined** with a seq/compose
+//! show: the scene is *set dressing* placed alongside the morphing splats — the show owns the
+//! camera/clock, and the .glb must live in the show's asset root.
 
 use bevy::prelude::*;
 use bevy_gaussian_splatting::{GaussianScene, GaussianSceneHandle, PlanarGaussian3dHandle};

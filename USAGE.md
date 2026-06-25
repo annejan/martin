@@ -134,6 +134,9 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_RECORD` | — | Directory to dump one PNG per frame into (the whole timeline; used by `record.sh`). **Recording runs fully headless** — no window, camera → an offscreen image (so it works over SSH / on any compositor, and never captures a black background). Works for `MARTIN_COMPOSE` stages too. |
 | `MARTIN_RES` | `1280x720` | Offscreen **render resolution** `WxH` for recordings (and the `MARTIN_SERVE` view) — e.g. `1920x1080`, `2560x1440` for a crisp master. **Keep it 16:9** (the fullscreen quads + framing assume that aspect; a non-16:9 size warns). |
 | `MARTIN_SS` | `1` | **Supersample anti-aliasing** (`record.sh` only): `=2` renders at 2× `MARTIN_RES` then lanczos-downscales in the mux — smooths the splat disk-edges + text (there's no in-engine AA). Costs ~n² fill, so it's for the final master, not fast previews. |
+| `MARTIN_FADE_OUT` | `2.6` | **Video fade-to-black** length (s) at the end of a render (`record.sh` only, applied in the mux). A show with a late visual climax (an explosion that must stay lit through the final bang) sets a shorter tail so the picture doesn't fade out *over* the payoff. |
+| `MARTIN_DISK_FLOOR_GB` | `3` | `record.sh` pre-flight: abort early if the scratch disk has less than this many GB free (a full 60 fps dump is ~10 GB). |
+| `MARTIN_NO_SYNTH_CACHE` | — | `=1` forces `record.sh` to re-render the synth WAV instead of reusing the cached one (use when overriding a synth param via env so the cache key misses). |
 | `MARTIN_PREVIEW_FPS` | 60 | `=<n>` renders the timeline at `n` fps instead of 60 — **far fewer frames** for a fast preview (rendering frames is the slow part, not the mux). `=8` → ~1/8 the frames. Frame `dt` + camera sway scale with it, so timing/motion stay correct; `record.sh` muxes at the same fps so duration + audio sync hold. Use for quick looks; drop it (or set 60) for the final render. |
 | `MARTIN_BENCH` | — | `=<frames>` renders that many frames **headless with no PNG output** and logs the render-only fps, then exits — a clean perf probe (disk-I/O-free). |
 | `MARTIN_LOADER` / `MARTIN_LOGO` | off | `=1` shows a **loading screen** (black + progress bar; `MARTIN_LOGO=<png OR svg in the asset root>` adds the logo — an `.svg` is rasterized, so it can be the same artwork the opening mesh was extruded from) until the show is built, then **cross-fades** into the opening logo behind it. Set automatically in a bundled build. (Window-only — not captured in recordings.) |
@@ -1036,10 +1039,13 @@ mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
   (1 vocal-saw · 2 breathy-sung · 3 brass-cut/Brut · 4 FM-bell · 5 **hoover** — the Alpha-Juno rave
   lead: detuned saw stack + fifth + sub + a pitch-dive on attack · 6 **koto** — plucked oriental string), `basssw` (2 Kavinsky-sub · 3 Brut-Reese
   · 4 acid-303), `arpsw` (1 **pan-flute** · 2 **FM bell** · 3 **glass pluck** · 4 **koto**), `stabsw` (1 **rave-organ**
-  · 2 **saw stab**), `padsw` (2 Juno · 3 PWM-string · 4 dark-wash), `drumsw` (1 analog/808 kit). `0` (default)
+  · 2 **saw stab**), `padsw` (2 Juno · 3 PWM-string · 4 dark-wash), `drumsw` (1 analog/808 kit · 2 festival/house kit). `0` (default)
   = the original voices, so existing tracks are unchanged. They resolve **per note**, so a
   `breakdown.set leadsw=2` gives a section its own instruments — e.g. softer voices in a calm interlude,
-  harder ones in the crescendo. (See `productions/camping/score.txt` for a worked example.)
+  harder ones in the crescendo. (See `productions/camping/score.txt` for a worked example.) Other `set`
+  knobs: `oversample=1` (2× anti-alias the saw/tanh voices), `gatesnare`, and **`endfade=<s>`** — the
+  master die-out length (default `0.025` ≈ a click-guard near-hard-stop; e.g. `1.6` rings the final
+  impact + reverb out into silence instead of hard-cutting).
 - The voices themselves (the synth DSP for each `kick/lead/bass/…` + its palette variants) live in code
   (`src/audio/voices.rs`); the score is the **composition** and now also *picks which voice* via the
   knobs above. **`assets/score.txt` is loaded by default** — just edit it and run (no recompile,

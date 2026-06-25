@@ -36,7 +36,7 @@ pub(crate) struct Shot {
     pub freeze: Option<f32>, // `freeze:N` → quantize the deform animation to N steps/bar (stop-motion)
     pub ground: Option<f32>, // `ground:<y>` → seat this part's LOWEST splat at world-Y (rest it on a
     // [stage] plate); None = centred at the origin (floats), the default
-    pub disk: Option<f32>, // `disk:<f>` → per-part mesh splat-disk overlap (overrides MARTIN_MESH_SPLAT);
+    pub disk: Option<f32>, // `disk:<f>` → per-part mesh splat-disk overlap (overrides the global mesh disk default);
     // smaller = crisper edges on a sharp graphic (the logo), None = global default
     pub aniso: Option<f32>, // `aniso:<f>` → per-part anisotropic mesh splats (>1 stretches each sample
     // into an ellipsoid along the surface grain, area-preserving), None = round

@@ -46,7 +46,7 @@ fn frame_of(normalize: bool, union_lo: Vec3, union_hi: Vec3) -> (Vec3, f32, f32)
     }
 }
 
-/// Resolve a shot's arrival entrance: explicit `~name` > global `MARTIN_TRANSITION` > Ball for shot 0
+/// Resolve a shot's arrival entrance: explicit `~name` > Ball for shot 0
 /// / Morph after. Shot 0 has nothing to flow FROM, so Morph/Swarm/Cut degrade to a Ball assemble (the
 /// caller logs the degrade). Pure — unit-tested.
 fn arrival_entrance(idx: usize, explicit: Option<Entrance>, global: Option<Entrance>) -> Entrance {
@@ -117,7 +117,7 @@ fn build_cpu(inputs: BuildInputs) -> BuildOutput {
         budget,
     } = inputs;
 
-    // resolve each part's entrance first (explicit ~name > MARTIN_TRANSITION > Ball for part
+    // resolve each part's entrance first (explicit ~name > Ball for part
     // 0 / Morph after) — needed before building gaussians so a PenWrite text part is built as a
     // stroked outline (pen order baked into visibility) instead of filled coverage.
     // global default transition: none — each shot's per-part `~name` token is the knob.
@@ -384,7 +384,7 @@ fn finalize_build(
         .clone()
         .expect("part 0 always builds a source cloud");
 
-    // MARTIN_REEL_POS="x,y,z" translates the whole morph timeline off the world origin (default 0,0,0).
+    // the reel sits at the world origin (parts carry their own @x,y,z).
     let reel_pos = Vec3::ZERO; // the reel sits at the origin; [stage] props carry their own @x,y,z
 
     let entity = commands
@@ -483,10 +483,10 @@ fn finalize_build(
 
 /// Build each shot's `BuiltShot` (consuming `raws`) — its shape (resampled to the shared budget `n`,
 /// with `rot:`/`tint:` baked in) + the morph-in `origin` cloud its entrance flows FROM (`~name` per
-/// shot > `MARTIN_TRANSITION` > Ball for shot 0 / Morph after; Morph/Swarm flow straight from the
+/// shot > Ball for shot 0 / Morph after; Morph/Swarm flow straight from the
 /// previous shape with no source) + the `exit:` departure cloud + the resolved deform/raster/cue.
 /// `MARTIN_PAIR=match` reorders each Morph shot so splat k slides to the nearest same-colour splat of
-/// the PREVIOUS shape (cost = pos² + `MARTIN_PAIR_COLOR`·colour²) — a coherent ghostly morph instead
+/// the PREVIOUS shape (cost = pos² + 0.5·colour²) — a coherent ghostly morph instead
 /// of an index-rank centre-ball. The only per-shot data `shot_director` reads.
 #[allow(clippy::too_many_arguments)] // the build inputs are genuinely independent resolved tables
 fn build_shots(
@@ -717,7 +717,7 @@ mod tests {
 
     #[test]
     fn arrival_entrance_precedence_and_later_default() {
-        // explicit ~name beats the global MARTIN_TRANSITION default.
+        // explicit ~name beats the shot-0 Ball default.
         assert_eq!(
             arrival_entrance(2, Some(Entrance::Fade), Some(Entrance::Explode)),
             Entrance::Fade
