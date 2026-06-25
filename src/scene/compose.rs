@@ -122,6 +122,9 @@ pub(crate) struct Prop {
     alpha: Option<f32>, // `alpha:V`: per-object translucency (0..1) baked into the cloud's splat opacity
     travel: Option<Travel>, // `travel:x,y,z[@anchor[,dur]]`: ease @pos→target over a window, then hold
     font: Option<String>, // `font:<name>`: pick a `text:` font (e.g. `defeest`); None = default font.ttf
+    disk_scale: Option<f32>, // `dscale:V`: per-object splat-disk size — a LOCAL MARTIN_SPLAT_SCALE. <1
+                             // shrinks just this object's disks (cut a full-screen backdrop's overdraw without thinning props);
+                             // multiplies the global MARTIN_SPLAT_SCALE.
 }
 
 impl Prop {
@@ -263,6 +266,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let mut path = None;
         let mut alpha = None;
         let mut font = None;
+        let mut disk_scale = None;
         // travel: parsed raw here (needs `score` + the object's `in` cue, both resolved after the loop)
         let mut travel_raw: Option<(Vec3, Option<String>, Option<f32>)> = None;
         let toks: Vec<&str> = s
@@ -298,6 +302,15 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     match n.parse::<f32>() {
                         Ok(a) => alpha = Some(a.clamp(0.0, 1.0)),
                         Err(_) => eprintln!("compose: bad 'alpha:{n}' (need 0..1) — ignored"),
+                    }
+                    return false;
+                }
+                // `dscale:V` — per-object splat-DISK size (a local MARTIN_SPLAT_SCALE). <1 shrinks just
+                // this object's disks → kills a full-screen backdrop's overdraw without thinning the props.
+                if let Some(n) = t.strip_prefix("dscale:") {
+                    match n.parse::<f32>() {
+                        Ok(d) => disk_scale = Some(d.max(0.0)),
+                        Err(_) => eprintln!("compose: bad 'dscale:{n}' (need a float) — ignored"),
                     }
                     return false;
                 }
@@ -447,6 +460,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             alpha,
             travel,
             font,
+            disk_scale,
         });
     }
     out
@@ -589,8 +603,10 @@ pub(crate) fn build_composition(
             bulge: 0.0,
             global_opacity: 0.0, // animate_composition fades it in (or holds it for a entrance)
             aabb: false,         // round isotropic splats (OBB), not the conic-from-cov2d ellipse
-            // MARTIN_SPLAT_SCALE shrinks every splat disk (default 1.0) → less overdraw on a weak GPU.
-            global_scale: crate::envvar::or("MARTIN_SPLAT_SCALE", 1.0_f32),
+            // MARTIN_SPLAT_SCALE shrinks every splat disk (default 1.0) → less overdraw on a weak GPU;
+            // a per-object `dscale:` multiplies it (shrink just a backdrop's disks, keep the props full).
+            global_scale: crate::envvar::or("MARTIN_SPLAT_SCALE", 1.0_f32)
+                * obj.disk_scale.unwrap_or(1.0),
             ..default()
         };
         let tf = Transform {

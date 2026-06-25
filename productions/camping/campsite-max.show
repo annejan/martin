@@ -22,15 +22,16 @@ particle_back  = @@climax       # …and return when the fire re-ignites for the
 particle_origin = 0,-0.3,0.3
 particle_spread = 1.8,1.0,1.8
 bg_dim         = 0.6
-splat_scale    = 0.6            # PERF: shrink the splat disks — the show is fill/overdraw-bound on a weak
-                               # iGPU (props' soft disks overlap), and 0.6 is ~2× fps with no visible loss
-                               # (text/props stay dense). Override per-run: MARTIN_SPLAT_SCALE=1.0 on a strong GPU.
+# PERF: the backdrop (terrain/mountains/moon) is ~68% of the frame — full-screen soft disks overdrawing
+# behind everything. Instead of a GLOBAL splat_scale (which thins the props/text too), each backdrop prop
+# carries a per-object `dscale:` to shrink JUST its disks, and the mountains are flattened to a thin wall
+# (a distant ridge needs no depth). Foreground props/text stay at full disk size (1.0).
 
 [stage]
 # ════════════ THE SKY + FIELD — persist the whole show (only the CAMP comes and goes) ════════════
-splat:mountains.ply @0,-1.2,-12.0  *8.5,2.6,7   ~fade  in intro  count:14000
-splat:moon.ply      @0.8,3.0,-50.0 *7.0      spin 0,3,0  drift 0.05,0.006,0  ~fade  in intro  count:5000
-splat:terrain.ply   @0,-1.7,-7.5   *10,2.6,8 ~fade  in intro  count:28000
+splat:mountains.ply @0,-1.2,-12.0  *9,3,2.2   dscale:0.45  ~fade  in intro  count:14000  # thin ridge WALL (depth 7→2.2) + small disks
+splat:moon.ply      @0.8,3.0,-50.0 *7.0      dscale:0.85  spin 0,3,0  drift 0.05,0.006,0  ~fade  in intro  count:5000  # bigger disks (a smooth sphere, not grainy)
+splat:terrain.ply   @0,-1.7,-7.5   *12,2.0,8 dscale:0.7   ~fade  in intro  count:28000  # ground: wider extent (rim off-screen) + softer disks
 # (galaxy nebula cut — at alpha 0.08 it was invisible but a full-screen disk = pure overdraw)
 splat:star.ply      @2.5,2.5,-9    *0.3   alpha:0.4   spin 4,6,3  bob 0.10  ^pulse:0.7  path:orbit:0.2,0.15,0.25   ~fade  in intro  count:2000
 splat:star.ply      @-2.0,2.0,-10  *0.25  alpha:0.35  spin 5,3,4  bob 0.08  ^pulse:0.6  path:orbit:0.18,0.12,0.3   ~fade  in intro  count:1500

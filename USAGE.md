@@ -870,6 +870,7 @@ mesh:bornhack2026-hardware.dae @0,-1.6,.3  *.7   spin 20,40,0   in climax
 | `@x,y,z` | position on the stage |
 | `*s` | scale (per-axis `*sx,sy,sz` too) |
 | `alpha:0..1` | per-object **translucency** baked into the splat opacity (`alpha:0.16` = a faint glass mug); composes with everything else |
+| `dscale:V` | per-object **splat-disk size** — a *local* `MARTIN_SPLAT_SCALE` (multiplies the global). `<1` shrinks just this object's disks: the surgical perf lever for an overdraw-heavy **full-screen backdrop** (`dscale:0.45` on terrain/mountains kills their fill without thinning the foreground props/text). Pairs with flattening a distant ridge's depth (`*X,Y,Z` with a small `Z`) — a jagged silhouette still reads as depth. |
 | `rot a,b,c` | static orientation (euler degrees) |
 | `spin a,b,c` | auto-rotation, **degrees/sec** (e.g. `spin 0,45,0` turns on Y, ~8 s/rev) |
 | `bob amp` | vertical bob amplitude |
