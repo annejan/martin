@@ -53,6 +53,12 @@ pub struct Cli {
     /// Write the built-in score as an editable tracker file and exit.
     #[arg(long = "dump-score", value_name = "PATH")]
     pub dump_score: Option<String>,
+    /// Start borderless-fullscreen (overrides the build default; F11/F still toggle live).
+    #[arg(long, conflicts_with = "windowed")]
+    pub fullscreen: bool,
+    /// Start in a window (overrides a fullscreen build default / `[settings] fullscreen`).
+    #[arg(long)]
+    pub windowed: bool,
     #[command(subcommand)]
     pub command: Option<Commands>,
 }
@@ -118,6 +124,13 @@ pub fn apply_cli(cli: &Cli) -> Vec<(String, String)> {
     if let Some(p) = &cli.dump_score {
         out.push(("MARTIN_SCORE_DUMP".into(), p.clone()));
     }
+    // Window mode override: --fullscreen/--windowed → MARTIN_FULLSCREEN=1/0 (tri-state — unset falls
+    // through to the build default; see main.rs). clap makes the two flags mutually exclusive.
+    if cli.fullscreen {
+        out.push(("MARTIN_FULLSCREEN".into(), "1".into()));
+    } else if cli.windowed {
+        out.push(("MARTIN_FULLSCREEN".into(), "0".into()));
+    }
     out
 }
 
@@ -163,6 +176,22 @@ mod tests {
     #[test]
     fn nothing_set_is_empty() {
         assert!(apply_cli(&Cli::default()).is_empty());
+    }
+
+    #[test]
+    fn window_mode_flags_map_to_fullscreen_env() {
+        let fs = apply_cli(&Cli {
+            fullscreen: true,
+            ..Default::default()
+        });
+        assert_eq!(find(&fs, "MARTIN_FULLSCREEN"), Some("1"));
+        let win = apply_cli(&Cli {
+            windowed: true,
+            ..Default::default()
+        });
+        assert_eq!(find(&win, "MARTIN_FULLSCREEN"), Some("0"));
+        // neither flag → no override (falls through to the build default in main)
+        assert_eq!(find(&apply_cli(&Cli::default()), "MARTIN_FULLSCREEN"), None);
     }
 
     #[test]

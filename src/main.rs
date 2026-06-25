@@ -121,6 +121,20 @@ fn quality_caps(q: &str) -> &'static [(&'static str, &'static str)] {
     }
 }
 
+/// Resolve the live window mode from a `MARTIN_FULLSCREEN` value: an explicit `0`/`false`/`off`/`no`/
+/// empty → windowed; any other set value → fullscreen; `None` (unset) → the **build default** (the
+/// `fullscreen` cargo feature — off → windowed). `--fullscreen`/`--windowed` + `[settings] fullscreen`
+/// all set the env, so they override the build default. Pure → unit-tested (the feature arm is build-dependent).
+fn window_fullscreen(env: Option<&str>) -> bool {
+    match env {
+        Some(v) => !matches!(
+            v.trim().to_ascii_lowercase().as_str(),
+            "0" | "false" | "off" | "no" | ""
+        ),
+        None => cfg!(feature = "fullscreen"),
+    }
+}
+
 fn main() {
     let cli = <cli::Cli as clap::Parser>::parse();
 
@@ -296,7 +310,12 @@ fn main() {
         std::env::var("MARTIN_SHOT").is_ok(),
         std::env::var("MARTIN_SHOTS").is_ok(),
     );
-    let fullscreen = std::env::var("MARTIN_FULLSCREEN").is_ok() && !headless;
+    // Window mode (live only). MARTIN_FULLSCREEN is TRI-STATE: an explicit `0`/`false`/`off` → windowed,
+    // any other set value → fullscreen, UNSET → the build default (the `fullscreen` cargo feature; off →
+    // windowed). The `--fullscreen`/`--windowed` flags + a `.show [settings] fullscreen = …` all set the
+    // env, so they override the build default; F11/F still toggle at runtime.
+    let fullscreen =
+        window_fullscreen(std::env::var("MARTIN_FULLSCREEN").ok().as_deref()) && !headless;
     // Live window size: `MARTIN_WIDTH`/`MARTIN_HEIGHT` (default 1280×720). Headless renders to an
     // offscreen image of the same size, so the two stay consistent; on the window this also lets a
     // perf sweep change the live resolution.
@@ -402,7 +421,20 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{ContentMode, choose_mode, is_headless, quality_caps};
+    use super::{ContentMode, choose_mode, is_headless, quality_caps, window_fullscreen};
+
+    #[test]
+    fn window_fullscreen_is_tri_state() {
+        // explicit truthy → fullscreen; explicit falsey (any spelling/case/whitespace) → windowed
+        assert!(window_fullscreen(Some("1")));
+        assert!(window_fullscreen(Some("yes")));
+        assert!(!window_fullscreen(Some("0")));
+        assert!(!window_fullscreen(Some("false")));
+        assert!(!window_fullscreen(Some(" OFF ")));
+        assert!(!window_fullscreen(Some("")));
+        // unset → the build default: windowed without the `fullscreen` feature, fullscreen with it
+        assert_eq!(window_fullscreen(None), cfg!(feature = "fullscreen"));
+    }
 
     #[test]
     fn quality_caps_tiers() {

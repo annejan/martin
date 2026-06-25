@@ -80,6 +80,7 @@ martin [SHOW]                 # a .show file to play (else $MARTIN_SHOW, else th
   --serve [PORT]               # the HTTP control bridge (default 7878)
   --synth-wav PATH             # render the synth to a WAV + exit
   --dump-score PATH            # write the built-in score as an editable tracker file + exit
+  --fullscreen | --windowed    # start fullscreen / windowed (overrides the build default; F11/F toggle)
 martin mcp                   # the stdio MCP server (proxy to a --serve bridge)
 ```
 
@@ -153,7 +154,7 @@ documents the underlying vars (the IR + the `record.sh` / CI escape hatch); for 
 | `MARTIN_SHOT_AT` | `6.0` | When (seconds) to take the `MARTIN_SHOT`. |
 | `MARTIN_SHOTS` | — | **Contact sheet**: comma-separated times (seconds) — seek to each, take a screenshot, exit after the last. Overrides `MARTIN_SHOT_AT`. |
 | `MARTIN_SERVE` | — | `=1` (or `=<port>`, default 7878) starts the **live control bridge** — see below. |
-| `MARTIN_FULLSCREEN` | off | `=1` starts borderless-fullscreen; toggle live with **F11 / F**. (Ignored while recording — that needs the fixed window.) |
+| `MARTIN_FULLSCREEN` | build default | Window mode (**tri-state**): an explicit `0`/`false`/`off` → **windowed**, any other set value → **borderless fullscreen**, *unset* → the **build default** (the `fullscreen` cargo feature — off ⇒ windowed). Set it via the `--fullscreen`/`--windowed` flags or a `.show [settings] fullscreen = true`; toggle live with **F11 / F**. (Ignored while recording — that needs the fixed window.) **Build a fullscreen-by-default binary** (e.g. the Evoke exe) with `cargo build --release --features fullscreen`, or bake `[settings] fullscreen = true` into the production's show. |
 | `MARTIN_TITLE` | `martin — splat fly-around` | The **window title** of a live/windowed run. Also settable per-show via `.show [settings] title = …` (which expands to this var), so a bundled demo names its own window. No effect headless (record/shot build no window). |
 | `MARTIN_WIDTH` / `MARTIN_HEIGHT` | `1280` / `720` | The live **window** size. (The headless record/shot image is sized by **`MARTIN_RES`**, not these — see that row.) Lower = a big perf win on a weak GPU: the demo is largely **fill-rate bound**, so frame time scales ~linearly with pixel count (1080p ≈ 80 ms, 720p ≈ 45 ms, 540p ≈ 31 ms on the dev iGPU). |
 | `MARTIN_VSYNC` | on | `=0` presents **uncapped** (`Immediate`) instead of vsync — for measuring true GPU throughput (the `MARTIN_FPS` metrics otherwise clamp at the monitor's refresh) or cutting present latency. Default keeps vsync for a tear-free show. Live window only. |

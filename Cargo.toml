@@ -56,6 +56,13 @@ lz4_flex = { version = "0.13", default-features = false, features = ["std"], opt
 [features]
 default = ["sh0"]
 
+# Build-time window default: with `--features fullscreen` a live run starts BORDERLESS-FULLSCREEN
+# unless told otherwise — the right default for a shipped demo/kiosk binary. Off by default (windowed).
+# `--windowed` / `MARTIN_FULLSCREEN=0` / `[settings] fullscreen = false` override it at runtime; F11/F
+# toggle live. (A per-production alternative without this feature: bake `fullscreen = true` into the
+# show's `[settings]`.)
+fullscreen = []
+
 # SH degree is a one-hot compile-time choice in the splat crate, so it can't be a runtime switch.
 # `sh0` (default) = one flat colour per splat: lean + fast, ideal for our synthetic text/morph demo.
 # `sh3` = full degree-3 view-dependent colour (specular glint), worth it for REAL captures (camping

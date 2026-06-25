@@ -24,6 +24,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   views skip cleanly. Chroma renders again (verified on campsite-max); the shader is unchanged.
 
 ### Added
+- **Window mode: `--fullscreen` / `--windowed` flags + a `fullscreen` build feature.** `MARTIN_FULLSCREEN`
+  is now **tri-state** — explicit `0`/`false`/`off` → windowed, any other set value → borderless
+  fullscreen, *unset* → the build default. Build a **fullscreen-by-default binary** (a shipped demo /
+  kiosk exe) with `cargo build --release --features fullscreen`, or bake `[settings] fullscreen = true`
+  into a production's show; either is overridden at runtime by `--windowed` / `MARTIN_FULLSCREEN=0`
+  (and F11/F still toggle live).
 - **Live perf knobs (run on weak/party hardware).** Profiling showed the live render is overdraw- and
   splat-count-bound on a weak GPU (not a martin bug — per-cloud it matches upstream). New levers:
   `MARTIN_SPLAT_SCALE=<f>` (shrink every splat disk — cuts overdraw while keeping every splat: `0.8`
