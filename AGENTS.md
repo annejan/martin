@@ -25,7 +25,7 @@ Transform the "Op de Camping" (Ome Henk, 1995) demoscene track from a basic plac
 ## File Structure
 - `assets/score.txt`: Tracker DSL — BPM, sections, chords, pattern tables, per-drum-lane hit patterns, gain/sub/mids curves. Editable at runtime (no recompile).
 - `src/audio/`: FunDSP voice synthesis — kick, snare, hat, lead, arp, bass, stab, pad, sub, reverb, sidechain. Split into `mod.rs`, `voices.rs`, `effects.rs`, `render.rs`, `stream.rs`, `analyze.rs`. Master is the `MasterChain` in `src/audio/stream.rs` (one streaming engine). Requires recompile.
-- `productions/camping/camping.show`: Unified show format — camera track, text sequence with @@anchors to score sections.
+- `productions/camping/campsite-max.show`: Unified show format — camera track, text sequence with @@anchors to score sections.
 - `src/score/`: Parser for score.txt — resolves section timing, drum hits, note lanes, phase lookup. Split into `types.rs`, `parse.rs`, `dump.rs`, `validate.rs`, `mod.rs`.
 - `src/music.rs`: Bevy plugin binding between score and audio playback.
 
@@ -104,9 +104,9 @@ keeps the round-trip lossless (it tags each prop with its source line so export 
 `@pos`/`*scale`/`rot`, preserving all martin-only tokens):
 ```python
 exec(open('/path/to/martin/pipeline/blender_bridge.py').read())
-bridge_import('productions/camping/campsite.show', cam_anchor='climax')  # spawn [stage] + set camera
+bridge_import('productions/camping/campsite-max.show', cam_anchor='climax')  # spawn [stage] + set camera
 # …user poses props + orbits (camera-lock ON)…  bridge_shot('/tmp/x.png') to deliver
-bridge_export('productions/camping/campsite.show')   # write @pos/*scale/rot back; prints camera line
+bridge_export('productions/camping/campsite-max.show')   # write @pos/*scale/rot back; prints camera line
 ```
 Poseable = `[stage]`/`[compose]` props. NOT poseable: `path:`/`travel:` (programmatic; show start `@pos`)
 and `[reel]` morphs (temporal — load one frame as a `backdrop=` city to pose stage props over it). Then

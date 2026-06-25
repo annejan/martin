@@ -330,7 +330,7 @@ token lands in a named slot, and no concept needs a word the model doesn't defin
 | `t=58.5 pos=0,0,0 dist=2.75 yaw=1.66 pitch=0.30` | **Key** on the Camera track; the surrounding pull-back+sweep → inferred **CameraMove**=Arc |
 | section starts `intro 0 · build 7.7 · drop 19.4 …` | **Sections** (time-grid); the Showbook **Arc** overlays **Scenes** on them |
 
-Every token has a home; nothing is left unnamed. **PASS.** Repeat for `camping.show` (the richest show)
+Every token has a home; nothing is left unnamed. **PASS.** Repeat for `campsite-max.show` (the richest show)
 to stress Props, captures, and the per-Shot density / scene-scoped-look engine-vragen — that exercise
 is what flushes out the Stage-4 concepts before they're built.
 

@@ -1,9 +1,9 @@
 name: ponycamp
 
-# Build the "PonyCamp 2026" camping demo (productions/camping/campsite.show) as ONE self-contained
+# Build the "PonyCamp 2026" camping demo (productions/camping/campsite-max.show) as ONE self-contained
 # single binary on Linux / Windows / macOS and upload each as a downloadable artifact. Triggered by
 # pushing the `ponycamp` branch (or run manually via the Actions tab) — keeps these heavier 3-OS
-# bundle builds off every main push. campsite.show references only git-tracked meshes + procedural
+# bundle builds off every main push. campsite-max.show references only git-tracked meshes + procedural
 # splats (regenerated at startup), so it builds from a clean checkout.
 
 on:
@@ -50,7 +50,7 @@ jobs:
 
       - name: Build PonyCamp single binary (--features bundle)
         shell: bash
-        run: MARTIN_BUNDLE=productions/camping/campsite-bundle.toml cargo build --release --features bundle
+        run: MARTIN_BUNDLE=productions/camping/bundle.toml cargo build --release --features bundle
 
       - name: Report binary size
         shell: bash

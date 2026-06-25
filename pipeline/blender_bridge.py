@@ -9,14 +9,14 @@ add-on, port 9876; `blender` is symlinked to `blender-5.1`). Typical loop, from 
 
     # in Blender (via mcp__*__execute_blender_code):
     exec(open('/path/to/martin/pipeline/blender_bridge.py').read())
-    bridge_import('productions/camping/campsite.show')        # spawn the [stage] + set the camera
+    bridge_import('productions/camping/campsite-max.show')        # spawn the [stage] + set the camera
     # …user drags/rotates/scales props + orbits the camera (camera-lock is ON)…
-    bridge_export('productions/camping/campsite.show')        # write @pos/*scale/rot back, keep all tokens
+    bridge_export('productions/camping/campsite-max.show')        # write @pos/*scale/rot back, keep all tokens
     bridge_shot('/tmp/blender_scene.png')                     # save a viewport shot to deliver
 
 Then render martin to confirm (it now matches 1:1 — see "WHY IT MATCHES"):
 
-    MARTIN_SHOW=productions/camping/campsite.show MARTIN_RECORD=$REC MARTIN_RES=854x480 \
+    MARTIN_SHOW=productions/camping/campsite-max.show MARTIN_RECORD=$REC MARTIN_RES=854x480 \
       MARTIN_PREVIEW_FPS=2 MARTIN_BUDGET=500000 BEVY_ASSET_ROOT=. ./target/release/martin
     DISPLAY=:0 xdg-open <frame>.png      # deliver to the user (MCP viewport shots go to the model only)
 

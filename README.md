@@ -196,10 +196,10 @@ with martin. It's `pipeline/blender_bridge.py`, driven over the `blender-mcp` MC
 
 ```python
 exec(open('/path/to/martin/pipeline/blender_bridge.py').read())
-bridge_import('productions/camping/campsite.show', cam_anchor='climax')  # spawn [stage] + set camera
+bridge_import('productions/camping/campsite-max.show', cam_anchor='climax')  # spawn [stage] + set camera
 # …drag / rotate / scale props, orbit the camera (camera-lock is ON); scale the PARTICLE.embers
 #   cube to dial the campfire ember volume…
-bridge_export('productions/camping/campsite.show')   # patch @pos/*scale/rot + particle volume back
+bridge_export('productions/camping/campsite-max.show')   # patch @pos/*scale/rot + particle volume back
 bridge_shot('/tmp/x.png')                            # save a shot (DISPLAY=:0 xdg-open to view)
 ```
 

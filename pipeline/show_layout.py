@@ -26,7 +26,7 @@ NORMALIZE_EXTENT (2.0) then placed by `@pos *scale` (scale is per-axis, the
 (see src/camera.rs). Heights use a calibratable prop model (see PROP_HALF_H).
 
 Usage:
-  python3 pipeline/show_layout.py productions/camping/hero.show --cam 4
+  python3 pipeline/show_layout.py productions/camping/campsite-max.show --cam 4
   python3 pipeline/show_layout.py <show> --cam 0 --az-off 20   # tune 3D azimuth to match a render
 """
 import argparse
@@ -46,7 +46,7 @@ NORMALIZE_EXTENT = 2.0  # src/scene/mod.rs — each part scaled so largest dim =
 # Disc/round content (terrain) reaches ~1.05 (90th-pct radius of a unit disc ≈ 0.95).
 DISC_FACTOR = 1.05
 # Prop vertical half-height as a fraction of scale.y (tuned so trees sit ON the field
-# in renders, not floating — calibrated against hero.show t=14 / campsite renders).
+# in renders, not floating — calibrated against campsite-max.show / campsite renders).
 PROP_HALF_H = 0.95
 
 # Rough footprint radius (XZ) per shape category, as a fraction of scale — for the

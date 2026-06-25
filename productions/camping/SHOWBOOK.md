@@ -1,5 +1,11 @@
 # SHOWBOOK — Op de Camping (deFEEST)
 
+> **CONVERGED 2026-06-25 → ONE show: [`campsite-max.show`](campsite-max.show)** — the PonyCamp night
+> diorama (camp assembles → flies away at the "zonder deFEEST" breakdown → bursts back at the climax).
+> The reel-based 6-scene morph arc documented below was the original design; the production went all-in
+> on the diorama, so that arc is **historical**. `campsite-max.show` is self-contained (git-tracked glb
+> meshes + splatgen procedurals), so `bundle.toml` / CI build it directly.
+
 > Het storyboard is het **bron-artefact** van deze productie: eerst hier ontwerpen (minuten), dan pas
 > renderen (tientallen minuten). Dit boek is ook de capture-boodschappenlijst voor op de camping.
 > Engine-werk hoort niet hier — als een scène iets van de engine vraagt dat nog niet kan, komt het in

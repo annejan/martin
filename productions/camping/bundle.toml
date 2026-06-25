@@ -9,7 +9,6 @@
 # build.rs auto-collects every asset the show references, lz4-compresses them into the binary;
 # src/bundle.rs self-extracts to a temp dir at startup and runs it.
 
-show = "productions/camping/camping.show"   # the full splat demo (seq + 3D camera)
+show = "productions/camping/campsite-max.show"   # the ONE camping show — the PonyCamp night diorama (self-contained: git-tracked glb + splatgen procedurals)
 score = "productions/camping/score.txt" # the Op de Camping arrangement (this production owns it)
 logo = "defeest-logo.png"            # the loader screen while it decompresses
-music = "assets/op-de-camping.wav"     # pre-rendered track baked in (render it first — see above; gitignored)

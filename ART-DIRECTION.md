@@ -166,7 +166,7 @@ at a time (`MARTIN_BUDGET≈6000 MARTIN_RES=640x360`) — never batches (concurr
    subject's normalized screen position (−1..1; ±0.33 = thirds, 0 = "DEAD-CENTRE (boring)").
 7. **Iterate cheap.** Stills in the python tool (<1 s) → a low-res `MARTIN_PREVIEW_FPS=8 MARTIN_RES=480x270`
    `record.sh` for the full video (~35 s) → full quality only when it's locked. SEND renders (don't just
-   inspect them). Worked reference: `productions/camping/campsite.show`.
+   inspect them). Worked reference: `productions/camping/campsite-max.show`.
 
 ### Object orientation & positioning (read before you place anything)
 

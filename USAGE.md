@@ -576,9 +576,9 @@ straight back into the `.show` — `pipeline/blender_bridge.py`, driven over the
 (`uvx blender-mcp` + the Blender add-on; `blender` is symlinked to `blender-5.1`). In Blender:
 ```python
 exec(open('/path/to/martin/pipeline/blender_bridge.py').read())
-bridge_import('productions/camping/campsite.show', cam_anchor='climax')  # spawn [stage] + set the camera
+bridge_import('productions/camping/campsite-max.show', cam_anchor='climax')  # spawn [stage] + set the camera
 # …drag / rotate / scale props, orbit the camera (camera-lock is ON)…
-bridge_export('productions/camping/campsite.show')   # patch @pos/*scale/rot back (all other tokens kept)
+bridge_export('productions/camping/campsite-max.show')   # patch @pos/*scale/rot back (all other tokens kept)
 bridge_shot('/tmp/x.png')                            # save a shot to deliver (DISPLAY=:0 xdg-open it)
 ```
 Position · rotation · scale · camera round-trip **1:1** with martin (calibrated maps; full reference in
