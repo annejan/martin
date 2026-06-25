@@ -253,7 +253,10 @@ fn main() {
     let fullscreen = std::env::var("MARTIN_FULLSCREEN").is_ok() && !headless;
     let mut plugins = DefaultPlugins.set(WindowPlugin {
         primary_window: (!headless).then(|| Window {
-            title: "martin — splat fly-around".into(),
+            // `MARTIN_TITLE` (or `.show [settings] title = …`, which expands to it) overrides the
+            // default window title — so a bundled demo can name its own window.
+            title: std::env::var("MARTIN_TITLE")
+                .unwrap_or_else(|_| "martin — splat fly-around".into()),
             resolution: (1280, 720).into(), // fixed size so recorded frames are uniform
             mode: if fullscreen {
                 WindowMode::BorderlessFullscreen(MonitorSelection::Current)

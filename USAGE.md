@@ -139,6 +139,7 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_SHOTS` | — | **Contact sheet**: comma-separated times (seconds) — seek to each, take a screenshot, exit after the last. Overrides `MARTIN_SHOT_AT`. |
 | `MARTIN_SERVE` | — | `=1` (or `=<port>`, default 7878) starts the **live control bridge** — see below. |
 | `MARTIN_FULLSCREEN` | off | `=1` starts borderless-fullscreen; toggle live with **F11 / F**. (Ignored while recording — that needs the fixed window.) |
+| `MARTIN_TITLE` | `martin — splat fly-around` | The **window title** of a live/windowed run. Also settable per-show via `.show [settings] title = …` (which expands to this var), so a bundled demo names its own window. No effect headless (record/shot build no window). |
 | `MARTIN_LOOP` | off | `=1` keeps a live window up after the show ends (for tuning). By default a live run **exits when the show is done** (Space restarts). |
 | `MARTIN_ZOOM` | `1.0` | Camera closeness multiplier: **`>1` = closer / more zoomed in, `<1` = pull back**. The camera frames the normalized content up close by default; nudge this to taste. (Each part is always centred on its centroid + scaled by its 90th-percentile radius so a 200-unit COLMAP scene and a 1-unit TRELLIS object share one "normal" scale.) |
 | `MARTIN_ROT` | — | `rx,ry,rz` euler **degrees** applied to the cloud — e.g. stand a COLMAP scene upright for a "normal" POV. Default = the portrait flip (gives scenes their abstract sideways look). Also orients a `glb:` dissolve (mesh + its splats together). |
