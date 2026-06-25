@@ -580,6 +580,7 @@ pub(crate) fn build_composition(
         ) * base;
         let cs = CloudSettings {
             sort_mode: SortMode::Radix,
+            radix_sort_depth_bits: crate::scene::sort_depth_bits(), // MARTIN_SORT_BITS (sort cost)
             time: 0.0,
             time_start: 0.0,
             time_stop: 1.0,

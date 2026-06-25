@@ -129,6 +129,7 @@ fn main() {
                 ("MARTIN_WIDTH", "960"),
                 ("MARTIN_HEIGHT", "540"),
                 ("MARTIN_SPLAT_SCALE", "0.9"),
+                ("MARTIN_SORT_BITS", "16"), // coarser depth sort — fewer digit passes/frame
             ],
             "med" | "medium" => &[
                 ("MARTIN_MORPH_COUNT", "250000"),

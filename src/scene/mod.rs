@@ -72,6 +72,19 @@ pub(crate) fn cloud_base_rotation() -> Quat {
     Quat::from_rotation_x(PI)
 }
 
+/// `MARTIN_SORT_BITS` (16|24|32) → the radix depth-key width for the per-frame GPU sort. Fewer bits =
+/// fewer LSD digit passes (16→2, 24→3, 32→4), so a cheaper sort every frame — at the cost of coarser
+/// depth buckets. Synthetic morph/text content has shallow depth complexity and rarely reorders
+/// visibly at 16/24; real captures can mis-order near-coplanar splats, so the default stays Bits32.
+pub(crate) fn sort_depth_bits() -> bevy_gaussian_splatting::RadixSortDepthBits {
+    use bevy_gaussian_splatting::RadixSortDepthBits as B;
+    match crate::envvar::or("MARTIN_SORT_BITS", 32u32) {
+        16 => B::Bits16,
+        24 => B::Bits24,
+        _ => B::Bits32,
+    }
+}
+
 pub(crate) fn file_name_of(p: &str) -> String {
     std::path::Path::new(p)
         .file_name()
