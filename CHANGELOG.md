@@ -24,6 +24,14 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   views skip cleanly. Chroma renders again (verified on campsite-max); the shader is unchanged.
 
 ### Added
+- **Per-object `dscale:` compose token + `MARTIN_QUALITY=potato` tier.** `dscale:V` is a *local*
+  `MARTIN_SPLAT_SCALE` (multiplies the global) so you can shrink a full-screen backdrop's overdraw-heavy
+  disks without thinning the foreground props/text. New `potato` (alias `min`/`party`) quality tier
+  (640×360 + 0.7 disks + `sort_bits 16` + 8k count cap) for a ~56–60 fps weak-HW floor; `low` retuned to
+  854×480 + 0.8 disks (≈30 fps on a dense stage). Profiling lesson baked in: a dense multi-object stage
+  is overdraw-bound at hi-res (disk size + resolution are the levers) and depth-sort-bound at lo-res
+  (`SORT_BITS=16` + fewer gaussians) — and a solid splat look follows `count × disk² ≈ const`, so fewer
+  splats with bigger disks beats many tiny ones (same coverage, far cheaper sort, no gaps).
 - **Window mode: `--fullscreen` / `--windowed` flags + a `fullscreen` build feature.** `MARTIN_FULLSCREEN`
   is now **tri-state** — explicit `0`/`false`/`off` → windowed, any other set value → borderless
   fullscreen, *unset* → the build default. Build a **fullscreen-by-default binary** (a shipped demo /
