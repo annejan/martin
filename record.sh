@@ -53,15 +53,35 @@ BIN="$(find "$HERE/target/release" -maxdepth 1 -type f -executable -name martin 
 AUDIO=()
 if [ -z "${MARTIN_MUTE:-}" ]; then
   WAV="$FR/track.wav"
-  echo "==> rendering synth -> $WAV"
-  # capture the synth log so we can read the show duration (it prints "(89.0s)") for the fit-check;
-  # `|| true` so a shutdown-panic exit doesn't abort under `set -e`.
-  SYNTH_LOG=$(MARTIN_SYNTH_WAV="$WAV" BEVY_ASSET_ROOT="$HERE" "$BIN" 2>&1 || true)
-  echo "$SYNTH_LOG" | tail -3
+  # SYNTH CACHE: the synth is a pure function of the score, so on a visual-only iteration (same score,
+  # tweaked .show) we reuse the rendered WAV and skip the ~18s re-synth. Key = hash of the resolved
+  # score file (MARTIN_SCORE, else the .show's `score=`, else the built-in assets/score.txt). Set
+  # MARTIN_NO_SYNTH_CACHE=1 to force a re-render (e.g. when overriding a synth param via env).
+  SCORE_FILE="${MARTIN_SCORE:-}"
+  if [ -z "$SCORE_FILE" ] && [ -n "${MARTIN_SHOW:-}" ] && [ -f "${MARTIN_SHOW:-}" ]; then
+    SCORE_FILE=$(grep -oE '^[[:space:]]*score[[:space:]]*=[[:space:]]*[^#]+' "$MARTIN_SHOW" | head -1 | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//')
+  fi
+  if [ -n "$SCORE_FILE" ] && [ ! -f "$SCORE_FILE" ] && [ -f "$HERE/$SCORE_FILE" ]; then SCORE_FILE="$HERE/$SCORE_FILE"; fi
+  if [ -z "$SCORE_FILE" ] || [ ! -f "$SCORE_FILE" ]; then SCORE_FILE="$HERE/assets/score.txt"; fi
+  CACHE_DIR="${MARTIN_SYNTH_CACHE_DIR:-$HOME/.cache/martin-synth}"
+  KEY=$(md5sum "$SCORE_FILE" 2>/dev/null | cut -d' ' -f1)
+  CACHED="$CACHE_DIR/$KEY.wav"
+  if [ -z "${MARTIN_NO_SYNTH_CACHE:-}" ] && [ -n "$KEY" ] && [ -f "$CACHED" ]; then
+    echo "==> synth cache HIT ($(basename "$SCORE_FILE") @ ${KEY:0:8}) — skipping the re-synth"
+    cp "$CACHED" "$WAV"
+    SHOW_SECS=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$WAV" 2>/dev/null | tr -dc '0-9.')
+  else
+    echo "==> rendering synth -> $WAV"
+    # capture the synth log so we can read the show duration (it prints "(89.0s)") for the fit-check;
+    # `|| true` so a shutdown-panic exit doesn't abort under `set -e`.
+    SYNTH_LOG=$(MARTIN_SYNTH_WAV="$WAV" BEVY_ASSET_ROOT="$HERE" "$BIN" 2>&1 || true)
+    echo "$SYNTH_LOG" | tail -3
+    SHOW_SECS=$(echo "$SYNTH_LOG" | grep -oE '\([0-9]+\.[0-9]+s\)' | head -1 | tr -dc '0-9.')
+    mkdir -p "$CACHE_DIR" 2>/dev/null && [ -n "$KEY" ] && cp "$WAV" "$CACHED" 2>/dev/null || true
+  fi
   AUDIO=(-i "$WAV" -c:a aac -shortest)
   # Will the whole PNG dump fit? Now that we know the show length, abort BEFORE the long capture if it
   # won't (the case the GB floor misses: plenty free generally, but not enough for THIS long render).
-  SHOW_SECS=$(echo "$SYNTH_LOG" | grep -oE '\([0-9]+\.[0-9]+s\)' | head -1 | tr -dc '0-9.')
   if [ -n "$SHOW_SECS" ] && awk "BEGIN{exit !($SHOW_SECS > $FIT_SECS)}"; then
     NEED_GB=$(awk "BEGIN{printf \"%.0f\", $SHOW_SECS*${MARTIN_PREVIEW_FPS:-60}*$PERFRAME_MB/1024}")
     echo "==> ERROR: this ${SHOW_SECS}s show needs ~${NEED_GB} GB of frames but only ${AVAIL_GB} GB is free (~${FIT_SECS}s fits)." >&2

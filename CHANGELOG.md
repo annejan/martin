@@ -415,6 +415,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   carries vertex colours; the shows sample it instead of the .obj.
 
 ### Tooling / CI
+- **`record.sh` synth cache** — the synth is a pure function of the score, so a visual-only iteration
+  (same score, tweaked `.show`) now reuses the rendered WAV and skips the ~18 s re-synth on every
+  preview. Keyed on the resolved score file's hash, cached under `~/.cache/martin-synth/`;
+  `MARTIN_NO_SYNTH_CACHE=1` forces a re-render (e.g. when overriding a synth param via env).
 - `pipeline/show_layout.py`: GPU-free layout preview now handles `mesh:`/`glb:` props (falls back to a
   name-based footprint instead of crashing on the missing sh0 header) and plots a `travel:` object where
   it comes to REST (its target), not its off-screen `@pos` start.
