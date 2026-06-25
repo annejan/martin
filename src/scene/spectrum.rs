@@ -50,9 +50,14 @@ impl Spectrum {
 }
 
 /// Render the whole track once and analyse it into the band table (pure fn of the score → record-safe).
+/// Uses the rayon batch render (`produce_parallel`, ~Ncores faster than the single-threaded `produce`)
+/// — the bake only needs PCM to FFT, not the live segmented stream, and the parallel path is
+/// deterministic (byte-identical across runs), so the table stays record-safe. With the parallel FFT in
+/// `analyze`, both halves of the startup bake now scale with cores, freeing them sooner for the rest of
+/// startup (asset load, pipeline compile, the audio producer).
 fn bake(score: &Score) -> Vec<[f32; BANDS]> {
     let mut pcm: Vec<f32> = Vec::new();
-    audio::stream::produce(score, |chunk| pcm.extend_from_slice(chunk));
+    audio::stream::produce_parallel(score, |chunk| pcm.extend_from_slice(chunk));
     let mono = analyze::mix_mono(&pcm);
     let frames = (score.demo_len() * TABLE_FPS).ceil() as usize + 1;
     analyze::analyze(&mono, SAMPLE_RATE, TABLE_FPS, frames)

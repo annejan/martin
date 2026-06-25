@@ -66,38 +66,43 @@ pub fn analyze(mono: &[f32], sample_rate: u32, fps: f32, frames: usize) -> Vec<[
         );
     }
 
-    // Pass 1: raw per-frame band energy from a window centred on each frame's sample.
+    // Pass 1: raw per-frame band energy from a window centred on each frame's sample. Each row is an
+    // INDEPENDENT windowed FFT (reads only mono/hann/band_bins) → fan across rayon, the dominant cost
+    // of the startup spectrum bake. `for_each_init` gives each worker its own re/im scratch (no per-row
+    // alloc); writing each row by index is order-free so the result is bit-identical to the serial loop.
     let mut raw = vec![[0.0f32; BANDS]; frames];
-    let mut re = vec![0.0f32; WIN];
-    let mut im = vec![0.0f32; WIN];
     let half = WIN as isize / 2;
     let fps = fps.max(1.0); // guard against zero → INF overflow
-    for (f, row) in raw.iter_mut().enumerate() {
-        let center = (f as f32 / fps * sr).round() as isize;
-        let start = center - half;
-        // Load the window with zero-pad past the ends; apply Hann.
-        for n in 0..WIN {
-            let idx = start + n as isize;
-            let s = if idx >= 0 && (idx as usize) < mono.len() {
-                mono[idx as usize]
-            } else {
-                0.0
-            };
-            re[n] = s * hann[n];
-            im[n] = 0.0;
-        }
-        fft(&mut re, &mut im);
-        // RMS magnitude per band (sqrt of mean power across the band's bins).
-        for b in 0..BANDS {
-            let (lo, hi) = band_bins[b];
-            let mut power = 0.0;
-            for k in lo..hi {
-                power += re[k] * re[k] + im[k] * im[k];
+    use rayon::prelude::*;
+    raw.par_iter_mut().enumerate().for_each_init(
+        || (vec![0.0f32; WIN], vec![0.0f32; WIN]),
+        |(re, im), (f, row)| {
+            let center = (f as f32 / fps * sr).round() as isize;
+            let start = center - half;
+            // Load the window with zero-pad past the ends; apply Hann.
+            for n in 0..WIN {
+                let idx = start + n as isize;
+                let s = if idx >= 0 && (idx as usize) < mono.len() {
+                    mono[idx as usize]
+                } else {
+                    0.0
+                };
+                re[n] = s * hann[n];
+                im[n] = 0.0;
             }
-            let n = (hi - lo).max(1) as f32;
-            row[b] = (power / n).sqrt();
-        }
-    }
+            fft(re, im);
+            // RMS magnitude per band (sqrt of mean power across the band's bins).
+            for b in 0..BANDS {
+                let (lo, hi) = band_bins[b];
+                let mut power = 0.0;
+                for k in lo..hi {
+                    power += re[k] * re[k] + im[k] * im[k];
+                }
+                let n = (hi - lo).max(1) as f32;
+                row[b] = (power / n).sqrt();
+            }
+        },
+    );
 
     // Pass 2: normalise each band to its own track-wide max (deterministic — the track is fixed),
     // then a mild sqrt to lift quiet detail into a visible range.
