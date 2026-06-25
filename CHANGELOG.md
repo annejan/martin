@@ -17,11 +17,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   channels/rate, `Decodable` drops `DecoderItem`), `Hdr` moved to `bevy_camera`, glTF scenes spawn via
   `WorldAssetRoot` (was `SceneRoot`), `DirectionalLight.shadow_maps_enabled`, the Parley text API
   (`Font::from_bytes`, `TextFont` `FontSource`/`FontSize`, `TextLayout::justify`), and `Assets::get_mut`
-  returning a guard. Verified: 151 tests + clippy + all 42 shows render headless on 0.19. **Known
-  regression:** the `MARTIN_POST` fullscreen FX (chroma/grain/vignette screen-tear) is **temporarily
-  stubbed** — 0.19's "render graph as systems" overhaul removed the `ViewNode` API it was built on;
-  `post=…` still parses and the rest of the show is unaffected, the pass just draws nothing pending a
-  rewrite to the new API (TODO in `src/post.rs`).
+  returning a guard. Verified: 151 tests + clippy + all 42 shows render headless on 0.19. The
+  `MARTIN_POST` fullscreen FX (chroma/grain/vignette screen-tear) was **ported to 0.19's "render graph
+  as systems"** — the old `ViewNode` became a render-world system (`post_pass`) in the `Core3d`
+  schedule's `PostProcess` set after tonemapping, fetching the view via `CurrentView` so non-`post`
+  views skip cleanly. Chroma renders again (verified on campsite-max); the shader is unchanged.
 
 ### Added
 - **Live perf knobs (run on weak/party hardware).** Profiling showed the live render is overdraw- and
