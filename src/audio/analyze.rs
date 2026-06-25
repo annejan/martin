@@ -50,57 +50,20 @@ pub fn analyze(mono: &[f32], sample_rate: u32, fps: f32, frames: usize) -> Vec<[
         return Vec::new();
     }
     let sr = sample_rate as f32;
-
-    // Precompute the Hann window once.
-    let hann: Vec<f32> = (0..WIN)
-        .map(|n| 0.5 - 0.5 * (2.0 * PI * n as f32 / WIN as f32).cos())
-        .collect();
-
-    // Map the Hz edges to FFT bin indices once (bins 1..WIN/2 are the usable spectrum).
-    let bin_of = |hz: f32| ((hz * WIN as f32 / sr).round() as usize).clamp(1, WIN / 2);
-    let mut band_bins = [(0usize, 0usize); BANDS];
-    for b in 0..BANDS {
-        band_bins[b] = (
-            bin_of(EDGES_HZ[b]),
-            bin_of(EDGES_HZ[b + 1]).max(bin_of(EDGES_HZ[b]) + 1),
-        );
-    }
+    let (hann, band_bins) = band_setup(sr);
+    let fps = fps.max(1.0); // guard against zero → INF overflow
 
     // Pass 1: raw per-frame band energy from a window centred on each frame's sample. Each row is an
     // INDEPENDENT windowed FFT (reads only mono/hann/band_bins) → fan across rayon, the dominant cost
     // of the startup spectrum bake. `for_each_init` gives each worker its own re/im scratch (no per-row
     // alloc); writing each row by index is order-free so the result is bit-identical to the serial loop.
     let mut raw = vec![[0.0f32; BANDS]; frames];
-    let half = WIN as isize / 2;
-    let fps = fps.max(1.0); // guard against zero → INF overflow
     use rayon::prelude::*;
     raw.par_iter_mut().enumerate().for_each_init(
         || (vec![0.0f32; WIN], vec![0.0f32; WIN]),
         |(re, im), (f, row)| {
             let center = (f as f32 / fps * sr).round() as isize;
-            let start = center - half;
-            // Load the window with zero-pad past the ends; apply Hann.
-            for n in 0..WIN {
-                let idx = start + n as isize;
-                let s = if idx >= 0 && (idx as usize) < mono.len() {
-                    mono[idx as usize]
-                } else {
-                    0.0
-                };
-                re[n] = s * hann[n];
-                im[n] = 0.0;
-            }
-            fft(re, im);
-            // RMS magnitude per band (sqrt of mean power across the band's bins).
-            for b in 0..BANDS {
-                let (lo, hi) = band_bins[b];
-                let mut power = 0.0;
-                for k in lo..hi {
-                    power += re[k] * re[k] + im[k] * im[k];
-                }
-                let n = (hi - lo).max(1) as f32;
-                row[b] = (power / n).sqrt();
-            }
+            *row = frame_bands(mono, center, &hann, &band_bins, re, im);
         },
     );
 
@@ -129,6 +92,150 @@ pub fn analyze(mono: &[f32], sample_rate: u32, fps: f32, frames: usize) -> Vec<[
         out[f] = cur; // `[f32; BANDS]` is Copy — snapshot the smoothed row
     }
     out
+}
+
+/// Hann window + per-band FFT-bin ranges (built once per analysis). Shared by [`analyze`] (whole-track,
+/// track-normalised) and [`StreamingAnalyzer`] (causal, AGC-normalised).
+fn band_setup(sr: f32) -> (Vec<f32>, [(usize, usize); BANDS]) {
+    let hann: Vec<f32> = (0..WIN)
+        .map(|n| 0.5 - 0.5 * (2.0 * PI * n as f32 / WIN as f32).cos())
+        .collect();
+    let bin_of = |hz: f32| ((hz * WIN as f32 / sr).round() as usize).clamp(1, WIN / 2);
+    let mut band_bins = [(0usize, 0usize); BANDS];
+    for b in 0..BANDS {
+        band_bins[b] = (
+            bin_of(EDGES_HZ[b]),
+            bin_of(EDGES_HZ[b + 1]).max(bin_of(EDGES_HZ[b]) + 1),
+        );
+    }
+    (hann, band_bins)
+}
+
+/// Raw per-band RMS magnitude of one Hann-windowed FFT centred on sample `center` (zero-padded past the
+/// signal ends). `re`/`im` are reusable scratch of length [`WIN`]. The per-frame core both analysers run.
+fn frame_bands(
+    mono: &[f32],
+    center: isize,
+    hann: &[f32],
+    band_bins: &[(usize, usize); BANDS],
+    re: &mut [f32],
+    im: &mut [f32],
+) -> [f32; BANDS] {
+    let start = center - WIN as isize / 2;
+    for n in 0..WIN {
+        let idx = start + n as isize;
+        let s = if idx >= 0 && (idx as usize) < mono.len() {
+            mono[idx as usize]
+        } else {
+            0.0
+        };
+        re[n] = s * hann[n];
+        im[n] = 0.0;
+    }
+    fft(re, im);
+    let mut bands = [0.0f32; BANDS];
+    for (b, slot) in bands.iter_mut().enumerate() {
+        let (lo, hi) = band_bins[b];
+        let mut power = 0.0;
+        for k in lo..hi {
+            power += re[k] * re[k] + im[k] * im[k];
+        }
+        *slot = (power / (hi - lo).max(1) as f32).sqrt();
+    }
+    bands
+}
+
+/// AGC peak decay per 60 fps row — a ~3 s half-life (`0.5^(1/180)`). Slow enough to hold a section's
+/// level, fast enough that a quiet breakdown re-sensitises instead of being crushed by an earlier peak.
+const STREAM_DECAY: f32 = 0.996_15;
+/// Peak floor: keeps silence at ~0 (avoids divide-by-tiny) and lets a faint sound re-arm a decayed band.
+const STREAM_FLOOR: f32 = 1e-6;
+
+/// **Causal** spectral analyser — the streaming twin of [`analyze`]. Ingests the rendered PCM in time
+/// order and emits each finalised band row the instant its FFT window is fully covered, so the spectrum
+/// table fills front-to-back as the bake renders (no "whole track first" wait → no live FFT-visual dead
+/// zone). Normalises per band by a running peak with slow decay (AGC) instead of the track-wide max, the
+/// one change that makes it causal. A pure forward function of the PCM → deterministic / record-safe,
+/// and live and record bake byte-identically since both drive it over the same `produce` output.
+pub struct StreamingAnalyzer {
+    sr: f32,
+    fps: f32,
+    hann: Vec<f32>,
+    band_bins: [(usize, usize); BANDS],
+    mono: Vec<f32>,
+    re: Vec<f32>,
+    im: Vec<f32>,
+    next_frame: usize,
+    peak: [f32; BANDS], // running AGC peak per band
+    cur: [f32; BANDS],  // attack/release smoothing state
+}
+
+impl StreamingAnalyzer {
+    pub fn new(sample_rate: u32, fps: f32) -> Self {
+        let sr = sample_rate as f32;
+        let (hann, band_bins) = band_setup(sr);
+        Self {
+            sr,
+            fps: fps.max(1.0),
+            hann,
+            band_bins,
+            mono: Vec::new(),
+            re: vec![0.0; WIN],
+            im: vec![0.0; WIN],
+            next_frame: 0,
+            peak: [STREAM_FLOOR; BANDS],
+            cur: [0.0; BANDS],
+        }
+    }
+
+    /// Centre sample of frame `f` (round to the nearest sample, matching `analyze`).
+    fn center(&self, f: usize) -> isize {
+        (f as f32 / self.fps * self.sr).round() as isize
+    }
+
+    /// One finalised, AGC-normalised + smoothed row from the current `mono` (window must be covered).
+    fn emit_row(&mut self) -> [f32; BANDS] {
+        let center = self.center(self.next_frame);
+        let raw = frame_bands(
+            &self.mono,
+            center,
+            &self.hann,
+            &self.band_bins,
+            &mut self.re,
+            &mut self.im,
+        );
+        let mut row = [0.0f32; BANDS];
+        for b in 0..BANDS {
+            self.peak[b] = (self.peak[b] * STREAM_DECAY).max(raw[b]).max(STREAM_FLOOR);
+            let norm = (raw[b] / self.peak[b]).clamp(0.0, 1.0).sqrt();
+            let coeff = if norm > self.cur[b] { ATTACK } else { RELEASE };
+            self.cur[b] += coeff * (norm - self.cur[b]);
+            row[b] = self.cur[b];
+        }
+        self.next_frame += 1;
+        row
+    }
+
+    /// Feed a chunk of interleaved-stereo PCM (the shape `produce` emits); emits every row whose FFT
+    /// window is now fully inside the accumulated signal, in order.
+    pub fn push_stereo(&mut self, stereo: &[f32], mut emit: impl FnMut([f32; BANDS])) {
+        self.mono
+            .extend(stereo.chunks_exact(2).map(|s| 0.5 * (s[0] + s[1])));
+        let half = WIN as isize / 2;
+        while (self.center(self.next_frame) + half) as usize <= self.mono.len() {
+            let row = self.emit_row();
+            emit(row);
+        }
+    }
+
+    /// Flush the tail: emit the remaining rows up to `total_frames` (their windows zero-pad past the
+    /// signal end). Call once the render is complete.
+    pub fn finish(&mut self, total_frames: usize, mut emit: impl FnMut([f32; BANDS])) {
+        while self.next_frame < total_frames {
+            let row = self.emit_row();
+            emit(row);
+        }
+    }
 }
 
 /// In-place iterative radix-2 Cooley-Tukey FFT. `re`/`im` must share a power-of-two length.
@@ -269,6 +376,70 @@ mod tests {
     #[test]
     fn silence_is_zero_not_nan() {
         let table = analyze(&vec![0.0f32; SR as usize], SR, 60.0, 10);
+        for row in table {
+            for v in row {
+                assert!(v.is_finite() && v.abs() < 1e-3, "silence band {v}");
+            }
+        }
+    }
+
+    /// Duplicate a mono buffer into interleaved stereo (L==R) — the shape the producer / analyser want.
+    fn to_stereo(mono: &[f32]) -> Vec<f32> {
+        mono.iter().flat_map(|&s| [s, s]).collect()
+    }
+
+    /// Run a `StreamingAnalyzer` over `stereo` split into chunks of `chunk` interleaved-stereo samples,
+    /// flushing to `frames` rows. `chunk == usize::MAX` ⇒ one push.
+    fn run_stream(stereo: &[f32], frames: usize, chunk: usize) -> Vec<[f32; BANDS]> {
+        let mut an = StreamingAnalyzer::new(SR, 60.0);
+        let mut out = Vec::new();
+        for c in stereo.chunks(chunk.min(stereo.len()).max(2)) {
+            an.push_stereo(c, |row| out.push(row));
+        }
+        an.finish(frames, |row| out.push(row));
+        out
+    }
+
+    #[test]
+    fn streaming_is_chunk_independent_and_deterministic() {
+        // The same PCM fed in one push vs many small chunks must yield BIT-IDENTICAL rows — this is what
+        // lets the live progressive feed and the record one-shot bake produce the same table (record-safe).
+        // `frames` (65) exceeds the audio's ~60 frames so `finish` zero-pads the tail, exercising both paths.
+        let pcm = to_stereo(&sine(440.0, 1.0, SR));
+        let one = run_stream(&pcm, 65, usize::MAX);
+        // even chunk (whole stereo frames, as `produce` emits), unaligned to frame/window boundaries.
+        let chunked = run_stream(&pcm, 65, 910);
+        assert_eq!(
+            one, chunked,
+            "chunked feed must equal single-push (record-safe)"
+        );
+        assert_eq!(
+            one,
+            run_stream(&pcm, 65, usize::MAX),
+            "and be deterministic"
+        );
+        assert_eq!(one.len(), 65, "emits exactly `frames` rows");
+    }
+
+    #[test]
+    fn streaming_lights_the_right_band() {
+        // Sanity that the causal analyser still resolves bands (AGC-normalised): a low tone lights sub,
+        // a high tone lights air — measured after the AGC peak has settled (a late row).
+        let lo = run_stream(&to_stereo(&sine(60.0, 1.0, SR)), 60, usize::MAX)[40];
+        assert!(
+            lo[0] > lo[BANDS - 1] + 0.3,
+            "low should dominate air: {lo:?}"
+        );
+        let hi = run_stream(&to_stereo(&sine(9000.0, 1.0, SR)), 60, usize::MAX)[40];
+        assert!(
+            hi[BANDS - 1] > hi[0] + 0.3,
+            "air should dominate sub: {hi:?}"
+        );
+    }
+
+    #[test]
+    fn streaming_silence_is_finite_zero() {
+        let table = run_stream(&vec![0.0f32; 2 * SR as usize], 30, usize::MAX);
         for row in table {
             for v in row {
                 assert!(v.is_finite() && v.abs() < 1e-3, "silence band {v}");

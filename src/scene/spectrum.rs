@@ -2,18 +2,23 @@
 //! backdrop breathes with the bass and shimmers on the lead's air — not just the score's kick/snare/
 //! hat *triggers* ([`crate::scene::beat`]). `MARTIN_FFT=<scale>` tunes it (default `1.0`, `0` = off).
 //!
-//! Deterministic by construction: [`crate::audio::stream::produce`] renders the whole track as a pure
-//! function of the `Score`, so we analyse it **once** into a band table at a fixed 60 rows/s
-//! ([`crate::audio::analyze`]) and every frame just indexes the row at `clock.t`. Indexing by time
-//! (not frame) keeps it identical across record fps (`MARTIN_PREVIEW_FPS`) and live. In **record**
-//! mode the table is baked synchronously before frame 0 — a background-thread race would vary the
-//! early frames and break byte-identical recordings; live mode bakes off-thread (zeros until ready).
+//! Deterministic by construction: the synth renders the track as a pure function of the `Score`, so the
+//! band table (60 rows/s) is a pure function too and every frame just indexes the row at `clock.t`
+//! (indexing by time, not frame, keeps it identical across record fps and live).
+//!
+//! Live uses a **causal streaming** analyser ([`crate::audio::analyze::StreamingAnalyzer`], AGC-
+//! normalised): a background thread renders the score in time order and APPENDS each band row the moment
+//! its FFT window is covered, so the table fills front-to-back ahead of the playhead — the FFT-reactive
+//! visuals come alive from t=0 (no dead zone). **Record** mode bakes the full table synchronously before
+//! frame 0 (a background-thread race would vary the early frames and break byte-identical recordings).
+//! `MARTIN_FFT_NORM=track` selects the legacy whole-track normalisation ([`crate::audio::analyze`]) — it
+//! needs the whole track first, so it re-introduces the live dead zone; kept for exact old output.
 
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex};
 
 use bevy::prelude::*;
 
-use crate::audio::analyze::{self, BANDS};
+use crate::audio::analyze::{self, BANDS, StreamingAnalyzer};
 use crate::audio::{self, SAMPLE_RATE};
 use crate::music::ScoreRes;
 use crate::scene::SeqClock;
@@ -23,11 +28,13 @@ use crate::score::Score;
 /// playhead just reads `row = clock.t * TABLE_FPS`.
 const TABLE_FPS: f32 = 60.0;
 
-/// The baked frame-indexed band table. `OnceLock` lets the live bake thread hand the table over
-/// without a mutex — readers just `.get()`. `intensity == 0` ⇒ no bake, no effect.
+/// The baked frame-indexed band table. A `Mutex<Vec>` rather than a set-once `OnceLock` so the live
+/// **streaming** bake can fill it PROGRESSIVELY (front-to-back) — readers index up to its current
+/// length, so the FFT-reactive visuals come alive from t=0 instead of waiting for the whole-track bake
+/// (the old dead zone). `intensity == 0` ⇒ no bake, no effect.
 #[derive(Resource)]
 struct SpectrumTable {
-    rows: Arc<OnceLock<Vec<[f32; BANDS]>>>,
+    rows: Arc<Mutex<Vec<[f32; BANDS]>>>,
     intensity: f32,
 }
 
@@ -49,39 +56,78 @@ impl Spectrum {
     }
 }
 
-/// Render the whole track once and analyse it into the band table (pure fn of the score → record-safe).
-/// Uses the rayon batch render (`produce_parallel`, ~Ncores faster than the single-threaded `produce`)
-/// — the bake only needs PCM to FFT, not the live segmented stream, and the parallel path is
-/// deterministic (byte-identical across runs), so the table stays record-safe. With the parallel FFT in
-/// `analyze`, both halves of the startup bake now scale with cores, freeing them sooner for the rest of
-/// startup (asset load, pipeline compile, the audio producer).
-fn bake(score: &Score) -> Vec<[f32; BANDS]> {
+fn total_frames(score: &Score) -> usize {
+    (score.demo_len() * TABLE_FPS).ceil() as usize + 1
+}
+
+/// True when `MARTIN_FFT_NORM=track` selects the legacy whole-track normalisation (each band scaled to
+/// its track-wide max). It needs the whole track first, so it re-introduces the live FFT-visual dead
+/// zone — kept only for byte-identical-to-old output. Default = the causal AGC streaming analyser.
+fn track_norm() -> bool {
+    std::env::var("MARTIN_FFT_NORM").is_ok_and(|v| v.eq_ignore_ascii_case("track"))
+}
+
+/// RECORD path (offline, synchronous before frame 0): render the whole track FAST (rayon
+/// `produce_parallel`) then analyse it in ONE shot into the full table. Streaming-AGC by default
+/// (matches the live look), or the legacy track-normalised `analyze` under `MARTIN_FFT_NORM=track`. No
+/// dead-zone concern here — it's done before the first captured frame, so we optimise for speed.
+fn bake_full(score: &Score) -> Vec<[f32; BANDS]> {
     let mut pcm: Vec<f32> = Vec::new();
     audio::stream::produce_parallel(score, |chunk| pcm.extend_from_slice(chunk));
-    let mono = analyze::mix_mono(&pcm);
-    let frames = (score.demo_len() * TABLE_FPS).ceil() as usize + 1;
-    analyze::analyze(&mono, SAMPLE_RATE, TABLE_FPS, frames)
+    let frames = total_frames(score);
+    if track_norm() {
+        let mono = analyze::mix_mono(&pcm);
+        return analyze::analyze(&mono, SAMPLE_RATE, TABLE_FPS, frames);
+    }
+    // Streaming analyser over the whole buffer in one push — chunk-boundary-independent, so this is
+    // byte-identical to the live progressive feed (modulo the produce vs produce_parallel epsilon).
+    let mut an = StreamingAnalyzer::new(SAMPLE_RATE, TABLE_FPS);
+    let mut out = Vec::with_capacity(frames);
+    an.push_stereo(&pcm, |row| out.push(row));
+    an.finish(frames, |row| out.push(row));
+    out
 }
 
 fn setup_spectrum(score: Res<ScoreRes>, mut commands: Commands) {
     let intensity = crate::envvar::or("MARTIN_FFT", 1.0_f32);
-    let rows: Arc<OnceLock<Vec<[f32; BANDS]>>> = Arc::new(OnceLock::new());
+    let rows: Arc<Mutex<Vec<[f32; BANDS]>>> = Arc::new(Mutex::new(Vec::new()));
     if intensity > 0.0 {
         let recording =
             std::env::var("MARTIN_RECORD").is_ok() || std::env::var("MARTIN_SHOT").is_ok();
         if recording {
             // Must be ready before the first captured frame — bake on the spot (we're offline anyway).
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| bake(&score.0)));
-            if let Ok(baked) = result {
-                let _ = rows.set(baked);
-            } else {
-                warn!("spectrum bake panicked — continuing with zero spectrum");
+            let result =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| bake_full(&score.0)));
+            match result {
+                Ok(baked) => *rows.lock().unwrap() = baked,
+                Err(_) => warn!("spectrum bake panicked — continuing with zero spectrum"),
             }
-        } else {
-            // Live: bake off-thread (~7× realtime); the spectrum stays zero until it lands.
+        } else if track_norm() {
+            // Legacy whole-track normalisation: bake off-thread, lands all at once (the old dead zone).
             let (rows, score) = (rows.clone(), score.0.clone());
             std::thread::spawn(move || {
-                let _ = rows.set(bake(&score));
+                let baked = bake_full(&score);
+                *rows.lock().unwrap() = baked;
+            });
+        } else {
+            // LIVE default: stream the score in time order on a background thread, APPENDING each
+            // finalised row as its FFT window is covered. Single-threaded `produce` emits early segments
+            // first and faster-than-realtime, so the table fills well ahead of the playhead → the
+            // FFT-reactive visuals react from t=0 (no dead zone). The AGC normalisation makes it causal.
+            let (rows, score) = (rows.clone(), score.0.clone());
+            std::thread::spawn(move || {
+                let frames = total_frames(&score);
+                let mut an = StreamingAnalyzer::new(SAMPLE_RATE, TABLE_FPS);
+                audio::stream::produce(&score, |chunk| {
+                    let mut batch = Vec::new();
+                    an.push_stereo(chunk, |row| batch.push(row));
+                    if !batch.is_empty() {
+                        rows.lock().unwrap().extend(batch);
+                    }
+                });
+                let mut tail = Vec::new();
+                an.finish(frames, |row| tail.push(row));
+                rows.lock().unwrap().extend(tail);
             });
         }
     }
@@ -98,12 +144,17 @@ fn track_spectrum(
     if table.intensity <= 0.0 {
         return;
     }
-    let Some(rows) = table.rows.get() else { return }; // live: not baked yet → leave at zero
+    let rows = table.rows.lock().unwrap();
     if rows.is_empty() {
-        return;
+        return; // not baked yet (or first streaming rows not in) → leave at zero
     }
+    // Index up to the CURRENTLY-FILLED length: the live streaming bake appends front-to-back, so a row
+    // for the playhead is normally already in (the bake runs ahead of realtime); clamp covers the rare
+    // case the playhead briefly outruns the fill.
     let idx = ((clock.t * TABLE_FPS) as usize).min(rows.len() - 1);
-    for (band, &v) in spectrum.bands.iter_mut().zip(rows[idx].iter()) {
+    let row = rows[idx];
+    drop(rows);
+    for (band, &v) in spectrum.bands.iter_mut().zip(row.iter()) {
         *band = v * table.intensity;
     }
 }
