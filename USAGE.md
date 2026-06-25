@@ -83,13 +83,26 @@ martin [SHOW]                 # a .show file to play (else $MARTIN_SHOW, else th
 martin mcp                   # the stdio MCP server (proxy to a --serve bridge)
 ```
 
-Each flag compiles to its `MARTIN_*` env var with **overwrite**, so the precedence is **CLI flag >
-env var > `.show` `[settings]` > built-in default**. Every var below is still read directly, so the
-env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
+### How to set a knob (you rarely touch a `MARTIN_*` directly)
 
-## Full env var reference
+The `MARTIN_*` vars are the engine's **internal IR**. You almost never set one by hand — there are two
+nicer interfaces that both expand into it:
 
-| Env var | Default | What it does |
+- **Author per-show knobs in the `.show` `[settings]` block.** *Any* key becomes `MARTIN_<KEY>`
+  automatically (no allowlist) — so `flash = 0.45` sets `MARTIN_FLASH`, `bg = plasma` sets `MARTIN_BG`,
+  `budget = 200000` sets `MARTIN_MORPH_COUNT`. This is the canonical way to tune a production: it lives
+  in the show file, versioned with the demo. **The setting name is the env var minus `MARTIN_`,
+  lowercased.**
+- **Run modes + a few overrides are `--flags`** (see [Command line](#command-line) above) — `--record`,
+  `--shot`, `--serve`, `--quality`, … Each compiles to its `MARTIN_*` with overwrite.
+
+Precedence: **CLI flag > env var > `.show` `[settings]` > built-in default**. The reference below
+documents the underlying vars (the IR + the `record.sh` / CI escape hatch); for authoring, prefer the
+`[settings]` key. Dev/profiling-only vars are corralled in their own table at the end.
+
+## Knob reference (the `MARTIN_*` IR)
+
+| Env var (`= [settings]` key) | Default | What it does |
 |---|---|---|
 | `MARTIN_PLY` | `assets/aegg.ply` | Asset-root override — its parent folder becomes the asset root that `splat:`/`image:`/etc. parts resolve against. |
 | `MARTIN_GLB` | — | Load a **`KHR_gaussian_splatting` glTF** (`.glb`) splat scene — the standard splat container (e.g. a TRELLIS single-image→3DGS export) — as a standalone scene at the origin, with the camera auto-framing it. **NB:** glTF-as-*splats*, distinct from `glb:`/`model:` which load glTF as a real PBR *mesh*. |
@@ -100,7 +113,6 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_DEFORM` | — | Scene-wide **persistent deform** field over every part *and* compose object: `wave`/`cloth`/`ripple`/`twist`/`wind`/`turbulence`/`pulse`/`jitter`/`spiral` — runs the whole time a part is held (great on a `wall:`, or to gently wobble a whole splat scene while you fly around it). A per-part `^name` overrides it (the `^name:amp` form scales its amplitude). See [Persistent deforms](#persistent-deforms-name-keep-a-part-moving-while-its-held). |
 | `MARTIN_BEAT` | `1.0` | **Beat-reactive visuals** strength (`0` = off). The score's drums drive the look: kick → a scale "thump", snare → a bloom flare, hat → a shimmer, and any active `^deform` swells on the beat. Per-Shot `beat:<scale>` dials it per shot. See [Beat-reactive visuals](#beat-reactive-visuals). |
 | `MARTIN_FFT` | `1.0` | **Spectral reactivity** strength (`0` = off). An FFT of the rendered track is baked into 8 log frequency bands (sub→air); the **background** (`MARTIN_BG`) and **`shader:` interludes** then react to the actual *spectrum* — the bass swells the whole field, the mids wash colour over it, the air sparkles — not just the drum triggers (`MARTIN_BEAT`). Deterministic (baked from the score, indexed by show-time), so it bakes identically into recordings. Live, a **causal streaming** analyser fills the band table front-to-back ahead of the playhead, so the FFT visuals react **from t=0** (no startup dead zone). Only affects shows with a backdrop/interlude. See [Spectral reactivity](#spectral-reactivity). |
-| `MARTIN_FFT_NORM` | streaming | Spectrum **normalisation**: default is a **causal AGC** (per-band running peak with a ~3 s decay) so the table fills live with no dead zone *and* quiet sections re-sensitise instead of being crushed by an earlier peak. `=track` selects the legacy **whole-track-max** normalisation — byte-identical to old output, but it must analyse the whole track first, re-introducing the live FFT-visual dead zone. |
 | `MARTIN_CAM_PUMP` | `0` (off) | Kick-driven **camera lunge** (a transient pull-in on each kick). **Off by default** — the shake is nauseating over a long loop. Opt in with a small value (`0.04` ≈ the old default) for a single punchy clip. |
 | `MARTIN_CAM_SPLINE` / `.show` `cam_spline=1` | `0` (off) | **Catmull-Rom camera** — interpolate the `[camera]` track *through* its keys with continuous velocity (a flowing, never-stopping glide) instead of the default per-leg smoothstep (which settles at each key). `cut` keys still snap; neighbours clamp at the ends + don't cross a cut. Opt-in (changes the move's feel); off = unchanged. |
 | `MARTIN_SIDECHAIN` | `0` (off) | **Visual sidechain**: the kick DUCKS the whole frame (splats + backdrop dim on the hit, swell back between hits) — the classic pumping you hear in the music, made visible. `~0.3`–`0.6` = a clear pump. Scaled by beat intensity (a hushed `[sync] beat=0` section doesn't pump); deterministic. The inverse of the kick-*brighten* flash — pick one feel. |
@@ -123,14 +135,12 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_SCORE_STRICT` | — | `=1` makes score parser warnings **fatal** (for authoring / CI) — otherwise they're non-fatal lints, the show still plays. |
 | `MARTIN_CAMERAS` | — | A 3DGS/COLMAP `cameras.json` (graphdeco format); parks the camera at a real capture pose (transformed through the same normalize + rotation as the splats). `MARTIN_CAM_INDEX` picks which shot (default 0). *Experimental:* helps cleanly-captured scenes; soft 360° photogrammetry dumps still render abstract (see the scene heads-up above). |
 | `MARTIN_MORPH_COUNT` | `0` (shorthand) / `200000` (`MARTIN_SEQ`) | Gaussian budget every part is resampled to. `0` = the largest part's natural count (~1.15M for the Martins; crisp, ~20 fps). Lower = faster: **250k ≈ 60 fps, 500k ≈ 40 fps.** |
-| `MARTIN_SPLAT_WARN` | `2000000` | Soft cap for the **GPU-OOM heads-up**. At build martin estimates a scene's PEAK resident gaussians — every reel shot's clouds (shape + `~entrance` source + `exit:` cloud) **plus** every compose prop (×2 for an `~entrance`), all held at once — and logs a `WARN` if it exceeds this. The dev iGPU (Radeon 860M) renders ~2M fine but OOMs ~2.5M (a long record dies mid-way with a wgpu buffer *Validation Error*, no panic). The warning fires **before** the slow render so you can lower `MARTIN_MORPH_COUNT` / the `.show` `budget` first. Pure heads-up — never clamps or changes output. |
 | `MARTIN_PAIR` | — | `=match` switches morph pairing from **index-rank** (Morton Z-order; default) to **nearest same-colour match** (colour weight fixed at `0.5` in the `distance² + 0.5·colour²` cost). Rank pairing flows beautifully between *similar* shapes (a truck → a train) but pinches *dissimilar* ones (city → city) through a centre **ball** — distant rank-pairs cross at the centroid. `match` reorders each shot so every splat slides to a nearby, similar-colour splat of the previous shot (grass→grass, tower→tower): short moves, a straight ghostly morph, no ball. Also suppresses the beat ball-pulse (below) so the slide stays clean. See [Sequences](#sequences). |
 | `MARTIN_MORPH_STAGGER` | `0` (off) | `0..1` — **per-particle staggered morph timing**. At `0` every splat morphs in lockstep, so a morph slides the whole cloud as a block → straight-line **streaks**. Higher spreads each splat's transition over its own sub-window of the morph (`offset = hash·stagger`), so the cloud **dissolves + reforms** instead of sliding — a soft, *cloudy* transition that kills the streaks. `~0.6` = a strong dissolve. Endpoints stay exact. Drives the fork's `morph_stagger` uniform (fork §8); applies to every reel morph in the show. |
 | `MARTIN_YAW` | `1.4` (front) | Seed the orbit **yaw** in **radians** (e.g. `1.57` ≈ head-on). When set, a recording **holds** this yaw instead of swaying — bake a found scene viewpoint. |
 | `MARTIN_PITCH` | `0.12` | Seed the orbit **pitch** in **radians** (0 = eye level, `+` looks down). |
 | `MARTIN_WAYPOINTS` | `waypoints.json` | File the **M-key camera waypoints** are written to (and read from on startup). Each marker appends the live orbit pose (target/dist/yaw/pitch) so you can author a camera path while flying — see [live controls](#live-keyboard-controls). |
 | `MARTIN_FLY` | — | `=<secs>` **flies the camera through the loaded waypoints** instead of free-orbiting. **If every waypoint has a `t`** the path is a *camera track* — played off the show clock (same move live and recorded, `secs` ignored). Otherwise — **Recording:** the path fills each part's on-screen time (longer `hold` = slower flyby), alternating direction; **Live:** `<secs>` = time per leg (default `2`) for a ping-pong preview. Needs ≥2 waypoints in `MARTIN_WAYPOINTS`. |
-| `MARTIN_FPS` | off | `=1` logs smoothed FPS / frame-time + timeline clock every ~0.5 s (the **`I`** key toggles it live + logs a snapshot). |
 | `MARTIN_RECORD` | — | Directory to dump one PNG per frame into (the whole timeline; used by `record.sh`). **Recording runs fully headless** — no window, camera → an offscreen image (so it works over SSH / on any compositor, and never captures a black background). Works for `MARTIN_COMPOSE` stages too. |
 | `MARTIN_RES` | `1280x720` | Offscreen **render resolution** `WxH` for recordings (and the `MARTIN_SERVE` view) — e.g. `1920x1080`, `2560x1440` for a crisp master. **Keep it 16:9** (the fullscreen quads + framing assume that aspect; a non-16:9 size warns). |
 | `MARTIN_SS` | `1` | **Supersample anti-aliasing** (`record.sh` only): `=2` renders at 2× `MARTIN_RES` then lanczos-downscales in the mux — smooths the splat disk-edges + text (there's no in-engine AA). Costs ~n² fill, so it's for the final master, not fast previews. |
@@ -138,7 +148,6 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_DISK_FLOOR_GB` | `3` | `record.sh` pre-flight: abort early if the scratch disk has less than this many GB free (a full 60 fps dump is ~10 GB). |
 | `MARTIN_NO_SYNTH_CACHE` | — | `=1` forces `record.sh` to re-render the synth WAV instead of reusing the cached one (use when overriding a synth param via env so the cache key misses). |
 | `MARTIN_PREVIEW_FPS` | 60 | `=<n>` renders the timeline at `n` fps instead of 60 — **far fewer frames** for a fast preview (rendering frames is the slow part, not the mux). `=8` → ~1/8 the frames. Frame `dt` + camera sway scale with it, so timing/motion stay correct; `record.sh` muxes at the same fps so duration + audio sync hold. Use for quick looks; drop it (or set 60) for the final render. |
-| `MARTIN_BENCH` | — | `=<frames>` renders that many frames **headless with no PNG output** and logs the render-only fps, then exits — a clean perf probe (disk-I/O-free). |
 | `MARTIN_LOADER` / `MARTIN_LOGO` | off | `=1` shows a **loading screen** (black + progress bar; `MARTIN_LOGO=<png OR svg in the asset root>` adds the logo — an `.svg` is rasterized, so it can be the same artwork the opening mesh was extruded from) until the show is built, then **cross-fades** into the opening logo behind it. Set automatically in a bundled build. (Window-only — not captured in recordings.) |
 | `MARTIN_SHOT` | — | Capture a single screenshot to this path, then exit. **Fully headless** (no window — renders the camera to an offscreen image like the recorder, so it works over SSH / on RADV where an unfocused window panics) and **waits for the file to land** before exiting (~5 s for a 1080p frame — fast look/perf iteration vs a whole video render). |
 | `MARTIN_SHOT_AT` | `6.0` | When (seconds) to take the `MARTIN_SHOT`. |
@@ -148,8 +157,6 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_TITLE` | `martin — splat fly-around` | The **window title** of a live/windowed run. Also settable per-show via `.show [settings] title = …` (which expands to this var), so a bundled demo names its own window. No effect headless (record/shot build no window). |
 | `MARTIN_WIDTH` / `MARTIN_HEIGHT` | `1280` / `720` | The live **window** size. (The headless record/shot image is sized by **`MARTIN_RES`**, not these — see that row.) Lower = a big perf win on a weak GPU: the demo is largely **fill-rate bound**, so frame time scales ~linearly with pixel count (1080p ≈ 80 ms, 720p ≈ 45 ms, 540p ≈ 31 ms on the dev iGPU). |
 | `MARTIN_VSYNC` | on | `=0` presents **uncapped** (`Immediate`) instead of vsync — for measuring true GPU throughput (the `MARTIN_FPS` metrics otherwise clamp at the monitor's refresh) or cutting present latency. Default keeps vsync for a tear-free show. Live window only. |
-| `MARTIN_HOLD_T` | — | **Pin the live timeline** at `<s>` seconds (don't advance) — a profiling aid so a windowed perf sweep renders byte-identical content every frame. Without it the clock advances by wall-time, so a faster GPU samples a *different* moment and count/res/scale comparisons are confounded. Used by `pipeline/bench-sweep.sh`. Live window only. |
-| `MARTIN_DIAG` | off | `=1` registers Bevy's frame-time / entity-count / system-info diagnostics + a periodic log (fps history, entity count, process CPU/mem) — a profiling aid. Off by default; never in the shipped show. |
 | `MARTIN_BLOOM` | on | `=0` drops the HDR bloom (the glow-on-black look) — a quality/perf toggle for weak GPUs. **Note:** profiling shows bloom is cheap (~0.7 ms/frame), so this is rarely worth it; **count/resolution/splat-scale are the real levers**. The splats still render, just without the glow. |
 | `MARTIN_SPLAT_SCALE` | `1.0` | Scales **every splat disk** size in-shader. The demo is **overdraw-bound** (big soft translucent disks blend over each other), so `<1` cuts fill-rate hard while **keeping every splat**: on the dev iGPU, `0.7` ≈ +57 % fps and `0.5` ≈ 2.2× — at the cost of a sparser/airier cloud. The single most effective perf knob that doesn't drop detail. |
 | `MARTIN_SORT_BITS` | `32` | Radix **depth-key width** (`16` / `24` / `32`) for the per-frame GPU depth sort. Fewer bits = fewer LSD digit passes (16→2, 24→3, 32→4) → a cheaper sort every frame (~2 ms / ~4–12 % on the dev iGPU at 200k, more when raster is light). Synthetic morph/text content sorts identically at `16`; **real captures** can mis-order near-coplanar splats, so the default stays `32`. `MARTIN_QUALITY=low` sets `16`. |
@@ -157,7 +164,21 @@ env forms (and `record.sh` / CI) keep working — the flags are sugar on top.
 | `MARTIN_LOOP` | off | `=1` keeps a live window up after the show ends (for tuning). By default a live run **exits when the show is done** (Space restarts). |
 | `MARTIN_ZOOM` | `1.0` | Camera closeness multiplier: **`>1` = closer / more zoomed in, `<1` = pull back**. The camera frames the normalized content up close by default; nudge this to taste. (Each part is always centred on its centroid + scaled by its 90th-percentile radius so a 200-unit COLMAP scene and a 1-unit TRELLIS object share one "normal" scale.) |
 | `MARTIN_ROT` | — | `rx,ry,rz` euler **degrees** applied to the cloud — e.g. stand a COLMAP scene upright for a "normal" POV. Default = the portrait flip (gives scenes their abstract sideways look). Also orients a `glb:` dissolve (mesh + its splats together). |
-| `MARTIN_4D_TEST` | — | **Experimental** 4D gaussian smoke test: spawns random 4D splats as a standalone scene. Niche — not needed for normal show authoring. |
+
+### Dev & profiling vars (env only, rarely set by hand)
+
+These aren't authoring knobs — they're for measuring/debugging the engine, so they live in the env
+only (no `[settings]` / `--flag` interface). You won't touch them tuning a show.
+
+| Env var | Default | What it does |
+|---|---|---|
+| `MARTIN_FFT_NORM` | streaming | Spectrum **normalisation**: default is a **causal AGC** (per-band running peak with a ~3 s decay) so the table fills live with no dead zone *and* quiet sections re-sensitise instead of being crushed by an earlier peak. `=track` selects the legacy **whole-track-max** normalisation (byte-identical to old output, but it re-introduces the live FFT-visual dead zone). |
+| `MARTIN_SPLAT_WARN` | `2000000` | Soft cap for the **GPU-OOM heads-up**. At build martin estimates a scene's PEAK resident gaussians and logs a `WARN` if it exceeds this (the dev iGPU OOMs ~2.5M). Fires **before** the slow render so you can lower the `budget` first. Pure heads-up — never clamps. |
+| `MARTIN_FPS` | off | `=1` logs smoothed FPS / frame-time + timeline clock every ~0.5 s (the **`I`** key toggles it live + logs a snapshot). |
+| `MARTIN_BENCH` | — | `=<frames>` renders that many frames **headless with no PNG output** and logs the render-only fps, then exits — a perf probe (also the `--bench` flag). **Note:** it measures CPU submit rate, not GPU completion — for the real live ceiling use `MARTIN_FPS` + `MARTIN_VSYNC=0` in a window (see `pipeline/bench-sweep.sh`). |
+| `MARTIN_HOLD_T` | — | **Pin the live timeline** at `<s>` seconds (don't advance) — a profiling aid so a windowed perf sweep renders byte-identical content every frame. Used by `pipeline/bench-sweep.sh`. Live window only. |
+| `MARTIN_DIAG` | off | `=1` registers Bevy's frame-time / entity-count / system-info diagnostics + a periodic log — a profiling aid. Never in the shipped show. |
+| `MARTIN_4D_TEST` | — | **Experimental** 4D gaussian smoke test: spawns random 4D splats as a standalone scene. Niche — not for show authoring. |
 
 ---
 
