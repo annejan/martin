@@ -65,11 +65,16 @@ const FIELD: f32 = 2.6;
 const PARTICLE_FADE: f32 = 1.5; // glow ramp-in duration (s)
 
 /// `MARTIN_PARTICLE_AT=<secs|@@anchor>`: ramp the glow in starting at this show-time (a campfire's
-/// sparks appear WITH the fire). Holds every material's full base/emissive so the ramp scales them.
+/// sparks appear WITH the fire). `MARTIN_PARTICLE_OUT` fades them back OUT (the fire leaves) and
+/// `MARTIN_PARTICLE_BACK` fades them in AGAIN (the fire re-ignites) — so a fire with two lives doesn't
+/// leave orphan embers floating over an empty field. Holds every material's full base/emissive so the
+/// ramp scales them.
 #[derive(Resource)]
 struct ParticleFade {
     mats: Vec<(Handle<StandardMaterial>, [f32; 3], [f32; 3])>, // (handle, base rgb, emissive rgb)
     start: f32,
+    out: f32,  // fade-out start (f32::MAX = never; sparks stay)
+    back: f32, // fade-back-in start (f32::MAX = never; they don't return)
 }
 
 /// Where the particle field sits + how tight, PER AXIS. By default it fills a wide box around the
@@ -150,15 +155,23 @@ fn spawn_particles(
         })
         .collect();
 
-    // When does the glow ramp in? `MARTIN_PARTICLE_AT` (seconds or `@@anchor`); unset → 0 (on from t0).
-    let start = std::env::var("MARTIN_PARTICLE_AT")
-        .ok()
-        .filter(|s| !s.is_empty())
-        .and_then(|s| score.0.anchor_seconds(s.trim_start_matches("@@")))
-        .unwrap_or(0.0);
+    // Glow timing: `MARTIN_PARTICLE_AT` ramps in (unset → 0 = on from t0); `MARTIN_PARTICLE_OUT` fades
+    // out (the fire leaves), `MARTIN_PARTICLE_BACK` fades in again (it re-ignites) — both default never.
+    let anchor = |var: &str, dflt: f32| {
+        std::env::var(var)
+            .ok()
+            .filter(|s| !s.is_empty())
+            .and_then(|s| score.0.anchor_seconds(s.trim_start_matches("@@")))
+            .unwrap_or(dflt)
+    };
+    let start = anchor("MARTIN_PARTICLE_AT", 0.0);
+    let out = anchor("MARTIN_PARTICLE_OUT", f32::MAX);
+    let back = anchor("MARTIN_PARTICLE_BACK", f32::MAX);
     commands.insert_resource(ParticleFade {
         mats: handles.clone(),
         start,
+        out,
+        back,
     });
 
     // Localize the field: re-centre (e.g. on the campfire) + tighten the spread so embers cluster
@@ -412,29 +425,35 @@ fn radial_glow(size: u32) -> Image {
 /// The additive particle layer — spawns when `MARTIN_PARTICLES` is set, animates deterministically.
 pub(crate) struct ParticlesPlugin;
 
-/// Ramp the glow 0 → full over `PARTICLE_FADE`, starting at `ParticleFade.start` — so the sparks fade
-/// in WITH the fire. No-op (full from t0) when `start <= 0`; stops once fully in. Ramps EVERY material
-/// (confetti's palette too). Deterministic: a pure function of the show clock.
+/// Scale the glow by a clock-driven envelope: ramp IN at `start`, OUT at `out`, back IN at `back`
+/// (each a `PARTICLE_FADE`-long smoothstep) — so sparks appear with the fire, leave when it does, and
+/// return when it re-ignites (no orphan embers over an empty field). `glow = in(start) − in(out) +
+/// in(back)`, clamped. Scales EVERY material (confetti's palette too). Deterministic: a pure fn of the clock.
 fn fade_particles(
     clock: Res<SeqClock>,
     ctl: Option<Res<ParticleFade>>,
     mut mats: ResMut<Assets<StandardMaterial>>,
-    mut done: Local<bool>,
 ) {
     let Some(ctl) = ctl else { return };
-    if *done || ctl.start <= 0.0 {
+    // Fully-on with no fade-out window → the materials sit at full from spawn; nothing to animate.
+    if ctl.start <= 0.0 && ctl.out == f32::MAX {
         return;
     }
-    let x = ((clock.t - ctl.start) / PARTICLE_FADE).clamp(0.0, 1.0);
-    let f = x * x * (3.0 - 2.0 * x); // smoothstep
+    let t = clock.t;
+    // smoothstep ramp that is 0 before `a` and 1 by `a + PARTICLE_FADE`. start<=0 means "already lit".
+    let ramp = |a: f32| {
+        if a <= 0.0 {
+            return 1.0;
+        }
+        let x = ((t - a) / PARTICLE_FADE).clamp(0.0, 1.0);
+        x * x * (3.0 - 2.0 * x)
+    };
+    let f = (ramp(ctl.start) - ramp(ctl.out) + ramp(ctl.back)).clamp(0.0, 1.0);
     for (h, base, emit) in &ctl.mats {
         if let Some(mut m) = mats.get_mut(h) {
             m.base_color = Color::srgb(base[0] * f, base[1] * f, base[2] * f);
             m.emissive = LinearRgba::rgb(emit[0] * f, emit[1] * f, emit[2] * f);
         }
-    }
-    if x >= 1.0 {
-        *done = true;
     }
 }
 
