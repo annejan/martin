@@ -405,6 +405,9 @@ fn finalize_build(
                 time_stop: 1.0,
                 bulge: 0.0,
                 aabb: false, // round isotropic splats (OBB), not the conic-from-cov2d ellipse
+                // MARTIN_SPLAT_SCALE shrinks every splat disk (default 1.0). Overdraw is the dominant
+                // GPU cost, so <1 (e.g. 0.8) cuts fill on a weak GPU — at the cost of a sparser cloud.
+                global_scale: crate::envvar::or("MARTIN_SPLAT_SCALE", 1.0_f32),
                 ..default()
             },
             Transform::from_rotation(entity_rot).with_translation(reel_pos),

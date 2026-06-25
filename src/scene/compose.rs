@@ -586,6 +586,8 @@ pub(crate) fn build_composition(
             bulge: 0.0,
             global_opacity: 0.0, // animate_composition fades it in (or holds it for a entrance)
             aabb: false,         // round isotropic splats (OBB), not the conic-from-cov2d ellipse
+            // MARTIN_SPLAT_SCALE shrinks every splat disk (default 1.0) → less overdraw on a weak GPU.
+            global_scale: crate::envvar::or("MARTIN_SPLAT_SCALE", 1.0_f32),
             ..default()
         };
         let tf = Transform {

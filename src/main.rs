@@ -118,6 +118,37 @@ fn main() {
         unsafe { std::env::set_var(key, value) };
     }
 
+    // MARTIN_QUALITY=low|med|high — a one-word perf preset for weak/strong GPUs. Profiling shows the
+    // demo is splat-count × fill bound, so the preset just caps the two real levers (morph count +
+    // resolution) plus a small splat-shrink on `low`. Set-if-absent (so an explicit MARTIN_MORPH_COUNT/
+    // _WIDTH/etc still wins) and BEFORE the .show expands — so it also caps a show's own `budget`.
+    if let Ok(q) = std::env::var("MARTIN_QUALITY") {
+        let caps: &[(&str, &str)] = match q.to_ascii_lowercase().as_str() {
+            "low" => &[
+                ("MARTIN_MORPH_COUNT", "120000"),
+                ("MARTIN_WIDTH", "960"),
+                ("MARTIN_HEIGHT", "540"),
+                ("MARTIN_SPLAT_SCALE", "0.9"),
+            ],
+            "med" | "medium" => &[
+                ("MARTIN_MORPH_COUNT", "250000"),
+                ("MARTIN_WIDTH", "1280"),
+                ("MARTIN_HEIGHT", "720"),
+            ],
+            "high" => &[("MARTIN_WIDTH", "1920"), ("MARTIN_HEIGHT", "1080")],
+            other => {
+                eprintln!("MARTIN_QUALITY: unknown '{other}' (expected low|med|high) — ignoring");
+                &[]
+            }
+        };
+        for (k, v) in caps {
+            if std::env::var_os(k).is_none() {
+                // SAFETY: top of main(), single-threaded, before the Bevy app (and its threads) start.
+                unsafe { std::env::set_var(k, v) };
+            }
+        }
+    }
+
     // Bundled single-binary build: self-extract the embedded assets + seed the baked-in show into
     // the env BEFORE anything reads it (a no-op without `--features bundle`).
     #[cfg(feature = "bundle")]
