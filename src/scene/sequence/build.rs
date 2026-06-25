@@ -135,10 +135,14 @@ pub(crate) fn build_sequence(
     // read every part's gaussians once, so count==0 can mean "size N to the largest part" (every part
     // is then resampled to that single N — required by the shared morph output). `sample_content`
     // applies the `~outline`/`~pen-write` text-effect builders, shared with the compose stage.
+    // PARALLEL: each part samples independently (mesh/text/svg rasterize is the multi-second cost);
+    // `&state`/`&assets`/`&root` are read-only `Sync` borrows, so rayon shares them safely. `par_iter`
+    // is index-ordered → `collect` preserves part order (the morph chain depends on it).
+    use rayon::prelude::*;
     let mut raws: Vec<Vec<Gaussian3d>> = seq
         .parts
-        .iter()
-        .zip(&transitions)
+        .par_iter()
+        .zip(transitions.par_iter())
         .map(|(part, &tr)| {
             sample_content(
                 &part.content,
