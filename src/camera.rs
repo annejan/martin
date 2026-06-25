@@ -336,7 +336,7 @@ fn spawn_camera(mut commands: Commands) {
     }
 }
 
-/// Apply the `[sync] exposure` knob (or `MARTIN_EXPOSURE`) to the camera bloom — a music-timed
+/// Apply the `[sync] exposure` knob to the camera bloom — a music-timed
 /// brightness ramp. **Gated**: only touches bloom when an exposure source is present, so the default
 /// look (`Bloom::NATURAL`) is byte-identical otherwise. The base intensity is captured once, so the
 /// knob *scales* it (exposure 1.0 = unchanged). Deterministic: driven by `clock.t` / the score.

@@ -196,7 +196,7 @@ fn build_cpu(inputs: BuildInputs) -> BuildOutput {
             *raw = crate::morph::cluster_of(&one, copies);
         }
     }
-    // Normalize each part to a common "normal" size (MARTIN_NORMALIZE=0 to disable). Sources
+    // Normalize each part to a common "normal" size (always on — there is no disable knob). Sources
     // vary wildly — a COLMAP scene spans hundreds of units, a TRELLIS object ~1 — so without
     // this they'd frame inconsistently and morph badly. We log the raw extent first.
     let normalize = true; // always frame each part to a common extent (parts vary wildly in raw scale)

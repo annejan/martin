@@ -54,4 +54,25 @@ mod tests {
         );
         unsafe { std::env::remove_var(key) };
     }
+
+    #[test]
+    fn opt_is_none_when_unset_some_when_valid_none_on_bad() {
+        // SAFETY: a unique key only this single-threaded test touches.
+        let key = "MARTIN_TEST_ENVVAR_OPT";
+        unsafe { std::env::remove_var(key) };
+        assert_eq!(
+            super::opt::<f32>(key),
+            None,
+            "unset → None (distinct from any value)"
+        );
+        unsafe { std::env::set_var(key, "1.5") };
+        assert_eq!(super::opt::<f32>(key), Some(1.5), "set + valid → Some");
+        unsafe { std::env::set_var(key, "nope") };
+        assert_eq!(
+            super::opt::<f32>(key),
+            None,
+            "set + invalid → None (warns to stderr)"
+        );
+        unsafe { std::env::remove_var(key) };
+    }
 }

@@ -86,7 +86,7 @@ fn attach_record_target(
     }
     let Some(target) = target else { return };
     for e in &cams {
-        // RenderTarget is a component in 0.18 — insert it to point this camera at the image.
+        // RenderTarget is a component (0.19) — insert it to point this camera at the image.
         commands
             .entity(e)
             .insert(RenderTarget::Image(ImageRenderTarget {

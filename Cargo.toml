@@ -92,7 +92,7 @@ strip = true
 
 # Fork of the splat renderer so we can inject the explosion displacement into its WGSL
 # (shaders load via hardcoded-UUID internal assets — no app-side hook). Tracked as the
-# `martin` branch of annejan/bevy_gaussian_splatting (= upstream 7.0.2 + our §1–7 edits,
+# `martin` branch of annejan/bevy_gaussian_splatting (= upstream 8.0.0 + our §1–8 edits,
 # documented in that branch's CHANGES.md); Cargo.lock pins the exact commit. To hack the
 # shaders locally, point this at a checkout instead: `path = "../bgs-fork"`.
 [patch.crates-io]

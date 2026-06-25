@@ -92,6 +92,35 @@ fn is_headless(record: bool, bench: bool, shot: bool, shots: bool) -> bool {
     record || bench || shot || shots
 }
 
+/// The `MARTIN_*` env caps a `MARTIN_QUALITY` tier applies (set-if-absent). Sets BOTH the live-window
+/// size (`MARTIN_WIDTH`/`_HEIGHT`) AND the headless render size (`MARTIN_RES`) so the resolution cap
+/// reaches a `--record`/`--shot` too (the offscreen image is sized by `MARTIN_RES`, not the window).
+/// Unknown tier → empty (the caller warns). Pure (str → table) → unit-tested.
+fn quality_caps(q: &str) -> &'static [(&'static str, &'static str)] {
+    match q.to_ascii_lowercase().as_str() {
+        "low" => &[
+            ("MARTIN_MORPH_COUNT", "120000"),
+            ("MARTIN_WIDTH", "960"),
+            ("MARTIN_HEIGHT", "540"),
+            ("MARTIN_RES", "960x540"),
+            ("MARTIN_SPLAT_SCALE", "0.9"),
+            ("MARTIN_SORT_BITS", "16"), // coarser depth sort — fewer digit passes/frame
+        ],
+        "med" | "medium" => &[
+            ("MARTIN_MORPH_COUNT", "250000"),
+            ("MARTIN_WIDTH", "1280"),
+            ("MARTIN_HEIGHT", "720"),
+            ("MARTIN_RES", "1280x720"),
+        ],
+        "high" => &[
+            ("MARTIN_WIDTH", "1920"),
+            ("MARTIN_HEIGHT", "1080"),
+            ("MARTIN_RES", "1920x1080"),
+        ],
+        _ => &[],
+    }
+}
+
 fn main() {
     let cli = <cli::Cli as clap::Parser>::parse();
 
@@ -119,29 +148,14 @@ fn main() {
     }
 
     // MARTIN_QUALITY=low|med|high — a one-word perf preset for weak/strong GPUs. Profiling shows the
-    // demo is splat-count × fill bound, so the preset just caps the two real levers (morph count +
+    // demo is splat-count × fill bound, so the preset caps the two real levers (morph count +
     // resolution) plus a small splat-shrink on `low`. Set-if-absent (so an explicit MARTIN_MORPH_COUNT/
     // _WIDTH/etc still wins) and BEFORE the .show expands — so it also caps a show's own `budget`.
     if let Ok(q) = std::env::var("MARTIN_QUALITY") {
-        let caps: &[(&str, &str)] = match q.to_ascii_lowercase().as_str() {
-            "low" => &[
-                ("MARTIN_MORPH_COUNT", "120000"),
-                ("MARTIN_WIDTH", "960"),
-                ("MARTIN_HEIGHT", "540"),
-                ("MARTIN_SPLAT_SCALE", "0.9"),
-                ("MARTIN_SORT_BITS", "16"), // coarser depth sort — fewer digit passes/frame
-            ],
-            "med" | "medium" => &[
-                ("MARTIN_MORPH_COUNT", "250000"),
-                ("MARTIN_WIDTH", "1280"),
-                ("MARTIN_HEIGHT", "720"),
-            ],
-            "high" => &[("MARTIN_WIDTH", "1920"), ("MARTIN_HEIGHT", "1080")],
-            other => {
-                eprintln!("MARTIN_QUALITY: unknown '{other}' (expected low|med|high) — ignoring");
-                &[]
-            }
-        };
+        let caps = quality_caps(&q);
+        if caps.is_empty() && !q.is_empty() {
+            eprintln!("MARTIN_QUALITY: unknown '{q}' (expected low|med|high) — ignoring");
+        }
         for (k, v) in caps {
             if std::env::var_os(k).is_none() {
                 // SAFETY: top of main(), single-threaded, before the Bevy app (and its threads) start.
@@ -321,7 +335,7 @@ fn main() {
     plugins = plugins.set(AssetPlugin {
         file_path: asset_root_path.to_string_lossy().into_owned(),
         // The bundled binary self-extracts its assets to /tmp and loads music.wav by ABSOLUTE path;
-        // Bevy 0.18 rejects out-of-root absolute paths by default (UnapprovedPathMode::Deny), so the
+        // Bevy 0.19 rejects out-of-root absolute paths by default (UnapprovedPathMode::Deny), so the
         // WAV never loads, the AudioGate never opens, and the loader hangs forever. martin only ever
         // loads its OWN local files (never untrusted web input), so allow them.
         unapproved_path_mode: bevy::asset::UnapprovedPathMode::Allow,
@@ -388,7 +402,33 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{ContentMode, choose_mode, is_headless};
+    use super::{ContentMode, choose_mode, is_headless, quality_caps};
+
+    #[test]
+    fn quality_caps_tiers() {
+        // every known tier caps a resolution on BOTH the window (WIDTH/HEIGHT) and the headless
+        // render (RES) — the record-path fix; unknown/empty → no caps.
+        let keys = |q| quality_caps(q).iter().map(|(k, _)| *k).collect::<Vec<_>>();
+        assert!(
+            keys("low").contains(&"MARTIN_RES"),
+            "low must set MARTIN_RES (headless cap)"
+        );
+        assert!(keys("low").contains(&"MARTIN_SORT_BITS")); // low-only knob
+        assert!(keys("med").contains(&"MARTIN_RES"));
+        assert!(keys("MED").contains(&"MARTIN_RES")); // case-insensitive
+        assert!(keys("high").contains(&"MARTIN_RES"));
+        assert!(quality_caps("ultra").is_empty()); // unknown → empty (caller warns)
+        assert!(quality_caps("").is_empty());
+        // RES matches WIDTHxHEIGHT for each tier
+        let res = |q| {
+            quality_caps(q)
+                .iter()
+                .find(|(k, _)| *k == "MARTIN_RES")
+                .map(|(_, v)| *v)
+        };
+        assert_eq!(res("low"), Some("960x540"));
+        assert_eq!(res("high"), Some("1920x1080"));
+    }
 
     #[test]
     fn choose_mode_truth_table() {

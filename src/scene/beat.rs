@@ -100,6 +100,30 @@ mod tests {
     use super::*;
 
     #[test]
+    fn pulse_picks_latest_hit_and_decays() {
+        let tau = 0.1;
+        // no hits, and t before the first hit → silent (no panic on the partition_point boundary)
+        assert_eq!(pulse(&[], 0.5, tau, 0.5, 0x55), 0.0);
+        assert_eq!(pulse(&[1.0], 0.5, tau, 0.5, 0x55), 0.0);
+        // AT a hit → nonzero, and one tau later it has decayed by exactly exp(-1) (vel cancels in the
+        // ratio, so this holds whatever the onset weight is).
+        let at = pulse(&[1.0], 1.0, tau, 0.5, 0x55);
+        let later = pulse(&[1.0], 1.0 + tau, tau, 0.5, 0x55);
+        assert!(at > 0.0);
+        assert!(
+            (later / at - (-1.0f32).exp()).abs() < 1e-4,
+            "decays by exp(-1) per tau"
+        );
+        // two hits: the envelope restarts from the LATEST hit ≤ t (so just after hit 2 ≈ full again).
+        let just_after_2 = pulse(&[1.0, 2.0], 2.0, tau, 0.5, 0x55);
+        let well_after_1 = pulse(&[1.0, 2.0], 1.9, tau, 0.5, 0x55);
+        assert!(
+            just_after_2 > well_after_1,
+            "a fresh hit re-arms the envelope"
+        );
+    }
+
+    #[test]
     fn duck_pumps_on_the_kick() {
         let b = |kick, intensity| Beat {
             kick,

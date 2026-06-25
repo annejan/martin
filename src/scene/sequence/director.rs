@@ -30,8 +30,8 @@ pub(crate) fn shot_director(
     score: Res<crate::music::ScoreRes>,
     // `[sync]` look-track: when it keyframes `flash`, it overrides the global FlashStrength per frame.
     sync: Option<Res<crate::sync::SyncTrack>>,
-    // (amp_scale, speed) for the persistent deform — read from env once. MARTIN_DEFORM_AMP scales the
-    // wobble strength (e.g. 0.3 = gentle on a whole scene), MARTIN_DEFORM_SPEED its rate.
+    // (amp_scale, speed) for the persistent deform — fixed (1.0, DEFORM_SPEED); the per-shot `^name:amp`
+    // token is the live strength knob, no global env var.
     mut deform_tune: Local<Option<(f32, f32)>>,
     // MARTIN_MORPH_STAGGER (0..1): per-particle staggered morph timing — the cloud DISSOLVES + reforms
     // instead of sliding (kills the straight-line streaks). Read from env once. 0 = synchronized.

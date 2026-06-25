@@ -55,10 +55,15 @@ pub(crate) struct PostSettings {
 /// `chroma` · `grain` · `vignette` · `cine` (= chroma+grain+vignette preset) · `chroma+grain` etc.,
 /// each optionally `:strength` (e.g. `cine:1.2`).
 pub(crate) fn settings_from_env() -> Option<PostSettings> {
-    let v = std::env::var("MARTIN_POST").ok()?;
-    let (name, strength) = v.split_once(':').map_or((v.as_str(), 1.0), |(n, s)| {
-        (n, s.trim().parse().unwrap_or(1.0))
-    });
+    parse_post(&std::env::var("MARTIN_POST").ok()?)
+}
+
+/// Pure parse of a `MARTIN_POST` value into settings (split out so it's unit-testable without env). See
+/// [`settings_from_env`] for the format. Returns `None` for an empty/`off`/all-unknown value.
+fn parse_post(v: &str) -> Option<PostSettings> {
+    let (name, strength) = v
+        .split_once(':')
+        .map_or((v, 1.0), |(n, s)| (n, s.trim().parse().unwrap_or(1.0)));
     let mut mode = 0u32;
     let (mut grain, mut vignette) = (0.0f32, 0.0f32);
     let mut chroma = 1.0f32;
@@ -262,5 +267,39 @@ impl Plugin for PostPlugin {
         if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app.init_resource::<PostPipeline>();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_post_modes_presets_and_strength() {
+        // single effect → its bit, full intensity, no grain/vignette
+        let c = parse_post("chroma").unwrap();
+        assert_eq!(c.mode, POST_CHROMA);
+        assert!((c.intensity - 1.0).abs() < 1e-6 && c.grain == 0.0 && c.vignette == 0.0);
+        // aliases fold to the same bit
+        assert_eq!(parse_post("rgb").unwrap().mode, POST_CHROMA);
+        assert_eq!(parse_post("split").unwrap().mode, POST_CHROMA);
+        // composition via + (and case-insensitive)
+        assert_eq!(
+            parse_post("CHROMA+grain").unwrap().mode,
+            POST_CHROMA | POST_GRAIN
+        );
+        // cine preset = all three bits with its tuned strengths
+        let cine = parse_post("cine").unwrap();
+        assert_eq!(cine.mode, POST_CHROMA | POST_GRAIN | POST_VIGNETTE);
+        assert!((cine.intensity - 0.7).abs() < 1e-6);
+        assert!((cine.grain - 0.06).abs() < 1e-6 && (cine.vignette - 0.32).abs() < 1e-6);
+        // :strength scales every effect
+        let s = parse_post("cine:2").unwrap();
+        assert!((s.intensity - 1.4).abs() < 1e-6 && (s.grain - 0.12).abs() < 1e-6);
+        // empty / off / all-unknown → None (no post-FX); a bad :strength falls back to 1.0, not a panic
+        assert!(parse_post("").is_none());
+        assert!(parse_post("off").is_none());
+        assert!(parse_post("chorma").is_none()); // typo → unknown → None (warns)
+        assert!((parse_post("chroma:abc").unwrap().intensity - 1.0).abs() < 1e-6);
     }
 }

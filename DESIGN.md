@@ -97,7 +97,7 @@ this doc warns against.
 
 ### 1.1 The engine in 30 seconds
 
-martin is a standalone Bevy 0.18 + `bevy_gaussian_splatting` 7.1.0 (our fork, a git
+martin is a standalone Bevy 0.19 + `bevy_gaussian_splatting` 8.0.0 (our fork, a git
 dep). CUDA-free: wgpu → Vulkan / Mesa RADV on AMD. It flies an orbit camera around
 3D Gaussian splats while they morph into one another.
 
@@ -133,7 +133,7 @@ frame-indexed and deterministic.
 These are ground truth. Every recommendation below stays inside them unless it
 *explicitly* proposes a fork edit and says so.
 
-1. **Toolchain/platform:** nightly Rust (pinned), Bevy 0.18, the splat-renderer fork via
+1. **Toolchain/platform:** nightly Rust (pinned), Bevy 0.19, the splat-renderer fork via
    `[patch.crates-io]` (git). wgpu → Vulkan / Mesa RADV, AMD, **no CUDA / no ROCm**.
 2. **One shared morph buffer → ONE count `N`.** Every part is `resample_morton`'d
    to the same `N`. Parts cannot have differing gaussian counts.
@@ -398,7 +398,7 @@ audio-driven playhead goes before you need per-element tracks.
 ### 3.1 Audio playback position as master clock — *and the dependency reality*
 
 **Dependency check first (the doc is careful about this elsewhere, so be careful
-here):** `Cargo.toml` depends on `bevy = "0.18"` with default features, which
+here):** `Cargo.toml` depends on `bevy = "0.19"` with default features, which
 **includes `bevy_audio`** (rodio-backed). So an audio stack *is* compiled in — but
 **no audio is wired today**: there is no `AudioPlayer`/`AudioSink` spawn anywhere in
 `src/`, and the clock is pure wall-time. Adding playback is net-new work, not a flip
@@ -721,7 +721,7 @@ slot itself is a fresh open item, added to §9.2 #16).
 ## 5. The fork's shader edits — per-particle phase + friends (LANDED; this is the original blueprint)
 
 > **STATUS (2026-06): this landed and then some.** What began as a single co-designed edit is now the
-> fork's **§1–8** on the `martin` branch (upstream **7.1.0**): explode/ball-pulse, the `bulge` uniform,
+> fork's **§1–8** on the `martin` branch (upstream **8.0.0**): explode/ball-pulse, the `bulge` uniform,
 > the per-particle **transition phase** (this section), persistent **deform**, **swarm**, **shockwave**
 > (transition mode 8), and **morph_stagger** (§8). The sort speedup (§3) went **upstream** (merged as
 > #229; #231/#232/#233 are further upstream fixes). The authoritative, current list is the fork's

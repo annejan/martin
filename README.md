@@ -19,7 +19,7 @@ cargo +nightly run --release     # a splat assembles out of a ball cloud
 It's **one sequence engine**: every run is a timeline of *parts* (splat-text or splats) that
 each assemble out of a ball cloud, then morph into the next (per-Gaussian, on the GPU), with
 HDR bloom on black. The `MARTIN_*` env vars compose the show — there's no config file. Built on
-Bevy 0.18 + `bevy_gaussian_splatting` 7.1.0 (our fork — the `martin` branch of
+Bevy 0.19 + `bevy_gaussian_splatting` 8.0.0 (our fork — the `martin` branch of
 [`annejan/bevy_gaussian_splatting`](https://github.com/annejan/bevy_gaussian_splatting),
 a git dep), wgpu → Vulkan, nightly toolchain (the `nightly` channel, unpinned — we ride
 current nightly).
@@ -131,7 +131,6 @@ particles in the *same* system, so any of these morphs into any other. Full refe
 | `MARTIN_SEQ="…"` | **Timeline** — a chain of parts that morph into one another (see below). Use `splat:`/`text:` parts to load splats and titles. |
 | `MARTIN_COMPOSE=stage.compose` | **Composition** — many objects on one stage at once, placed + spinning/bobbing/drifting, fading in on the music, camera auto-orbiting (vs the morph timeline). Example: `assets/examples/stage.show`. |
 | `MARTIN_FPS=1` / **`I`** key | Log FPS + splat count (the `I` key toggles it live + logs a snapshot). |
-| `MARTIN_BULGE=0.9` | Ball-cloud explosiveness at a morph's midpoint (`0` = clean reorder). |
 | `~name` (per-part token) | How each part **arrives**: `morph`/`swarm`/`ball`/`fade`/`explode`/`implode`/`drop`/`swirl`, or the shader ones `typewriter`/`wipe`/`sparkle`/`slither`/`vortex`/`outline`/`pen-write`. `swarm` = like `morph` but the splats flock along curled paths *between* the two scenes (the `@_,_,N` value tunes the swarm strength). |
 | `MARTIN_DEFORM=wave` | A **scene-wide persistent deform** field held the whole part (`wave`/`cloth`/`ripple`/`twist`/`wind`/`turbulence`/`pulse`/`jitter`/`spiral`) — great on a `wall:` of text, or to **gently wobble a whole splat scene** while you fly around it; applies to compose objects too. Per-part `^name` wins. |
 | `^name:amp` (per-part token) | Scale a part's deform amplitude (`^wave:0.3` ≈ a gentle wobble on a big scene; `1` = default). |

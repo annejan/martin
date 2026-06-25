@@ -77,11 +77,31 @@ pub(crate) fn cloud_base_rotation() -> Quat {
 /// depth buckets. Synthetic morph/text content has shallow depth complexity and rarely reorders
 /// visibly at 16/24; real captures can mis-order near-coplanar splats, so the default stays Bits32.
 pub(crate) fn sort_depth_bits() -> bevy_gaussian_splatting::RadixSortDepthBits {
+    sort_bits_of(crate::envvar::or("MARTIN_SORT_BITS", 32u32))
+}
+
+/// Map a `MARTIN_SORT_BITS` width (16|24|32) to the radix depth enum; any other value → Bits32 (the
+/// safe default). Split out so the mapping is unit-testable without touching the env.
+fn sort_bits_of(n: u32) -> bevy_gaussian_splatting::RadixSortDepthBits {
     use bevy_gaussian_splatting::RadixSortDepthBits as B;
-    match crate::envvar::or("MARTIN_SORT_BITS", 32u32) {
+    match n {
         16 => B::Bits16,
         24 => B::Bits24,
         _ => B::Bits32,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bevy_gaussian_splatting::RadixSortDepthBits as B;
+
+    #[test]
+    fn sort_bits_maps_known_widths_else_default_32() {
+        assert_eq!(super::sort_bits_of(16), B::Bits16);
+        assert_eq!(super::sort_bits_of(24), B::Bits24);
+        assert_eq!(super::sort_bits_of(32), B::Bits32);
+        assert_eq!(super::sort_bits_of(17), B::Bits32, "unknown → safe default");
+        assert_eq!(super::sort_bits_of(0), B::Bits32);
     }
 }
 
