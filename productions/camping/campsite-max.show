@@ -22,69 +22,71 @@ particle_spread = 1.8,1.0,1.8
 bg_dim         = 0.6
 
 [stage]
-# ── BACKDROP: ridge, moon, field, faint nebula, a few stars ──
+# ════════════ THE SKY + FIELD — persist the whole show (only the CAMP comes and goes) ════════════
 splat:mountains.ply @0,-1.2,-12.0  *11,3,9   ~fade  in intro  count:14000
 splat:moon.ply      @0.8,3.0,-50.0 *7.0      spin 0,3,0  drift 0.05,0.006,0  ~fade  in intro  count:5000
 splat:terrain.ply   @0,-1.5,-7     *13,4.5,11 ~fade  in intro  count:28000
 splat:galaxy.ply    @0,2.8,-8.0    *6,1,6    alpha:0.08  drift 0.002,0,0  ~fade  in intro  count:6000
-splat:star.ply      @2.5,2.5,-9    *0.3   alpha:0.4   spin 4,6,3  bob 0.10  ^pulse:0.7  path:orbit:0.2,0.15,0.25   ~fade  in intro  count:2000  # twinkle: beat-pulse + slow spin + gentle orbit drift
+splat:star.ply      @2.5,2.5,-9    *0.3   alpha:0.4   spin 4,6,3  bob 0.10  ^pulse:0.7  path:orbit:0.2,0.15,0.25   ~fade  in intro  count:2000
 splat:star.ply      @-2.0,2.0,-10  *0.25  alpha:0.35  spin 5,3,4  bob 0.08  ^pulse:0.6  path:orbit:0.18,0.12,0.3   ~fade  in intro  count:1500
 splat:star.ply      @3.0,1.5,-8    *0.2   alpha:0.3   spin 3,7,2  bob 0.12  ^pulse:0.8  path:orbit:0.15,0.1,0.2    ~fade  in intro  count:1000
 
-# ── TENTS: pitched well clear of each other and the trees ──
-splat:tent.ply      @-2.8,-1.11,0.7  *0.85  sway 0,4,0   ~fade  in build  count:9000
-splat:tent.ply      @4.0,-1.08,1.2   *0.55  rot 0,30,0  sway 0,3,0  ~fade  in drop  count:5000
+# ════════════ ACT 1 — THE CAMP (build→drop) — it FLIES AWAY at the breakdown ════════════
+# Every camp prop carries `out breakdown` + a `travel:` to an off-screen point @breakdown, so when
+# deFEEST leaves the whole camp lifts/scatters off + fades — the bare moonlit field + the lone horse
+# remain. "Zonder deFEEST is het kut." (Compose objects fade on `out`; the travel makes it a fly-away.)
 
-# ── CAMPFIRE: flame in the centre, embers fly. ^turbulence churns it + beat: makes it FLICKER/leap on
-#    the kick (a live fire, not a static cone); bob lifts it, more splats = a fuller flame body. ──
-splat:flame.ply     @0.0,-0.44,0.3   *0.72  bob 0.11  ^turbulence:0.72  ~fade  in drop  count:3600
+# TENTS — pitch in (~drop) on the build; fly off + fade at the breakdown. Taller per-axis so they read as tents.
+splat:tent.ply      @-2.8,-1.11,0.7  *0.85,1.3,0.85  ~drop  sway 0,4,0  travel:-15,4,0.7@breakdown,3.5   in build  out breakdown  count:9000
+splat:tent.ply      @4.0,-1.08,1.2   *0.55,0.85,0.55 rot 0,30,0  ~drop  sway 0,3,0  travel:16,4,1.2@breakdown,3.5  in drop  out breakdown  count:5000
 
-# ── GROVE: spaced wide, well clear of tents ──
-splat:pine.ply      @3.0,-0.31,0.5   *1.2   sway 0,8,0  bob 0.04   ~fade  in build  count:7000  # tall front
-splat:pine.ply      @3.8,-0.56,-0.6  *0.55  sway 0,13,0  bob 0.03  ~fade  in build  count:4000  # short sapling
-splat:pine.ply      @1.7,-0.44,-1.7  *0.8   sway 0,5,0  bob 0.05   ~fade  in climax  count:6000
-splat:pine.ply      @-1.5,-0.38,-1.9 *1.15  sway 0,9,0  bob 0.04   ~fade  in climax  count:7000  # tall back-left
-splat:pine.ply      @-3.5,-0.31,-0.9 *0.65  sway 0,7,0  bob 0.03   ~fade  in climax  count:4500  # short
-splat:pine.ply      @-4.0,-0.48,1.2  *0.9   sway 0,6,0  bob 0.04   ~fade  in drop
-# caravan.glb (PD, AJB) — the camper parked in the camp; assembles with the tent in the build. rot/scale
-# render-checked per the new-asset rule.
-mesh:caravan.glb    @-2.7,-0.55,-0.4 *0.7   rot -0,122.7,-0  disk:0.4  ~fade  in build   count:35000
+# CAMPFIRE — IGNITES with a shockwave-blast on the drop; rises away (smoke) + fades at the breakdown.
+splat:flame.ply     @0.0,-0.44,0.3   *0.72  ~shockwave  bob 0.11  ^turbulence:0.72  travel:0,9,0.3@breakdown,3.5  in drop  out breakdown  count:3600
 
-# ── WORDMARK: the emotional spine. deFEEST opens the camp (build), then LEAVES at the breakdown
-#    (the "zonder deFEEST is het kut" dip — the camp goes dark + empty), then RETURNS bigger + bright
-#    on the climax (~explode = the joyful comeback) — the party only erupts WITH deFEEST back. ──
+# GROVE (build/drop) — fly up + fade at the breakdown.
+splat:pine.ply      @3.0,-0.31,0.5   *1.2   ~fade  sway 0,8,0  bob 0.04   travel:5,7,0.5@breakdown,3.5    in build  out breakdown  count:7000
+splat:pine.ply      @3.8,-0.56,-0.6  *0.55  ~fade  sway 0,13,0  bob 0.03  travel:7,7,-0.6@breakdown,3.5   in build  out breakdown  count:4000
+splat:pine.ply      @-4.0,-0.48,1.2  *0.9   ~fade  sway 0,6,0  bob 0.04   travel:-7,7,1.2@breakdown,3.5   in drop  out breakdown
+
+# CARAVAN — parks in the build (~drop); rolls off-left + fades at the breakdown.
+mesh:caravan.glb    @-2.7,-0.55,-0.4 *0.7   rot -0,122.7,-0  disk:0.4  ~drop  travel:-16,1,-0.4@breakdown,3.5  in build  out breakdown  count:35000
+
+# BARNYARD (build/drop) — scatter outward + fade at the breakdown.
+mesh:geit.glb  @-2.4,-1.05,2.1  *0.5   rot 0,-4,0   sway 0,5,0  bob 0.05   ~fade  travel:-12,-1,5@breakdown,3.5  in build  out breakdown
+mesh:geit.glb  @2.6,-1.24,2     *0.45  rot -0,-101.2,-0  sway 0,6,0  bob 0.06  ~fade  travel:12,-1,5@breakdown,3.5  in build  out breakdown
+mesh:pauw.glb  @-1.8241,-1.3,-0.4451  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~fade  travel:-13,-1,-3@breakdown,3.5  in drop  out breakdown
+mesh:cavia.glb @-1.15,-1.12,1.45  *0.26  rot 0,28,0   sway 0,10,0  bob 0.035  ^jitter:0.4  ~fade  travel:-10,-1,6@breakdown,3  in build  out breakdown
+mesh:cavia.glb @-0.78,-1.10,1.55  *0.22  rot 0,-18,0  sway 0,12,0  bob 0.04   ^jitter:0.4  ~fade  travel:-9,-1,6@breakdown,3   in build  out breakdown
+
+# WORDMARK — deFEEST opens the camp (build), LEAVES at the breakdown (the dip), EXPLODES back on the climax.
 text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build  out breakdown
-text:deFEEST        @-1.4,0.9,1.0 *0.55  ~outline    font:defeest  tint:brand  bob 0.05  in climax  # the SECOND coming — outline draw-on
+text:deFEEST        @-1.4,0.9,1.0 *0.6   ~explode    font:defeest  tint:brand  bob 0.05  in climax  # the joyful comeback BURSTS in
 
-# ── STORY: horse walks in, party erupts with flying bitterballen ──
+# ════════════ ACT 2 — BREAKDOWN — the lone horse walks the empty field ════════════
 mesh:paard.glb  @-9.0,-0.5,-4.5  *0.9  count:40000  rot 0,180,0  travel:-2.2,-0.868,-4.5@breakdown,16  sway 0,4,0  bob 0.05  ^pulse:0.4  ~fade  in breakdown
+
+# ════════════ ACT 3 — CLIMAX — the camp BURSTS BACK + the party ERUPTS (MET deFEEST) ════════════
+# Hero camp re-assembles with explosive entrances; flying bitterballen rain in; all hold to the outro.
+splat:tent.ply      @-2.8,-1.11,0.7  *0.85,1.3,0.85 ~shockwave  sway 0,4,0  in climax  count:9000   # the tent SLAMS back up
+splat:flame.ply     @0.0,-0.44,0.3   *0.8   ~shockwave  bob 0.11  ^turbulence:0.8  in climax  count:4200  # fire re-ignites, bigger
+mesh:caravan.glb    @-2.7,-0.55,-0.4 *0.7   rot -0,122.7,-0  disk:0.4  ~drop  in climax  count:35000
+splat:pine.ply      @1.7,-0.44,-1.7  *0.8   ~drop  sway 0,5,0  bob 0.05   in climax  count:6000
+splat:pine.ply      @-1.5,-0.38,-1.9 *1.15  ~drop  sway 0,9,0  bob 0.04   in climax  count:7000
+splat:pine.ply      @-3.5,-0.31,-0.9 *0.65  ~drop  sway 0,7,0  bob 0.03   in climax  count:4500
 mesh:bier.glb       @1.6,-0.55,0.9  *0.45  alpha:0.16  bob 0.04  spin 0,45,0  ~fade  in climax
-# ── 5 bitterballen: a BOUNDED Lissajous weave near the fire (was `drift` — constant velocity from
-#    t=0, so by the climax entry (~128s) they'd flown right out of frame; path:liss stays put + tumbles).
-mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  path:liss:0.35,0.25,0.3,2,3,1,0.45  bob 0.10  ^pulse:0.6  spin 19,37,13  tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  path:liss:0.3,0.3,0.25,3,1,2,0.50   bob 0.12  ^pulse:0.6  spin 23,29,17  tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  path:liss:0.28,0.22,0.32,1,3,2,0.40 bob 0.12  ^pulse:0.6  spin 31,13,41  tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  path:liss:0.32,0.28,0.3,2,1,3,0.55  bob 0.10  ^pulse:0.5  spin 11,23,7   tint:fry  ~fade  in climax
-mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  path:liss:0.3,0.26,0.28,3,2,1,0.48  bob 0.12  ^pulse:0.7  spin 17,43,29  tint:fry  ~fade  in climax
+# 5 bitterballen RAIN in (~drop = flying snacks), weave a bounded Lissajous near the fire.
+mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  ~drop  path:liss:0.35,0.25,0.3,2,3,1,0.45  bob 0.10  ^pulse:0.6  spin 19,37,13  tint:fry  in climax
+mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  ~drop  path:liss:0.3,0.3,0.25,3,1,2,0.50   bob 0.12  ^pulse:0.6  spin 23,29,17  tint:fry  in climax
+mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  ~drop  path:liss:0.28,0.22,0.32,1,3,2,0.40 bob 0.12  ^pulse:0.6  spin 31,13,41  tint:fry  in climax
+mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  ~drop  path:liss:0.32,0.28,0.3,2,1,3,0.55  bob 0.10  ^pulse:0.5  spin 11,23,7   tint:fry  in climax
+mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  ~drop  path:liss:0.3,0.26,0.28,3,2,1,0.48  bob 0.12  ^pulse:0.7  spin 17,43,29  tint:fry  in climax
 mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   count:40000  rot 0,200,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax
 splat:doggo.ply     @1.96,-1.16,1.2  *0.5   rot 0,-16,0  sway 0,7,0  bob 0.04  travel:1.8,-1.1562,1.2@climax,14  ~fade  in climax
-# Festival title card — drawn EARLY (from the drop, as the camp comes alive) in OUTLINE (neon draw-on),
-# held to the outro. Title + subtitle stacked, centre-upper, clear of the deFEEST wordmark (left).
-text:PonyCamp       @0,1.25,1.0    *0.5   ~fade  font:defeest  tint:brand  bob 0.05  in build  out outro  # filled deFEEST font (not outline)
-text:Fun en Games   @0,0.78,1.0   *0.3   ~fade  font:defeest  tint:brand  bob 0.04  in build  out outro
+mesh:pauw.glb  @1.0301,-1.33,-1.98  *0.6   rot 0,-55,0  spin 0,12,0  bob 0.06  ^pulse:0.6  tint:white  ~drop  in climax  # the rare WHITE peacock parades for the party
 
-# ── BARNYARD: the camp's resident animals finish off PonyCamp. Two goats graze as the camp assembles
-#    (build); a peacock struts in when the fire lights (drop); and a rare WHITE peacock (tint:white —
-#    albino, the shape carries it) parades for the party on the climax. Grazing = sway+bob; the peacocks
-#    strut (slow yaw-spin) + bounce on the kick (^pulse). All front-foreground + grounded, clear of the
-#    tents/pines/snacks. ──
-mesh:geit.glb  @-2.4,-1.05,2.1  *0.5   rot 0,-4,0   sway 0,5,0  bob 0.05               ~fade  in build
-mesh:geit.glb  @2.6,-1.24,2   *0.45  rot -0,-101.2,-0  sway 0,6,0  bob 0.06               ~fade  in build
-mesh:pauw.glb  @-1.8241,-1.3,-0.4451  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~fade  in drop
-mesh:pauw.glb  @1.0301,-1.33,-1.98  *0.6   rot 0,-55,0  spin 0,12,0  bob 0.06  ^pulse:0.6  tint:white  ~fade  in drop
-# cavia's (guinea pigs) — tiny camp critters near the tent, social pair; nervous twitch via ^jitter.
-mesh:cavia.glb @-1.15,-1.12,1.45  *0.26  rot 0,28,0   sway 0,10,0  bob 0.035  ^jitter:0.4  ~fade  in build
-mesh:cavia.glb @-0.78,-1.10,1.55  *0.22  rot 0,-18,0  sway 0,12,0  bob 0.04   ^jitter:0.4  ~fade  in build
+# Festival title card — TYPEWRITER-reveal on the build, held to the outro (the brand persists).
+text:PonyCamp       @0,1.25,1.0    *0.5   ~typewriter  font:defeest  tint:brand  bob 0.05  in build  out outro
+text:Fun en Games   @0,0.78,1.0   *0.3   ~typewriter  font:defeest  tint:brand  bob 0.04  in build  out outro
 
 # ── CREDITS: Bevy UI scrolling captions (see [caption] below) ──
 
@@ -100,7 +102,7 @@ t=@@bar:52     pos=-0.4,-0.30,0.2  dist=4.5   yaw=1.80   pitch=0.16
 t=@@breakdown  pos=-1.3,-0.35,0.4  dist=6.8   yaw=2.05   pitch=0.14
 t=@@bar:65     pos=-1.5,-0.30,0.3  dist=7.5   yaw=2.10   pitch=0.12
 t=@@climax     pos=-0.6,0.05,-1.2  dist=5.0   yaw=1.55   pitch=0.12   cut   # CUT INTO the party — the snacks erupt
-t=@@bar:85     pos=0.5,-0.15,-0.3  dist=3.6   yaw=1.10   pitch=0.16   cut         # dive among the bouncing bitterballen
+t=@@bar:85     pos=0.0,-0.20,0.9   dist=2.9   yaw=1.42   pitch=0.30   cut         # dive among the bouncing bitterballen (target ON the lit fire+snack cluster, look down into them)
 t=@@bar:95     pos=-0.6,0.25,-2.2  dist=8.0   yaw=1.85   pitch=0.18   cut         # pull WIDE — the whole camp raves
 t=@@bar:105    pos=0.5,0.00,-0.8   dist=5.0   yaw=1.35   pitch=0.20   cut
 t=@@outro      pos=0.2,0.05,-0.6   dist=6.6   yaw=1.45   pitch=0.16
