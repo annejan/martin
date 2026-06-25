@@ -322,10 +322,14 @@ fn spawn_camera(mut commands: Commands) {
         Hdr, // HDR target so bright splats bloom
         // film-grade tonemap: bright splats roll off instead of clipping to flat white
         Tonemapping::TonyMcMapface,
-        Bloom::NATURAL,
         Transform::default(),
         OrbitCam::default(),
     ));
+    // Bloom is the look (HDR glow on black) but costs several fullscreen passes/frame — `MARTIN_BLOOM=0`
+    // drops it for weak GPUs / perf profiling (the splats still render, just without the glow).
+    if std::env::var("MARTIN_BLOOM").as_deref() != Ok("0") {
+        cam.insert(Bloom::NATURAL);
+    }
     // MARTIN_POST=chroma → a beat-gated fullscreen post-FX on this camera (default-off: no component).
     if let Some(post) = crate::post::settings_from_env() {
         cam.insert(post);

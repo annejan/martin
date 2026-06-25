@@ -251,13 +251,26 @@ fn main() {
         std::env::var("MARTIN_SHOTS").is_ok(),
     );
     let fullscreen = std::env::var("MARTIN_FULLSCREEN").is_ok() && !headless;
+    // Live window size: `MARTIN_WIDTH`/`MARTIN_HEIGHT` (default 1280×720). Headless renders to an
+    // offscreen image of the same size, so the two stay consistent; on the window this also lets a
+    // perf sweep change the live resolution.
+    let win_w = crate::envvar::or("MARTIN_WIDTH", 1280_u32);
+    let win_h = crate::envvar::or("MARTIN_HEIGHT", 720_u32);
+    // `MARTIN_VSYNC=0` → uncapped present (Immediate) to measure true GPU throughput / cut present
+    // latency; default keeps vsync (AutoVsync) for a tear-free live show.
+    let present_mode = if std::env::var("MARTIN_VSYNC").as_deref() == Ok("0") {
+        bevy::window::PresentMode::Immediate
+    } else {
+        bevy::window::PresentMode::AutoVsync
+    };
     let mut plugins = DefaultPlugins.set(WindowPlugin {
         primary_window: (!headless).then(|| Window {
             // `MARTIN_TITLE` (or `.show [settings] title = …`, which expands to it) overrides the
             // default window title — so a bundled demo can name its own window.
             title: std::env::var("MARTIN_TITLE")
                 .unwrap_or_else(|_| "martin — splat fly-around".into()),
-            resolution: (1280, 720).into(), // fixed size so recorded frames are uniform
+            resolution: (win_w, win_h).into(),
+            present_mode,
             mode: if fullscreen {
                 WindowMode::BorderlessFullscreen(MonitorSelection::Current)
             } else {
