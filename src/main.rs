@@ -100,10 +100,12 @@ fn quality_caps(q: &str) -> &'static [(&'static str, &'static str)] {
     match q.to_ascii_lowercase().as_str() {
         "low" => &[
             ("MARTIN_MORPH_COUNT", "120000"),
-            ("MARTIN_WIDTH", "960"),
-            ("MARTIN_HEIGHT", "540"),
-            ("MARTIN_RES", "960x540"),
-            ("MARTIN_SPLAT_SCALE", "0.9"),
+            ("MARTIN_WIDTH", "854"),
+            ("MARTIN_HEIGHT", "480"),
+            ("MARTIN_RES", "854x480"),
+            // 0.8 disk shrink + 480p clears a 30 fps floor even on a dense overdraw-bound stage (the
+            // PonyCamp climax: 8.8 fps default → 30 here on the 860M iGPU). Measured via bench-sweep.
+            ("MARTIN_SPLAT_SCALE", "0.8"),
             ("MARTIN_SORT_BITS", "16"), // coarser depth sort — fewer digit passes/frame
         ],
         "med" | "medium" => &[
@@ -458,7 +460,7 @@ mod tests {
                 .find(|(k, _)| *k == "MARTIN_RES")
                 .map(|(_, v)| *v)
         };
-        assert_eq!(res("low"), Some("960x540"));
+        assert_eq!(res("low"), Some("854x480"));
         assert_eq!(res("high"), Some("1920x1080"));
     }
 
