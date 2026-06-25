@@ -98,6 +98,17 @@ fn is_headless(record: bool, bench: bool, shot: bool, shots: bool) -> bool {
 /// Unknown tier → empty (the caller warns). Pure (str → table) → unit-tested.
 fn quality_caps(q: &str) -> &'static [(&'static str, &'static str)] {
     match q.to_ascii_lowercase().as_str() {
+        // "potato" — the weak-HW floor. 640x360 + 0.7 disks + sort16 + an 8k count cap (at low res the
+        // depth-SORT dominates, so capping gaussians + the coarse sort is what buys fps). ~56-60 fps even
+        // on the dense PonyCamp climax (860M iGPU). Soft but playable.
+        "potato" | "min" | "party" => &[
+            ("MARTIN_MORPH_COUNT", "8000"),
+            ("MARTIN_WIDTH", "640"),
+            ("MARTIN_HEIGHT", "360"),
+            ("MARTIN_RES", "640x360"),
+            ("MARTIN_SPLAT_SCALE", "0.7"),
+            ("MARTIN_SORT_BITS", "16"),
+        ],
         "low" => &[
             ("MARTIN_MORPH_COUNT", "120000"),
             ("MARTIN_WIDTH", "854"),
@@ -170,7 +181,7 @@ fn main() {
     if let Ok(q) = std::env::var("MARTIN_QUALITY") {
         let caps = quality_caps(&q);
         if caps.is_empty() && !q.is_empty() {
-            eprintln!("MARTIN_QUALITY: unknown '{q}' (expected low|med|high) — ignoring");
+            eprintln!("MARTIN_QUALITY: unknown '{q}' (expected potato|low|med|high) — ignoring");
         }
         for (k, v) in caps {
             if std::env::var_os(k).is_none() {
@@ -447,7 +458,9 @@ mod tests {
             keys("low").contains(&"MARTIN_RES"),
             "low must set MARTIN_RES (headless cap)"
         );
-        assert!(keys("low").contains(&"MARTIN_SORT_BITS")); // low-only knob
+        assert!(keys("low").contains(&"MARTIN_SORT_BITS"));
+        assert!(keys("potato").contains(&"MARTIN_SORT_BITS")); // potato also coarsens the sort
+        assert!(keys("party").contains(&"MARTIN_RES")); // potato alias
         assert!(keys("med").contains(&"MARTIN_RES"));
         assert!(keys("MED").contains(&"MARTIN_RES")); // case-insensitive
         assert!(keys("high").contains(&"MARTIN_RES"));
@@ -460,6 +473,7 @@ mod tests {
                 .find(|(k, _)| *k == "MARTIN_RES")
                 .map(|(_, v)| *v)
         };
+        assert_eq!(res("potato"), Some("640x360"));
         assert_eq!(res("low"), Some("854x480"));
         assert_eq!(res("high"), Some("1920x1080"));
     }

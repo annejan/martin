@@ -22,6 +22,8 @@ particle_back  = @@climax       # …and return when the fire re-ignites for the
 particle_origin = 0,-0.3,0.3
 particle_spread = 1.8,1.0,1.8
 bg_dim         = 0.6
+sort_bits      = 16            # PERF: coarse 16-bit depth sort — safe for all-synthetic content (no real
+                               # captures here); ~free fps (the sort dominates at low res). Captures want 32.
 # PERF: the backdrop (terrain/mountains/moon) is ~68% of the frame — full-screen soft disks overdrawing
 # behind everything. Instead of a GLOBAL splat_scale (which thins the props/text too), each backdrop prop
 # carries a per-object `dscale:` to shrink JUST its disks, and the mountains are flattened to a thin wall
