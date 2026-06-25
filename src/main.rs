@@ -370,8 +370,19 @@ fn main() {
             crate::post::PostPlugin,
             crate::particles::ParticlesPlugin,
             crate::scene::caption::CaptionPlugin,
-        ))
-        .run();
+        ));
+    // MARTIN_DIAG=1: register Bevy's frame-time / entity-count / system-info diagnostics + a periodic
+    // log — a profiling aid (per-frame fps history, entity count, process CPU/mem). Off by default so
+    // the shipped live show carries no diagnostics overhead.
+    if std::env::var_os("MARTIN_DIAG").is_some() {
+        app.add_plugins((
+            bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
+            bevy::diagnostic::EntityCountDiagnosticsPlugin::default(),
+            bevy::diagnostic::SystemInformationDiagnosticsPlugin,
+            bevy::diagnostic::LogDiagnosticsPlugin::default(),
+        ));
+    }
+    app.run();
 }
 
 #[cfg(test)]

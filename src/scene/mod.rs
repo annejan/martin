@@ -111,6 +111,8 @@ fn advance_seq_clock(
     // MARTIN_LOOP=1 wraps the clock at show-end → the reel plays forever (a live kiosk loop). Read
     // once; `None` = not looping, `Some(len)` = wrap modulo len (only when a reel/Score gives a length).
     mut loop_len: Local<Option<Option<f32>>>,
+    // MARTIN_HOLD_T pin (profiling): cached once; outer None = unread, inner None = not set.
+    mut hold_t: Local<Option<Option<f32>>>,
 ) {
     if rec.dir.is_some() {
         return;
@@ -131,6 +133,16 @@ fn advance_seq_clock(
     }
     // advance once the show is up — the morph sequence OR the composition stage.
     let built = state.map(|s| s.built).unwrap_or(false) || comp.map(|c| c.built).unwrap_or(false);
+    // MARTIN_HOLD_T=<s>: PIN the live timeline at a fixed time (don't advance) — a profiling aid so a
+    // windowed perf sweep renders byte-identical content every frame (the real-time advance otherwise
+    // makes a faster GPU sample a different moment, confounding count/res/scale comparisons). Read once.
+    let hold_t = *hold_t.get_or_insert_with(|| crate::envvar::opt::<f32>("MARTIN_HOLD_T"));
+    if let Some(ht) = hold_t {
+        if built {
+            clock.t = ht;
+        }
+        return;
+    }
     if built {
         clock.t += time.delta_secs();
         // resolve the loop length once the reel exists: the cue-timeline end (last shot + hold).

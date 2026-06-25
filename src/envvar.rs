@@ -19,6 +19,23 @@ pub fn or<T: FromStr>(key: &str, default: T) -> T {
     }
 }
 
+/// `Some(key parsed as T)` when set+valid, `None` when **unset** (the knob is absent), and `None`+a
+/// warning when set-but-unparseable. For optional knobs where "unset" is meaningfully distinct from any
+/// value (e.g. `MARTIN_HOLD_T` — pin the timeline only when present).
+pub fn opt<T: FromStr>(key: &str) -> Option<T> {
+    let s = std::env::var(key).ok()?;
+    match s.parse() {
+        Ok(v) => Some(v),
+        Err(_) => {
+            eprintln!(
+                "env: ignoring {key}={s:?} — not a valid {}; treating as unset",
+                std::any::type_name::<T>()
+            );
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
