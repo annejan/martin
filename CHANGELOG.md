@@ -38,7 +38,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   then finalizes (GPU upload + camera framing) the frame it's ready. Deterministic capture modes
   (`--record`/`--shot`/`--bench`) build **inline before frame 0**, so a record bakes byte-identically to
   before. Verified: the camping reel renders byte-for-byte identical on both paths; all 42 shows pass
-  the headless smoke test. (See `ASYNC-BUILD-PLAN.md`, now shipped.)
+  the headless smoke test.
 
 ### Added
 - **Audio die-out tail (`[score] set endfade=<s>`)** — the master fade-out length is now a score knob
