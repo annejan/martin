@@ -23,6 +23,7 @@ import os
 import re
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 from PIL import Image, ImageStat
 
@@ -81,6 +82,40 @@ def classify(stat):
     return "ok"
 
 
+def process_show(show):
+    """Validate + probe one show. Returns (name, output_lines, failures) — output is collected
+    (not printed) so a thread pool can run shows concurrently without interleaving their lines."""
+    name = os.path.relpath(show, HERE)
+    lines, fails = [], []
+    starts, warns, rc = validate(show)
+    if starts is None or rc != 0:
+        lines.append(f"\n### {name}\n   VALIDATE FAILED rc={rc} {warns}")
+        fails.append(f"{name}: validate rc={rc}")
+        return name, lines, fails
+    last = max(starts) if starts else 6.0
+    probe = min(last, MAXAT)
+    times = sorted(set([round((min(starts) if starts else 2.0) + 1.0, 1),
+                        round(probe * 0.5 + 1.0, 1), round(probe + 0.5, 1)]))
+    lines.append(f"\n### {name}  ({len(starts)} shots, last@{last:.1f}s)")
+    for w in warns:
+        lines.append(f"   ! {w[:120]}")
+    verdicts = []
+    for i, at in enumerate(times):
+        p = f"{OUT}/{name.replace('/', '_')}_{i}.png"
+        err, stat = shot(show, at, p)
+        if err:
+            lines.append(f"   t={at:6.1f}  {err}")
+            verdicts.append(err)
+        else:
+            v = classify(stat)
+            lines.append(f"   t={at:6.1f}  mean={stat[0]:5} max={stat[1]:3} lit={stat[2]:.3f}  {v}")
+            verdicts.append(v)
+    # hard failure only if NOTHING rendered ok anywhere (a truly dead/black show or all-crash)
+    if not any(v == "ok" for v in verdicts):
+        fails.append(f"{name}: no good frame ({verdicts})")
+    return name, lines, fails
+
+
 def main():
     if not os.path.exists(BIN):
         sys.exit(f"build first: cargo build --release  (missing {BIN})")
@@ -89,35 +124,16 @@ def main():
     if len(sys.argv) > 1:
         shows = [s for s in shows if any(a in s for a in sys.argv[1:])]
 
+    # Run shows CONCURRENTLY — each `martin` invocation is dominated by the Bevy boot (CPU-bound), so a
+    # small pool parallelizes the sweep ~linearly (~45 min → a few). MARTIN_SMOKE_JOBS tunes the width;
+    # keep it modest (default 3) — many simultaneous GPU renders can wedge the RADV driver. ex.map keeps
+    # the output in show order. Drop to 1 if the iGPU misbehaves.
+    jobs = max(1, int(os.environ.get("MARTIN_SMOKE_JOBS", "3")))
     failures = []
-    for show in shows:
-        name = os.path.relpath(show, HERE)
-        starts, warns, rc = validate(show)
-        if starts is None or rc != 0:
-            print(f"\n### {name}\n   VALIDATE FAILED rc={rc} {warns}")
-            failures.append(f"{name}: validate rc={rc}")
-            continue
-        last = max(starts) if starts else 6.0
-        probe = min(last, MAXAT)
-        times = sorted(set([round((min(starts) if starts else 2.0) + 1.0, 1),
-                            round(probe * 0.5 + 1.0, 1), round(probe + 0.5, 1)]))
-        print(f"\n### {name}  ({len(starts)} shots, last@{last:.1f}s)")
-        for w in warns:
-            print(f"   ! {w[:120]}")
-        verdicts = []
-        for i, at in enumerate(times):
-            p = f"{OUT}/{name.replace('/', '_')}_{i}.png"
-            err, stat = shot(show, at, p)
-            if err:
-                print(f"   t={at:6.1f}  {err}")
-                verdicts.append(err)
-            else:
-                v = classify(stat)
-                print(f"   t={at:6.1f}  mean={stat[0]:5} max={stat[1]:3} lit={stat[2]:.3f}  {v}")
-                verdicts.append(v)
-        # hard failure only if NOTHING rendered ok anywhere (a truly dead/black show or all-crash)
-        if not any(v == "ok" for v in verdicts):
-            failures.append(f"{name}: no good frame ({verdicts})")
+    with ThreadPoolExecutor(max_workers=jobs) as ex:
+        for _name, lines, fails in ex.map(process_show, shows):
+            print("\n".join(lines))
+            failures.extend(fails)
 
     print("\n" + ("=" * 60))
     if failures:

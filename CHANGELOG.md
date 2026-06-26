@@ -31,6 +31,17 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   854×480 → 54 fps. Gated on the SH degree (`#if SH_DEGREE > 0`): the **sh3 build = real captures keeps the full 3.0σ** (2.4σ visibly thinned an aerial-city capture — anisotropic splats need the wider tails to blend), so only the synthetic **sh0** build opts in. (`bevy_gaussian_splatting` `martin` branch, `render/gaussian.wgsl`.)
 
 ### Added
+- **Leaner build + a fast-iteration profile.** Dropped the splat crate's unused `tooling`/`viewer`/
+  `web_asset` features (martin loads local files only) — **−51 crates** from the lock (a whole TLS
+  stack), so a smaller binary + faster clean/CI builds, zero functionality lost. New `cargo b-fast`/
+  `r-fast` profile (`[profile.fast]`, no-LTO + parallel codegen, same opt-level 3 → visually identical)
+  cuts the per-edit relink **~6× (≈2m→≈18s)** for the render loop; ship + CI still use `--release`.
+- **sh0 depth sort defaults to 24-bit** (was 32). Synthetic morph/text content (the sh0 default) rarely
+  reorders visibly below 32, so one fewer radix digit pass is ~free fps (biggest at low res where the
+  sort dominates); A/B mean pixel diff 0.22/255 (imperceptible). Real captures (**sh3**) keep 32.
+  Override either with `MARTIN_SORT_BITS`.
+- **`smoke-shows.py` runs shows concurrently** (`MARTIN_SMOKE_JOBS`, default 3) — each `martin` boot is
+  CPU-bound, so a small pool parallelizes the full-sweep smoke test ~linearly (~45 min → a few).
 - **`MARTIN_COUNT_SCALE` — global density multiplier (+ `MARTIN_QUALITY` now scales compose stages).**
   A single knob that scales EVERY resolved gaussian count — the reel part `budget` and every compose
   object's `count:`/default — so a whole scene thins even past an explicit `budget=`/`count:` that
