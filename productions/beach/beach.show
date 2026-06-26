@@ -23,11 +23,11 @@ sort_bits      = 16
 
 [stage]
 # ── THE BEACH (the real Ham Tin capture) — the world, pushed back; small disks (it's the backdrop) ──
-splat:hamtin.ply  @0,-0.45,-0.3 *1.15  dscale:0.85  rot 0,0,0  ~fade  in intro  count:340000
+splat:hamtin.ply  @0,-0.45,-0.3 *1.15  dscale:0.85  rot 180,0,0  ~fade  in intro  count:340000
 # ── SEA + SUN + PALMS: the setting assembles over the intro/build ──
 splat:star.ply    @2.0,1.9,-2  *0.7   spin 0,0,18  bob 0.06  ^pulse:0.5  ~fade  in intro  count:30000            # the sun, high right
-splat:fern.ply    @-2.1,-0.9,-0.3 *1.3  sway 0,7,0  bob 0.04  ~fade  in build  count:26000                          # palm, left
-splat:fern.ply    @2.2,-1.0,-0.5 *1.2  rot 0,40,0  sway 0,6,0  bob 0.04  ~fade  in build  count:26000               # palm, right
+splat:fern.ply    @-2.1,-0.9,-0.3 *1.3  rot 180,0,0  sway 0,7,0  bob 0.04  ~fade  in build  count:26000                          # palm, left
+splat:fern.ply    @2.2,-1.0,-0.5 *1.2  rot 180,40,0  sway 0,6,0  bob 0.04  ~fade  in build  count:26000               # palm, right
 splat:shell.ply   @-1.0,-0.75,1.1 *0.32  rot 0,20,0  bob 0.02  ~fade  in build  count:12000                          # a shell on the sand
 splat:shell.ply   @1.1,-0.72,1.2 *0.30 rot 0,-30,0  bob 0.02  ~fade  in build  count:12000
 
