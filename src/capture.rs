@@ -369,6 +369,85 @@ fn fps_log(
     }
 }
 
+/// On-screen FPS HUD — the engine's own live perf readout (smoothed FPS + frame-time + splat budget +
+/// clock), in the top-left corner. The **`I`** key toggles it (alongside the console metric);
+/// `MARTIN_FPS_OVERLAY=1` (or `[settings] fps_overlay`) starts it shown. **Live windows only** — never
+/// spawned for `--record`/`--shot`, so the HUD can't bake into recorded frames.
+#[derive(Component)]
+pub(crate) struct FpsOverlay;
+
+fn setup_fps_overlay(mut commands: Commands) {
+    // A video RECORD renders the UI into the offscreen image too → the HUD would bake into the frames.
+    // Never spawn it there. (A single `--shot` may show it — hidden unless MARTIN_FPS_OVERLAY is set —
+    // so you can grab a HUD still on purpose without it ever creeping into a deliverable video.)
+    if std::env::var("MARTIN_RECORD").is_ok() {
+        return;
+    }
+    let visible = std::env::var("MARTIN_FPS_OVERLAY").is_ok();
+    commands.spawn((
+        FpsOverlay,
+        Text::new("…"),
+        TextFont {
+            font_size: 20.0.into(), // 0.19: TextFont::font_size is FontSize
+            ..default()
+        },
+        TextColor(Color::srgb(0.5, 1.0, 0.65)),
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(6.0),
+            left: Val::Px(8.0),
+            padding: UiRect::axes(Val::Px(8.0), Val::Px(5.0)),
+            ..default()
+        },
+        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.55)), // a panel so it reads over any scene
+        GlobalZIndex(i32::MAX),                             // draw over captions / credits
+        if visible {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        },
+    ));
+}
+
+/// Toggle the HUD on `I`; while shown, refresh it from the smoothed FPS diagnostic each frame.
+fn fps_overlay(
+    keys: Res<ButtonInput<KeyCode>>,
+    diagnostics: Res<bevy::diagnostic::DiagnosticsStore>,
+    clock: Res<SeqClock>,
+    seq: Option<Res<Sequence>>,
+    mut q: Query<(&mut Visibility, &mut Text), With<FpsOverlay>>,
+) {
+    let Ok((mut vis, mut text)) = q.single_mut() else {
+        return;
+    };
+    if keys.just_pressed(KeyCode::KeyI) {
+        *vis = if *vis == Visibility::Visible {
+            Visibility::Hidden
+        } else {
+            Visibility::Visible
+        };
+    }
+    if *vis != Visibility::Visible {
+        return;
+    }
+    let fps = diagnostics
+        .get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS)
+        .and_then(|d| d.smoothed())
+        .unwrap_or(0.0);
+    let ms = if fps > 0.0 { 1000.0 / fps } else { 0.0 };
+    // gaussians per part (the morph budget; 0 = each part's native count, as the console metric reports).
+    let splats = seq.map(|s| s.budget).unwrap_or(0);
+    let splats = if splats == 0 {
+        "native".to_string()
+    } else {
+        format!("{splats}")
+    };
+    text.0 = format!(
+        "{fps:5.1} fps   {ms:4.1} ms\n{splats} splats/part   t={:.1}s",
+        clock.t
+    );
+}
+
 /// The frame recorder, the single screenshot, the metrics log, and the live auto-exit.
 pub(crate) struct CapturePlugin;
 
@@ -424,7 +503,7 @@ impl Plugin for CapturePlugin {
             accum: 0.0,
             frames: 0,
         })
-        .add_systems(Startup, setup_record_target)
+        .add_systems(Startup, (setup_record_target, setup_fps_overlay))
         .add_systems(
             Update,
             (
@@ -433,6 +512,7 @@ impl Plugin for CapturePlugin {
                 shot_driver,
                 live_end,
                 fps_log,
+                fps_overlay,
             ),
         );
     }

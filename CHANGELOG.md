@@ -31,6 +31,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   854×480 → 54 fps. Gated on the SH degree (`#if SH_DEGREE > 0`): the **sh3 build = real captures keeps the full 3.0σ** (2.4σ visibly thinned an aerial-city capture — anisotropic splats need the wider tails to blend), so only the synthetic **sh0** build opts in. (`bevy_gaussian_splatting` `martin` branch, `render/gaussian.wgsl`.)
 
 ### Added
+- **On-screen FPS HUD (`MARTIN_FPS_OVERLAY` / `[settings] fps_overlay`, `I` key)** — the engine reports
+  its own performance: a corner readout of smoothed FPS + frame-time + splat budget + the timeline clock,
+  drawn over the live window (no external counter / bench-sweep needed for a quick glance). The `I` key
+  toggles it alongside the existing console metric. Live windows only — never drawn into a `--record`
+  video or a `--shot`, so it can't bake into a deliverable.
 - **`--benchmark` auto-tuner.** Re-launches the binary once per quality tier (`potato`/`low`/`med`/
   `high`), renders the show pinned at `--benchmark-at` (default 30 s) with that tier's caps, and prints
   each tier's fps + the best one that clears `--target-fps` (default 30) — the in-process form of
