@@ -424,7 +424,7 @@ fn advance_seq_clock(rec: Res<RecordState>, state: Option<Res<SeqState>>,
 }
 ```
 
-**Bevy 0.18 mechanics.** `bevy_audio`'s `AudioSink` does *not* expose a
+**Bevy 0.19 mechanics.** `bevy_audio`'s `AudioSink` does *not* expose a
 sample-accurate position. Two implementations behind one `position_secs()` seam
 (→ OQ#5):
 

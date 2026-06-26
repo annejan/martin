@@ -17,13 +17,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   channels/rate, `Decodable` drops `DecoderItem`), `Hdr` moved to `bevy_camera`, glTF scenes spawn via
   `WorldAssetRoot` (was `SceneRoot`), `DirectionalLight.shadow_maps_enabled`, the Parley text API
   (`Font::from_bytes`, `TextFont` `FontSource`/`FontSize`, `TextLayout::justify`), and `Assets::get_mut`
-  returning a guard. Verified: 151 tests + clippy + all 42 shows render headless on 0.19. The
+  returning a guard. Verified: 160 tests + clippy + all 34 shows render headless on 0.19. The
   `MARTIN_POST` fullscreen FX (chroma/grain/vignette screen-tear) was **ported to 0.19's "render graph
   as systems"** — the old `ViewNode` became a render-world system (`post_pass`) in the `Core3d`
   schedule's `PostProcess` set after tonemapping, fetching the view via `CurrentView` so non-`post`
   views skip cleanly. Chroma renders again (verified on campsite-max); the shader is unchanged.
-
-### Changed
 - **Splat fill-rate cut (fork §9): the quad extent tightened 3.0σ → 2.4σ.** The 2.4–3σ ring of every
   splat is near-zero alpha (rasterised + blended for almost nothing); trimming it cuts the quad pixel
   area ~36 % with no visible change (it does *not* shrink the gaussians, unlike `SPLAT_SCALE`). Lifts
@@ -127,7 +125,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   thread** onto `AsyncComputeTaskPool` — a live/windowed run keeps the loader animating while it builds,
   then finalizes (GPU upload + camera framing) the frame it's ready. Deterministic capture modes
   (`--record`/`--shot`/`--bench`) build **inline before frame 0**, so a record bakes byte-identically to
-  before. Verified: the camping reel renders byte-for-byte identical on both paths; all 42 shows pass
+  before. Verified: the camping reel renders byte-for-byte identical on both paths; all 34 shows pass
   the headless smoke test.
 
 ### Added
