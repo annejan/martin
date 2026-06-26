@@ -96,6 +96,14 @@ worst scene; `potato` is the party-hardware floor.
 - **Authoring for speed:** prefer **spread** compositions over dense overlapping stacks; a city-style
   cloud is far cheaper than a tight object or a piled diorama at the same count. Keep the effects — they
   don't cost frames.
+- **GOTCHA — always set `count:` on a `[stage]`/compose prop.** A compose object *without* a `count:`
+  token falls back to the default sample count (**120k splat / 60k mesh**) — fine for a hero, ruinous for
+  a small decorative prop. PonyCamp's climax had ~600k hidden gaussians in count-less snacks/animals
+  (five `*0.2` bitterballen at 60k each, etc.), dwarfing the ~90k of explicit counts → 13 fps. Adding
+  `count:` to all 15 via the **count × size law** (count ∝ on-screen area: a `*0.16` prop wants ~2.5k, not
+  60k) took the climax to **40 fps (3×)** with no visible change. Audit a show with: list every
+  `[stage]` `splat:`/`mesh:` line with no `count:`. (`[reel]` parts correctly omit it — they share the
+  morph budget.)
 - **Cities specifically:** ~0.9–2.0M splats native; live wants ~250–300k/city (≈40 fps), but the
   recorded video can take 600–800k. The streaming window caps a *morph* reel at ~800k/city before the
   iGPU OOMs (~2.5M resident, window ≈ 3× count).

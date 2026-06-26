@@ -34,7 +34,7 @@ sort_bits      = 16            # PERF: coarse 16-bit depth sort — safe for all
 splat:mountains.ply @0,-1.2,-12.0  *9,3,2.2   dscale:0.45  ~fade  in intro  count:8000  # thin ridge WALL (depth 7→2.2) + small disks
 splat:moon.ply      @0.8,3.0,-50.0 *7.0      dscale:0.85  spin 0,3,0  drift 0.05,0.006,0  ~fade  in intro  count:5000  # bigger disks (a smooth sphere, not grainy)
 splat:terrain.ply   @0,-1.7,-7.5   *19,2.0,9 dscale:0.5   ~fade  in intro  count:18000  # ground: wider extent (rim off-screen) + softer disks
-# (galaxy nebula cut — at alpha 0.08 it was invisible but a full-screen disk = pure overdraw)
+splat:galaxy.ply    @-3.6,4.0,-42   *15  rot 90,0,25  alpha:0.13  dscale:1.9  spin 0,0,0.4  ~fade  in intro  count:3500  # FUZZY galaxy swirl: face-on spiral, FEW big soft disks = hazy nebula off in the sky (cheap — no overdraw)
 splat:star.ply      @2.5,2.5,-9    *0.3   alpha:0.4   spin 4,6,3  bob 0.10  ^pulse:0.7  path:orbit:0.2,0.15,0.25   ~fade  in intro  count:2000
 splat:star.ply      @-2.0,2.0,-10  *0.25  alpha:0.35  spin 5,3,4  bob 0.08  ^pulse:0.6  path:orbit:0.18,0.12,0.3   ~fade  in intro  count:1500
 splat:star.ply      @3.0,1.5,-8    *0.2   alpha:0.3   spin 3,7,2  bob 0.12  ^pulse:0.8  path:orbit:0.15,0.1,0.2    ~fade  in intro  count:1000
