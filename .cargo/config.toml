@@ -12,3 +12,7 @@ b-sh0 = "build --release"
 r-sh0 = "run --release"
 b-sh3 = "build --release --no-default-features --features sh3 --target-dir target/sh3"
 r-sh3 = "run --release --no-default-features --features sh3 --target-dir target/sh3"
+# Fast-iteration build (no-LTO, parallel codegen — ~6× faster relink, same opt-level=3). Output is
+# target/fast/. For the edit→render loop; ship + CI still use plain --release.
+b-fast = "build --profile fast"
+r-fast = "run --profile fast"

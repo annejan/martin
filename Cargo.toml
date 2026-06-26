@@ -18,7 +18,9 @@ bevy_gaussian_splatting = { version = "8.0.0", default-features = false, feature
     "io_flexbuffers", "io_ply", "planar", "buffer_storage",
     "query_select", "morph_interpolate", "nightly_generic_alias",
     "sort_bitonic", "sort_radix", "sort_rayon", "sort_std",
-    "tooling", "viewer", "file_asset", "web_asset",
+    "file_asset",
+    # dropped: tooling/viewer (the splat crate's own CLI + viewer app — martin uses neither) and
+    # web_asset (martin loads local files only) — removes ~19 crates incl. a whole TLS stack.
 ] }
 # Glyph rasterization for splat-text (pure Rust; already in the lockfile transitively).
 ab_glyph = "0.2"
@@ -96,6 +98,15 @@ opt-level = 3
 lto = "thin"
 codegen-units = 1
 strip = true
+
+# Fast ITERATION profile: same opt-level=3 (renders are visually identical) but no LTO + parallel
+# codegen → the per-source-edit relink drops ~6× (≈2m → ≈18s). Output goes to target/fast/. Use the
+# `cargo b-fast` / `r-fast` aliases. Release/LTO stays the shipped + CI build (smaller, slightly faster).
+[profile.fast]
+inherits = "release"
+lto = false
+codegen-units = 16
+strip = false
 
 # Fork of the splat renderer so we can inject the explosion displacement into its WGSL
 # (shaders load via hardcoded-UUID internal assets — no app-side hook). Tracked as the
