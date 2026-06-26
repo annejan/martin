@@ -116,14 +116,6 @@ pub fn report(
                 cap as f32 / 1e6,
             );
         }
-        let faders = compose.iter().filter(|o| o.fades_via_interpolate()).count();
-        if faders > 0 {
-            eprintln!(
-                "compose: {faders} object(s) use `~fade` — that spawns a GaussianInterpolate, DOUBLING \
-                 their resident VRAM for a fade the plain opacity path does for free. Drop `~fade` (a \
-                 bare object fades by opacity) unless you want the assemble-from-a-cloud look."
-            );
-        }
         for o in compose {
             println!("  {}", o.summary());
         }

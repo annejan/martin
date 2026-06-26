@@ -173,13 +173,9 @@ impl Prop {
         let n = ((self.count.unwrap_or(scene_default) as f32 * crate::scene::count_scale()).round()
             as usize)
             .max(64);
-        n * if self.entrance.is_some() { 2 } else { 1 }
-    }
-
-    /// True if this prop assembles via a `~fade` GaussianInterpolate — which DOUBLES its resident VRAM
-    /// (a source cloud) for a fade the plain opacity path does for free. Flagged in the validate dry-run.
-    pub(crate) fn fades_via_interpolate(&self) -> bool {
-        matches!(self.entrance, Some(Entrance::Fade))
+        // a SPATIAL `~entrance` holds a source cloud too (×2); `~fade` is the plain opacity path → ×1.
+        let doubles = matches!(self.entrance, Some(t) if t != Entrance::Fade);
+        n * if doubles { 2 } else { 1 }
     }
 
     /// The motion state carried on the spawned entity (shared by splat clouds + mesh props).
@@ -589,8 +585,10 @@ pub(crate) fn build_composition(
         let obj_count = ((obj.count.unwrap_or(count) as f32 * crate::scene::count_scale()).round()
             as usize)
             .max(64);
-        // Peak resident for this prop: its shape cloud + (for a `~entrance`) its source cloud → ×2.
-        resident += obj_count * if obj.entrance.is_some() { 2 } else { 1 };
+        // Peak resident: its shape cloud + (for a SPATIAL `~entrance`) its source cloud → ×2. `~fade`
+        // is the plain opacity path now (no source cloud), so it counts ×1.
+        let doubles = matches!(obj.entrance, Some(t) if t != Entrance::Fade);
+        resident += obj_count * if doubles { 2 } else { 1 };
         let sample_n = match obj.field {
             Some(n) => (obj_count / n.max(1)).max(2_000),
             None => obj_count,
@@ -662,7 +660,13 @@ pub(crate) fn build_composition(
         // is driven by animate_composition). Without one it's a PLAIN static cloud (a fade-in) — no
         // per-frame GPU blend. Plain `PlanarGaussian3dHandle` renders directly; `calculate_bounds`
         // gives both kinds an Aabb (NO NoFrustumCulling — that would skip the Aabb → black screen).
-        if let Some(tr) = obj.entrance {
+        // `~fade`'s "source cloud" is just its shape at alpha 0 (`fade_of`), so its assemble is a pure
+        // OPACITY fade — no spatial motion. Render it on the PLAIN path (no GaussianInterpolate → no
+        // doubled source cloud in VRAM), only forcing the opacity fade to COMPOSE_MORPH so it still
+        // fades over the same 3.6 s. Only the genuinely SPATIAL entrances (ball/scatter/swirl/…) need
+        // the interpolate. (Halves a ~fade-heavy stage's resident — e.g. PonyCamp 19 ~fade objects.)
+        let spatial = obj.entrance.filter(|t| *t != Entrance::Fade);
+        if let Some(tr) = spatial {
             let source =
                 source_cloud(tr, &shaped, NORMALIZE_EXTENT * 0.5).unwrap_or_else(|| shaped.clone());
             commands.spawn((
@@ -676,12 +680,16 @@ pub(crate) fn build_composition(
                 obj.anim(rot, true, field),
             ));
         } else {
+            let mut a = obj.anim(rot, false, field);
+            if obj.entrance == Some(Entrance::Fade) {
+                a.fade = COMPOSE_MORPH; // preserve ~fade's 3.6 s in/out fade (was the morph duration)
+            }
             commands.spawn((
                 PlanarGaussian3dHandle(assets.add(PlanarGaussian3d::from(shaped))),
                 Visibility::Visible,
                 cs,
                 tf,
-                obj.anim(rot, false, field),
+                a,
             ));
         }
         placed.push((obj.pos, NORMALIZE_EXTENT * 0.5 * obj.scale.max_element()));
