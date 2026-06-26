@@ -54,17 +54,17 @@ splat:flame.ply     @0.0,-0.44,0.3   *0.72  ~shockwave  bob 0.11  ^turbulence:0.
 # GROVE (build/drop) — fly up + fade at the breakdown.
 splat:pine.ply      @3.0,-0.31,0.5   *1.2   ~fade  sway 0,8,0  bob 0.04   travel:5,7,0.5@breakdown,3.5    in build  out breakdown  count:7000
 splat:pine.ply      @3.8,-0.56,-0.6  *0.55  ~fade  sway 0,13,0  bob 0.03  travel:7,7,-0.6@breakdown,3.5   in build  out breakdown  count:4000
-splat:pine.ply      @-4.0,-0.48,1.2  *0.9   ~fade  sway 0,6,0  bob 0.04   travel:-7,7,1.2@breakdown,3.5   in drop  out breakdown
+splat:pine.ply      @-4.0,-0.48,1.2  *0.9   ~fade  sway 0,6,0  bob 0.04   travel:-7,7,1.2@breakdown,3.5   in drop  out breakdown  count:6000
 
 # CARAVAN — parks in the build (~drop); rolls off-left + fades at the breakdown.
 mesh:caravan.glb    @-2.7,-0.55,-0.4 *0.7   rot -0,122.7,-0  disk:0.4  ~drop  travel:-16,1,-0.4@breakdown,3.5  in build  out breakdown  count:9000
 
 # BARNYARD (build/drop) — scatter outward + fade at the breakdown.
-mesh:geit.glb  @-2.4,-1.05,2.1  *0.5   rot 0,-4,0   sway 0,5,0  bob 0.05   ~fade  travel:-12,-1,5@breakdown,3.5  in build  out breakdown
-mesh:geit.glb  @2.6,-1.24,2     *0.45  rot -0,-101.2,-0  sway 0,6,0  bob 0.06  ~fade  travel:12,-1,5@breakdown,3.5  in build  out breakdown
-mesh:pauw.glb  @-1.8241,-1.3,-0.4451  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~fade  travel:-13,-1,-3@breakdown,3.5  in drop  out breakdown
-mesh:cavia.glb @-1.15,-1.12,1.45  *0.26  rot 0,28,0   sway 0,10,0  bob 0.035  ^jitter:0.4  ~fade  travel:-10,-1,6@breakdown,3  in build  out breakdown
-mesh:cavia.glb @-0.78,-1.10,1.55  *0.22  rot 0,-18,0  sway 0,12,0  bob 0.04   ^jitter:0.4  ~fade  travel:-9,-1,6@breakdown,3   in build  out breakdown
+mesh:geit.glb  @-2.4,-1.05,2.1  *0.5   rot 0,-4,0   sway 0,5,0  bob 0.05   ~fade  travel:-12,-1,5@breakdown,3.5  in build  out breakdown  count:14000
+mesh:geit.glb  @2.6,-1.24,2     *0.45  rot -0,-101.2,-0  sway 0,6,0  bob 0.06  ~fade  travel:12,-1,5@breakdown,3.5  in build  out breakdown  count:12000
+mesh:pauw.glb  @-1.8241,-1.3,-0.4451  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~fade  travel:-13,-1,-3@breakdown,3.5  in drop  out breakdown  count:12000
+mesh:cavia.glb @-1.15,-1.12,1.45  *0.26  rot 0,28,0   sway 0,10,0  bob 0.035  ^jitter:0.4  ~fade  travel:-10,-1,6@breakdown,3  in build  out breakdown  count:5000
+mesh:cavia.glb @-0.78,-1.10,1.55  *0.22  rot 0,-18,0  sway 0,12,0  bob 0.04   ^jitter:0.4  ~fade  travel:-9,-1,6@breakdown,3   in build  out breakdown  count:4000
 
 # WORDMARK — deFEEST opens the camp (build), LEAVES at the breakdown (the dip), EXPLODES back on the climax.
 text:deFEEST        @-1.7,0.7,1.0 *0.42  ~pen-write  tint:brand  in build  out breakdown
@@ -81,17 +81,17 @@ mesh:caravan.glb    @-2.7,-0.55,-0.4 *0.7   rot -0,122.7,-0  disk:0.4  ~drop  in
 splat:pine.ply      @1.7,-0.44,-1.7  *0.8   ~drop  sway 0,5,0  bob 0.05   in climax  count:6000
 splat:pine.ply      @-1.5,-0.38,-1.9 *1.15  ~drop  sway 0,9,0  bob 0.04   in climax  count:7000
 splat:pine.ply      @-3.5,-0.31,-0.9 *0.65  ~drop  sway 0,7,0  bob 0.03   in climax  count:4500
-mesh:bier.glb       @1.6,-0.55,0.9  *0.45  alpha:0.16  bob 0.04  spin 0,45,0  ~fade  in climax
+mesh:bier.glb       @1.6,-0.55,0.9  *0.45  alpha:0.16  bob 0.04  spin 0,45,0  ~fade  in climax  count:5000
 # 5 bitterballen RAIN in (~drop = flying snacks), weave a bounded Lissajous near the fire.
-mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  ~drop  path:liss:0.35,0.25,0.3,2,3,1,0.45  bob 0.10  ^pulse:0.6  spin 19,37,13  tint:fry  in climax
-mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  ~drop  path:liss:0.3,0.3,0.25,3,1,2,0.50   bob 0.12  ^pulse:0.6  spin 23,29,17  tint:fry  in climax
-mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  ~drop  path:liss:0.28,0.22,0.32,1,3,2,0.40 bob 0.12  ^pulse:0.6  spin 31,13,41  tint:fry  in climax
-mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  ~drop  path:liss:0.32,0.28,0.3,2,1,3,0.55  bob 0.10  ^pulse:0.5  spin 11,23,7   tint:fry  in climax
-mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  ~drop  path:liss:0.3,0.26,0.28,3,2,1,0.48  bob 0.12  ^pulse:0.7  spin 17,43,29  tint:fry  in climax
+mesh:bitterbal.glb  @-0.9,-0.32,1.0 *0.20  ~drop  path:liss:0.35,0.25,0.3,2,3,1,0.45  bob 0.10  ^pulse:0.6  spin 19,37,13  tint:fry  in climax  count:3000
+mesh:bitterbal.glb  @0.8,-0.30,1.2  *0.18  ~drop  path:liss:0.3,0.3,0.25,3,1,2,0.50   bob 0.12  ^pulse:0.6  spin 23,29,17  tint:fry  in climax  count:2500
+mesh:bitterbal.glb  @0.1,-0.10,1.5  *0.16  ~drop  path:liss:0.28,0.22,0.32,1,3,2,0.40 bob 0.12  ^pulse:0.6  spin 31,13,41  tint:fry  in climax  count:2500
+mesh:bitterbal.glb  @-1.5,-0.25,0.5 *0.22  ~drop  path:liss:0.32,0.28,0.3,2,1,3,0.55  bob 0.10  ^pulse:0.5  spin 11,23,7   tint:fry  in climax  count:3000
+mesh:bitterbal.glb  @1.8,-0.28,0.3  *0.15  ~drop  path:liss:0.3,0.26,0.28,3,2,1,0.48  bob 0.12  ^pulse:0.7  spin 17,43,29  tint:fry  in climax  count:2500
 mesh:paard.glb      @1.0,-0.775,-4.0 *0.8   count:12000  rot 0,200,0  sway 0,5,0  bob 0.05  ^pulse:0.4  tint:fry  ~fade  in climax
-splat:doggo.ply     @1.96,-1.16,1.2  *0.5   rot 0,-16,0  sway 0,7,0  bob 0.04  travel:1.8,-1.1562,1.2@climax,14  ~fade  in climax
-mesh:pauw.glb  @-1.8241,-1.3,-0.4451  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~drop  in climax  # the BLUE peacock struts back in for the party (it left at the breakdown)
-mesh:pauw.glb  @1.0301,-1.33,-1.98  *0.6   rot 0,-55,0  spin 0,12,0  bob 0.06  ^pulse:0.6  tint:white  ~drop  in climax  # the rare WHITE peacock parades for the party
+splat:doggo.ply     @1.96,-1.16,1.2  *0.5   rot 0,-16,0  sway 0,7,0  bob 0.04  travel:1.8,-1.1562,1.2@climax,14  ~fade  in climax  count:8000
+mesh:pauw.glb  @-1.8241,-1.3,-0.4451  *0.55  rot 0,55,0   spin 0,16,0  bob 0.05  ^pulse:0.4  ~drop  in climax  count:12000  # the BLUE peacock struts back in for the party (it left at the breakdown)
+mesh:pauw.glb  @1.0301,-1.33,-1.98  *0.6   rot 0,-55,0  spin 0,12,0  bob 0.06  ^pulse:0.6  tint:white  ~drop  in climax  count:12000  # the rare WHITE peacock parades for the party
 
 # Festival title card — TYPEWRITER-reveal on the build, held to the outro (the brand persists).
 text:PonyCamp       @0,1.25,1.0    *0.5   ~typewriter  font:defeest  tint:brand  bob 0.05  in build  out outro
