@@ -1,4 +1,6 @@
 [toolchain]
-# bevy_gaussian_splatting's default features use generic associated types
-# behind the `nightly_generic_alias` feature, which requires nightly.
-channel = "nightly"
+# bevy_gaussian_splatting's default features use generic associated types behind the
+# `nightly_generic_alias` feature, which requires nightly. PINNED to a known-good DATE (not rolling
+# `nightly`) so a nightly regression / ICE / feature-drop can't break the build the night before the
+# compo — the CI `dtolnay/rust-toolchain` steps inherit this file. Bump deliberately + re-verify.
+channel = "nightly-2026-04-26"
