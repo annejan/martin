@@ -23,8 +23,8 @@ text:2026         ~sparkle
 
 # --- the stage: objects placed around the hero (verbatim .compose syntax) ---
 [stage]
-mesh:bitterbal.obj  @-1.4,.2,0  *.5  ~drop          # a bitterbal drops in on the left
-mesh:bitterbal.obj  @1.4,-.3,0  *.4  ~drop ^turb    # ...and one churning on the right
+mesh:bitterbal.obj  @-1.4,.2,0  *.5  ~drop  count:4000          # a bitterbal drops in on the left
+mesh:bitterbal.obj  @1.4,-.3,0  *.4  ~drop ^turb  count:3500    # ...and one churning on the right
 
 # --- the camera: a music-timed track (order-free key=value; t = show-time seconds) ---
 # pos = look-at target (x,y,z); dist/yaw/pitch place the orbit camera. Authored live by flying +

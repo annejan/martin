@@ -30,28 +30,28 @@ bg_dim       = 0.5
 #     edge-on pink streak — dropped; pure-mesh storm reads cleaner against the boiling shader sky).
 
 # --- INTRO seeds: a few lone bitterballen tumble in from the dark, easing the storm open.
-mesh:bitterbal.glb  @-2.0,0.8,1.0   *0.34  spin 23,41,17  path:liss:2.6,1.4,2.0,2,3,5,0.20   tint:fry  ~morph  in intro                 # first ball, wide left
-mesh:bitterbal.glb  @2.3,-0.6,0.4  *0.30  spin 31,19,43  path:liss:2.2,1.8,2.4,3,5,2,0.17   tint:fry  ~morph  in intro                 # second, low right
-mesh:bitterbal.glb  @0.4,1.6,-0.8  *0.28  spin 13,47,29  path:orbit:2.4,0.30                tint:fry  ~morph  in intro                 # high orbiter
+mesh:bitterbal.glb  @-2.0,0.8,1.0   *0.34  spin 23,41,17  path:liss:2.6,1.4,2.0,2,3,5,0.20   tint:fry  ~morph  count:5000  in intro                 # first ball, wide left
+mesh:bitterbal.glb  @2.3,-0.6,0.4  *0.30  spin 31,19,43  path:liss:2.2,1.8,2.4,3,5,2,0.17   tint:fry  ~morph  count:4500  in intro                 # second, low right
+mesh:bitterbal.glb  @0.4,1.6,-0.8  *0.28  spin 13,47,29  path:orbit:2.4,0.30                tint:fry  ~morph  count:3500  in intro                 # high orbiter
 
 # --- BUILD: the swarm proper arrives — field:N scatters MANY balls per line, each on its own path.
-mesh:bitterbal.glb  @-1.2,0.2,0.6   *0.24  field:9  spin 37,23,11  path:liss:3.0,1.6,2.6,5,7,3,0.24  ^turbulence:0.25  tint:fry  ~swarm  in build   out outro   # the main cloud, left-biased
-mesh:bitterbal.glb  @1.4,0.4,-0.4  *0.22  field:9  spin 19,43,31  path:liss:2.6,2.0,3.0,7,5,11,0.27 ^turbulence:0.25  tint:fry  ~swarm  in build   out outro   # the main cloud, right-biased
-mesh:bitterbal.glb  @0.0,1.2,1.2   *0.20  field:7  spin 29,17,47  path:liss:2.0,2.6,2.2,11,3,7,0.31 ^turbulence:0.20  tint:fry  ~swarm  in build   out outro   # the high tier
-mesh:bitterbal.glb  @0.0,-1.0,-0.8 *0.20  field:7  spin 41,29,13  path:liss:2.8,1.4,2.8,3,11,5,0.22 ^turbulence:0.20  tint:fry  ~swarm  in build   out outro   # the low tier
+mesh:bitterbal.glb  @-1.2,0.2,0.6   *0.24  field:9  spin 37,23,11  path:liss:3.0,1.6,2.6,5,7,3,0.24  ^turbulence:0.25  tint:fry  ~swarm  count:3000  in build   out outro   # the main cloud, left-biased
+mesh:bitterbal.glb  @1.4,0.4,-0.4  *0.22  field:9  spin 19,43,31  path:liss:2.6,2.0,3.0,7,5,11,0.27 ^turbulence:0.25  tint:fry  ~swarm  count:3000  in build   out outro   # the main cloud, right-biased
+mesh:bitterbal.glb  @0.0,1.2,1.2   *0.20  field:7  spin 29,17,47  path:liss:2.0,2.6,2.2,11,3,7,0.31 ^turbulence:0.20  tint:fry  ~swarm  count:2800  in build   out outro   # the high tier
+mesh:bitterbal.glb  @0.0,-1.0,-0.8 *0.20  field:7  spin 41,29,13  path:liss:2.8,1.4,2.8,3,11,5,0.22 ^turbulence:0.20  tint:fry  ~swarm  count:2800  in build   out outro   # the low tier
 
 # --- DROP: the KILL-SHOT — a clutch of fat hero balls SLAMS in on the kick, snapped + flashed + fried.
-mesh:bitterbal.glb  @-0.8,0.3,0.2   *0.46  field:5  spin 53,37,23  path:liss:1.8,1.2,1.6,13,7,5,0.34 ^turbulence:0.40  tint:fry  ~morph      in drop   out outro   # hero cluster (the reveal), front-left third
-mesh:bitterbal.glb  @1.0,-0.2,-0.3 *0.42  field:5  spin 23,53,37  path:orbit:1.9,0.46              ^turbulence:0.40  tint:fry  ~morph      in drop   out outro   # hero orbiters, right
+mesh:bitterbal.glb  @-0.8,0.3,0.2   *0.46  field:5  spin 53,37,23  path:liss:1.8,1.2,1.6,13,7,5,0.34 ^turbulence:0.40  tint:fry  ~morph      count:7000  in drop   out outro   # hero cluster (the reveal), front-left third
+mesh:bitterbal.glb  @1.0,-0.2,-0.3 *0.42  field:5  spin 23,53,37  path:orbit:1.9,0.46              ^turbulence:0.40  tint:fry  ~morph      count:6500  in drop   out outro   # hero orbiters, right
 
 # --- BREAKDOWN→CLIMAX: more layers pile on, deeper rings of balls — the storm thickens.
-mesh:bitterbal.glb  @-2.6,0.6,-1.4  *0.26  field:8  spin 17,31,43  path:orbit:3.2,0.21              ^turbulence:0.30  tint:fry  ~morph  in breakdown  out outro   # wide outer orbit ring
-mesh:bitterbal.glb  @2.6,-0.4,1.6  *0.26  field:8  spin 43,13,29  path:liss:3.4,2.2,3.0,5,13,7,0.19 ^turbulence:0.30  tint:fry  ~morph  in climax     out outro   # far counter-layer
+mesh:bitterbal.glb  @-2.6,0.6,-1.4  *0.26  field:8  spin 17,31,43  path:orbit:3.2,0.21              ^turbulence:0.30  tint:fry  ~morph  count:3200  in breakdown  out outro   # wide outer orbit ring
+mesh:bitterbal.glb  @2.6,-0.4,1.6  *0.26  field:8  spin 43,13,29  path:liss:3.4,2.2,3.0,5,13,7,0.19 ^turbulence:0.30  tint:fry  ~morph  count:3200  in climax     out outro   # far counter-layer
 
 # --- THE BRAND: AEgg easter-egg tumbling through, then the punchline + the logo crown the climax.
-mesh:aegg.glb       @2.0,1.4,0.5   *0.5   spin 22,38,14  path:liss:1.6,1.2,1.4,2,5,3,0.16   ~morph  in build   out climax                              # 🥚 the AEgg cameo whirls past
-text:de wereld is een bitterbal  @-0.9,0.9,1.6  *0.85  ~pen-write  tint:brand  bob 0.06  in drop   out outro    # THE PUNCHLINE handwrites in upper-left on the drop
-mesh:defeest.glb    @0.0,-0.2,0.0  *1.5   rot 180,0,0  bob 0.08  sway 0,6,0  ~ball  flash:0.6  in climax  out outro                                              # the deFEEST logo crowns the peak (mesh: = sampled, renders reliably in [stage])
+mesh:aegg.glb       @2.0,1.4,0.5   *0.5   spin 22,38,14  path:liss:1.6,1.2,1.4,2,5,3,0.16   ~morph  count:6000  in build   out climax                              # 🥚 the AEgg cameo whirls past
+text:de wereld is een bitterbal  @-0.9,0.9,1.6  *0.85  ~pen-write  tint:brand  bob 0.06  count:10000  in drop   out outro    # THE PUNCHLINE handwrites in upper-left on the drop
+mesh:defeest.glb    @0.0,-0.2,0.0  *1.5   rot 180,0,0  bob 0.08  sway 0,6,0  ~ball  flash:0.6  count:16000  in climax  out outro                                              # the deFEEST logo crowns the peak (mesh: = sampled, renders reliably in [stage])
 
 # Camera: LOW + OFF-centre (rule of thirds), orbiting the storm. CUT-punch on the drop (the reveal),
 # switch sides for the breakdown, swing grand for the climax, settle on the logo. cam_pump lunges per beat.

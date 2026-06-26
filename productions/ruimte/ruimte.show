@@ -71,22 +71,22 @@ text:deFEEST                  @@outro    @10,2     ~pen-write               back
 # STAGGERED: at most one prop shares a window with the hero so nothing piles on the centre.
 
 # Landmarks: Saturn far top-LEFT through build/drop; the Moon far top-RIGHT through the climax.
-splat:saturn.ply  @-2.6,2.6,3.2   *0.9   rot 0,0,0   spin 0,3,0   alpha:0.9   ~fade   in @@build    out @@bar:20
-splat:moon.ply    @2.6,2.6,-3.2   *0.8   spin 0,4,0  alpha:0.9               ~fade   in @@climax   out @@outro
+splat:saturn.ply  @-2.6,2.6,3.2   *0.9   rot 0,0,0   spin 0,3,0   alpha:0.9   ~fade   in @@build    out @@bar:20   count:12000
+splat:moon.ply    @2.6,2.6,-3.2   *0.8   spin 0,4,0  alpha:0.9               ~fade   in @@climax   out @@outro   count:10000
 
 # DROP: a UFO streaks across the top early (bars 10-14), THEN a rocket LAUNCHES up the left side (bars
 # 14-20). travel: now works (parser fix); Y travel = the launch climb, Z travel = a horizontal cross.
 # Both clear out before the breakdown so the title card is clean. spin = barrel-roll life.
-splat:ufo.ply     @2.8,2.0,2.8    *0.5   spin 0,50,0   ~fade  travel:2.8,2.0,-3.0@bar:10,5   in @@bar:10   out @@bar:14
-splat:rocket.ply  @-2.6,-2.8,2.6  *0.45  spin 0,25,0   ~fade  travel:-2.6,3.6,2.6@bar:14,5   in @@bar:14   out @@bar:20
+splat:ufo.ply     @2.8,2.0,2.8    *0.5   spin 0,50,0   ~fade  travel:2.8,2.0,-3.0@bar:10,5   in @@bar:10   out @@bar:14   count:6000
+splat:rocket.ply  @-2.6,-2.8,2.6  *0.45  spin 0,25,0   ~fade  travel:-2.6,3.6,2.6@bar:14,5   in @@bar:14   out @@bar:20   count:6000
 
 # CLIMAX: a rocket LAUNCHES up the right side (bars 26-32), THEN a UFO streaks across the top (32-38).
-splat:rocket.ply  @2.6,-2.8,-2.6  *0.45  spin 0,25,0   ~fade  travel:2.6,3.6,-2.6@climax,6   in @@climax   out @@bar:32
-splat:ufo.ply     @-2.8,2.0,-3.0  *0.5   spin 0,50,0   ~fade  travel:-2.8,2.0,3.0@bar:32,5   in @@bar:32   out @@outro
+splat:rocket.ply  @2.6,-2.8,-2.6  *0.45  spin 0,25,0   ~fade  travel:2.6,3.6,-2.6@climax,6   in @@climax   out @@bar:32   count:6000
+splat:ufo.ply     @-2.8,2.0,-3.0  *0.5   spin 0,50,0   ~fade  travel:-2.8,2.0,3.0@bar:32,5   in @@bar:32   out @@outro   count:6000
 
 # deFEEST MOTIF — a small bitterbal (a MESH, which DOES honor travel) drifts the far lower void.
-mesh:bitterbal.glb @-2.2,-2.0,2.8  *0.14  path:liss:1.0,0.6,0.8,0.4,0.3,0.3  spin 0,30,0  alpha:0.6  ~fade  in @@drop  out @@bar:14
-mesh:bitterbal.glb @2.2,-1.6,3.0   *0.14  travel:3.0,0.4,3.6   alpha:0.5  ~fade  in @@outro  out @@outro+7bar
+mesh:bitterbal.glb @-2.2,-2.0,2.8  *0.14  path:liss:1.0,0.6,0.8,0.4,0.3,0.3  spin 0,30,0  alpha:0.6  ~fade  in @@drop  out @@bar:14   count:2500
+mesh:bitterbal.glb @2.2,-1.6,3.0   *0.14  travel:3.0,0.4,3.6   alpha:0.5  ~fade  in @@outro  out @@outro+7bar   count:2500
 
 # ── CAPTIONS (2D screen text overlay) ──────────────────────────────────────────
 [caption]

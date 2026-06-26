@@ -43,7 +43,7 @@ mesh:cuy.glb      @@bar:8    @18,3.2,0  ~morph   ease:hold-snap   ^turbulence@mo
 [stage]
 # Plate — a SOLID round disc (a flat squashed sphere, not the holed ring/donut) the animal rests on.
 # Stays the whole show (no `out`), so the dish always has a bottom under it.
-splat:sphere.ply   @0,-0.75,0   *2.2,0.10,2.2   alpha:0.6   ~fade   in @@bar:0
+splat:sphere.ply   @0,-0.75,0   *2.2,0.10,2.2   alpha:0.6   ~fade   in @@bar:0   count:12000
 
 [camera]
 # Focused orbit around the plated dish (plate + animal at origin): a slow full turn, tight, looking

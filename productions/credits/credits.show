@@ -18,16 +18,16 @@ pitch = 0.0
 
 [compose]
 # <source>  @x,y,z  *scale  drift dx,dy,dz   — all drift up 0.17/s; higher y = appears sooner.
-svg:defeest-white.svg                          @0,-0.4,0     *0.55  drift 0,0.17,0
+svg:defeest-white.svg                          @0,-0.4,0     *0.55  drift 0,0.17,0  count:18000
 text:a deFEEST production                       @0,-1.5,0     *0.42  drift 0,0.17,0
 text:CODE                                       @0,-2.7,0     *0.30  drift 0,0.17,0
 wall:annejan|Kloot                              @0,-3.5,0     *0.40  drift 0,0.17,0
 text:MUSIC                                      @0,-4.7,0     *0.30  drift 0,0.17,0
 text:Cinder                                     @0,-5.5,0     *0.42  drift 0,0.17,0
 text:BUILT WITH                                 @0,-6.7,0     *0.30  drift 0,0.17,0
-svg:bevy.svg                                    @-0.85,-7.7,0 *0.40  drift 0,0.17,0
-svg:ferris.svg                                  @0,-7.7,0     *0.28  drift 0,0.17,0
-svg:claude.svg                                  @0.85,-7.7,0  *0.30  drift 0,0.17,0
+svg:bevy.svg                                    @-0.85,-7.7,0 *0.40  drift 0,0.17,0  count:5000
+svg:ferris.svg                                  @0,-7.7,0     *0.28  drift 0,0.17,0  count:3000
+svg:claude.svg                                  @0.85,-7.7,0  *0.30  drift 0,0.17,0  count:4000
 text:Bevy · Rust · Claude                       @0,-8.7,0     *0.30  drift 0,0.17,0
 text:SPLATS                                     @0,-9.9,0     *0.30  drift 0,0.17,0
 wall:bevy_gaussian_splatting|Mitchell Mosure    @0,-10.7,0    *0.32  drift 0,0.17,0

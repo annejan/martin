@@ -45,9 +45,9 @@ mesh:defeest.glb    rot:180,0,0 @4,2       ~morph                               
 # ASYNC LAYER in front of the reel — the snack MOTIF drifts in/out at staggered bars + varied tempo
 # (overlapping the reel, not lockstep), and ONE caption lands the punchline at the drop. The reel's
 # logo finale carries the brand. Sized/placed for the reel cameras (in FRONT = Z-safe).
-mesh:bitterbal.glb @2.2,0.7,2.3   *0.42  spin 19,37,13  drift -0.02,0,0.006   ~morph  tint:fry  in bar:6   out bar:11   # the snack hints during the whirlwind, front-right
+mesh:bitterbal.glb @2.2,0.7,2.3   *0.42  spin 19,37,13  drift -0.02,0,0.006   ~morph  tint:fry  in bar:6   out bar:11   count:6000   # the snack hints during the whirlwind, front-right
 text:de wereld is een bitterbal  @-0.7,0.85,1.5  *0.85  ~pen-write  tint:brand  in bar:11  out bar:18   # the punchline lands on the drop, upper-left
-mesh:bitterbal.glb @-2.6,0.6,2.5  *0.38  spin 23,29,17  drift 0.018,0.008,0   ~morph  tint:fry  in bar:23  out bar:39   # motif returns, left, through breakdown→climax
+mesh:bitterbal.glb @-2.6,0.6,2.5  *0.38  spin 23,29,17  drift 0.018,0.008,0   ~morph  tint:fry  in bar:23  out bar:39   count:6000   # motif returns, left, through breakdown→climax
 
 # camera: orbit the hero OFF-centre (rule of thirds), punch in on the drop (cut), switch sides, settle
 # front-on for the brand. dist ~5 frames the @5-6 morph cloud with cosmos around it.

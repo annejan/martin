@@ -20,7 +20,7 @@ bg_dim   = 0.55
 # THE STAGE — one baby, centred, spinning. spin = deg/sec around Y (the pirouette); a slow bob lifts
 # it on the swell. Fades in on the intro, holds for the whole hymn.
 [stage]
-splat:baby.ply  @0,0.2,0  *1.6  spin 0,28,0  bob 0,0.12,0  ~fade  in intro     # 👶 pirouetting on its pedestal
+splat:baby.ply  @0,0.2,0  *1.6  spin 0,28,0  bob 0,0.12,0  ~fade  in intro  count:30000   # 👶 pirouetting on its pedestal — HERO, kept generous
 text:ANTHEM BABY  @-0.9,-1.4,1.4  *0.7  ~pen-write  in refrain  out outro       # title handwrites in on the soar
 
 # THE CAMERA — a slow reverent push-in, eyes level with the baby, drifting just enough to read the

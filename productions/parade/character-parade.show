@@ -37,9 +37,9 @@ mesh:defeest.glb       rot:180,0,0 @4,2,0       ~morph   beat:0.7               
 # ASYNC LAYER in front of the reel (Z-safe = meshes + foreground): the snack motif drifts in/out at
 # staggered bars + varied tempo (overlapping, not lockstep) and one caption lands the bit at the drop.
 [stage]
-mesh:bitterbal.glb @2.4,0.7,2.4   *0.40  spin 17,31,11  drift -0.018,0,0.006  ~morph  tint:fry  in bar:5   out bar:11   # the snack hints during the parade, front-right
+mesh:bitterbal.glb @2.4,0.7,2.4   *0.40  spin 17,31,11  drift -0.018,0,0.006  ~morph  tint:fry  count:6000  in bar:5   out bar:11   # the snack hints during the parade, front-right
 text:de hele cast is een bitterbal  @-0.8,0.9,1.5  *0.8  ~pen-write  tint:brand  in bar:11  out bar:18      # the punchline lands on the drop, upper-left
-mesh:bitterbal.glb @-2.7,0.6,2.5  *0.36  spin 23,29,19  drift 0.02,0.008,0   ~morph  tint:fry  in bar:23  out bar:39   # motif returns, left, through breakdown→climax
+mesh:bitterbal.glb @-2.7,0.6,2.5  *0.36  spin 23,29,19  drift 0.02,0.008,0   ~morph  tint:fry  count:6000  in bar:23  out bar:39   # motif returns, left, through breakdown→climax
 
 # camera: low, OFF the subject (rule of thirds); orbit each cast member, CUT in on the peace-sign drop,
 # switch sides for the bitterbal, settle front-on for the logo. dist ~5 frames the @3-4 morph cloud.

@@ -41,7 +41,7 @@ mesh:defeest.glb          rot:180,0,0  @3,5    ~morph  beat:0                   
 # the credit shows during Seattle. All gone before the bitterbal/logo finale so it reads clean.
 [stage]
 text:deFEEST          @0,0.26,0    *0.42  ~pen-write  tint:brand                in breakdown  out outro   # wordmark handwrites in, blue→gold
-mesh:bitterbal.glb    @0.22,0.08,0.35 *0.08  spin 17,43,11  bob 0.03  ^turbulence:0.3  drift 0.013,0,-0.003  ~morph  tint:fry  in drop  out breakdown  # the snack motif — FORWARD (z0.35) to stay in front of the backdrop city without leaving the diving-camera frame (z0.75 was out of POV, z0.12 sank behind)
+mesh:bitterbal.glb    @0.22,0.08,0.35 *0.08  spin 17,43,11  bob 0.03  ^turbulence:0.3  drift 0.013,0,-0.003  ~morph  tint:fry  count:2500  in drop  out breakdown  # the snack motif — FORWARD (z0.35) to stay in front of the backdrop city without leaving the diving-camera frame (z0.75 was out of POV, z0.12 sank behind)
 text:Imagery ©Google  @0,-0.4,0    *0.5   ~fade  tint:brand                    in climax  out outro       # credit during Seattle, brand gold
 
 # camera: high raked establishing on the logo → dive → city tour (frontal through the write) → the DOME

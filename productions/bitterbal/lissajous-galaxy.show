@@ -28,31 +28,31 @@ bg_dim       = 0.5
 #     disc — dropped; the starfield reads cleaner and the swarm is pure mesh = no phantom-sphere risk)
 
 # --- THE CORE: slow-spinning deFEEST logo, the hub of the system, lifted off the rule-of-thirds centre
-mesh:defeest.glb   @0,0.3,0      *1.1   rot 180,0,0   bob 0.06   sway 0,7,0                     in intro      # the brand at the heart, turning slow
+mesh:defeest.glb   @0,0.3,0      *1.1   rot 180,0,0   bob 0.06   sway 0,7,0   count:30000        in intro      # the brand at the heart, turning slow
 
 # --- INNER ORBITAL: two snacks on a tight near-circular lissajous (3:2) — the close dance
-mesh:bitterbal.glb @0,0,0        *0.30  spin 21,33,11  path:liss:1.7,0.9,1.5,3,2,2,0.42   tint:fry   ~morph  in build      # close lissajous, fries-hot
-mesh:bitterbal.glb @0,0,0        *0.28  spin 17,40,23  path:liss:1.6,1.3,1.4,2,3,2,0.37   tint:fry   ~morph  in build      # its counter-weave (swapped fx/fy)
+mesh:bitterbal.glb @0,0,0        *0.30  spin 21,33,11  path:liss:1.7,0.9,1.5,3,2,2,0.42   tint:fry   ~morph  count:6000  in build      # close lissajous, fries-hot
+mesh:bitterbal.glb @0,0,0        *0.28  spin 17,40,23  path:liss:1.6,1.3,1.4,2,3,2,0.37   tint:fry   ~morph  count:5000  in build      # its counter-weave (swapped fx/fy)
 
 # --- MID ORBITAL: the AEggs ride wide elliptical lissajous (5:3, 4:5) — slower, statelier
-mesh:aegg.glb      @0,0,0        *0.55  spin 9,19,7    path:liss:2.9,1.1,2.4,5,3,2,0.27           ~swirl  in build      # big slow egg, wide weave
-mesh:aegg.glb      @0,0,0        *0.50  spin 13,8,16   path:liss:2.6,1.6,2.7,4,5,3,0.23           ~swirl  in build      # second egg, taller weave
+mesh:aegg.glb      @0,0,0        *0.55  spin 9,19,7    path:liss:2.9,1.1,2.4,5,3,2,0.27           ~swirl  count:7000  in build      # big slow egg, wide weave
+mesh:aegg.glb      @0,0,0        *0.50  spin 13,8,16   path:liss:2.6,1.6,2.7,4,5,3,0.23           ~swirl  count:6000  in build      # second egg, taller weave
 
 # --- OUTER ORBITAL: more bitterballen on coprime lissajous (7:4, 5:7, 6:5) — the layered halo
-mesh:bitterbal.glb @0,0,0        *0.26  spin 29,12,19  path:liss:3.6,2.1,3.2,7,4,3,0.19   tint:fry   ~morph  in drop       # far weave, top of the halo
-mesh:bitterbal.glb @0,0,0        *0.24  spin 11,27,35  path:liss:3.4,2.6,3.5,5,7,4,0.17   tint:fry   ~morph  in drop       # far weave, deep figure-eight
-mesh:bitterbal.glb @0,0,0        *0.27  spin 33,18,9   path:liss:3.8,1.7,3.0,6,5,2,0.21   tint:fry   ~morph  in drop       # far weave, fast spinner
+mesh:bitterbal.glb @0,0,0        *0.26  spin 29,12,19  path:liss:3.6,2.1,3.2,7,4,3,0.19   tint:fry   ~morph  count:4000  in drop       # far weave, top of the halo
+mesh:bitterbal.glb @0,0,0        *0.24  spin 11,27,35  path:liss:3.4,2.6,3.5,5,7,4,0.17   tint:fry   ~morph  count:3500  in drop       # far weave, deep figure-eight
+mesh:bitterbal.glb @0,0,0        *0.27  spin 33,18,9   path:liss:3.8,1.7,3.0,6,5,2,0.21   tint:fry   ~morph  count:4000  in drop       # far weave, fast spinner
 
 # --- the AEgg moon: a single egg on a clean wide orbit, the steady satellite
-mesh:aegg.glb      @0,0,0        *0.34  spin 7,23,5    path:orbit:4.2,0.16                        ~ball   in drop       # the moon — a calm circular orbit
+mesh:aegg.glb      @0,0,0        *0.34  spin 7,23,5    path:orbit:4.2,0.16                        ~ball   count:5000  in drop       # the moon — a calm circular orbit
 
 # --- CLIMAX: a dense outer ring of identical snacks (field) each on the same big orbit, phase-spread,
 #     turning the halo into a full Saturn-ring of bitterballen for the peak
-mesh:bitterbal.glb @0,0,0        *0.18  spin 41,0,0    path:orbit:5.4,0.12   tint:fry   field:14   ~explode  in climax  out outro   # the ring of snacks — the galaxy fills out
+mesh:bitterbal.glb @0,0,0        *0.18  spin 41,0,0    path:orbit:5.4,0.12   tint:fry   field:14   ~explode  count:3000  in climax  out outro   # the ring of snacks — the galaxy fills out
 
 # --- CLIMAX caption: the brand line lands off-centre (upper-left third), handwriting in on the peak
 [stage]
-text:de wereld is een bitterbal  @-1.9,1.9,1.0  *0.7  ~pen-write  tint:brand  bob 0.05  in climax  out outro   # the punchline, upper-left
+text:de wereld is een bitterbal  @-1.9,1.9,1.0  *0.7  ~pen-write  tint:brand  bob 0.05  count:8000  in climax  out outro   # the punchline, upper-left
 
 # CAMERA — start wide and low looking UP into the system (horizon low, core on a third), slowly orbit
 # so the lissajous weave parallax-shifts, punch in on the drop, swing to a grand high-three-quarter for
