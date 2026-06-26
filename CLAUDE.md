@@ -37,6 +37,7 @@ Two ways to stage content (both in `src/scene/`):
 | `SHADER-BLUEPRINT.md` | The per-particle / WGSL transition shader work. |
 | `productions/README.md` | The engine-vs-production split; one folder per demo. |
 | `pipeline/AERIAL-CITIES.md` | The aerial-city capture pipeline (gitignored, ©Google constraints). |
+| `PERF.md` | The **measured** perf playbook: the two fps regimes (fill/overdraw vs vertex/count), the levers ranked, the `QUALITY` tiers, how to benchmark. |
 | `CHANGELOG.md` | Update this for anything user-facing. |
 
 ## Repository layout

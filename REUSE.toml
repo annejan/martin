@@ -203,6 +203,7 @@ SPDX-License-Identifier = "MIT"
 path = [
     "AGENTS.md",
     "CLAUDE.md",
+    "PERF.md",
     "README.md",
     "ART-DIRECTION.md",
     "DESIGN.md",
