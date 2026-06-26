@@ -53,7 +53,8 @@ def main():
     ap.add_argument("dst")
     ap.add_argument("--count", type=int, default=400_000, help="target splat count (subsample)")
     ap.add_argument("--opacity", type=float, default=0.9)
-    ap.add_argument("--overlap", type=float, default=1.4, help="radius = spacing * overlap")
+    ap.add_argument("--overlap", type=float, default=1.4, help="radius = robust spacing * overlap")
+    ap.add_argument("--radius", type=float, default=0.0, help="fixed splat radius in .ply units (overrides spacing)")
     args = ap.parse_args()
 
     data = open(args.src, "rb").read()
@@ -75,11 +76,18 @@ def main():
     xs = [read(i, "x") for i in kept]
     ys = [read(i, "y") for i in kept]
     zs = [read(i, "z") for i in kept]
-    lo = (min(xs), min(ys), min(zs))
-    hi = (max(xs), max(ys), max(zs))
-    vol = max((hi[0] - lo[0]) * (hi[1] - lo[1]) * (hi[2] - lo[2]), 1e-9)
+
+    # ROBUST extent: the 1st..99th percentile of each axis, not min/max — a handful of stray outlier
+    # points (common in phone captures) otherwise blow up the bbox and make the spacing estimate (hence
+    # the radius) wildly wrong + count-dependent. --radius overrides the estimate entirely.
+    def pct(v, p):
+        s = sorted(v)
+        return s[min(len(s) - 1, max(0, int(p * len(s))))]
+
+    ext = [pct(a, 0.99) - pct(a, 0.01) for a in (xs, ys, zs)]
+    vol = max(ext[0] * ext[1] * ext[2], 1e-9)
     spacing = (vol / max(len(kept), 1)) ** (1.0 / 3.0)
-    radius = spacing * args.overlap
+    radius = args.radius if args.radius > 0 else spacing * args.overlap
     ln_r = struct.pack("<f", __import__("math").log(max(radius, 1e-6)))
     op_logit = struct.pack("<f", __import__("math").log(args.opacity / (1.0 - args.opacity)))
     rot = struct.pack("<ffff", 1.0, 0.0, 0.0, 0.0)
