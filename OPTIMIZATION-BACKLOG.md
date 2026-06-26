@@ -40,9 +40,16 @@ was stale at `57a03ee`). Then path-patch martin to `../bgs-fork`, edit, rebuild 
 both, push the `martin` branch, repoint the git dep + `cargo update`.
 - **#5 — dead-discard + alpha early-out** (`gaussian.wgsl:705-707` `dist²>9` never fires; ~21 % of every
   quad is sub-1 %-alpha fill). Clean but **modest** (saves shading, not rasterization).
-- **#4 — move the PNG dump off-thread** (`IoTaskPool`). Record runs ~24 fps vs a ~712 fps render ceiling
-  (~29× headroom) — a 720p master could drop from minutes toward tens of seconds. Assess how cleanly
-  forkable the screenshot save path is.
+- ~~**#4 — move the PNG dump off-thread**~~ **TRIED 2026-06-26 → NO-OP, dropped.** Built it (martin-side,
+  `AsyncComputeTaskPool` + atomic tmp→rename) and A/B'd a full 720p record: **109 s sync vs 108 s
+  off-thread = identical.** The record is NOT encode-bound. The "~29× headroom" was a mirage — the
+  "712 fps ceiling" is the **CPU-submit `MARTIN_BENCH` number, which over-reports ~20×**; the real
+  headless record renders at ~17 fps because the **headless `ScheduleRunner` doesn't pipeline a render
+  thread** (CPU-schedule-bound, exactly what `--benchmark` measured: ~9–18 fps headless vs ~40 windowed).
+  The ~15 ms PNG encode hides behind the ~60 ms render, so off-threading it saves nothing. **The only
+  real record speedup is enabling pipelined rendering in the headless loop** (the windowed app already
+  pipelines → ~2×, not 30×), or rendering windowed-focused — both deeper + riskier than they're worth
+  for an offline master.
 - **#8a — SH-gate the fragment `sigma`** (`gaussian.wgsl:714` hardcodes `1/3`; §9 shrank the vertex quad
   to 2.4σ on sh0 but the fragment still shades as 3σ → sh0 splats render ~20 % tighter than a true
   Gaussian). **NOT a clear win — it changes the look of ALL sh0 content** (which the demos are tuned on).
