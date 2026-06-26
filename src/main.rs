@@ -29,6 +29,7 @@ use bevy_gaussian_splatting::GaussianSplattingPlugin;
 
 mod audio;
 mod background;
+mod benchmark;
 #[cfg(feature = "bundle")]
 mod bundle;
 mod camera;
@@ -96,7 +97,7 @@ fn is_headless(record: bool, bench: bool, shot: bool, shots: bool) -> bool {
 /// size (`MARTIN_WIDTH`/`_HEIGHT`) AND the headless render size (`MARTIN_RES`) so the resolution cap
 /// reaches a `--record`/`--shot` too (the offscreen image is sized by `MARTIN_RES`, not the window).
 /// Unknown tier → empty (the caller warns). Pure (str → table) → unit-tested.
-fn quality_caps(q: &str) -> &'static [(&'static str, &'static str)] {
+pub(crate) fn quality_caps(q: &str) -> &'static [(&'static str, &'static str)] {
     match q.to_ascii_lowercase().as_str() {
         // "potato" — the weak-HW floor. 640x360 + 0.7 disks + sort16 + an 8k count cap (at low res the
         // depth-SORT dominates, so capping gaussians + the coarse sort is what buys fps). ~56-60 fps even
@@ -172,6 +173,15 @@ fn main() {
     for (key, value) in cli::apply_cli(&cli) {
         // SAFETY: top of main(), single-threaded, before the Bevy app (and its threads) start.
         unsafe { std::env::set_var(key, value) };
+    }
+
+    // `--benchmark`: the PARENT auto-tuner re-launches this binary once per quality tier (children
+    // inherit the env set above — same MARTIN_SHOW), measures each one's real fps, prints the verdict,
+    // and exits without ever building a Bevy app here. A CHILD (MARTIN_BENCHMARK_CHILD) falls through
+    // and runs the show normally, plus the measurement system (added in the app build below).
+    if benchmark::is_parent() {
+        benchmark::run_parent();
+        return;
     }
 
     // MARTIN_QUALITY=low|med|high — a one-word perf preset for weak/strong GPUs. Profiling shows the
@@ -428,6 +438,11 @@ fn main() {
             bevy::diagnostic::SystemInformationDiagnosticsPlugin,
             bevy::diagnostic::LogDiagnosticsPlugin::default(),
         ));
+    }
+    // A benchmark CHILD measures its own real fps after a warm-up, prints `BENCHMARK_RESULT=<fps>`
+    // for the parent, and exits. (The parent never reaches here — it returned above.)
+    if benchmark::is_child() {
+        app.add_plugins(benchmark::plugin);
     }
     app.run();
 }

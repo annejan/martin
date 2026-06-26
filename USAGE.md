@@ -81,8 +81,17 @@ martin [SHOW]                 # a .show file to play (else $MARTIN_SHOW, else th
   --synth-wav PATH             # render the synth to a WAV + exit
   --dump-score PATH            # write the built-in score as an editable tracker file + exit
   --fullscreen | --windowed    # start fullscreen / windowed (overrides the build default; F11/F toggle)
+  --benchmark [--benchmark-at S] [--target-fps N]   # auto-tune: time each quality tier + recommend one
 martin mcp                   # the stdio MCP server (proxy to a --serve bridge)
 ```
+
+**`--benchmark`** re-launches the binary once per quality tier (`potato`/`low`/`med`/`high`), renders the
+show pinned at `--benchmark-at` seconds (default 30 — pick your heaviest moment), and prints each tier's
+fps + the highest one that clears `--target-fps` (default 30). It's the in-process form of
+`pipeline/bench-sweep.sh`. **Caveat:** each tier is timed in a *spawned* window, which most compositors
+**throttle when unfocused** — so on an unfocused desktop / over SSH the numbers read low (~4× on the dev
+iGPU). Run it in a **focused or fullscreen session** (e.g. the shipped exe on the target machine) for the
+true rate; for a trusted dev measurement use `bench-sweep.sh` run directly.
 
 ### How to set a knob (you rarely touch a `MARTIN_*` directly)
 

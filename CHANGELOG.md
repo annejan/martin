@@ -31,6 +31,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   854×480 → 54 fps. Gated on the SH degree (`#if SH_DEGREE > 0`): the **sh3 build = real captures keeps the full 3.0σ** (2.4σ visibly thinned an aerial-city capture — anisotropic splats need the wider tails to blend), so only the synthetic **sh0** build opts in. (`bevy_gaussian_splatting` `martin` branch, `render/gaussian.wgsl`.)
 
 ### Added
+- **`--benchmark` auto-tuner.** Re-launches the binary once per quality tier (`potato`/`low`/`med`/
+  `high`), renders the show pinned at `--benchmark-at` (default 30 s) with that tier's caps, and prints
+  each tier's fps + the best one that clears `--target-fps` (default 30) — the in-process form of
+  `pipeline/bench-sweep.sh`. **Caveat (documented in the output + USAGE):** each tier is timed in a
+  *spawned* window, which most compositors throttle when unfocused, so an unfocused desktop / SSH session
+  reads ~4× low; run it focused/fullscreen (e.g. the shipped exe on the target box) for the true rate.
 - **Per-object `dscale:` compose token + `MARTIN_QUALITY=potato` tier.** `dscale:V` is a *local*
   `MARTIN_SPLAT_SCALE` (multiplies the global) so you can shrink a full-screen backdrop's overdraw-heavy
   disks without thinning the foreground props/text. New `potato` (alias `min`/`party`) quality tier

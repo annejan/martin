@@ -59,6 +59,15 @@ pub struct Cli {
     /// Start in a window (overrides a fullscreen build default / `[settings] fullscreen`).
     #[arg(long)]
     pub windowed: bool,
+    /// Auto-tune: measure each quality tier's real fps on THIS GPU and recommend the best one.
+    #[arg(long)]
+    pub benchmark: bool,
+    /// Show-time (s) to pin while benchmarking — pick your heaviest moment (default 30).
+    #[arg(long = "benchmark-at", value_name = "SECS")]
+    pub benchmark_at: Option<f32>,
+    /// The fps floor `--benchmark` recommends the best tier for (default 30).
+    #[arg(long = "target-fps", value_name = "FPS")]
+    pub target_fps: Option<f32>,
     #[command(subcommand)]
     pub command: Option<Commands>,
 }
@@ -130,6 +139,16 @@ pub fn apply_cli(cli: &Cli) -> Vec<(String, String)> {
         out.push(("MARTIN_FULLSCREEN".into(), "1".into()));
     } else if cli.windowed {
         out.push(("MARTIN_FULLSCREEN".into(), "0".into()));
+    }
+    // --benchmark → the parent auto-tuner (benchmark.rs); --benchmark-at / --target-fps tune it.
+    if cli.benchmark {
+        out.push(("MARTIN_BENCHMARK".into(), "1".into()));
+    }
+    if let Some(t) = cli.benchmark_at {
+        out.push(("MARTIN_BENCHMARK_AT".into(), t.to_string()));
+    }
+    if let Some(f) = cli.target_fps {
+        out.push(("MARTIN_BENCHMARK_TARGET".into(), f.to_string()));
     }
     out
 }
