@@ -224,6 +224,9 @@ fn build_cpu(inputs: BuildInputs) -> BuildOutput {
     } else {
         raws.iter().map(Vec::len).max().unwrap_or(0).max(1)
     };
+    // MARTIN_COUNT_SCALE: global density multiplier (QUALITY low/potato dial it down) — scales even an
+    // explicit `budget=` that MARTIN_MORPH_COUNT can't cap, so QUALITY thins any reel.
+    let n = ((n as f32 * crate::scene::count_scale()).round() as usize).max(256);
 
     // Framing geometry of the *content* (see `frame_of`): normalized shots frame from the centroid
     // (robust to floaters that inflate the raw union AABB); raw mode frames the union box. The radius

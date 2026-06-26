@@ -104,6 +104,7 @@ pub(crate) fn quality_caps(q: &str) -> &'static [(&'static str, &'static str)] {
         // on the dense PonyCamp climax (860M iGPU). Soft but playable.
         "potato" | "min" | "party" => &[
             ("MARTIN_MORPH_COUNT", "8000"),
+            ("MARTIN_COUNT_SCALE", "0.4"), // also thins explicit-budget reels + compose count: props
             ("MARTIN_WIDTH", "640"),
             ("MARTIN_HEIGHT", "360"),
             ("MARTIN_RES", "640x360"),
@@ -112,6 +113,7 @@ pub(crate) fn quality_caps(q: &str) -> &'static [(&'static str, &'static str)] {
         ],
         "low" => &[
             ("MARTIN_MORPH_COUNT", "120000"),
+            ("MARTIN_COUNT_SCALE", "0.5"), // thin count-bound compose stages MORPH_COUNT can't reach
             ("MARTIN_WIDTH", "854"),
             ("MARTIN_HEIGHT", "480"),
             ("MARTIN_RES", "854x480"),

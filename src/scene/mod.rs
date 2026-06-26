@@ -25,6 +25,15 @@ use crate::capture::RecordState;
 
 const NORMALIZE_EXTENT: f32 = 2.0; // each part is centered + scaled so its largest dim = this
 
+/// `MARTIN_COUNT_SCALE` (default 1.0): a global density multiplier applied to EVERY resolved gaussian
+/// count — the reel part budget AND every compose object's `count:`/default. The one knob that scales a
+/// whole scene's density, even an explicit `budget=`/`count:` that `MARTIN_MORPH_COUNT` can't reach, so
+/// `MARTIN_QUALITY` low/potato can thin a count-bound compose stage (PonyCamp) the same way it thins a
+/// reel. Clamped to a sane range; a count never drops below a floor (the caller `.max(…)`es it).
+pub(crate) fn count_scale() -> f32 {
+    crate::envvar::or("MARTIN_COUNT_SCALE", 1.0_f32).clamp(0.02, 4.0)
+}
+
 /// Warn when a scene's estimated PEAK resident gaussian count is high enough to risk a GPU OOM on the
 /// dev iGPU (Radeon 860M OOMs ~2.5M; safe ~1.2M). The build holds every reel shot's clouds (shape +
 /// `origin`/`exit` source clouds) AND every compose prop (+ its entrance source cloud) resident at

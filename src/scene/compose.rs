@@ -544,7 +544,11 @@ pub(crate) fn build_composition(
         // copies. Sample a MESH at this final per-object count (passed into sample_content) so its disk
         // size matches the eventual density — sampling high then downsampling left mesh disks too small
         // for the thinned spacing → holes (most visible on the big props, e.g. the horses, at 1080p).
-        let obj_count = obj.count.unwrap_or(count);
+        // MARTIN_COUNT_SCALE thins EVERY prop (count: or default) — lets QUALITY scale a count-bound
+        // compose stage, which a per-object `count:` would otherwise pin past MARTIN_MORPH_COUNT.
+        let obj_count = ((obj.count.unwrap_or(count) as f32 * crate::scene::count_scale()).round()
+            as usize)
+            .max(64);
         // Peak resident for this prop: its shape cloud + (for a `~entrance`) its source cloud → ×2.
         resident += obj_count * if obj.entrance.is_some() { 2 } else { 1 };
         let sample_n = match obj.field {

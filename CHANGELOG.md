@@ -31,6 +31,13 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   854×480 → 54 fps. Gated on the SH degree (`#if SH_DEGREE > 0`): the **sh3 build = real captures keeps the full 3.0σ** (2.4σ visibly thinned an aerial-city capture — anisotropic splats need the wider tails to blend), so only the synthetic **sh0** build opts in. (`bevy_gaussian_splatting` `martin` branch, `render/gaussian.wgsl`.)
 
 ### Added
+- **`MARTIN_COUNT_SCALE` — global density multiplier (+ `MARTIN_QUALITY` now scales compose stages).**
+  A single knob that scales EVERY resolved gaussian count — the reel part `budget` and every compose
+  object's `count:`/default — so a whole scene thins even past an explicit `budget=`/`count:` that
+  `MARTIN_MORPH_COUNT` can't reach. `MARTIN_QUALITY` `low`/`potato` now set it (0.5/0.4), which finally
+  lets the presets thin a **count-bound compose diorama** (PonyCamp): the climax/full-party frame goes
+  **39→56 fps on `low`** (854×480) and **77→88 fps on `potato`** (640×360) — both at the worst moment,
+  the rest of the show faster. Default 1.0 = existing renders byte-identical. Build-time → record-safe.
 - **On-screen FPS HUD (`MARTIN_FPS_OVERLAY` / `[settings] fps_overlay`, `I` key)** — the engine reports
   its own performance: a corner readout of smoothed FPS + frame-time + splat budget + the timeline clock,
   drawn over the live window (no external counter / bench-sweep needed for a quick glance). The `I` key
