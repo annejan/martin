@@ -22,9 +22,17 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      # Enable auto-merge for patch/minor only — GitHub then merges once the required checks pass.
-      - name: Enable auto-merge (patch/minor)
-        if: contains(fromJSON('["version-update:semver-patch", "version-update:semver-minor"]'), steps.meta.outputs.update-type)
+      # Enable auto-merge for patch/minor ONLY, and NEVER for the render-critical crates. CI has no GPU
+      # render gate, so a bevy/wgpu/winit/naga bump (a Bevy 0.x→0.y is *minor* per semver but breaking)
+      # could change a render default / shader validation / sort encoding, pass the no-GPU checks, and
+      # auto-merge a silently-broken renderer. Those get a separate PR that a human renders + reviews.
+      - name: Enable auto-merge (patch/minor, non-render crates)
+        if: >
+          contains(fromJSON('["version-update:semver-patch", "version-update:semver-minor"]'), steps.meta.outputs.update-type)
+          && !contains(steps.meta.outputs.dependency-names, 'bevy')
+          && !contains(steps.meta.outputs.dependency-names, 'wgpu')
+          && !contains(steps.meta.outputs.dependency-names, 'winit')
+          && !contains(steps.meta.outputs.dependency-names, 'naga')
         run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

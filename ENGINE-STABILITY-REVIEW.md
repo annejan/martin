@@ -8,6 +8,16 @@ parallel, every finding adversarially verified, deduped + prioritized. 17 findin
 
 # Engine Stability Review — martin
 
+## Status (2026-06-26 hardening pass)
+
+**FIXED:** B1 (asset-load hang → load-state gate + 120 s record backstop) · H1 (deadline build pinned —
+fork `rev` + dated nightly; *vendored-fork copy still deferred*) · H3 (vec3_csv position-strict + finite;
+recorder duration clamped) · H4 (glTF attribute length-guard) · M3 + L2 (typo'd settings-key / section
+warn) · L1 (score octave range) · M2b (Bevy/wgpu/winit/naga excluded from Dependabot auto-merge).
+**STILL OPEN:** H2 (clamp an absurd budget/count before OOM) · H5 (aggregate unresolved `@@anchor`s into a
+fatal `--validate`) · M1 (a GPU-render smoke gate in CI) · M4 (capture.rs disk pre-flight + truncated-dump
+detection) · L3 (cap pathological score length). All "still open" are M-effort hardening, none in the hot path.
+
 ## Verdict
 
 **Yes — you can start building a "quick dumb summer demo" today, but fix the two real hang-risks first.** There is exactly one near-blocker: a missing/corrupt `.ply` or a NaN/inf placement value makes a headless `--record`/`--shot` run **wedge forever** (no timeout, fills disk, reports nothing) — that will bite you during the Evoke render crunch, not in the live window. Everything else is either a hardening gap against *adversarial/typo'd input* (the engine is single-author, so the blast radius is "you wasted a render", not "the engine is broken") or supply-chain/CI reproducibility debt that matters specifically *because there's a hard deadline*. The engine's actual render path is sound; the gaps are in the **error/edge boundaries and the build/CI reproducibility**, not in the core morph/raster pipeline.
