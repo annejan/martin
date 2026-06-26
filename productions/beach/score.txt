@@ -1,0 +1,73 @@
+# martin score — "Coco Jamboo" (Mr. President, 1996) · the SUMMER demo.
+# A quick, dumb, sunny eurodance bop. Melody + bass transcribed 1:1 from a MIDI (assets/beach/1352.mid,
+# ch7 lead / ch1 bass) via pipeline/midi_to_score.py — NEVER from memory. Key C# minor, 100 BPM, the
+# classic 4-on-the-floor party groove. Edit + re-render with MARTIN_SCORE; the loader LINTS it.
+bpm 100
+chords C#m A E B  C#m A E B
+
+# Sunny eurodance: bright lead, house organ + donk for the cheese, wide + wet, woozbass OFF, no dark.
+set lead=0.8 sub=0.42 supersaw=0.06 choir=0.4 donk=0.16 house=0.1 reverb=0.5 sidechain=0.62 widen=1.8 makeup=1.12 ceiling=0.94 woozbass=0 shimmer=0.16 reverbauto=1 hats=0.36 snares=0.42 atmosphere=0.18
+
+section intro 8 8
+section build 9 8 fill
+section drop 17 8,8 fill
+section breakdown 9 8 fill
+section climax 17 8,8 fill
+section outro 9 8 fill
+
+# this is a BEACH party — keep the party layers + risers, no battle jets / impact-booms.
+drop.fx: wall donk house riser
+climax.fx: wall donk house shimmer riser
+outro.fx: wall house casio shimmer
+
+# --- drums: four-on-the-floor eurodance, clap on 2&4, offbeat shaker, open hat lift ---
+intro.kick p0: x... .... x... ....
+intro.hat p0: ..x. ..x. ..x. ..x.
+build.kick p0: x... x... x... x...
+build.hat p0: ..x. ..x. ..x. ..x.
+build.kick fill: x... x... x.x. xxxx
+build.snare fill: ..x. ..x. x.x. xxxx
+build.hat fill: xxxx xxxx xxxx xxxx
+drop.kick p0: x... x... x... x...
+drop.kick p1: x... x... x... x...
+drop.snare p0: .... x... .... x...
+drop.snare p1: .... x... .... x...
+drop.hat p0: ..x. ..x. ..x. ..x.
+drop.hat p1: ..x. ..x. ..x. ..xx
+drop.kick fill: x... x... x.x. xxxx
+drop.snare fill: ..x. ..x. x.x. xxxx
+drop.hat fill: xxxx xxxx xxxx xxxx
+breakdown.kick p0: x... .... x... ....
+breakdown.hat p0: ..x. ..x. ..x. ..x.
+breakdown.kick fill: x.x. x.x. x.x. xxxx
+breakdown.snare fill: .... .... .... xxxx
+climax.kick p0: x... x... x... x...
+climax.kick p1: x... x... x... x...
+climax.snare p0: .... x... .... x...
+climax.snare p1: .... x... .... x...
+climax.hat p0: ..x. ..x. ..x. ..x.
+climax.hat p1: x.xx x.xx x.xx x.xx
+climax.kick fill: x... x... x.x. xxxx
+climax.snare fill: ..x. ..x. x.x. xxxx
+climax.hat fill: xxxx xxxx xxxx xxxx
+outro.kick p0: x... .... x... ....
+outro.hat p0: ..x. ..x. ..x. ..x.
+outro.kick fill: .... .... .... ....
+
+# --- LEAD: the Coco Jamboo hook (transcribed, ch7). Loops across each section. ---
+drop.lead p0: .   . G#4   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  C#5   .  E5   .   E5 D#5  B4 F#5    . F#5 D#5  E5  D#5   . C#5   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  D#5   .  E5   .   E5 F#5 C#5 F#5    .   .   .   .  .   . G#4   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  C#5   .  E5   .   E5 D#5  B4 F#5    . F#5 D#5  E5  D#5   . C#5   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  D#5   .  E5   .   E5 F#5 C#5 F#5    .   .   .   .
+drop.lead fill: . . . .  . . . .  . . . .  . . . .
+climax.lead p0: .   . G#4   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  C#5   .  E5   .   E5 D#5  B4 F#5    . F#5 D#5  E5  D#5   . C#5   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  D#5   .  E5   .   E5 F#5 C#5 F#5    .   .   .   .  .   . G#4   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  C#5   .  E5   .   E5 D#5  B4 F#5    . F#5 D#5  E5  D#5   . C#5   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  D#5   .  E5   .   E5 F#5 C#5 F#5    .   .   .   .
+climax.lead fill: . . . .  . . . .  . . . .  . . . .
+breakdown.lead p0: .   . G#4   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  C#5   .  E5   .   E5 D#5  B4 F#5    . F#5 D#5  E5  D#5   . C#5   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  D#5   .  E5   .   E5 F#5 C#5 F#5    .   .   .   .  .   . G#4   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  C#5   .  E5   .   E5 D#5  B4 F#5    . F#5 D#5  E5  D#5   . C#5   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  D#5   .  E5   .   E5 F#5 C#5 F#5    .   .   .   .
+breakdown.lead fill: . . . .  . . . .  . . . .  . . . .
+outro.lead p0: .   . G#4   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  C#5   .  E5   .   E5 D#5  B4 F#5    . F#5 D#5  E5  D#5   . C#5   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  D#5   .  E5   .   E5 F#5 C#5 F#5    .   .   .   .  .   . G#4   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  C#5   .  E5   .   E5 D#5  B4 F#5    . F#5 D#5  E5  D#5   . C#5   .  C#5   . G#5   .  G#5 C#5 G#4 G#5    . G#5 D#5  E5  D#5   . C#5   .  D#5   .  E5   .   E5 F#5 C#5 F#5    .   .   .   .
+outro.lead fill: . . . .  . . . .  . . . .  . . . .
+
+# --- BASS: the disco-octave groove (transcribed, ch1). ---
+drop.bass p0: C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -   B1  B1  B1   -  G#1   -  B1   -  C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -    .   .   .   .    .   .   .   .  C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -   B1  B1  B1   -  G#1   -  B1   -  C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -    .   .   .   .    .   .   .   .
+drop.bass fill: . . . .  . . . .  . . . .  . . . .
+climax.bass p0: C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -   B1  B1  B1   -  G#1   -  B1   -  C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -    .   .   .   .    .   .   .   .  C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -   B1  B1  B1   -  G#1   -  B1   -  C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -    .   .   .   .    .   .   .   .
+climax.bass fill: . . . .  . . . .  . . . .  . . . .
+outro.bass p0: C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -   B1  B1  B1   -  G#1   -  B1   -  C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -    .   .   .   .    .   .   .   .  C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -   B1  B1  B1   -  G#1   -  B1   -  C#2   -   -   .  C#2   - G#1   -   B1  B1 C#2   -  G#1   - C#2   -  F#1   - G#1   -   A1   - F#1   -    .   .   .   .    .   .   .   .
+outro.bass fill: . . . .  . . . .  . . . .  . . . .

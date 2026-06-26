@@ -1,0 +1,67 @@
+# martin — COCO JAMBOO · the dumb summer beach demo 🏖️🥥
+# A real Ham Tin beach capture (Luma, CC-BY lookingglass) as the world, tropical props raining in on
+# the eurodance drop, the "Coco Jamboo" hook (transcribed from 1352.mid). Sunny, silly, fun.
+#   MARTIN_SHOW=productions/beach/beach.show cargo run --release
+#   MARTIN_SHOW=productions/beach/beach.show ./record.sh coco.mp4
+
+[settings]
+kind           = demo
+score          = productions/beach/score.txt
+budget         = 90000
+bg             = aurora
+post           = chroma
+cam_pump       = 0.14            # subtle beat-lunge on the four-on-floor kick
+sidechain      = 0.5
+fft            = 1.4
+particles      = confetti        # beach-party confetti on the drop
+particle_count = 500
+particle_at    = @@drop
+particle_origin = 0,1.5,0.3
+particle_spread = 3.0,1.5,3.0
+bg_dim         = 0.5
+sort_bits      = 16
+
+[stage]
+# ── THE BEACH (the real Ham Tin capture) — the world, pushed back; small disks (it's the backdrop) ──
+splat:hamtin.ply  @0,-0.4,-0.8  *0.62  dscale:0.45  rot 0,0,0  ~fade  in intro  count:320000
+# ── SEA + SUN + PALMS: the setting assembles over the intro/build ──
+splat:star.ply    @2.6,2.6,-3   *0.9   spin 0,0,18  bob 0.06  ^pulse:0.5  ~fade  in intro  count:30000            # the sun, high right
+splat:fern.ply    @-3.4,-1.4,-0.5 *1.7  sway 0,7,0  bob 0.04  ~fade  in build  count:26000                          # palm, left
+splat:fern.ply    @3.6,-1.5,-0.8 *1.5  rot 0,40,0  sway 0,6,0  bob 0.04  ~fade  in build  count:26000               # palm, right
+splat:shell.ply   @-1.4,-1.25,1.6 *0.4  rot 0,20,0  bob 0.02  ~fade  in build  count:12000                          # a shell on the sand
+splat:shell.ply   @1.7,-1.22,1.7  *0.35 rot 0,-30,0  bob 0.02  ~fade  in build  count:12000
+
+# ── THE PARTY: beach balls RAIN in on the drop, bouncing a bounded Lissajous (rainbow = colorful balls) ──
+splat:sphere.ply  @-0.9,-0.2,1.0 *0.30  ~drop  path:liss:0.4,0.3,0.35,2,3,1,0.5  bob 0.12  spin 23,37,13  in drop  count:20000
+splat:sphere.ply  @0.8,-0.1,1.2  *0.26  ~drop  path:liss:0.35,0.35,0.3,3,1,2,0.55 bob 0.14  spin 31,19,41  in drop  count:20000
+splat:sphere.ply  @0.0,0.1,1.5   *0.22  ~drop  path:liss:0.3,0.25,0.32,1,3,2,0.45 bob 0.13  spin 17,43,29  in drop  count:20000
+splat:sphere.ply  @-1.6,-0.05,0.6 *0.28 ~drop  path:liss:0.38,0.28,0.3,2,1,3,0.6  bob 0.11  spin 11,29,7   in climax  count:20000
+splat:sphere.ply  @1.9,-0.15,0.4  *0.24 ~drop  path:liss:0.32,0.3,0.28,3,2,1,0.5  bob 0.12  spin 19,13,37  in climax  count:20000
+
+# ── THE HOOK: the title cards ──
+text:COCO JAMBOO  @0,2.0,1.0    *0.5   ~typewriter  tint:rainbow  bob 0.05  in build  out outro
+text:mama say     @0,1.45,1.0   *0.3   ~fade        tint:brand  bob 0.04  in drop   out outro
+
+[camera]
+# A sunny flowing fly — low, drifting along the beach, lifting for the party, settling for the outro.
+t=@@intro      pos=0.5,0.1,1.2    dist=8.0   yaw=1.05   pitch=0.10
+t=@@build      pos=0.2,-0.1,0.8   dist=6.0   yaw=1.35   pitch=0.12
+t=@@drop       pos=0.0,0.2,0.6    dist=4.2   yaw=1.55   pitch=0.10   cut
+t=@@bar:30     pos=-0.4,0.3,0.4   dist=4.8   yaw=1.85   pitch=0.14
+t=@@breakdown  pos=-0.8,0.1,0.6   dist=6.5   yaw=2.05   pitch=0.12
+t=@@climax     pos=0.4,0.4,-0.2   dist=4.5   yaw=1.40   pitch=0.16   cut
+t=@@bar:55     pos=-0.3,0.5,-0.6  dist=7.0   yaw=1.70   pitch=0.18   cut
+t=@@outro      pos=0.2,0.2,0.4    dist=7.5   yaw=1.45   pitch=0.12
+
+[sync]
+t=@@intro      flash=0.1  bg_dim=0.62  beat=0.4  exposure=0.95  bg=aurora
+t=@@build      flash=0.2  bg_dim=0.5   beat=0.8  exposure=1.05
+t=@@drop       flash=0.8  bg_dim=0.34  beat=2.0  exposure=1.35  bg=plasma
+t=@@breakdown  flash=0.2  bg_dim=0.6   beat=0.6  exposure=0.9   bg=aurora
+t=@@climax     flash=0.95 bg_dim=0.3   beat=2.3  exposure=1.6   bg=fractal
+t=@@outro      flash=0.3  bg_dim=0.55  beat=1.0  exposure=1.05  bg=aurora
+
+[caption]
+screentext:Coco Jamboo            in @@outro       out @@bar:66  at 0,1.2  center  size 22  scroll 0.05  fade 1.0
+screentext:a deFEEST summer       in @@outro+2bar  out @@bar:66  at 0,1.2  center  size 22  scroll 0.05  fade 1.0
+screentext:Ham Tin beach · CC-BY lookingglass  in @@outro+4bar  out @@bar:66  at 0,1.2  center  size 18  scroll 0.05  fade 1.0
