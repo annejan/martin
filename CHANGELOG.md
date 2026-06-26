@@ -11,6 +11,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 ## [Unreleased]
 
 ### Changed
+
 - **Upgraded to Bevy 0.19** (was 0.18) + `bevy_gaussian_splatting` 8.0.0 (our `martin` fork rebased
   onto upstream's Bevy-0.19 release with a zero-conflict replay of our shader edits). Mechanical API
   churn handled across the engine: rodio-0.22 audio `Source` (`current_span_len`, `NonZero`
@@ -27,8 +28,24 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   area ~36 % with no visible change (it does *not* shrink the gaussians, unlike `SPLAT_SCALE`). Lifts
   every quality tier on an overdraw-bound GPU — the PonyCamp climax went **720p 30→40 fps (+32 %)**,
   854×480 → 54 fps. Gated on the SH degree (`#if SH_DEGREE > 0`): the **sh3 build = real captures keeps the full 3.0σ** (2.4σ visibly thinned an aerial-city capture — anisotropic splats need the wider tails to blend), so only the synthetic **sh0** build opts in. (`bevy_gaussian_splatting` `martin` branch, `render/gaussian.wgsl`.)
+- **Live FFT-reactive visuals react from t=0 (no dead zone).** The spectrum band table that drives the
+  FFT-reactive backdrop/interludes is now filled by a **causal streaming analyser** (per-band AGC) that a
+  background thread appends front-to-back ahead of the playhead — instead of waiting ~9.8 s for the whole
+  track to render + normalise. First rows land in ~98 ms. Deterministic / record-safe (chunk-independent;
+  record still bakes the full table before frame 0). `MARTIN_FFT_NORM=track` keeps the legacy whole-track
+  normalisation (and its dead zone) for byte-identical-to-old output. The startup spectrum bake also
+  parallelised (rayon render + FFT).
+- **Non-blocking reel build (startup-freeze fix).** A reel of big captures no longer freezes the frame
+  for seconds at startup while it samples + resamples every shot. Two steps: (1) the per-part sampling
+  now fans across **rayon** (each part is independent); (2) the whole heavy build moved **off the main
+  thread** onto `AsyncComputeTaskPool` — a live/windowed run keeps the loader animating while it builds,
+  then finalizes (GPU upload + camera framing) the frame it's ready. Deterministic capture modes
+  (`--record`/`--shot`/`--bench`) build **inline before frame 0**, so a record bakes byte-identically to
+  before. Verified: the camping reel renders byte-for-byte identical on both paths; all 34 shows pass
+  the headless smoke test.
 
 ### Added
+
 - **Four tropical splatgen shapes: `palm`, `parasol`, `cocktail`, `crab`** — procedural beach props for
   the summer demo (`splatgen palm assets/palm.ply`, or `splat:palm.ply` in a show). A leaning palm with
   drooping fronds + coconuts, a red/white striped beach parasol, a martini cocktail (glass + liquid +
@@ -110,25 +127,6 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   `MARTIN_BLOOM=0`, `MARTIN_HOLD_T=<s>` (pin the timeline for a deterministic sweep), `MARTIN_DIAG=1`
   (Bevy diagnostics), and `pipeline/bench-sweep.sh` (repeatable, GPU-safe count×res×scale sweep). The old
   `MARTIN_BENCH` measures CPU submit rate, not GPU completion — use the windowed `MARTIN_FPS`+`VSYNC=0`.
-
-### Changed
-- **Live FFT-reactive visuals react from t=0 (no dead zone).** The spectrum band table that drives the
-  FFT-reactive backdrop/interludes is now filled by a **causal streaming analyser** (per-band AGC) that a
-  background thread appends front-to-back ahead of the playhead — instead of waiting ~9.8 s for the whole
-  track to render + normalise. First rows land in ~98 ms. Deterministic / record-safe (chunk-independent;
-  record still bakes the full table before frame 0). `MARTIN_FFT_NORM=track` keeps the legacy whole-track
-  normalisation (and its dead zone) for byte-identical-to-old output. The startup spectrum bake also
-  parallelised (rayon render + FFT).
-- **Non-blocking reel build (startup-freeze fix).** A reel of big captures no longer freezes the frame
-  for seconds at startup while it samples + resamples every shot. Two steps: (1) the per-part sampling
-  now fans across **rayon** (each part is independent); (2) the whole heavy build moved **off the main
-  thread** onto `AsyncComputeTaskPool` — a live/windowed run keeps the loader animating while it builds,
-  then finalizes (GPU upload + camera framing) the frame it's ready. Deterministic capture modes
-  (`--record`/`--shot`/`--bench`) build **inline before frame 0**, so a record bakes byte-identically to
-  before. Verified: the camping reel renders byte-for-byte identical on both paths; all 34 shows pass
-  the headless smoke test.
-
-### Added
 - **Audio die-out tail (`[score] set endfade=<s>`)** — the master fade-out length is now a score knob
   (default `0.025`, a click-guard near-hard-stop — unchanged for every existing track). A larger value
   (e.g. `1.6`) lets the final impact + reverb **ring out into silence** instead of the mix hard-cutting
@@ -224,6 +222,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   (`tint:white`, drop), strutting front-of-camp to finish off PonyCamp.
 
 ### Fixed
+
 - **Captions: a lyric word that is also an option keyword no longer truncates the line.** The
   `[caption]` parser split text from options at the *first* keyword token, so a bare `in`/`at`/… inside
   the text (e.g. "dooie beessies **in** me thee") cut the caption short and desynced its options. It
@@ -233,6 +232,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   wrapped second line hugging the left edge.
 
 ### Removed
+
 - **Pruned ~23 never-used global `MARTIN_*` env vars** — mesh-sampling (`MESH_COUNT`/`MESH_SPLAT`/
   `MESH_THIN`/`MESH_OPACITY`/`MESH_RGB`/`MESH_JITTER`/`MESH_ANISO`/`MESH_RANDOM`), image
   (`IMG_STRIDE`/`IMG_SPLAT`/`SVG_PX`), camera (`TONEMAP`/`EXPOSURE`/`AABB`/`NORMALIZE`), reel
@@ -244,6 +244,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   splat scene (now origin-centred, camera auto-frames).
 
 ### CLI
+
 - **A real CLI** (the start of moving config off the ~85 global `MARTIN_*` env vars): `martin [SHOW]
   [--record DIR] [--shot PATH --shot-at S] [--shots T1,T2] [--bench N] [--validate] [--strict]
   [--serve [PORT]] [--synth-wav PATH] [--dump-score PATH]`, plus `--production NAME` →
@@ -254,6 +255,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   pre-parse `--mcp` special-case is gone from `main`. `$MARTIN_MCP` still works for parity.
 
 ### Engine
+
 - **Catmull-Rom camera (`MARTIN_CAM_SPLINE` / `.show` `cam_spline=1`)** — opt-in: interpolate the
   `[camera]` track THROUGH its keys with continuous velocity (a flowing, never-stopping glide) instead
   of the default per-leg smoothstep that settles at each key. `cut` keys still snap; neighbours clamp at
@@ -472,6 +474,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   timing/motion stay constant; `record.sh` muxes at the same fps so duration + audio sync hold.
 
 ### Music (data-driven score files, no recompile)
+
 - **Streaming synth**: the track renders in time-ordered segments on a background thread, so live
   playback + the show start together ~1 s after launch (the producer races ahead at ≈7× realtime)
   instead of waiting for the whole render — no more dead black screen, and `@@` anchors stay
@@ -518,6 +521,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   Splat-only morph shows are untouched (the coupling lives in the fullscreen-effect uniform).
 
 ### Content & productions
+
 - The **default show is the intro production** — a bare `cargo run` (and a fresh `git clone`) plays
   the same showcase CI bundles into the single binary. Its procedural splats are synthesized by
   `build.rs` (via `build/gen_splats.rs`, all 11 shapes) if missing, so a clean checkout builds + runs
@@ -533,6 +537,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   carries vertex colours; the shows sample it instead of the .obj.
 
 ### Tooling / CI
+
 - **`record.sh` synth cache** — the synth is a pure function of the score, so a visual-only iteration
   (same score, tweaked `.show`) now reuses the rendered WAV and skips the ~18 s re-synth on every
   preview. Keyed on the resolved score file's hash, cached under `~/.cache/martin-synth/`;
