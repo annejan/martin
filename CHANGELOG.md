@@ -31,6 +31,11 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   854×480 → 54 fps. Gated on the SH degree (`#if SH_DEGREE > 0`): the **sh3 build = real captures keeps the full 3.0σ** (2.4σ visibly thinned an aerial-city capture — anisotropic splats need the wider tails to blend), so only the synthetic **sh0** build opts in. (`bevy_gaussian_splatting` `martin` branch, `render/gaussian.wgsl`.)
 
 ### Added
+- **`--validate` flags compose OOM risk + the `~fade` VRAM trap (GPU-free).** The dry run now prints a
+  compose stage's estimated **peak resident gaussians**, warns if it's over the `MARTIN_SPLAT_WARN`
+  soft cap (the OOM heads-up used to fire only once the GPU renderer was up), and flags every `~fade`
+  prop — a `~fade` spawns a GaussianInterpolate that DOUBLES the prop's resident VRAM for a fade plain
+  opacity does for free. Catch both on paper before the slow render.
 - **Compose `disk:` / `aniso:` now honoured (were silently dropped).** A `[stage]`/compose mesh prop's
   `disk:<size>` / `aniso:<f>` mesh-sampling tokens fell through the parser and were ignored, so a prop
   rendered at the default disk size (e.g. PonyCamp's `caravan.glb disk:0.4` drew its splats ~3× larger

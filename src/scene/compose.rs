@@ -166,6 +166,22 @@ impl Prop {
         s
     }
 
+    /// Estimated peak resident gaussians for this prop: its cloud + (for a `~entrance`) its source
+    /// cloud → ×2. `scene_default` is the count for a prop with no `count:` (MARTIN_MORPH_COUNT).
+    /// Mirrors the build-time sample math so `--validate` can flag OOM risk GPU-free (count-bound).
+    pub(crate) fn resident_estimate(&self, scene_default: usize) -> usize {
+        let n = ((self.count.unwrap_or(scene_default) as f32 * crate::scene::count_scale()).round()
+            as usize)
+            .max(64);
+        n * if self.entrance.is_some() { 2 } else { 1 }
+    }
+
+    /// True if this prop assembles via a `~fade` GaussianInterpolate — which DOUBLES its resident VRAM
+    /// (a source cloud) for a fade the plain opacity path does for free. Flagged in the validate dry-run.
+    pub(crate) fn fades_via_interpolate(&self) -> bool {
+        matches!(self.entrance, Some(Entrance::Fade))
+    }
+
     /// The motion state carried on the spawned entity (shared by splat clouds + mesh props).
     /// `interpolate` = this object is a `GaussianInterpolate` (a `~entrance`), so its `cs.time`
     /// is driven (the assemble) instead of an opacity fade-in. `field` is the scene-wide default

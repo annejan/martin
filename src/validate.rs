@@ -97,7 +97,33 @@ pub fn report(
     }
 
     if !compose.is_empty() {
-        println!("\ncompose:  {} objects", compose.len());
+        // Peak-resident OOM heads-up, GPU-free (the build-time warn_splat_budget only fires once the
+        // renderer is up — this lets an author catch it at the dry run). Estimate = Σ each prop's
+        // cloud (+ ×2 for a ~entrance source cloud), mirroring the compose sample math.
+        let default = crate::envvar::or("MARTIN_MORPH_COUNT", 120_000usize);
+        let resident: usize = compose.iter().map(|o| o.resident_estimate(default)).sum();
+        println!(
+            "\ncompose:  {} objects, ~{:.2}M gaussians peak resident",
+            compose.len(),
+            resident as f32 / 1e6,
+        );
+        let cap = crate::envvar::or("MARTIN_SPLAT_WARN", 2_000_000usize);
+        if resident > cap {
+            eprintln!(
+                "compose: ~{:.2}M peak resident — over the {:.2}M soft cap (MARTIN_SPLAT_WARN); a long \
+                 record may OOM the iGPU. Lower a `count:`/the budget, or run `--quality low`.",
+                resident as f32 / 1e6,
+                cap as f32 / 1e6,
+            );
+        }
+        let faders = compose.iter().filter(|o| o.fades_via_interpolate()).count();
+        if faders > 0 {
+            eprintln!(
+                "compose: {faders} object(s) use `~fade` — that spawns a GaussianInterpolate, DOUBLING \
+                 their resident VRAM for a fade the plain opacity path does for free. Drop `~fade` (a \
+                 bare object fades by opacity) unless you want the assemble-from-a-cloud look."
+            );
+        }
         for o in compose {
             println!("  {}", o.summary());
         }
