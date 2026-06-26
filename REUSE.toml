@@ -204,6 +204,7 @@ path = [
     "AGENTS.md",
     "CLAUDE.md",
     "PERF.md",
+    "OPTIMIZATION-BACKLOG.md",
     "README.md",
     "ART-DIRECTION.md",
     "DESIGN.md",

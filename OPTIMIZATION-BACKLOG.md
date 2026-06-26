@@ -1,0 +1,61 @@
+<!--
+SPDX-FileCopyrightText: 2026 Anne Jan Brouwer <brouwer@annejan.com>
+SPDX-License-Identifier: MIT
+-->
+
+# Optimization backlog
+
+Verified-but-not-yet-done optimizations from the 2026-06-26 hunt (each was checked against the real
+code — hallucinations dropped). The easy/safe wins already shipped; what's left is **delicate** and
+each deserves its own focused session with the right verification. Measured perf model is in `PERF.md`.
+
+## Already shipped (don't redo)
+
+Splat streaming · free-source-after-build · async/off-thread reel build + rayon sampling ·
+`MARTIN_COUNT_SCALE` + `MARTIN_QUALITY` scaling compose · count: hygiene across all shows · synth-WAV
+cache · causal FFT analyser · cine post-FX · camera spline · FPS HUD · perf knobs (SPLAT_SCALE /
+SORT_BITS / QUALITY / VSYNC / BLOOM / fullscreen) · fork §9 quad-cut (sh0) · Bevy 0.19. **This round:**
+trimmed splat features (−51 crates) · `b-fast` no-LTO profile · parallel `smoke-shows.py` · sh0 sort
+default 24-bit · compose `disk:`/`aniso:` honoured · `--validate` peak-resident heads-up · `~fade` on
+the opacity path (no doubled cloud).
+
+## Remaining — delicate, needs care
+
+### #6 — Rebalance the batch synth into even chunks  ·  ~−3 s per *score* render
+`stream.rs:33,513-530`. The rayon synth is pinned by the single fattest lane (`L_WALL`: 12 supersaw/
+choir voices per-sample over a full bar) while ~6 of 16 cores idle. Even-chunk split shaves ~3–3.5 s
+off every score-change render (the WAV cache only covers visual-only reruns).
+**Risk:** audio determinism — the render must stay byte-identical (cache + record-safety). The epsilon
+test (`stream.rs:746`, 1e-4) permits the reorder, but **verify with a WAV byte-diff before/after.**
+
+### #7 — `par_iter` the compose-stage build  ·  K-core startup-build win (live only)
+`compose.rs` build loop. The reel got per-object parallelism; compose samples/normalizes/resamples one
+object at a time. **Risk:** the loop interleaves `commands.spawn` (main-thread) + glTF-scene spawns with
+the CPU sampling, and `sample_content` borrows `&assets`/`&state` — needs a sample→spawn split + `Send`
+plumbing. Startup wall-clock only (record/shot build inline; live windowed loads benefit).
+
+### Fork-shader batch (`bgs-fork`, branch `martin`)  ·  the full clone→sync→edit→A/B→push→repoint dance
+First sync the local checkout to the pinned commit (`Cargo.lock` rev `e4787a8` — the local `bgs-fork`
+was stale at `57a03ee`). Then path-patch martin to `../bgs-fork`, edit, rebuild **sh0 AND sh3**, A/B
+both, push the `martin` branch, repoint the git dep + `cargo update`.
+- **#5 — dead-discard + alpha early-out** (`gaussian.wgsl:705-707` `dist²>9` never fires; ~21 % of every
+  quad is sub-1 %-alpha fill). Clean but **modest** (saves shading, not rasterization).
+- **#4 — move the PNG dump off-thread** (`IoTaskPool`). Record runs ~24 fps vs a ~712 fps render ceiling
+  (~29× headroom) — a 720p master could drop from minutes toward tens of seconds. Assess how cleanly
+  forkable the screenshot save path is.
+- **#8a — SH-gate the fragment `sigma`** (`gaussian.wgsl:714` hardcodes `1/3`; §9 shrank the vertex quad
+  to 2.4σ on sh0 but the fragment still shades as 3σ → sh0 splats render ~20 % tighter than a true
+  Gaussian). **NOT a clear win — it changes the look of ALL sh0 content** (which the demos are tuned on).
+  Do only if deliberately re-baking the splat falloff.
+
+## Marginal (idle-only)
+
+Backdrop-overdraw `--validate` heuristic (flag large far-Z props lacking `dscale:`) · slim
+`match_reorder` to copy pos+col only (24 B) on the `MARTIN_PAIR=match` path · pipeline the serial synth
+finisher chain (~0.5 s, only after #6) · warm persistent renderer for single-show probe loops.
+
+## Bigger picture (not perf)
+
+The engine is **fast + robust + live-playable** (`--quality low`/`potato` clear 30/60 fps). The
+critical path for Evoke isn't more perf — it's the **demo itself**: one coherent show that carries a
+story, built on the now-strong engine. Design it in a `SHOWBOOK` before rendering.
