@@ -155,6 +155,20 @@ pub fn report(
             println!("  {knob:8} {}", kf.join("  "));
         }
     }
+
+    // Aggregate the unresolved `@@anchor`s the camera/sync parsers counted (H5). An untimed keyframe
+    // sorts to the end and flips the WHOLE path off its music-timed track onto the part-window
+    // heuristic, so the printed track above is plausible-but-wrong. Surface the total loudly; `main`
+    // makes `--validate` exit non-zero when any failed.
+    let unresolved = crate::waypoints::unresolved_anchors();
+    if unresolved > 0 {
+        println!(
+            "\n⚠  {unresolved} camera/sync keyframe(s) failed to resolve their @@anchor — the \
+             music-timed track above SILENTLY DEGRADES to the part-window heuristic. Fix the anchor \
+             name(s), or run this show against the MARTIN_SCORE whose sections it references. \
+             (--validate exits non-zero.)"
+        );
+    }
     println!();
 }
 
