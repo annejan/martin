@@ -53,7 +53,16 @@ impl From<&str> for Section {
             "camera" | "cam" => Section::Camera,
             "sync" | "automation" | "look" => Section::Sync,
             "caption" | "captions" | "titles" => Section::Caption,
-            _ => Section::Settings, // `[settings]`, or anything unknown → top-level knobs
+            "settings" | "set" | "config" => Section::Settings,
+            // An unknown header (`[reeel]`, `[stge]`, `[scene]`) falls through to Settings, where its
+            // body lines lack `=` and are silently dropped — a whole `[reel]`/`[stage]` could vanish and
+            // the show fall back to the built-in default with rc=0. Warn so the typo isn't invisible.
+            other => {
+                eprintln!(
+                    "show: unknown section [{other}] — its body is ignored (typo? expected reel/stage/scenes/camera/sync/caption/settings)"
+                );
+                Section::Settings
+            }
         }
     }
 }
@@ -261,13 +270,110 @@ fn canonical_key(key: &str) -> &str {
     }
 }
 
+/// Every `[settings]` key the engine actually reads (the canonical names, post-`canonical_key`). Derived
+/// from the `MARTIN_*` reads in src/ — keep in sync: `grep -rhoE 'MARTIN_[A-Z0-9_]+' src/ | sort -u`.
+/// Used ONLY to warn on a typo'd key (a bogus `MARTIN_<KEY>` is still set, never read → silent
+/// wrong-default render); it's advisory, not an allowlist that blocks unknown keys.
+const SETTINGS_KEYS: &[&str] = &[
+    "4d_test",
+    "beat",
+    "bench",
+    "benchmark",
+    "benchmark_at",
+    "benchmark_target",
+    "bg",
+    "bg_dim",
+    "bloom",
+    "cameras",
+    "cam_index",
+    "cam_pump",
+    "cam_spline",
+    "compose",
+    "count_scale",
+    "deform",
+    "diag",
+    "fft",
+    "fft_norm",
+    "flash",
+    "fly",
+    "fps",
+    "fps_overlay",
+    "fullscreen",
+    "glb",
+    "height",
+    "hold_t",
+    "kind",
+    "loader",
+    "logo",
+    "loop",
+    "mcp",
+    "mesh_jitter",
+    "mesh_rgb",
+    "morph_count",
+    "morph_stagger",
+    "music",
+    "mute",
+    "pair",
+    "pair_color",
+    "particle_at",
+    "particle_back",
+    "particle_count",
+    "particle_origin",
+    "particle_out",
+    "particles",
+    "particle_spread",
+    "pitch",
+    "ply",
+    "post",
+    "preview_fps",
+    "pw_splat",
+    "pw_step",
+    "quality",
+    "raster",
+    "record",
+    "res",
+    "rot",
+    "score",
+    "score_dump",
+    "score_strict",
+    "seq",
+    "serve",
+    "shot",
+    "shot_at",
+    "shots",
+    "show",
+    "sidechain",
+    "sort_bits",
+    "splat_scale",
+    "splat_warn",
+    "synth_wav",
+    "tint_music",
+    "title",
+    "validate",
+    "vsync",
+    "waypoints",
+    "width",
+    "yaw",
+    "zoom",
+];
+
 /// `key = value` → set `MARTIN_<KEY>=value`, but only if that env var isn't already set, so an
 /// explicit CLI env var wins over the file.
 fn set_if_absent(key: &str, value: &str) {
     if key.is_empty() {
         return;
     }
-    let var = format!("MARTIN_{}", canonical_key(key).to_ascii_uppercase());
+    let canon = canonical_key(key).to_ascii_lowercase();
+    if !SETTINGS_KEYS.contains(&canon.as_str()) {
+        // A typo (`morphcount`, `splatscale`, `budgett`) becomes a never-read MARTIN_<KEY> → the
+        // intended knob keeps its default (wrong budget/scale → OOM or sluggish, looks like an engine
+        // bug). Warn but still set it (forward-compat with a knob added before this list is updated).
+        eprintln!(
+            "show: unknown [settings] key '{key}' — it sets MARTIN_{} which nothing reads (typo?)",
+            canon.to_ascii_uppercase()
+        );
+    }
+    let var = format!("MARTIN_{}", canon.to_ascii_uppercase());
     if std::env::var(&var).is_err() {
         // SAFETY: show settings are applied at startup, single-threaded, before any threads spawn.
         unsafe { std::env::set_var(var, value) };

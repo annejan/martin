@@ -502,13 +502,29 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
     out
 }
 
+/// Parse `x,y,z` POSITION-STRICTLY and reject non-finite. The old `filter_map(parse.ok())` dropped a bad
+/// component and shifted the rest (`@1,O,3` → `(1,3,0)` — object silently mis-placed), and let `nan`/`1e40`
+/// through into the Transform → a NaN camera framing blacks the whole render. Now each slot is parsed by
+/// INDEX; a missing/unparseable/non-finite component keeps its 0.0 default and warns (no shift, no poison).
 fn vec3_csv(s: &str) -> Vec3 {
-    let n: Vec<f32> = s.split(',').filter_map(|x| x.trim().parse().ok()).collect();
-    Vec3::new(
-        n.first().copied().unwrap_or(0.0),
-        n.get(1).copied().unwrap_or(0.0),
-        n.get(2).copied().unwrap_or(0.0),
-    )
+    let mut a = [0.0_f32; 3];
+    for (i, part) in s.split(',').take(3).enumerate() {
+        match part.trim().parse::<f32>() {
+            Ok(f) if f.is_finite() => a[i] = f,
+            Ok(_) => eprintln!(
+                "compose: non-finite vec component '{}' in '{s}' — using 0",
+                part.trim()
+            ),
+            Err(_) if !part.trim().is_empty() => {
+                eprintln!(
+                    "compose: bad vec component '{}' in '{s}' — using 0",
+                    part.trim()
+                )
+            }
+            Err(_) => {}
+        }
+    }
+    Vec3::from_array(a)
 }
 
 /// Build the stage once every referenced splat has loaded: each object → its own gaussian cloud
@@ -533,8 +549,24 @@ pub(crate) fn build_composition(
     if comp.built || comp.objects.is_empty() {
         return;
     }
-    if state.loads.iter().any(|h| assets.get(h).is_none()) {
-        return; // wait for every referenced splat
+    // Wait until every referenced splat has SETTLED (loaded OR failed) — not "is_none()", which blocks
+    // forever on a `Failed` handle (a missing/corrupt/typo'd .ply hung the whole stage indefinitely). A
+    // failed load falls through; that object samples 0 gaussians and is simply absent.
+    {
+        let mut failed = Vec::new();
+        for (h, name) in state.loads.iter().zip(&state.load_names) {
+            match asset_server.load_state(h) {
+                bevy::asset::LoadState::Loaded => {}
+                bevy::asset::LoadState::Failed(_) => failed.push(name.as_str()),
+                _ => return,
+            }
+        }
+        if !failed.is_empty() {
+            warn!(
+                "compose: {} splat(s) failed to load: {failed:?} — stage renders without them",
+                failed.len()
+            );
+        }
     }
     let base = cloud_base_rotation();
     // MARTIN_DEFORM = a scene-wide FIELD: it wobbles every object on the stage (a per-object
@@ -894,6 +926,18 @@ mod tests {
 
     fn objs(spec: &str) -> Vec<Prop> {
         parse_compose(spec, &score::Score::builtin())
+    }
+
+    #[test]
+    fn vec3_csv_is_position_strict_and_finite() {
+        assert_eq!(vec3_csv("1,2,3"), Vec3::new(1.0, 2.0, 3.0));
+        assert_eq!(vec3_csv("1,2"), Vec3::new(1.0, 2.0, 0.0)); // short → trailing default
+        // a bad component keeps its SLOT (no shift) — the old filter_map made `1,O,3` → (1,3,0)
+        assert_eq!(vec3_csv("1,O,3"), Vec3::new(1.0, 0.0, 3.0));
+        // non-finite is rejected, not passed into the Transform/camera
+        let v = vec3_csv("nan,1e40,5");
+        assert_eq!(v, Vec3::new(0.0, 0.0, 5.0));
+        assert!(v.is_finite());
     }
 
     #[test]

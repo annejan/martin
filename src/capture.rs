@@ -117,6 +117,7 @@ pub(crate) struct RecordState {
 fn record_driver(
     mut rec: ResMut<RecordState>,
     time: Res<Time>,
+    real: Res<Time<Real>>,
     seq: Option<Res<Sequence>>,
     state: Option<Res<SeqState>>,
     comp: Option<Res<Composition>>,
@@ -135,6 +136,15 @@ fn record_driver(
     let seq_built = state.as_ref().map(|s| s.built).unwrap_or(false);
     let comp_built = comp.as_ref().map(|c| c.built).unwrap_or(false);
     if (!seq_built && !comp_built) || !camq.iter().any(|c| c.framed) {
+        // Backstop: never hang a record/bench forever waiting to build+frame (any loader/build edge
+        // case CI must survive). No legitimate build takes 120 s — exit NON-ZERO so a wedge is a CI
+        // failure, not a silent zero-frame "success".
+        if real.elapsed_secs() > 120.0 {
+            error!(
+                "record: scene not built+framed after 120 s — aborting (a missing asset / build hang?)"
+            );
+            exit.write(AppExit::error());
+        }
         return;
     }
     // MARTIN_BENCH=<frames>: render-only throughput — advance the clock + render each frame but skip
@@ -174,6 +184,15 @@ fn record_driver(
     // clip would cut before the finale. The video should never end before the song.
     let score_dur = score.as_ref().map(|s| s.0.demo_len() + 1.0).unwrap_or(0.0);
     let dur = seq_dur.max(comp_dur).max(score_dur).max(12.0);
+    // Belt-and-braces: a non-finite or absurd duration (an `inf` hold/anchor that slipped a parser)
+    // would make `(dur/dt).ceil() as u32` saturate to u32::MAX → the recorder never reaches `total` and
+    // wedges forever, filling the disk. Clamp to a sane finite ceiling (30 min — far past any demo).
+    let dur = if dur.is_finite() {
+        dur.min(1800.0)
+    } else {
+        warn!("record: non-finite show duration (a bad @timing / anchor?) — capping at 1800s");
+        1800.0
+    };
     let total = (dur / rec.dt).ceil() as u32;
     if rec.i >= total {
         // Wait for the async PNG writes to actually land before exiting — a fast (release)

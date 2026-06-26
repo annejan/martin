@@ -581,11 +581,33 @@ fn build_gltf_gaussians(
                     continue;
                 };
                 let positions: Vec<[f32; 3]> = pos.collect();
-                let normals: Option<Vec<[f32; 3]>> = reader.read_normals().map(|n| n.collect());
-                let colors: Option<Vec<[f32; 3]>> =
-                    reader.read_colors(0).map(|c| c.into_rgb_f32().collect());
-                let uvs: Option<Vec<[f32; 2]>> =
-                    reader.read_tex_coords(0).map(|t| t.into_f32().collect());
+                // A malformed/hand-crafted glTF can have a NORMAL/COLOR_0/TEXCOORD_0 accessor with fewer
+                // elements than POSITION (the `gltf` crate doesn't enforce equal counts). The triangle
+                // loop indexes these by the position-validated a/b/c, so a short attr → OOB panic in a
+                // rayon worker → the whole reel build aborts. Drop any attr whose length ≠ positions'
+                // (the triangle just uses defaults for it) instead of trusting the exporter.
+                let npos = positions.len();
+                let checked = |len: usize, kind: &str| {
+                    let ok = len == npos;
+                    if !ok {
+                        eprintln!(
+                            "glb: {kind} count ({len}) ≠ vertex count ({npos}) — ignoring it"
+                        );
+                    }
+                    ok
+                };
+                let normals: Option<Vec<[f32; 3]>> = reader
+                    .read_normals()
+                    .map(|n| n.collect())
+                    .filter(|v: &Vec<[f32; 3]>| checked(v.len(), "NORMAL"));
+                let colors: Option<Vec<[f32; 3]>> = reader
+                    .read_colors(0)
+                    .map(|c| c.into_rgb_f32().collect())
+                    .filter(|v: &Vec<[f32; 3]>| checked(v.len(), "COLOR_0"));
+                let uvs: Option<Vec<[f32; 2]>> = reader
+                    .read_tex_coords(0)
+                    .map(|t| t.into_f32().collect())
+                    .filter(|v: &Vec<[f32; 2]>| checked(v.len(), "TEXCOORD_0"));
                 let indices: Vec<u32> = reader
                     .read_indices()
                     .map(|i| i.into_u32().collect())

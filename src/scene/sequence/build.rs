@@ -304,8 +304,26 @@ pub(crate) fn build_sequence(
         return;
     }
 
-    if state.loads.iter().any(|h| assets.get(h).is_none()) {
-        return; // wait for every referenced splat
+    // Wait until every referenced splat has SETTLED — loaded OR failed. The old `assets.get(h).is_none()`
+    // gate also blocked on `Failed` (whose `get()` stays `None` forever), so one missing/corrupt/typo'd
+    // `.ply` hung the whole show indefinitely (no build, no frames, no exit — a disk-filling hang in the
+    // exact `--record` mode used for the master). A failed load now falls through to the empty→transparent
+    // -placeholder degrade in `build_shots`; the show plays on minus that part.
+    {
+        let mut failed = Vec::new();
+        for (h, name) in state.loads.iter().zip(&state.load_names) {
+            match asset_server.load_state(h) {
+                bevy::asset::LoadState::Loaded => {}
+                bevy::asset::LoadState::Failed(_) => failed.push(name.as_str()),
+                _ => return, // NotLoaded / Loading — still in flight
+            }
+        }
+        if !failed.is_empty() {
+            warn!(
+                "seq: {} splat(s) failed to load: {failed:?} — rendering without them",
+                failed.len()
+            );
+        }
     }
 
     // Main thread, cheap: pre-extract the only asset-dependent content (`splat:` parts → an owned copy

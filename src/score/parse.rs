@@ -344,6 +344,12 @@ pub(super) fn note_freq(name: &str) -> Option<f32> {
         _ => {}
     }
     let octave: i32 = rest.parse().ok()?;
+    // any real note is octave 0–9; reject absurd values BEFORE the arithmetic so a garbage token
+    // (`A2147483647`) can't overflow `(octave+1)*12` (debug/test panic; release wraps to a non-finite
+    // frequency fed to the synth). `None` → the lane parser turns it into a clean "needs 16 notes" error.
+    if !(-1..=10).contains(&octave) {
+        return None;
+    }
     let midi = (octave + 1) * 12 + semi;
     Some(440.0 * 2f32.powf((midi as f32 - 69.0) / 12.0))
 }
@@ -407,4 +413,20 @@ fn parse_pattern(s: &str) -> Option<[bool; 16]> {
         }
     }
     (i == 16).then_some(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::note_freq;
+
+    #[test]
+    fn note_freq_rejects_absurd_octave_without_overflowing() {
+        assert!(note_freq("A4").is_some()); // a real note
+        assert!(note_freq("C0").is_some());
+        // absurd octaves return None (the lane parser turns that into a clean error) instead of
+        // overflowing `(octave+1)*12` → a debug/test panic / release garbage frequency.
+        assert_eq!(note_freq("A2147483647"), None);
+        assert_eq!(note_freq("A-2147483648"), None);
+        assert_eq!(note_freq("A99"), None);
+    }
 }
