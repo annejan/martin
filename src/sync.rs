@@ -166,7 +166,11 @@ pub fn parse_sync(lines: &[String], score: &crate::score::Score) -> SyncTrack {
                 return None;
             }
             match v.strip_prefix("@@") {
-                Some(a) => score.anchor_seconds(a),
+                Some(a) => score.anchor_seconds(a).or_else(|| {
+                    eprintln!("sync: unknown anchor '@@{a}' — line untimed + skipped");
+                    crate::waypoints::note_unresolved_anchor();
+                    None
+                }),
                 None => v.parse().ok(),
             }
         });

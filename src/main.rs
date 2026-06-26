@@ -309,6 +309,11 @@ fn main() {
             &score,
             asset_root.as_deref(),
         );
+        // H5: a `--validate` with any unresolved `@@anchor` exits NON-ZERO — the track silently
+        // degrades, so an authoring/CI check must fail rather than bless a plausible-but-wrong run.
+        if waypoints::unresolved_anchors() > 0 {
+            std::process::exit(1);
+        }
         return;
     }
 

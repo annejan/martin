@@ -188,7 +188,10 @@ fn build_cpu(inputs: BuildInputs) -> BuildOutput {
     // to keep the total near the morph budget.
     // a shot's cluster needs a concrete per-copy budget; when `budget==0` (auto-size to the largest
     // shot) fall back to 200k here rather than 0 — so this default is intentionally NOT `budget`.
-    let cluster_total = crate::envvar::or("MARTIN_MORPH_COUNT", 200_000usize);
+    let cluster_total = crate::scene::cap_count(
+        "cluster",
+        crate::envvar::or("MARTIN_MORPH_COUNT", 200_000usize),
+    );
     for (raw, part) in raws.iter_mut().zip(&parts) {
         if let Some(copies) = part.flock {
             let per = (cluster_total / copies.max(1)).max(2_000);
@@ -226,7 +229,10 @@ fn build_cpu(inputs: BuildInputs) -> BuildOutput {
     };
     // MARTIN_COUNT_SCALE: global density multiplier (QUALITY low/potato dial it down) — scales even an
     // explicit `budget=` that MARTIN_MORPH_COUNT can't cap, so QUALITY thins any reel.
-    let n = ((n as f32 * crate::scene::count_scale()).round() as usize).max(256);
+    let n = crate::scene::cap_count(
+        "reel",
+        ((n as f32 * crate::scene::count_scale()).round() as usize).max(256),
+    );
 
     // Framing geometry of the *content* (see `frame_of`): normalized shots frame from the centroid
     // (robust to floaters that inflate the raw union AABB); raw mode frames the union box. The radius

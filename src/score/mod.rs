@@ -22,6 +22,16 @@ pub use types::{Chord, Inst, Levels, NoteLane, Ramp, Section};
 const SLOTS_PER_BAR: i64 = 16;
 const BEATS_PER_BAR: f32 = 4.0;
 
+/// Hard ceiling on a score's playable length (seconds) — the streaming synth allocates ~16 buffers of
+/// `demo_len()*sr`, so an absurdly-long score (a `section … x 10000`, hundreds of section lines) must
+/// not be able to demand tens of GB. Real tracks are ~90–170 s; 10 min is far past any demo.
+/// [`Score::demo_len`] clamps to this; [`validate`] warns (fatal under strict) before you get here.
+pub(crate) const MAX_DEMO_SECS: f32 = 600.0;
+
+/// Aggregate bar ceiling for the `validate` heads-up (the per-section guard is `parse::MAX_BARS`;
+/// this catches the SUM across many sections). ~real tracks are tens of bars.
+pub(crate) const MAX_TOTAL_BARS: u32 = 10_000;
+
 /// The editable default score, loaded from disk when present (so editing it needs no recompile).
 /// The same file is `include_str!`'d as the embedded fallback — the music lives here, not in code.
 const DEFAULT_SCORE: &str = "assets/score.txt";
@@ -107,7 +117,13 @@ impl Score {
         self.beat() / 4.0
     }
     pub fn demo_len(&self) -> f32 {
-        self.total_bars as f32 * self.bar()
+        // CAP the reported length: the streaming synth sizes its up-front buffers from `demo_len()*sr`
+        // (×~16 lanes), so a pathological score (`section … x 10000`, or hundreds of section lines)
+        // would otherwise try to allocate tens of GB and OOM-abort instead of erroring cleanly. No real
+        // track is anywhere near 10 min — clamp here so the allocation is bounded; `score::validate`
+        // separately WARNS (fatal under strict) when a score is this long. (The recorder has its own
+        // 1800 s clamp; this is the audio-buffer backstop.)
+        (self.total_bars as f32 * self.bar()).min(MAX_DEMO_SECS)
     }
 
     fn abs_slot(&self, t: f32) -> i64 {
@@ -688,6 +704,26 @@ mod tests {
         assert!(
             validate(&Score::builtin().sections).is_empty(),
             "the built-in score must be warning-clean"
+        );
+    }
+
+    #[test]
+    fn absurdly_long_score_warns_and_demo_len_is_capped() {
+        // two 9000-bar sections = 18000 bars (each under the per-section MAX_BARS, but the SUM is
+        // pathological) → L3: validate warns + demo_len() clamps so the synth can't try to allocate
+        // tens of GB. Real tracks are tens of bars / ~90-170 s.
+        let dsl = "bpm 120\nchords C\nsection a 9000 9000\nsection b 9000 9000\n";
+        let s = Score::from_str(dsl).expect("parses (warnings, not errors)");
+        let w = validate(&s.sections);
+        assert!(
+            w.iter()
+                .any(|m| m.contains("far longer than any real track")),
+            "aggregate length flagged: {w:?}"
+        );
+        assert_eq!(
+            s.demo_len(),
+            MAX_DEMO_SECS,
+            "demo_len clamps to the ceiling (bounds the synth buffer allocation)"
         );
     }
 

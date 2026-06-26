@@ -206,9 +206,19 @@ fn record_driver(
                     .count()
             })
             .unwrap_or(total as usize);
-        if written >= total as usize || rec.grace > 1200 {
+        if written >= total as usize {
             info!("recording complete: {total} frames ({written} on disk) -> {dir}");
             exit.write(AppExit::Success);
+        } else if rec.grace > 1200 {
+            // Grace cap hit with frames STILL missing → the PNG writer stalled (disk full / write
+            // error), not "just slow". Exit NON-ZERO so record.sh + CI don't mux a truncated clip and
+            // report success — the old code declared "complete" + AppExit::Success here regardless.
+            error!(
+                "record: PNG writer stalled at {written}/{total} frames after the grace cap — the disk \
+                 likely filled or a write failed. Aborting (a truncated dump must not look complete); \
+                 free space or point TMPDIR at a bigger filesystem and re-run."
+            );
+            exit.write(AppExit::error());
         }
         return;
     }

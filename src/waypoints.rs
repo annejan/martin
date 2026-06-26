@@ -4,7 +4,26 @@
 //! OrbitCam's own state (target/dist/yaw/pitch) — a path is just a lerp of these, so playback
 //! (`MARTIN_FLY=<secs>`, driven by `flypath` in `main.rs`) is a simple interpolation.
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use bevy::prelude::*;
+
+/// Count of `t=@@anchor` keyframes (camera + sync) whose anchor didn't resolve to a section in the
+/// active score — a typo (`@@drp`) or a `.show` run against a `MARTIN_SCORE` that lacks the section.
+/// An unresolved keyframe goes UNTIMED, which flips the whole path off its music-timed track onto the
+/// part-window heuristic — a silent, plausible-but-wrong degrade. Aggregated here so `--validate` can
+/// report the total and exit non-zero. Process-global (parse is single-pass, single-threaded).
+static UNRESOLVED_ANCHORS: AtomicUsize = AtomicUsize::new(0);
+
+/// Record an unresolved `@@anchor` (called from the camera + sync parsers).
+pub fn note_unresolved_anchor() {
+    UNRESOLVED_ANCHORS.fetch_add(1, Ordering::Relaxed);
+}
+
+/// How many `@@anchor`s failed to resolve so far (for the `--validate` report + its exit code).
+pub fn unresolved_anchors() -> usize {
+    UNRESOLVED_ANCHORS.load(Ordering::Relaxed)
+}
 
 /// One logged camera pose — enough to fully reconstruct the `OrbitCam` (its transform is derived
 /// from exactly these four). Interpolation-friendly: tween target/dist/yaw/pitch between markers.
@@ -158,44 +177,47 @@ pub fn save(list: &[Key], path: &str) -> std::io::Result<()> {
 /// lock it to a music section/bar/beat, just like a seq part; omit → an untimed marker), `pos` (the
 /// look-at `x,y,z`), `dist`, `yaw`, `pitch` (radians). Needs the score for the `@@` anchors.
 pub fn parse_camera(lines: &[String], score: &crate::score::Score) -> Vec<Key> {
-    let mut keys: Vec<Key> = lines
-        .iter()
-        .filter_map(|line| {
-            let s = line.split('#').next().unwrap_or("").trim();
-            if s.is_empty() {
-                return None;
-            }
-            let mut w = Key {
-                target: Vec3::ZERO,
-                dist: 5.0,
-                yaw: crate::camera::FRONT_YAW,
-                pitch: crate::camera::DEFAULT_PITCH,
-                t: None,
-                cut: false,
-            };
-            // a bare `cut` token (no `=`) → snap to this keyframe instead of gliding into it.
-            w.cut = s.split_whitespace().any(|tok| tok == "cut");
-            for (k, v) in s.split_whitespace().filter_map(|t| t.split_once('=')) {
-                match k {
-                    "t" | "time" => {
-                        w.t = match v.strip_prefix("@@") {
+    let mut keys: Vec<Key> =
+        lines
+            .iter()
+            .filter_map(|line| {
+                let s = line.split('#').next().unwrap_or("").trim();
+                if s.is_empty() {
+                    return None;
+                }
+                let mut w = Key {
+                    target: Vec3::ZERO,
+                    dist: 5.0,
+                    yaw: crate::camera::FRONT_YAW,
+                    pitch: crate::camera::DEFAULT_PITCH,
+                    t: None,
+                    cut: false,
+                };
+                // a bare `cut` token (no `=`) → snap to this keyframe instead of gliding into it.
+                w.cut = s.split_whitespace().any(|tok| tok == "cut");
+                for (k, v) in s.split_whitespace().filter_map(|t| t.split_once('=')) {
+                    match k {
+                        "t" | "time" => w.t = match v.strip_prefix("@@") {
                             Some(a) => score.anchor_seconds(a).or_else(|| {
-                                eprintln!("camera: unknown anchor '@@{a}' — keyframe untimed");
+                                eprintln!(
+                                    "camera: unknown anchor '@@{a}' — keyframe untimed (the whole \
+                                     track degrades off its music timing)"
+                                );
+                                note_unresolved_anchor();
                                 None
                             }),
                             None => v.parse().ok(),
-                        }
+                        },
+                        "dist" | "d" => w.dist = v.parse().unwrap_or(w.dist),
+                        "yaw" => w.yaw = v.parse().unwrap_or(w.yaw),
+                        "pitch" => w.pitch = v.parse().unwrap_or(w.pitch),
+                        "pos" | "target" => w.target = parse_vec3(v).unwrap_or(w.target),
+                        _ => {}
                     }
-                    "dist" | "d" => w.dist = v.parse().unwrap_or(w.dist),
-                    "yaw" => w.yaw = v.parse().unwrap_or(w.yaw),
-                    "pitch" => w.pitch = v.parse().unwrap_or(w.pitch),
-                    "pos" | "target" => w.target = parse_vec3(v).unwrap_or(w.target),
-                    _ => {}
                 }
-            }
-            Some(w)
-        })
-        .collect();
+                Some(w)
+            })
+            .collect();
     // sort by resolved time so pose_at_time works even with out-of-order anchors;
     // untimed keyframes (None) sort to the end.
     keys.sort_by(|a, b| {

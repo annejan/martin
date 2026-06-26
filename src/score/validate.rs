@@ -21,6 +21,21 @@ pub(super) fn strict_scores() -> bool {
 ///     `NoteLane::bar`), so any `p1`+ is silently ignored, and a lane with ONLY a `p1` is dead silent.
 pub(super) fn validate(sections: &[Section]) -> Vec<String> {
     let mut w = Vec::new();
+    // Aggregate length: the per-section bar count is guarded (`parse::MAX_BARS`), but the SUM across
+    // sections is not — hundreds of section lines (or a few huge ones) make `demo_len()` enormous, and
+    // the streaming synth allocates ~16 buffers from it. `demo_len()` clamps to `MAX_DEMO_SECS` so it
+    // can't actually OOM, but flag it loudly (fatal under strict) so a pathological/typo'd length is
+    // caught at authoring rather than silently truncating playback at the cap.
+    let total_bars: u32 = sections.iter().map(|s| s.bars).sum();
+    if total_bars > crate::score::MAX_TOTAL_BARS {
+        w.push(format!(
+            "score totals {total_bars} bars across {} sections — far longer than any real track (a \
+             typo'd `section … x N`?). Playback is CAPPED at {:.0}s (MAX_DEMO_SECS) to bound the synth \
+             buffer allocation, so anything past the cap won't render.",
+            sections.len(),
+            crate::score::MAX_DEMO_SECS,
+        ));
+    }
     // Duplicate section names: `section_time`/`section_window`/`fx_on` resolve a section by FIRST name
     // match, so a second section with the same name silently inherits the first's window/FX gate — its
     // own reverb/FX automation never fires. Flag it (names should be unique).

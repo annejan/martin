@@ -170,9 +170,12 @@ impl Prop {
     /// cloud → ×2. `scene_default` is the count for a prop with no `count:` (MARTIN_MORPH_COUNT).
     /// Mirrors the build-time sample math so `--validate` can flag OOM risk GPU-free (count-bound).
     pub(crate) fn resident_estimate(&self, scene_default: usize) -> usize {
-        let n = ((self.count.unwrap_or(scene_default) as f32 * crate::scene::count_scale()).round()
-            as usize)
-            .max(64);
+        let n = crate::scene::cap_count(
+            "compose",
+            ((self.count.unwrap_or(scene_default) as f32 * crate::scene::count_scale()).round()
+                as usize)
+                .max(64),
+        );
         // a SPATIAL `~entrance` holds a source cloud too (×2); `~fade` is the plain opacity path → ×1.
         let doubles = matches!(self.entrance, Some(t) if t != Entrance::Fade);
         n * if doubles { 2 } else { 1 }
@@ -614,9 +617,11 @@ pub(crate) fn build_composition(
         // for the thinned spacing → holes (most visible on the big props, e.g. the horses, at 1080p).
         // MARTIN_COUNT_SCALE thins EVERY prop (count: or default) — lets QUALITY scale a count-bound
         // compose stage, which a per-object `count:` would otherwise pin past MARTIN_MORPH_COUNT.
-        let obj_count = ((obj.count.unwrap_or(count) as f32 * crate::scene::count_scale()).round()
-            as usize)
-            .max(64);
+        let obj_count = crate::scene::cap_count(
+            "compose",
+            ((obj.count.unwrap_or(count) as f32 * crate::scene::count_scale()).round() as usize)
+                .max(64),
+        );
         // Peak resident: its shape cloud + (for a SPATIAL `~entrance`) its source cloud → ×2. `~fade`
         // is the plain opacity path now (no source cloud), so it counts ×1.
         let doubles = matches!(obj.entrance, Some(t) if t != Entrance::Fade);

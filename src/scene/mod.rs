@@ -34,6 +34,32 @@ pub(crate) fn count_scale() -> f32 {
     crate::envvar::or("MARTIN_COUNT_SCALE", 1.0_f32).clamp(0.02, 4.0)
 }
 
+/// Hard upper bound on any SINGLE resolved gaussian count — a reel part `budget`/`MARTIN_MORPH_COUNT`
+/// or a compose object's `count:`. The OOM backstop for an absurd value (`MARTIN_MORPH_COUNT=9000000`,
+/// a `count:50000000` typo): the GPU upload of a single multi-million-splat cloud crashes the driver
+/// outright (the 860M already OOMs ~2.5M), so a value this large is never renderable — clamp it cold
+/// instead of wedging the record mid-dump. (The streaming-window SUM staying under the iGPU is the
+/// separate, softer `warn_splat_budget` heads-up.) Default 4M; override with `MARTIN_SPLAT_MAX`.
+pub(crate) fn count_cap() -> usize {
+    crate::envvar::or("MARTIN_SPLAT_MAX", 4_000_000usize).max(256)
+}
+
+/// Clamp a resolved gaussian count to [`count_cap`], WARNING when it actually bites — so an absurd
+/// budget/count renders thinned (and tells you) instead of silently OOMing the GPU.
+pub(crate) fn cap_count(label: &str, n: usize) -> usize {
+    let cap = count_cap();
+    if n > cap {
+        warn!(
+            "{label}: resolved count {n} exceeds the {cap} hard cap (MARTIN_SPLAT_MAX) — clamping; \
+             a single cloud that big would OOM the GPU upload. Lower MARTIN_MORPH_COUNT / the .show \
+             `budget` / this object's `count:`."
+        );
+        cap
+    } else {
+        n
+    }
+}
+
 /// Warn when a scene's estimated PEAK resident gaussian count is high enough to risk a GPU OOM on the
 /// dev iGPU (Radeon 860M OOMs ~2.5M; safe ~1.2M). The build holds every reel shot's clouds (shape +
 /// `origin`/`exit` source clouds) AND every compose prop (+ its entrance source cloud) resident at
@@ -114,6 +140,21 @@ mod tests {
         assert_eq!(super::sort_bits_of(32), B::Bits32);
         assert_eq!(super::sort_bits_of(17), B::Bits32, "unknown → safe default");
         assert_eq!(super::sort_bits_of(0), B::Bits32);
+    }
+
+    #[test]
+    fn cap_count_clamps_an_absurd_count_to_the_hard_max() {
+        let cap = super::count_cap(); // default 4M (MARTIN_SPLAT_MAX)
+        assert_eq!(
+            super::cap_count("t", 100_000),
+            100_000,
+            "a sane count passes through"
+        );
+        assert_eq!(
+            super::cap_count("t", 50_000_000),
+            cap,
+            "an OOM-sized count is clamped to the hard cap (would crash the GPU upload)"
+        );
     }
 }
 
