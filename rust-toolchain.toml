@@ -4,3 +4,6 @@
 # `nightly`) so a nightly regression / ICE / feature-drop can't break the build the night before the
 # compo — the CI `dtolnay/rust-toolchain` steps inherit this file. Bump deliberately + re-verify.
 channel = "nightly-2026-04-26"
+# A DATED nightly doesn't ship rustfmt/clippy unless they're requested — list them so the fmt + clippy
+# CI gates (and any fresh checkout) install them with the toolchain. Required for nightly-2026-04-26.
+components = ["rustfmt", "clippy"]
