@@ -31,6 +31,18 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   854×480 → 54 fps. Gated on the SH degree (`#if SH_DEGREE > 0`): the **sh3 build = real captures keeps the full 3.0σ** (2.4σ visibly thinned an aerial-city capture — anisotropic splats need the wider tails to blend), so only the synthetic **sh0** build opts in. (`bevy_gaussian_splatting` `martin` branch, `render/gaussian.wgsl`.)
 
 ### Added
+- **Four tropical splatgen shapes: `palm`, `parasol`, `cocktail`, `crab`** — procedural beach props for
+  the summer demo (`splatgen palm assets/palm.ply`, or `splat:palm.ply` in a show). A leaning palm with
+  drooping fronds + coconuts, a red/white striped beach parasol, a martini cocktail (glass + liquid +
+  straw + garnish), and a cartoon crab.
+- **`pipeline/pointcloud_to_splat.py`** — convert a plain colored point cloud `.ply` (Open3D/Luma
+  export: x y z + r g b) into a martin gaussian `.ply`, so a captured scene that isn't already 3DGS
+  loads + morphs like any splat cloud. Robust (percentile-bbox) radius estimate + a `--radius` override.
+- **`pipeline/midi_to_score.py`** — extract a monophonic melody (+ bass) from a MIDI per channel into
+  martin's 16-slot tracker note-grid, so a real tune is transcribed 1:1 instead of from memory.
+- **`productions/beach/`** — the "Coco Jamboo" (Mr. President, 1996) summer beach demo: a real Ham Tin
+  beach capture (CC-BY lookingglass) as the world, tropical props on the eurodance drop, the hook lifted
+  1:1 from a MIDI.
 - **`~fade` compose props no longer double their VRAM.** A `~fade` object's "source cloud" is just its
   shape at alpha 0 (`fade_of`), so its assemble is a pure OPACITY fade — no spatial motion. It now
   renders on the plain opacity path instead of spawning a GaussianInterpolate (which held both the

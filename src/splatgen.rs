@@ -48,6 +48,10 @@ pub const SHAPES: &[&str] = &[
     "terrain",
     "moon",
     "mountains",
+    "palm",
+    "parasol",
+    "cocktail",
+    "crab",
 ];
 
 /// For each referenced `*.ply` that's MISSING and is a shape we know how to synthesize, generate it
@@ -700,6 +704,305 @@ pub fn gen_shape(stem: &str) -> Option<Cloud> {
                 90.0,
             ));
         }
+        "palm" => {
+            // A coconut palm: a slender brown trunk leaning in +x, crowned by ~8 long green fronds
+            // that radiate out and DROOP at the tips, with a few brown coconut clusters under the crown.
+            // Y-DOWN build (top = -y, base = +y): base sits at +y≈0.9 (ground), crown at -y≈-0.85
+            // (renders high after the flip); the trunk leans +x with height (same -Y trick as pine/tent).
+            let fronds = 8u64;
+            let lean = 0.32f32; // how far the crown shifts in +x from the base
+            let crown_y = -0.85f32; // build-space y of the crown (renders HIGH after the flip)
+            let base_y = 0.9f32; // build-space y of the base (renders LOW = ground)
+            for _ in 0..N {
+                let role = rng.unit();
+                if role < 0.16 {
+                    // TRUNK: slender, leaning, slightly tapered toward the crown, faint ring banding.
+                    let h = rng.unit(); // 0 = base, 1 = crown
+                    let y = base_y + (crown_y - base_y) * h; // base(+y) → crown(-y)
+                    let lx = lean * h * h; // lean grows toward the top (a gentle curve)
+                    let r = (0.06 - 0.025 * h) * rng.unit().sqrt(); // thinner near the crown
+                    let a = rng.uniform(0.0, tau);
+                    pos.push([lx + r * a.cos(), y, r * a.sin()]);
+                    let band = 0.5 + 0.5 * (h * 22.0).sin(); // periodic darker rings up the trunk
+                    let v = 0.30 + 0.12 * band;
+                    rgb.push([v, v * 0.66, v * 0.42]); // brown (r > g > b)
+                } else if role < 0.92 {
+                    // FRONDS: ~8 arcs from the crown, radiating out and drooping at the tips.
+                    let f = rng.int(fronds) as f32;
+                    let base_a = f / fronds as f32 * tau + 0.4; // even fan, small offset
+                    let a = base_a + rng.uniform(-0.18, 0.18); // jitter across the blade
+                    let t = rng.unit(); // 0 = crown, 1 = frond tip
+                    let rad = 0.95 * t; // out from the crown (horizontal reach)
+                    let droop = -0.28 + 0.95 * t * t; // crown ~level, tip drops well below (toward +y)
+                    let w = (1.0 - t) * 0.10 * rng.uniform(-1.0, 1.0); // blade width, tapering to the tip
+                    let pa = a + pi * 0.5; // across the frond
+                    let x = lean + rad * a.cos() + w * pa.cos();
+                    let z = rad * a.sin() + w * pa.sin();
+                    pos.push([x, crown_y + droop, z]);
+                    rgb.push(hsv(0.30 - 0.05 * t, 0.78 - 0.2 * t, 0.40 + 0.32 * t)); // green, lighter+yellower at tips
+                } else {
+                    // COCONUTS: a few brown clusters tucked just under the crown.
+                    let c = rng.int(3) as f32;
+                    let ca = c / 3.0 * tau + 0.7;
+                    let cx = lean + 0.16 * ca.cos();
+                    let cz = 0.16 * ca.sin();
+                    let d = rng.normal(0.0, 0.05);
+                    let a2 = rng.uniform(0.0, tau);
+                    let e = rng.normal(0.0, 0.05);
+                    pos.push([
+                        cx + d * a2.cos(),
+                        crown_y + 0.12 + e.abs(),
+                        cz + d * a2.sin(),
+                    ]);
+                    rgb.push([0.34, 0.22, 0.10]); // dark coconut brown
+                }
+            }
+        }
+        "parasol" => {
+            // A beach parasol: a thin vertical pole (light tan) from base (+y) up to the
+            // canopy apex (-y), topped by a wide shallow dome that opens downward, painted
+            // in alternating red/white azimuthal wedges, plus a tiny finial nub at the top.
+            // Build Y-DOWN: top = -y, base = +y. Place/rotate upright via the show.
+            let apex_y = -0.78f32; // canopy apex height (most negative y = highest)
+            let wedges = 12u64; // number of alternating colour wedges
+            for _ in 0..N {
+                let p: [f32; 3];
+                let col: [f32; 3];
+                let s = rng.unit();
+                if s < 0.14 {
+                    // pole: a thin column on the central axis, base (+y) up to the apex (-y).
+                    let a = rng.uniform(0.0, tau);
+                    let r = 0.022 * rng.unit().sqrt();
+                    let y = rng.uniform(apex_y, 0.96); // -0.78 (top) .. +0.96 (ground)
+                    p = [r * a.cos(), y, r * a.sin()];
+                    col = [0.80, 0.74, 0.62]; // light tan / driftwood
+                } else if s < 0.98 {
+                    // canopy: a shallow dome opening downward. Apex at -y, rim flares out to
+                    // radius ~1.0 and curves slightly back toward +y. Wedge-striped by azimuth.
+                    let a = rng.uniform(0.0, tau);
+                    let rr = rng.unit().sqrt(); // 0 (apex) .. 1 (rim), uniform over the disc
+                    // dome profile: apex highest, dropping (toward +y) with radius, with a
+                    // small upward scallop near the rim so the edge lip reads.
+                    let droop = 0.40 * rr * rr;
+                    let lip = 0.06 * (1.0 - (rr * pi).cos()) * (rr > 0.85) as i32 as f32;
+                    let y = apex_y + droop - lip;
+                    p = [rr * a.cos(), y, rr * a.sin()];
+                    // alternating wedges: even = warm red, odd = near-white. Slight value
+                    // falloff toward the rim for a touch of shading.
+                    let w = ((a / tau) * wedges as f32).floor() as u64;
+                    let shade = 1.0 - 0.12 * rr;
+                    col = if w.is_multiple_of(2) {
+                        hsv(0.99, 0.82, (0.92 * shade).clamp(0.0, 1.0)) // red
+                    } else {
+                        [0.96 * shade, 0.95 * shade, 0.93 * shade] // off-white
+                    };
+                } else {
+                    // finial: a tiny nub at the very top (above the apex, most negative y).
+                    let d = norm(rng.normal3());
+                    p = [d[0] * 0.04, apex_y - 0.07 + d[1] * 0.04, d[2] * 0.04];
+                    col = [0.85, 0.80, 0.66]; // pale tan knob
+                }
+                pos.push(p);
+                rgb.push(col);
+            }
+        }
+        "cocktail" => {
+            // A tropical martini: a V-bowl of translucent pale-cyan glass on a stem + round foot,
+            // FILLED with a warm orange→pink liquid, a thin magenta STRAW poking out at an angle, and
+            // a round lime-green GARNISH wedge perched on the rim. yu is the up-axis (foot −1 → rim
+            // +1), stored NEGATED so the rim opens UPWARD after martin flips the Y-down .ply on load
+            // (same trick as rocket/ufo). Colour tags drive the glass/liquid split in opacity/size_of.
+            let rim_yu = 0.78f32; // top of the bowl (widest)
+            let cone_yu = -0.05f32; // V apex where the bowl meets the stem
+            let rim_r = 0.62f32; // bowl opening radius
+            let liquid_yu = 0.42f32; // liquid surface height in the cone
+            for _ in 0..N {
+                let s = rng.unit();
+                let p: [f32; 3];
+                let col: [f32; 3];
+                // cone radius as a function of height yu (0 at apex → rim_r at the rim)
+                let cone_r =
+                    |yu: f32| rim_r * ((yu - cone_yu) / (rim_yu - cone_yu)).clamp(0.0, 1.0);
+                if s < 0.30 {
+                    // GLASS bowl wall: the V cone surface, apex (cone_yu) up to the rim. Pale cyan,
+                    // translucent. A faint rim band reads as the glass lip.
+                    let t = rng.unit().sqrt(); // bias points toward the wider rim (more area there)
+                    let yu = cone_yu + t * (rim_yu - cone_yu);
+                    let a = rng.uniform(0.0, tau);
+                    let r = cone_r(yu) * (1.0 + 0.01 * rng.normal(0.0, 1.0));
+                    p = [r * a.cos(), yu, r * a.sin()];
+                    let lip = if (yu - rim_yu).abs() < 0.04 {
+                        0.12
+                    } else {
+                        0.0
+                    };
+                    col = [0.58 + lip, 0.84 + lip * 0.4, 0.90]; // pale cyan glass (B>R tags it)
+                } else if s < 0.42 {
+                    // GLASS stem + round foot: a thin column from the apex down, flaring to a disc base.
+                    if rng.unit() < 0.45 {
+                        // stem column: thin, yu from foot up to the apex
+                        let yu = rng.uniform(-0.92, cone_yu);
+                        let a = rng.uniform(0.0, tau);
+                        let r = 0.045 * (1.0 + 0.1 * rng.normal(0.0, 1.0));
+                        p = [r * a.cos(), yu, r * a.sin()];
+                    } else {
+                        // foot disc at the very bottom (yu ≈ -0.95)
+                        let a = rng.uniform(0.0, tau);
+                        let r = 0.34 * rng.unit().sqrt();
+                        p = [
+                            r * a.cos(),
+                            -0.95 + 0.02 * rng.normal(0.0, 1.0),
+                            r * a.sin(),
+                        ];
+                    }
+                    col = [0.58, 0.84, 0.90]; // same pale-cyan glass
+                } else if s < 0.74 {
+                    // LIQUID: fills the lower cone (apex → liquid_yu). A vertical orange→pink gradient
+                    // (deep orange at the bottom, hot pink at the surface). Warm = R-dominant tag.
+                    let yu = cone_yu + rng.unit().cbrt() * (liquid_yu - cone_yu); // pack toward apex
+                    let a = rng.uniform(0.0, tau);
+                    let r = cone_r(yu) * 0.96 * rng.unit().sqrt(); // fill the disc inside the wall
+                    p = [r * a.cos(), yu, r * a.sin()];
+                    let g = ((yu - cone_yu) / (liquid_yu - cone_yu)).clamp(0.0, 1.0); // 0 bottom→1 top
+                    col = hsv(0.06 - 0.10 * g, 0.88, 1.0); // orange (h≈0.06) → pink/magenta (h<0)
+                } else if s < 0.94 {
+                    // STRAW: a thin tube rising at an angle out of the liquid, well past the rim. Magenta
+                    // (R+B high, low G — tagged distinct from liquid and glass).
+                    let t = rng.unit(); // 0 = down in the drink, 1 = top tip in the air
+                    let base = [0.16f32, liquid_yu - 0.30, -0.05f32]; // dipped into the liquid
+                    let lean = [0.34f32, 1.30, 0.10f32]; // up + leaning out over the rim
+                    let a = rng.uniform(0.0, tau);
+                    let rr = 0.022;
+                    // offset perpendicular-ish to give the straw thickness
+                    p = [
+                        base[0] + lean[0] * t + rr * a.cos(),
+                        base[1] + lean[1] * t,
+                        base[2] + lean[2] * t + rr * a.sin(),
+                    ];
+                    col = [0.95, 0.18, 0.62]; // bright magenta straw
+                } else {
+                    // GARNISH: a round fruit wedge perched on the rim edge (+X side). A small disc, lime
+                    // green with a paler pith centre. Sits just outside/on the lip.
+                    let a = rng.uniform(0.0, tau);
+                    let rr = rng.unit().sqrt();
+                    let wedge_r = 0.20;
+                    // local disc, tilted to lie across the rim, centred at the +X rim point
+                    let lx = rr * a.cos() * wedge_r;
+                    let ly = rr * a.sin() * wedge_r;
+                    p = [rim_r * 0.92 + lx, rim_yu + 0.06 + ly * 0.5, ly * 0.7];
+                    col = if rr < 0.45 {
+                        [0.85, 0.92, 0.62] // pale pith centre
+                    } else {
+                        [0.55, 0.85, 0.20] // lime-green rind
+                    };
+                }
+                pos.push([p[0], -p[1], p[2]]); // -Y: rim opens upward after martin's load-flip
+                rgb.push(col);
+            }
+        }
+        "crab" => {
+            // A cute cartoon crab. Build Y-DOWN: the body's top + eyestalks render HIGH (negative y),
+            // the legs splay DOWN to the ground (positive y). +z is "forward" — the claws reach that way.
+            // Body = a squashed red/orange ellipsoid (wide in x/z, flat in y), domed brighter on top.
+            // 6 thin legs (3 per side) splay out + down. Two big front claws on jointed arms. Two dark
+            // eyes on short reddish stalks up top. Point share: body 46% · legs 14% · claws 32% · eyes 8%.
+            let body_h = 0.34f32; // half-height of the squashed (flat) body
+            let body_rx = 0.78f32; // half-width across (x)
+            let body_rz = 0.60f32; // half-depth front-to-back (z)
+            let shell = [0.93f32, 0.26, 0.14]; // warm crab red-orange (lit top)
+            let shell_lo = [0.74f32, 0.16, 0.10]; // shaded underside / legs
+            for _ in 0..N {
+                let s = rng.unit();
+                let p: [f32; 3];
+                let col: [f32; 3];
+                if s < 0.46 {
+                    // ---- BODY: a filled squashed ellipsoid; top (-y) bright, underside (+y) shaded. ----
+                    let d = norm(rng.normal3());
+                    let r = rng.unit().cbrt();
+                    let yu = d[1] * r; // -1 top .. +1 bottom in body space
+                    p = [d[0] * r * body_rx, -yu * body_h - 0.06, d[2] * r * body_rz]; // -0.06: sit above legs
+                    let lit = (-yu * 0.5 + 0.5).clamp(0.0, 1.0); // 1 at the shell top, 0 underneath
+                    col = [
+                        shell_lo[0] + (shell[0] - shell_lo[0]) * lit,
+                        shell_lo[1] + (shell[1] - shell_lo[1]) * lit,
+                        shell_lo[2] + (shell[2] - shell_lo[2]) * lit,
+                    ];
+                } else if s < 0.60 {
+                    // ---- LEGS: 3 per side, thin tubes splaying OUT (+/-x) and DOWN (+y) to the ground. ----
+                    let side = if rng.unit() < 0.5 { -1.0f32 } else { 1.0 };
+                    let leg = rng.int(3) as f32; // 0 front .. 2 back: fan to different z anchors on the flank
+                    let z0 = body_rz * (0.45 - leg * 0.42);
+                    let x0 = side * body_rx * 0.92;
+                    let t = rng.unit(); // 0 = hip (at body) .. 1 = foot (tip on the ground)
+                    let x = x0 + side * 0.55 * t * (0.6 + 0.4 * t); // reach further out toward the tip
+                    let y = 0.10 + 0.62 * t; // legs drop to the ground (+y)
+                    let z = z0 * (1.0 - 0.25 * t) + 0.04 * (3.0 * t).sin();
+                    let jit = 0.018 * (1.0 - 0.5 * t); // thin tube, not a line
+                    p = [
+                        x + rng.normal(0.0, jit),
+                        y + rng.normal(0.0, jit),
+                        z + rng.normal(0.0, jit),
+                    ];
+                    col = shell_lo; // shaded red legs
+                } else if s < 0.92 {
+                    // ---- CLAWS: two arms reaching FORWARD (+z), ending in a fat notched pincer blob. ----
+                    let side = if rng.unit() < 0.5 { -1.0f32 } else { 1.0 };
+                    let ax0 = side * body_rx * 0.62; // shoulder, on the front flank
+                    let az0 = body_rz * 0.55; // at the front of the body
+                    let ay0 = -0.02;
+                    if rng.unit() < 0.40 {
+                        // upper arm: a tube from the shoulder reaching forward + a touch down to the claw.
+                        let t = rng.unit();
+                        let jit = 0.03;
+                        p = [
+                            ax0 + side * 0.16 * t + rng.normal(0.0, jit),
+                            ay0 + 0.10 * t + rng.normal(0.0, jit),
+                            az0 + 0.55 * t + rng.normal(0.0, jit),
+                        ];
+                        col = shell;
+                    } else {
+                        // the pincer: a fat ellipsoid blob with a V-notch (the gripping mouth) at the front.
+                        let cx = ax0 + side * 0.16;
+                        let cy = ay0 + 0.10;
+                        let cz = az0 + 0.55;
+                        let d = norm(rng.normal3());
+                        let r = rng.unit().cbrt();
+                        let mut bx = d[0] * r * 0.20;
+                        let by = -d[1] * r * 0.16; // a touch taller than wide
+                        let bz = d[2] * r * 0.26 + 0.10; // pushed forward
+                        if bz > 0.14 && bx.abs() < 0.06 {
+                            bx += if bx >= 0.0 { 0.07 } else { -0.07 }; // carve the notch open
+                        }
+                        p = [cx + bx, cy + by, cz + bz];
+                        col = shell;
+                    }
+                } else {
+                    // ---- EYES: two dark dots on short reddish stalks, on TOP of the shell (-y), forward. ----
+                    let side = if rng.unit() < 0.5 { -1.0f32 } else { 1.0 };
+                    let ex = side * 0.20; // a bit apart, near the centerline
+                    let ez = body_rz * 0.30; // forward of center
+                    if rng.unit() < 0.55 {
+                        // stalk: a thin reddish tube rising from the shell to the eye.
+                        let t = rng.unit();
+                        let jit = 0.014;
+                        p = [
+                            ex + rng.normal(0.0, jit),
+                            -(body_h + 0.06) - 0.24 * t,
+                            ez + rng.normal(0.0, jit),
+                        ];
+                        col = [0.86, 0.30, 0.20];
+                    } else {
+                        // eyeball: a small near-black sphere atop the stalk.
+                        let d = norm(rng.normal3());
+                        let r = rng.unit().cbrt() * 0.075;
+                        p = [ex + d[0] * r, -(body_h + 0.30) + d[1] * r, ez + d[2] * r];
+                        col = [0.07, 0.07, 0.09];
+                    }
+                }
+                pos.push(p);
+                rgb.push(col);
+            }
+        }
         _ => return None,
     }
     Some((pos, rgb))
@@ -901,7 +1204,39 @@ fn opacity_of(name: &str, rgb: &[f32; 3]) -> f32 {
         "moon" => 0.92,      // solid rock
         "terrain" => 0.60,   // the ground reads, but a touch translucent helps it sit behind props
         "mountains" => 0.40, // hazy, distant
-        _ => ALPHA,          // everything else: the soft default
+        "palm" => {
+            if rgb[1] > rgb[0] {
+                0.45 // airy translucent fronds
+            } else {
+                0.88 // solid trunk + coconuts
+            }
+        }
+        "parasol" => {
+            // solid fabric canopy; solid pole/finial — keep the silhouette crisp
+            if rgb[0] > rgb[1] && rgb[1] > rgb[2] {
+                0.92
+            } else {
+                0.85
+            }
+        }
+        // cocktail: the pale-cyan GLASS (blue-dominant, B>R) is translucent so the liquid shows
+        // through; the liquid, straw and garnish are near-solid so they read crisp.
+        "cocktail" => {
+            if rgb[2] > rgb[0] {
+                0.34
+            } else {
+                0.92
+            }
+        }
+        "crab" => {
+            // fully solid, cartoony body; the eyes a hair more opaque so the dark dots read sharp.
+            if rgb[0] < 0.2 && rgb[1] < 0.2 {
+                0.95
+            } else {
+                0.9
+            }
+        }
+        _ => ALPHA, // everything else: the soft default
     }
 }
 
@@ -931,6 +1266,38 @@ fn size_of(name: &str, rgb: &[f32; 3]) -> f32 {
         "terrain" => 0.030, // soft ground
         "tent" => 0.020,    // crisp canvas
         "moon" => 0.022,
+        "palm" => {
+            if rgb[1] > rgb[0] {
+                0.030 // fluffy frond fronds
+            } else {
+                0.014 // crisp trunk + coconuts
+            }
+        }
+        "parasol" => {
+            // chunky fabric canopy (red or white) vs crisp thin pole/finial (tan: r>g>b)
+            if rgb[0] > rgb[1] && rgb[1] > rgb[2] {
+                0.016
+            } else {
+                0.030
+            }
+        }
+        // cocktail: the translucent GLASS (B>R) gets fluffy soft splats so the wall reads as a smooth
+        // surface; the liquid/straw/garnish stay crisp and bright.
+        "cocktail" => {
+            if rgb[2] > rgb[0] {
+                0.026
+            } else {
+                0.015
+            }
+        }
+        "crab" => {
+            // crisp little black eyes; everything else (shell/claws/legs) a normal solid splat.
+            if rgb[0] < 0.2 && rgb[1] < 0.2 {
+                0.013 // tiny crisp pupil
+            } else {
+                0.020 // solid shell / claw / leg
+            }
+        }
         _ => SPLAT, // the default
     }
 }
