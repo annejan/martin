@@ -123,8 +123,12 @@ pub(crate) struct Prop {
     travel: Option<Travel>, // `travel:x,y,z[@anchor[,dur]]`: ease @pos→target over a window, then hold
     font: Option<String>, // `font:<name>`: pick a `text:` font (e.g. `defeest`); None = default font.ttf
     disk_scale: Option<f32>, // `dscale:V`: per-object splat-disk size — a LOCAL MARTIN_SPLAT_SCALE. <1
-                             // shrinks just this object's disks (cut a full-screen backdrop's overdraw without thinning props);
-                             // multiplies the global MARTIN_SPLAT_SCALE.
+    // shrinks just this object's disks (cut a full-screen backdrop's overdraw without thinning props);
+    // multiplies the global MARTIN_SPLAT_SCALE.
+    disk: Option<f32>, // `disk:V`: MESH-sampling disk size (the size of each splat as a mesh is sampled
+    // into gaussians) — a DIFFERENT knob from `dscale:` (a render-time multiplier). Threaded into
+    // sample_content; was silently dropped, so a compose mesh's `disk:`/`aniso:` had no effect.
+    aniso: Option<f32>, // `aniso:V`: mesh-sampling anisotropy (stretch the sampled splats).
 }
 
 impl Prop {
@@ -267,6 +271,8 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let mut alpha = None;
         let mut font = None;
         let mut disk_scale = None;
+        let mut disk = None;
+        let mut aniso = None;
         // travel: parsed raw here (needs `score` + the object's `in` cue, both resolved after the loop)
         let mut travel_raw: Option<(Vec3, Option<String>, Option<f32>)> = None;
         let toks: Vec<&str> = s
@@ -311,6 +317,22 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     match n.parse::<f32>() {
                         Ok(d) => disk_scale = Some(d.max(0.0)),
                         Err(_) => eprintln!("compose: bad 'dscale:{n}' (need a float) — ignored"),
+                    }
+                    return false;
+                }
+                // `disk:V` / `aniso:V` — MESH-sampling knobs (splat size + anisotropy as a mesh is
+                // sampled into gaussians), passed into sample_content. Were silently dropped before.
+                if let Some(n) = t.strip_prefix("disk:") {
+                    match n.parse::<f32>() {
+                        Ok(d) => disk = Some(d.max(0.0)),
+                        Err(_) => eprintln!("compose: bad 'disk:{n}' (need a float) — ignored"),
+                    }
+                    return false;
+                }
+                if let Some(n) = t.strip_prefix("aniso:") {
+                    match n.parse::<f32>() {
+                        Ok(d) => aniso = Some(d.max(0.0)),
+                        Err(_) => eprintln!("compose: bad 'aniso:{n}' (need a float) — ignored"),
                     }
                     return false;
                 }
@@ -461,6 +483,8 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             travel,
             font,
             disk_scale,
+            disk,
+            aniso,
         });
     }
     out
@@ -561,8 +585,8 @@ pub(crate) fn build_composition(
             &state,
             &assets,
             &root.0,
-            None,
-            None,
+            obj.disk,
+            obj.aniso,
             Some(sample_n),
             obj.font.as_deref(),
         );
