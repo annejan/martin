@@ -44,7 +44,10 @@ fi
 
 echo "==> building martin (release — debug can render the splats black, and release is far"
 echo "    faster for big .ply clouds)"
-cargo +nightly build --release --manifest-path "$HERE/Cargo.toml"
+# Use the toolchain pinned in rust-toolchain.toml (NOT an explicit `+nightly`, which resolves to the
+# LATEST nightly and thrashes the build cache against every plain `cargo build` — a full rebuild each
+# render). The pin already selects nightly, so a bare `cargo build` shares the cache.
+cargo build --release --manifest-path "$HERE/Cargo.toml"
 BIN="$(find "$HERE/target/release" -maxdepth 1 -type f -executable -name martin | head -n1)"
 
 # Render the synth to a WAV FIRST, then mux it in (honours MARTIN_SCORE; skipped by MARTIN_MUTE).
