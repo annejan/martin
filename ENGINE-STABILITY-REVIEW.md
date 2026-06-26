@@ -10,13 +10,17 @@ parallel, every finding adversarially verified, deduped + prioritized. 17 findin
 
 ## Status (2026-06-26 hardening pass)
 
-**FIXED:** B1 (asset-load hang → load-state gate + 120 s record backstop) · H1 (deadline build pinned —
-fork `rev` + dated nightly; *vendored-fork copy still deferred*) · H3 (vec3_csv position-strict + finite;
-recorder duration clamped) · H4 (glTF attribute length-guard) · M3 + L2 (typo'd settings-key / section
-warn) · L1 (score octave range) · M2b (Bevy/wgpu/winit/naga excluded from Dependabot auto-merge).
-**STILL OPEN:** H2 (clamp an absurd budget/count before OOM) · H5 (aggregate unresolved `@@anchor`s into a
-fatal `--validate`) · M1 (a GPU-render smoke gate in CI) · M4 (capture.rs disk pre-flight + truncated-dump
-detection) · L3 (cap pathological score length). All "still open" are M-effort hardening, none in the hot path.
+**ALL ADDRESSED.** First pass: B1 (asset-load hang → load-state gate + 120 s record backstop) · H1
+(deadline build pinned — fork `rev` + dated nightly; *vendored-fork copy still deferred*) · H3 (vec3_csv
+position-strict + finite; recorder duration clamped) · H4 (glTF attribute length-guard) · M3 + L2 (typo'd
+settings-key / section warn) · L1 (score octave range) · M2b (Bevy/wgpu/winit/naga excluded from Dependabot
+auto-merge). Second pass: H2 (`scene::cap_count` hard-clamps any single count to MARTIN_SPLAT_MAX=4M) ·
+H5 (unresolved `@@anchor`s aggregated → `--validate` exits non-zero) · M4 (a stalled record writer exits
+NON-ZERO instead of faking "complete") · L3 (`demo_len()` clamped to 10 min + a validate warning) · M1 (a
+NON-BLOCKING lavapipe software-Vulkan smoke render in CI — a "didn't go black / didn't crash" net).
+**Remaining deferred (acceptable):** H1's vendored-fork mirror (the rev+date pins cover the common cases);
+M1 as a *required* check (depends on lavapipe proving non-flaky — kept `continue-on-error` for now). Nothing
+open in the hot path.
 
 ## Verdict
 

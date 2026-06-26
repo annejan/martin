@@ -47,6 +47,43 @@ jobs:
       # -D warnings so a new lint can't slip in — the few intentional ones are #[allow]ed.
       - run: cargo clippy --all-targets -- -D warnings
 
+  # M1: the ONLY CI gate that actually RASTERIZES a frame — a software-Vulkan (Mesa lavapipe) smoke
+  # render of the intro, so a fork-shader edit / wgpu-or-Bevy bump that blacks the screen or panics on
+  # the GPU path is caught in CI instead of in a live render (the rest of CI returns before the Bevy app
+  # is even built). NON-BLOCKING on purpose (`continue-on-error`): lavapipe is slower + flakier than the
+  # iGPU and won't reproduce RADV-specific black frames, so this is a "didn't go fully black / didn't
+  # crash on launch" net, not a required check — `pipeline/smoke-shows.py` on real RADV stays the
+  # pre-push ritual. See ENGINE-STABILITY-REVIEW.md § M1.
+  smoke:
+    name: gpu smoke (lavapipe)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install Linux + software-Vulkan deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libudev-dev libasound2-dev libwayland-dev libxkbcommon-dev \
+            mesa-vulkan-drivers vulkan-tools python3-pil
+      - uses: dtolnay/rust-toolchain@5b842231ba77f5c045dba54ac5560fed2db780e2 # nightly
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - name: Build (release)
+        run: cargo build --release
+      - name: Smoke-render the intro on lavapipe (tiny res/count)
+        env:
+          VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          WGPU_BACKEND: vulkan
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          MARTIN_WIDTH: "320"
+          MARTIN_HEIGHT: "180"
+          MARTIN_MORPH_COUNT: "8000"
+          MARTIN_QUALITY: potato
+        run: |
+          vulkaninfo --summary 2>/dev/null | grep -iE "deviceName|driverName" || true
+          python3 pipeline/smoke-shows.py intro
+
   # RustSec advisory scan of the (committed) Cargo.lock — surfaces CVEs in the 25+ transitive Bevy
   # deps. Not a required check (advisories in deps we don't control shouldn't block a merge), but it
   # annotates + flags them so they're visible.
