@@ -6,7 +6,7 @@
 use crate::scene::compose::Prop;
 use crate::scene::sequence::{Sequence, shot_starts, show_end};
 use crate::score::Score;
-use crate::waypoints::{Waypoints, is_track};
+use crate::waypoints::{Waypoints, is_timed, is_track};
 
 /// The production kind a show declares (`kind = intro|demo` in `[settings]` → `MARTIN_KIND`). An
 /// **intro** is a self-contained, asset-budgeted showcase that must bundle into the single binary; a
@@ -124,8 +124,10 @@ pub fn report(
     if !cam.list.is_empty() {
         let kind = if is_track(&cam.list) {
             "track (music-timed)"
+        } else if is_timed(&cam.list) {
+            "held pose (single keyframe → static camera)"
         } else {
-            "path"
+            "path (untimed → inline keys are ignored; a file replays only via MARTIN_FLY)"
         };
         println!("\ncamera:   {} waypoints ({kind})", cam.list.len());
         for (i, w) in cam.list.iter().enumerate() {

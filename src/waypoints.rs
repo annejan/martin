@@ -315,6 +315,15 @@ pub fn is_track(list: &[Key]) -> bool {
     list.len() >= 2 && list.iter().all(|w| w.t.is_some())
 }
 
+/// **Timed** = every waypoint carries a time anchor, with ≥1 key. The looser cousin of `is_track`:
+/// a *single* timed key is a valid authored camera too — a HELD static pose (`pose_at_time` returns
+/// it for all `t`). An inline `.show [camera]` uses this so one keyframe drives the camera (without
+/// it the lone key was silently ignored → the auto-frame owned the camera). `is_track` (≥2) still
+/// gates the M-authored *file* replay, so a 2nd live-stamped waypoint doesn't snap-hijack free-flying.
+pub fn is_timed(list: &[Key]) -> bool {
+    !list.is_empty() && list.iter().all(|w| w.t.is_some())
+}
+
 /// Sample a *timed* track at absolute show-time `t` (seconds): find the bracketing pair by their
 /// anchors, smoothstep between them, clamp at the ends (hold the first pose before the track starts,
 /// the last after it ends). Assumes `is_track(list)` — anchors are taken as monotonically authored.

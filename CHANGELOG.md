@@ -223,6 +223,15 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Fixed
 
+- **A single `[camera]` keyframe now drives the camera (held static pose).** An inline `[camera]` track
+  with exactly one timed keyframe was silently ignored — the `is_track` gate requires ≥2 keys, so a lone
+  pose fell through to the `build_*` auto-frame and the authored camera was lost (a sharp authoring
+  footgun: a one-shot `.show` camera looked like it "didn't apply"). The flypath now applies any **inline
+  timed** camera (`is_timed`, ≥1 key): one key holds that pose for the whole show (`pose_at_time` returns
+  it for all `t`), ≥2 still interpolate as a music-timed track. M-authored *files* stay gated by
+  `is_track` (≥2) so a second live-stamped waypoint doesn't snap-hijack free-flying. `--validate` now
+  labels the three cases: `track (music-timed)` / `held pose (single keyframe → static camera)` /
+  `path (untimed → inline keys are ignored)`.
 - **Captions: a lyric word that is also an option keyword no longer truncates the line.** The
   `[caption]` parser split text from options at the *first* keyword token, so a bare `in`/`at`/… inside
   the text (e.g. "dooie beessies **in** me thee") cut the caption short and desynced its options. It
