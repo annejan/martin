@@ -119,6 +119,11 @@ pub struct Waypoints {
     /// `MARTIN_FLY=<secs>`: replay the path instead of free-orbiting; `secs` is the **time per
     /// waypoint leg** (time between markers). `Some(secs)` = enabled.
     pub fly: Option<f32>,
+    /// True when the track came from a `.show` `[camera]` section (authored) rather than the live
+    /// `MARTIN_WAYPOINTS` file (M-logged). Only an **inline** track auto-plays as authoritative — a
+    /// file you're still M-AUTHORING must NOT take over the free-orbit camera (else logging a 2nd timed
+    /// waypoint makes it a `is_track` and the playback snaps the camera back, blocking further flying).
+    pub inline: bool,
 }
 
 impl Waypoints {
@@ -135,6 +140,7 @@ impl Waypoints {
 
     fn build(inline: Option<Vec<Key>>) -> Self {
         let path = std::env::var("MARTIN_WAYPOINTS").unwrap_or_else(|_| "waypoints.json".into());
+        let is_inline = inline.is_some();
         Self {
             // inline wins; else seed from the file so M *continues* a path and MARTIN_FLY replays it.
             list: inline.unwrap_or_else(|| load(&path)),
@@ -142,6 +148,7 @@ impl Waypoints {
             fly: std::env::var("MARTIN_FLY")
                 .ok()
                 .map(|s| s.trim().parse::<f32>().unwrap_or(2.0).max(0.05)),
+            inline: is_inline,
         }
     }
 }

@@ -245,7 +245,10 @@ fn flypath(
     // path: the part-window mode below.) This is how a `.show` `[camera]` (or a Blender-authored camera)
     // drives BOTH compose and reel shows; without it, the build_* auto-frame + record sway own the camera
     // and the authored pose is ignored.
-    if waypoints::is_track(&marks.list) {
+    // Only an INLINE (`.show [camera]`) track is authoritative-always; a file you're M-AUTHORING must
+    // not auto-play (else the 2nd timed waypoint forms a track + snaps the camera back, blocking flying).
+    // A file replays only via `MARTIN_FLY` (the part-window mode below).
+    if marks.inline && waypoints::is_track(&marks.list) {
         if let Some(w) = waypoints::pose_at_time(&marks.list, clock.t, spline) {
             for mut cam in &mut q {
                 cam.target = w.target;
