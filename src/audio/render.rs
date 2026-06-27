@@ -112,13 +112,15 @@ fn lead_pick(n: i32, f: f32, v: f32) -> Unit {
         _ => lead(f, v),
     }
 }
-// arpsw: the arp lane's voice — 0 default arp · 1 pan-flute · 2 FM bell · 3 glass pluck.
+// arpsw: the arp lane's voice — 0 default arp · 1 pan-flute · 2 FM bell · 3 glass pluck · 4 koto ·
+// 5 sharp sawing arp (aggressive Dubmood/MBR screech).
 fn arp_pick(n: i32, f: f32, v: f32) -> Unit {
     match n {
         1 => flute(f, v),
         2 => bell(f, v),
         3 => pluck(f, v),
         4 => koto(f, v),
+        5 => arp_saw(f, v),
         _ => arp(f, v),
     }
 }
@@ -131,13 +133,15 @@ fn stab_pick(n: i32) -> fn(f32) -> Unit {
     }
 }
 // bass also has CHARACTERS: basssw = 0 orig · 1 *_sw clean-split Reese · 2 Kavinsky clean sub ·
-// 3 Brut Reese growl · 4 acid/303 squelch. (held-note variant = the matching woozbass.)
+// 3 Brut Reese growl · 4 acid/303 squelch · 5 bright saw bass (octave-up mid presence, Dubmood drive).
+// (held-note variant = the matching woozbass.)
 fn bass_pick(n: i32, f: f32, v: f32) -> Unit {
     match n {
         1 => bass_sw(f, v),
         2 => bass_sw2(f, v),
         3 => bass_sw3(f, v),
         4 => bass_sw4(f, v),
+        5 => bass_saw(f, v),
         _ => bass(f, v),
     }
 }
@@ -158,6 +162,7 @@ fn supersaw_pick(n: i32, f: f32) -> Unit {
         2 => supersaw_sw2(f),
         3 => supersaw_sw3(f),
         4 => supersaw_sw4(f),
+        5 => supersaw_clean(f),
         _ => supersaw(f),
     }
 }

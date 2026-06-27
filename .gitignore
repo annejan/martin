@@ -104,3 +104,8 @@ productions/*/captures/*.glb
 /.agents/
 /.openhands/
 /skills-lock.json
+
+# Downloaded MIDI sources (transcription inputs; sequences are third-party — keep local)
+*.mid
+/assets/beach/
+/assets/chopin/

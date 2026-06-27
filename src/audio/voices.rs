@@ -140,6 +140,40 @@ pub(super) fn bass(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
     }
 }
 
+/// Bright saw bass (`basssw=5`): a driving saw bass with real UPPER-MID presence — for when the Reese/
+/// sub sits too low and the line vanishes under the kick. The fundamental saw + an OCTAVE-UP saw (the
+/// "less-low" layer the sub-only basses miss) through a brighter resonant low-pass (no deep sub
+/// roll-off) + tanh drive, so it cuts in the ~200 Hz–1.6 kHz band (Dubmood drive bass) instead of
+/// living only in the sub. Oversampled.
+pub(super) fn bass_saw(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    let mk = move || {
+        let osc = saw_hz(freq) * 0.5
+            + saw_hz(freq * 2.0) * 0.45 // the octave-up "less-low" layer = the mid presence
+            + saw_hz(freq * 1.006) * 0.35
+            + saw_hz(freq * 0.994) * 0.35;
+        let drive = 1.7 + 0.8 * vel;
+        let cut = envelope(move |t: f32| 1400.0 + 900.0 * (-t * 6.0).exp());
+        ((osc | cut)
+            >> lowpass_q(1.3)
+            >> highpass_hz(90.0, 0.7)
+            >> shape_fn(move |x| (x * drive).tanh()))
+            * envelope(|t: f32| {
+                let a = 0.004;
+                if t < a {
+                    t / a
+                } else {
+                    0.22 + 0.78 * (-(t - a) * 4.5).exp()
+                }
+            })
+            * 0.5
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
 /// Wooz-bass: thick + dark in the low-mids, a slow GROWL that develops AFTER the hit, and a
 /// slightly-detuned, woozy quality — the pitch never quite settles. How each trait is built:
 ///   • dark low-mid body — a sub sine for weight + two detuned saws, all through a RESONANT low-pass
@@ -344,6 +378,42 @@ pub(super) fn arp(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
     )
 }
 
+/// Sharp sawing arp (`arpsw=5`): the aggressive end — Dubmood / Master Boot Record territory. A
+/// detuned 3-saw unison (+ a square edge) through a HIGH-resonance low-pass whose cutoff snaps from
+/// wide-open down to a sustained mid (the acid/saw screech), hard tanh drive, and a fast snappy
+/// envelope so dense 16th/32nd cascades stay articulate + buzzy — vs the mellow default `arp` / glassy
+/// `pluck`. Bright, gritty, in-your-face. Oversampled (the drive aliases otherwise).
+pub(super) fn arp_saw(freq: f32, vel: f32) -> Box<dyn AudioUnit> {
+    let mk = move || {
+        // a detuned saw unison + a SUB-OCTAVE saw (weight) + a SQUARE edge (bite) — a fat nasty stack.
+        // Detune kept TIGHT (~±12 cents) so it's fat, not audibly out-of-tune on sustained notes.
+        let osc = (saw_hz(freq) + saw_hz(freq * 1.007) + saw_hz(freq * 0.993)) * 0.26
+            + saw_hz(freq * 0.5) * 0.16
+            + square_hz(freq) * 0.16;
+        let top = 6500.0 + 4500.0 * vel;
+        let cut = envelope(move |t: f32| 1300.0 + top * (-t * 18.0).exp()); // a HARD, fast snap = punch
+        // SCREAMING resonance → hard tanh → a WAVEFOLD (extra harsh inharmonic teeth) → a hard CLIP →
+        // highpass so it cuts + stays nasty. The fold+clip are the "rauw/gemeen". Oversampled, so all
+        // this aggression doesn't alias into hash.
+        ((osc | cut)
+            >> lowpass_q(4.4)
+            >> shape(Tanh(3.8))
+            >> shape_fn(|x| x + 0.3 * (2.4 * x).sin())
+            >> shape_fn(|x| (x * 1.2).clamp(-0.78, 0.78))
+            >> highpass_hz(280.0, 0.7))
+            * envelope(|t: f32| {
+                let a = 0.0015;
+                if t < a { t / a } else { (-(t - a) * 6.0).exp() } // a touch more body so a riff sings
+            })
+            * 0.20
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
 /// Supersaw: 7 detuned saws + a sub-octave saw through a bright-ish filter, slow swell — the wide
 /// "epic" chord wall for the drop/climax. Held a full bar per chord note (panned wide by chord_spread).
 pub(super) fn supersaw(freq: f32) -> Box<dyn AudioUnit> {
@@ -361,6 +431,24 @@ pub(super) fn supersaw(freq: f32) -> Box<dyn AudioUnit> {
         ((saws | cut) >> lowpass_q(0.7) >> highpass_hz(180.0, 0.7) >> shape(Tanh(1.8)))
             * envelope(|t: f32| (t * 3.0).min(1.0))
             * 0.42
+    };
+    if oversampling() {
+        Box::new(oversample(mk()))
+    } else {
+        Box::new(mk())
+    }
+}
+
+/// Clean tight pad (`padsw=5`): a NARROW-detune (~±5 cent) 3-saw chord pad — warm + IN TUNE, for
+/// content with fast/rich harmony (Opus 10) where the default supersaw's ±35-cent shimmer beats
+/// against a moving cascade and reads as "detuned". Just harmonic body + width, no woozy chorus.
+pub(super) fn supersaw_clean(freq: f32) -> Box<dyn AudioUnit> {
+    let mk = move || {
+        let saws = (saw_hz(freq) + saw_hz(freq * 1.003) + saw_hz(freq * 0.997)) * 0.22;
+        let cut = envelope(|t: f32| 900.0 + 1800.0 * (t * 1.2).min(1.0)); // gentle swell open
+        ((saws | cut) >> lowpass_q(0.7) >> highpass_hz(140.0, 0.7))
+            * envelope(|t: f32| (t * 2.5).min(1.0))
+            * 0.38
     };
     if oversampling() {
         Box::new(oversample(mk()))
