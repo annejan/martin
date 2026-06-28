@@ -1039,10 +1039,11 @@ tempo @bar:8=96 @bar:16=132 @bar:24=72
 # chord progression, one per bar, cycling (a note + optional `m` = minor): drives bass + stab
 chords Am F C G
 
-# section <name> <bars> <phase-bars,csv> [fill]
+# section <name> <bars> <phase-bars,csv> [fill] [grid:N]
 section intro      8             # 8 bars, one phase, no fill
 section build     20  9,10 fill  # 20 bars = phase0 (9 bars) + phase1 (10) + 1 fill bar
 section drop      28  13,14 fill
+section waltz      8  grid:12     # ODD METER: 12 slots/bar = a 3/4 bar (a slot is always a 16th)
 
 # <section>.<kick|snare|hat|stab>  p<N>|fill:  16 steps   (x = hit, . = rest; spaces ignored)
 build.kick  p0:   x... .... .... x...
@@ -1070,6 +1071,12 @@ mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
   written per phase like the drums.
 - **16 steps per bar** (16th notes); patterns you don't write are silent. A tie with no preceding note
   is just a rest; an untied note keeps its fixed length (so adding ties never changes existing tracks).
+- **`grid:N` (odd meter / tuplets).** A section defaults to a **16-slot** bar (4/4 sixteenths). Add
+  `grid:N` on the `section` line to change the slots per bar — a slot stays a 16th-note, so the bar's
+  duration is `N/4` beats: `grid:12` = a **3/4** bar, `grid:14` = **7/8**, `grid:20` = **5/4**. Patterns
+  on that section then carry `N` steps/notes per bar (the parser enforces it). A whole odd-meter riff
+  cycle can be one big bar — e.g. `grid:52` holds |3/4 3/4 3/4 4/4| (12+12+12+16) as a single repeating
+  unit. A section with no `grid:` (the default 16) is byte-identical to before. Composes with `tempo`.
 - **`tempo` (rubato).** `bpm N` is the bar-0 tempo; an optional `tempo @bar:N=BPM @bar:M=BPM …` line
   steps the tempo at those bars (piecewise-constant per bar). It makes the grid breathe — a slow bar
   is literally longer in seconds — so a rubato piece (e.g. a Debussy transcription) flows instead of

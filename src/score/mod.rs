@@ -49,9 +49,14 @@ pub struct Score {
     pub sections: Vec<Section>,
     total_bars: u32,
     /// Cumulative seconds at the START of each bar, length `total_bars + 1` — the prefix sum that makes
-    /// the slot↔seconds map piecewise-constant-per-bar. With an empty `tempo` it is exactly
-    /// `bar_secs[b] == b * bar()`, so every conversion stays byte-identical to a single-tempo score.
+    /// the slot↔seconds map piecewise-per-bar (a bar's duration = its `grid`/4 beats at its tempo).
     bar_secs: Vec<f32>,
+    /// Cumulative SLOT count at the start of each bar, length `total_bars + 1` — maps slot↔bar when
+    /// bars have different `grid`s. With all-16 grids it is exactly `bar_slot0[b] == b * 16`.
+    bar_slot0: Vec<i64>,
+    /// `tempo` empty AND every section grid == 16 — then the funnels take the exact old single-multiply
+    /// fast path and the whole timeline is byte-for-byte identical to a pre-tempo, pre-grid score.
+    uniform: bool,
     /// Free-form mix/fx knobs from `set <key>=<value>` lines — the synth reads these (with built-in
     /// defaults) so the SOUND can be tuned by editing the score file (no recompile), not the engine.
     params: std::collections::HashMap<String, f32>,
@@ -72,16 +77,28 @@ impl Score {
             bar += s.bars;
         }
         let total_bars = bar;
-        // Prefix-sum the per-bar seconds: each bar runs at the latest tempo point with `point.bar <= b`
-        // (default `bpm`). Piecewise-constant per bar → the cumulative table is a simple running sum, and
-        // the slot↔seconds inverse is an exact per-bar binary-search. Empty `tempo` ⇒ every bar is the
-        // same length ⇒ `bar_secs[b] == b * 4 * (60/bpm)` ⇒ byte-identical to before.
+        // Per-bar grid (slots): the section a bar falls in sets it (16 = 4/4 sixteenths, the default).
+        let mut bar_grid = vec![16usize; total_bars as usize];
+        for s in &sections {
+            for b in s.start_bar..s.start_bar + s.bars {
+                if let Some(g) = bar_grid.get_mut(b as usize) {
+                    *g = s.grid.max(1);
+                }
+            }
+        }
+        // Prefix-sum BOTH the per-bar seconds and the per-bar slot count. A bar's duration is its
+        // grid/4 beats (a slot is always a 16th) at the latest tempo point with `point.bar <= b`
+        // (default `bpm`). All-16 grids + empty tempo ⇒ `bar_secs[b] == b*4*(60/bpm)` and
+        // `bar_slot0[b] == b*16` ⇒ byte-identical to before.
         let mut bar_secs = Vec::with_capacity(total_bars as usize + 1);
+        let mut bar_slot0 = Vec::with_capacity(total_bars as usize + 1);
         let mut acc = 0.0f32;
+        let mut slot_acc = 0i64;
         let mut cur_bpm = bpm;
         let mut ti = 0;
         for b in 0..=total_bars {
             bar_secs.push(acc);
+            bar_slot0.push(slot_acc);
             if b == total_bars {
                 break;
             }
@@ -89,8 +106,11 @@ impl Score {
                 cur_bpm = tempo[ti].bpm;
                 ti += 1;
             }
-            acc += BEATS_PER_BAR * (60.0 / cur_bpm); // one bar at the current tempo
+            let g = bar_grid[b as usize];
+            acc += (g as f32 / 4.0) * (60.0 / cur_bpm); // grid/4 beats at the current tempo
+            slot_acc += g as i64;
         }
+        let uniform = tempo.is_empty() && bar_grid.iter().all(|&g| g == 16);
         // a score with no `chords` line still needs harmony — default to a single A-minor.
         let chords = if chords.is_empty() {
             vec![Chord {
@@ -107,6 +127,8 @@ impl Score {
             sections,
             total_bars,
             bar_secs,
+            bar_slot0,
+            uniform,
             params: std::collections::HashMap::new(),
         }
     }
@@ -158,24 +180,43 @@ impl Score {
     fn slot_len(&self) -> f32 {
         self.beat() / 4.0
     }
-    /// Seconds spanned by one 16th-slot inside `bar` (the bar's length / 16).
+    /// Slots in `bar` (its `grid`), from the cumulative table. All-16 grids ⇒ 16.
+    #[inline]
+    fn bar_grid(&self, bar: u32) -> i64 {
+        let b = (bar as usize).min(self.total_bars.saturating_sub(1) as usize);
+        self.bar_slot0[b + 1] - self.bar_slot0[b]
+    }
+    /// Total slots across the whole track (`sum of each bar's grid`). All-16 ⇒ `total_bars * 16`.
+    #[inline]
+    fn total_slots(&self) -> i64 {
+        self.bar_slot0[self.total_bars as usize]
+    }
+    /// The bar whose `[bar_slot0[b], bar_slot0[b+1])` span contains absolute slot `slot`.
+    fn bar_of_slot(&self, slot: i64) -> u32 {
+        (match self.bar_slot0.binary_search(&slot) {
+            Ok(b) => b.min(self.total_bars.saturating_sub(1) as usize),
+            Err(0) => 0,
+            Err(b) => (b - 1).min(self.total_bars.saturating_sub(1) as usize),
+        }) as u32
+    }
+    /// Seconds spanned by one slot inside `bar` (the bar's length / its grid).
     #[inline]
     fn slot_len_of_bar(&self, bar: u32) -> f32 {
         let b = bar.min(self.total_bars.saturating_sub(1)) as usize;
-        (self.bar_secs[b + 1] - self.bar_secs[b]) / SLOTS_PER_BAR as f32
+        (self.bar_secs[b + 1] - self.bar_secs[b]) / self.bar_grid(bar) as f32
     }
     /// Seconds at the start of bar `bar` (clamped to the track).
     pub fn bar_start_secs(&self, bar: u32) -> f32 {
         let bar = (bar as usize).min(self.total_bars as usize);
-        if self.tempo.is_empty() {
+        if self.uniform {
             bar as f32 * self.bar()
         } else {
             self.bar_secs[bar]
         }
     }
-    /// Local beat length (s) at time `t` — the bar-at-`t`'s length / 4.
+    /// Local beat length (s) at time `t` — the bar-at-`t`'s slot length × 4 (a beat = 4 slots).
     pub fn beat_at(&self, t: f32) -> f32 {
-        if self.tempo.is_empty() {
+        if self.uniform {
             self.beat()
         } else {
             self.slot_len_of_bar(self.bar_idx_at(t)) * 4.0
@@ -183,29 +224,29 @@ impl Score {
     }
     /// Local bar length (s) at time `t`.
     pub fn bar_len_at(&self, t: f32) -> f32 {
-        if self.tempo.is_empty() {
+        if self.uniform {
             self.bar()
         } else {
             let b = (self.bar_idx_at(t) as usize).min(self.total_bars as usize);
             self.bar_secs[(b + 1).min(self.total_bars as usize)] - self.bar_secs[b]
         }
     }
-    /// FORWARD funnel: an absolute 16th-slot index → seconds. Fractional `slot` lerps inside its bar.
+    /// FORWARD funnel: an absolute slot index → seconds. Fractional `slot` lerps inside its bar.
     pub(crate) fn slot_to_secs(&self, slot: f32) -> f32 {
         if slot <= 0.0 {
             return 0.0;
         }
-        if self.tempo.is_empty() {
+        if self.uniform {
             return slot * self.slot_len();
         }
-        let bar = (slot as i64 / SLOTS_PER_BAR).min(self.total_bars as i64) as u32;
-        let rem = slot - (bar as i64 * SLOTS_PER_BAR) as f32;
+        let bar = self.bar_of_slot(slot as i64);
+        let rem = slot - self.bar_slot0[bar as usize] as f32;
         self.bar_start_secs(bar) + rem * self.slot_len_of_bar(bar)
     }
-    /// INVERSE funnel: seconds → absolute 16th-slot index (floored). Keeps the forward epsilon nudge
+    /// INVERSE funnel: seconds → absolute slot index (floored). Keeps the forward epsilon nudge
     /// (per the local slot length) so an exact boundary time floors to the right slot, not one early.
     fn secs_to_slot(&self, t: f32) -> i64 {
-        if self.tempo.is_empty() {
+        if self.uniform {
             let sl = self.slot_len();
             return ((t + sl * 1e-3) / sl).floor() as i64;
         }
@@ -219,7 +260,7 @@ impl Score {
         } as u32;
         let sl = self.slot_len_of_bar(bar);
         let into = ((t - self.bar_start_secs(bar) + sl * 1e-3) / sl).floor() as i64;
-        bar as i64 * SLOTS_PER_BAR + into.clamp(0, SLOTS_PER_BAR - 1)
+        self.bar_slot0[bar as usize] + into.clamp(0, self.bar_grid(bar) - 1)
     }
     /// Total bar count (the playable timeline length in bars).
     pub fn total_bars(&self) -> u32 {
@@ -232,7 +273,7 @@ impl Score {
         // track is anywhere near 10 min — clamp here so the allocation is bounded; `score::validate`
         // separately WARNS (fatal under strict) when a score is this long. (The recorder has its own
         // 1800 s clamp; this is the audio-buffer backstop.)
-        let total = if self.tempo.is_empty() {
+        let total = if self.uniform {
             self.total_bars as f32 * self.bar()
         } else {
             self.bar_secs[self.total_bars as usize]
@@ -244,7 +285,18 @@ impl Score {
         self.secs_to_slot(t)
     }
     fn bar_idx_at(&self, t: f32) -> u32 {
-        (self.abs_slot(t).max(0) / SLOTS_PER_BAR) as u32
+        if self.uniform {
+            return (self.abs_slot(t).max(0) / SLOTS_PER_BAR) as u32;
+        }
+        // the bar whose `[bar_secs[b], bar_secs[b+1])` span contains `t` (variable bar lengths).
+        (match self
+            .bar_secs
+            .binary_search_by(|x| x.partial_cmp(&t).unwrap_or(std::cmp::Ordering::Less))
+        {
+            Ok(b) => b.min(self.total_bars.saturating_sub(1) as usize),
+            Err(0) => 0,
+            Err(b) => (b - 1).min(self.total_bars.saturating_sub(1) as usize),
+        }) as u32
     }
 
     /// Structural lint of the tempo map (alongside `validate`'s section lints): a point past the
@@ -286,21 +338,30 @@ impl Score {
     }
 
     // --- patterns -----------------------------------------------------------------------------
-    fn lane_hits(&self, inst: Inst, t: f32) -> [bool; 16] {
+    fn lane_hits(&self, inst: Inst, t: f32) -> &[bool] {
         let i = self.section_index_at(t);
         let s = &self.sections[i];
         let into = (self.bar_idx_at(t) as i64 - s.start_bar as i64).max(0) as u32;
         s.lane(inst).at(s.phase_at(into))
     }
 
+    /// The position of absolute slot `s` within its bar (0..the bar's grid).
+    #[inline]
+    fn slot_in_bar(&self, s: i64) -> usize {
+        (s - self.bar_slot0[self.bar_of_slot(s) as usize]) as usize
+    }
+
     /// Every hit time (s) for `inst` across the whole track, in order — the synth builds a voice at
-    /// each. Forward enumeration: walk every 16th-note slot and keep the ones that fire.
+    /// each. Forward enumeration: walk every slot (per the bar's grid) and keep the ones that fire.
     pub fn hits(&self, inst: Inst) -> Vec<f32> {
-        let slots = self.total_bars as i64 * SLOTS_PER_BAR;
-        (0..slots)
+        (0..self.total_slots())
             .filter_map(|s| {
                 let t = self.slot_to_secs(s as f32);
-                self.lane_hits(inst, t)[(s % SLOTS_PER_BAR) as usize].then_some(t)
+                self.lane_hits(inst, t)
+                    .get(self.slot_in_bar(s))
+                    .copied()
+                    .unwrap_or(false)
+                    .then_some(t)
             })
             .collect()
     }
@@ -329,7 +390,7 @@ impl Score {
         }
     }
 
-    fn note_grid(&self, t: f32, pick: fn(&Section) -> &NoteLane) -> [Option<f32>; 16] {
+    fn note_grid(&self, t: f32, pick: fn(&Section) -> &NoteLane) -> &[Option<f32>] {
         let i = self.section_index_at(t);
         let s = &self.sections[i];
         let into = (self.bar_idx_at(t) as i64 - s.start_bar as i64).max(0) as u32;
@@ -347,9 +408,14 @@ impl Score {
     /// tie slots after the onset, so the synth can hold the note instead of the fixed slot length. A
     /// note with no ties has `hold == 0.0` → byte-identical to before (every existing score uses `.`).
     fn note_line(&self, pick: fn(&Section) -> &NoteLane) -> Vec<(f32, f32, f32)> {
-        let slots = self.total_bars as i64 * SLOTS_PER_BAR;
+        let slots = self.total_slots();
         let secs = |s: i64| self.slot_to_secs(s as f32);
-        let val = |s: i64| self.note_grid(secs(s), pick)[(s % SLOTS_PER_BAR) as usize];
+        let val = |s: i64| {
+            self.note_grid(secs(s), pick)
+                .get(self.slot_in_bar(s))
+                .copied()
+                .flatten()
+        };
         let mut out = Vec::new();
         for s in 0..slots {
             // emit on a real onset only; a tie (NaN) is consumed by the note before it, a rest skipped.
@@ -677,6 +743,26 @@ mod tests {
         assert!((s.anchor_seconds("bar:2").unwrap() - 4.0).abs() < 1e-4);
         assert!((s.anchor_seconds("bar:3").unwrap() - 8.0).abs() < 1e-4);
         assert!((s.beat_at(5.0) - 1.0).abs() < 1e-4); // 5 s is in bar 2 (@60) → beat = 1.0 s
+    }
+
+    #[test]
+    fn grid_sets_odd_meter_bar_length_and_round_trips() {
+        // a 3/4 bar (grid:12) is 3 beats; a 4/4 bar (default 16) is 4. At 120 BPM a 16th = 0.125 s.
+        let s = Score::from_str("bpm 120\nsection a 2 grid:12\nsection b 2\n").unwrap();
+        assert_eq!((s.sections[0].grid, s.sections[1].grid), (12, 16));
+        assert!(!s.uniform); // a non-16 grid takes the table path, not the fast path
+        assert!((s.bar_start_secs(1) - 1.5).abs() < 1e-4); // bar 0 = 3/4 = 1.5 s
+        assert!((s.bar_start_secs(2) - 3.0).abs() < 1e-4);
+        assert!((s.bar_start_secs(3) - 5.0).abs() < 1e-4); // bar 2 = 4/4 = 2 s
+        assert!((s.demo_len() - 7.0).abs() < 1e-4); // 1.5 + 1.5 + 2 + 2
+        assert!((s.slot_to_secs(12.0) - 1.5).abs() < 1e-4); // 12 slots = end of the 3/4 bar
+        assert!((s.slot_to_secs(24.0) - 3.0).abs() < 1e-4); // slot 24 = start of bar 2
+        assert_eq!(s.secs_to_slot(3.0), 24); // exact boundary floors forward
+        // round-trip preserves the grid; a default-16 section emits no `grid:` token.
+        let b = Score::from_str(&s.to_dsl()).unwrap();
+        assert_eq!(b.sections[0].grid, 12);
+        assert!(s.to_dsl().contains("grid:12") && !s.to_dsl().contains("grid:16"));
+        assert_eq!(s.to_dsl(), b.to_dsl());
     }
 
     #[test]

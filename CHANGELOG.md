@@ -46,6 +46,15 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Added
 
+- **Variable grid / odd meter in the score DSL** — a section can declare `grid:N` (slots per bar,
+  default 16); a slot stays a 16th-note so the bar is `N/4` beats: `grid:12` = 3/4, `grid:14` = 7/8,
+  etc. The per-bar slot/note arrays became `Vec` (were `[_; 16]`) and the timeline now carries a
+  cumulative `bar_slot0` table alongside `bar_secs`, so slot↔seconds + slot↔bar work with mixed-length
+  bars. An odd-meter riff cycle can be one big bar (e.g. `grid:52` = |3/4 3/4 3/4 4/4|). A score with
+  every section at the default 16 grid + no `tempo` line hits a `uniform` fast path and renders
+  **byte-for-byte identical** to before — verified: a fresh rebuild of the previous commit and this one
+  produce the same WAV md5 for the built-in score (and every shipped production score is uniform).
+  Composes with tempo automation. The MIDI converter still emits 4/4; odd-meter emission is next.
 - **Tempo automation (rubato) in the score DSL** — an optional `tempo @bar:N=BPM @bar:M=BPM …` line
   steps the tempo at bar boundaries (piecewise-constant per bar); `bpm N` stays the bar-0 default.
   The slot↔seconds map is now piecewise-per-bar (a cumulative `bar_secs` prefix table behind two

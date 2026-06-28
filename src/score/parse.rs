@@ -13,6 +13,9 @@ const MAX_PHASE: usize = 64;
 /// Upper bound on a section's bar count (a runaway `section x 4000000000` would make the synth-prep
 /// walks iterate `bars·16` slots into an unbounded Vec → hang/OOM). 10k bars ≈ hours of music.
 const MAX_BARS: u32 = 10_000;
+/// Upper bound on a section's `grid:N` (slots per bar). Generous — a whole odd-meter riff cycle as one
+/// bar (e.g. Golden Brown's |3/4 3/4 3/4 4/4| triplet grid) is well under this; caps the per-bar Vec.
+const MAX_GRID: usize = 256;
 
 impl Score {
     /// `MARTIN_SCORE=<file>` loads a tracker-DSL score; on any error we log + fall back to the
@@ -160,8 +163,11 @@ impl Score {
                     // pitched note lane: a phrase of 1+ bars, 16 tokens each — `A4`/`C#5` note, `.`
                     // rest, `-`/`_` TIE (hold the previous note one more slot: `C4 - - .` = a dotted-
                     // eighth-ish held C). A note with no ties is unchanged (the fixed slot length).
-                    let grid = parse_notes(pat).ok_or_else(|| {
-                        format!("line {ln}: {inst} needs 16 notes/rests (or a multiple of 16)")
+                    let g = sections[si].grid;
+                    let phrase = parse_notes(pat, g).ok_or_else(|| {
+                        format!(
+                            "line {ln}: {inst} needs {g} notes/rests per bar (a multiple of {g})"
+                        )
                     })?;
                     let lane = match inst {
                         "arp" => &mut sections[si].arp,
@@ -169,27 +175,28 @@ impl Score {
                         _ => &mut sections[si].lead,
                     };
                     match phase {
-                        None => lane.fill = grid,
+                        None => lane.fill = phrase,
                         Some(p) => {
                             if lane.phases.len() <= p {
                                 lane.phases.resize(p + 1, Vec::new());
                             }
-                            lane.phases[p] = grid;
+                            lane.phases[p] = phrase;
                         }
                     }
                 } else {
-                    let grid = parse_pattern(pat)
-                        .ok_or_else(|| format!("line {ln}: pattern must be 16 of x/."))?;
+                    let g = sections[si].grid;
+                    let pattern = parse_pattern(pat, g)
+                        .ok_or_else(|| format!("line {ln}: pattern must be {g} of x/."))?;
                     let lane = sections[si]
                         .lane_mut(inst)
                         .ok_or_else(|| format!("line {ln}: unknown instrument `{inst}`"))?;
                     match phase {
-                        None => lane.fill = grid,
+                        None => lane.fill = pattern,
                         Some(p) => {
                             if lane.phases.len() <= p {
-                                lane.phases.resize(p + 1, [false; 16]);
+                                lane.phases.resize(p + 1, Vec::new());
                             }
-                            lane.phases[p] = grid;
+                            lane.phases[p] = pattern;
                         }
                     }
                 }
@@ -254,9 +261,20 @@ impl Score {
                     }
                     let mut phases = vec![bars];
                     let mut fill = false;
+                    let mut grid = 16usize;
                     for tok in it {
                         if tok.eq_ignore_ascii_case("fill") {
                             fill = true;
+                        } else if let Some(g) = tok.strip_prefix("grid:") {
+                            // odd meter / tuplets: slots per bar (a slot stays a 16th, so the bar is
+                            // grid/4 beats). `grid:12` = a 3/4 bar; default 16 = 4/4.
+                            grid = g
+                                .parse()
+                                .ok()
+                                .filter(|&g| (1..=MAX_GRID).contains(&g))
+                                .ok_or_else(|| {
+                                    format!("line {ln}: grid must be 1..={MAX_GRID}, got `{g}`")
+                                })?;
                         } else {
                             let ph: Vec<u32> =
                                 tok.split(',').filter_map(|x| x.parse().ok()).collect();
@@ -265,7 +283,9 @@ impl Score {
                             }
                         }
                     }
-                    sections.push(Section::empty(name, bars, phases, fill));
+                    let mut sec = Section::empty(name, bars, phases, fill);
+                    sec.grid = grid;
+                    sections.push(sec);
                 }
                 "chords" => {
                     for tok in it {
@@ -403,32 +423,33 @@ fn parse_chord(s: &str) -> Option<Chord> {
 /// Parse whitespace-separated note tokens (`A4`/`C#5`/… or `.`/`-`/`_` = rest) into a melodic
 /// phrase: one or more bars of 16 slots each (so a 32/48/… token line is a 2/3/…-bar phrase). The
 /// token count must be a positive multiple of 16.
-/// Parse pitched note lanes (`lead`/`arp`/`bass`): whitespace tokens, 16 per bar. `A4`/`C#5` = a note,
-/// `.` = rest, `-`/`_` = a **tie** (held as `NaN`, merged into the preceding note's duration by
-/// `Score::note_line`). Returns one `[Option<f32>; 16]` per bar (`None` rest, `Some(NaN)` tie).
-fn parse_notes(s: &str) -> Option<Vec<[Option<f32>; 16]>> {
+/// Parse pitched note lanes (`lead`/`arp`/`bass`): whitespace tokens, `grid` per bar. `A4`/`C#5` = a
+/// note, `.` = rest, `-`/`_` = a **tie** (held as `NaN`, merged into the preceding note's duration by
+/// `Score::note_line`). Returns one `Vec<Option<f32>>` (length `grid`) per bar.
+fn parse_notes(s: &str, grid: usize) -> Option<Vec<Vec<Option<f32>>>> {
     let toks: Vec<&str> = s.split_whitespace().collect();
-    if toks.is_empty() || !toks.len().is_multiple_of(16) {
+    if toks.is_empty() || grid == 0 || !toks.len().is_multiple_of(grid) {
         return None;
     }
-    let mut bars = Vec::with_capacity(toks.len() / 16);
-    for chunk in toks.chunks(16) {
-        let mut bar = [None; 16];
-        for (i, t) in chunk.iter().enumerate() {
-            bar[i] = match *t {
+    let mut bars = Vec::with_capacity(toks.len() / grid);
+    for chunk in toks.chunks(grid) {
+        let mut bar = Vec::with_capacity(grid);
+        for t in chunk {
+            bar.push(match *t {
                 "." => None,                 // rest
                 "-" | "_" => Some(f32::NAN), // TIE: hold the previous note through this slot
                 n => Some(note_freq(n)?),
-            };
+            });
         }
         bars.push(bar);
     }
     Some(bars)
 }
 
-/// Parse a 16-step grid: `x`/`X` = hit, `.`/`-`/`_` = rest; spaces / `|` group separators ignored.
-fn parse_pattern(s: &str) -> Option<[bool; 16]> {
-    let mut out = [false; 16];
+/// Parse a `grid`-step pattern: `x`/`X` = hit, `.`/`-`/`_` = rest; spaces / `|` group separators
+/// ignored. Returns a `Vec<bool>` of exactly `grid` steps.
+fn parse_pattern(s: &str, grid: usize) -> Option<Vec<bool>> {
+    let mut out = vec![false; grid];
     let mut i = 0;
     for c in s.chars() {
         match c {
@@ -444,7 +465,7 @@ fn parse_pattern(s: &str) -> Option<[bool; 16]> {
             _ => return None,
         }
     }
-    (i == 16).then_some(out)
+    (i == grid).then_some(out)
 }
 
 #[cfg(test)]

@@ -42,64 +42,69 @@ pub struct TempoPoint {
     pub bpm: f32,
 }
 
-/// One instrument's pattern within a section: a 16-step grid per phase, plus the fill-bar grid.
+/// One instrument's pattern within a section: a `grid`-step grid per phase, plus the fill-bar grid.
+/// The grid length is the section's `grid` (16 by default); odd-meter / tuplet sections carry a
+/// different length (e.g. 12 for a 3/4 bar). Empty slices mean "silent" — see `at`.
 #[derive(Clone, Default)]
 pub struct Lane {
-    pub phases: Vec<[bool; 16]>,
-    pub fill: [bool; 16],
+    pub phases: Vec<Vec<bool>>,
+    pub fill: Vec<bool>,
 }
 
 impl Lane {
-    /// the grid for `phase` (255 = fill). An undefined phase is **silent** — lanes only carry the
-    /// phases that have hits, so this keeps `MARTIN_SCORE_DUMP` → reload faithful and makes
-    /// "didn't write a pattern" mean "doesn't play" (not "repeat the previous one").
-    pub(super) fn at(&self, phase: u8) -> [bool; 16] {
+    /// the grid for `phase` (255 = fill), as a borrowed slice. An undefined phase is **silent** (an
+    /// empty slice) — lanes only carry the phases that have hits, so this keeps `MARTIN_SCORE_DUMP` →
+    /// reload faithful and makes "didn't write a pattern" mean "doesn't play". Callers index with
+    /// `.get(slot)` so an empty/short slice reads as a rest.
+    pub(super) fn at(&self, phase: u8) -> &[bool] {
         if phase == 255 {
-            self.fill
+            &self.fill
         } else {
             self.phases
                 .get(phase as usize)
-                .copied()
-                .unwrap_or([false; 16])
+                .map(Vec::as_slice)
+                .unwrap_or(&[])
         }
     }
-    pub(super) fn any(&self, p: &[bool; 16]) -> bool {
+    pub(super) fn any(p: &[bool]) -> bool {
         p.iter().any(|&b| b)
     }
 }
 
-/// A melodic note lane: a frequency (Hz) per 16-step slot (`None` = rest) — same phase/fill shape
-/// as `Lane`, but pitched. This is the `lead` (melody) the synth plays.
+/// A melodic note lane: a frequency (Hz) per slot (`None` = rest) — same phase/fill shape as `Lane`,
+/// but pitched. The per-bar slot count is the section's `grid` (16 by default). This is the `lead`
+/// (melody) the synth plays.
 #[derive(Clone, Default)]
 pub struct NoteLane {
-    /// Each phase is a melodic **phrase**: a sequence of 1+ bars that plays out and loops every N
-    /// bars (a 1-bar phrase = the old per-bar repeat). So a section can carry a real multi-bar
-    /// melody — a through-composed line — not just one looping bar.
-    pub phases: Vec<Vec<[Option<f32>; 16]>>,
-    pub fill: Vec<[Option<f32>; 16]>,
+    /// Each phase is a melodic **phrase**: a sequence of 1+ bars (each a `grid`-slot grid) that plays
+    /// out and loops every N bars (a 1-bar phrase = the old per-bar repeat). So a section can carry a
+    /// real multi-bar melody — a through-composed line — not just one looping bar.
+    pub phases: Vec<Vec<Vec<Option<f32>>>>,
+    pub fill: Vec<Vec<Option<f32>>>,
 }
 
 impl NoteLane {
-    /// The 16-slot grid `into` bars into the section. The melodic phrase (the primary `p0` line)
-    /// loops CONTINUOUSLY across the whole section — independent of the drum phases and the fill
+    /// The slot grid `into` bars into the section, borrowed. The melodic phrase (the primary `p0`
+    /// line) loops CONTINUOUSLY across the whole section — independent of the drum phases and the fill
     /// bar — so a through-composed line plays as one uninterrupted statement (and breathes over a
     /// drum fill) instead of being chopped/restarted at every phase boundary.
     ///
     /// When `fill_active` is true and the lane has a fill phrase, that fill is returned instead of
-    /// the looped p0 phrase — so a per-section `<section>.lead fill: <16 rests>` silences the
-    /// melody on the drum-fill bar, preventing the verse's pickup from bleeding into the chorus.
-    pub(super) fn bar(&self, into: u32, fill_active: bool) -> [Option<f32>; 16] {
+    /// the looped p0 phrase — so a per-section `<section>.lead fill: <rests>` silences the melody on
+    /// the drum-fill bar, preventing the verse's pickup from bleeding into the chorus. Callers index
+    /// with `.get(slot)` so an empty/short bar reads as rests.
+    pub(super) fn bar(&self, into: u32, fill_active: bool) -> &[Option<f32>] {
         if fill_active && !self.fill.is_empty() {
-            return self.fill[(into as usize).min(self.fill.len() - 1)];
+            return &self.fill[(into as usize).min(self.fill.len() - 1)];
         }
         let phrase = self.phases.first().map(Vec::as_slice).unwrap_or(&[]);
         if phrase.is_empty() {
-            [None; 16]
+            &[]
         } else {
-            phrase[into as usize % phrase.len()]
+            &phrase[into as usize % phrase.len()]
         }
     }
-    pub(super) fn any(phrase: &[[Option<f32>; 16]]) -> bool {
+    pub(super) fn any(phrase: &[Vec<Option<f32>>]) -> bool {
         phrase.iter().flatten().any(|n| n.is_some())
     }
 }
@@ -151,6 +156,10 @@ fn default_fx(name: &str, token: &str) -> bool {
 pub struct Section {
     pub name: String,
     pub bars: u32,
+    /// Slots per bar (16 = a 4/4 sixteenth grid, the default). A slot is always a 16th-note, so the
+    /// bar's DURATION is `grid/4` beats — `grid:12` is a 3/4 bar, `grid:14` a 7/8 bar, etc. (odd
+    /// meter). A whole odd-meter riff cycle can be one big bar (e.g. `grid:52` for |3/4 3/4 3/4 4/4|).
+    pub grid: usize,
     pub phases: Vec<u32>, // bars per phase; if `fill`, the final bar of the section is the fill
     pub fill: bool,
     pub gain: Ramp,
@@ -180,6 +189,7 @@ impl Section {
         Self {
             name,
             bars,
+            grid: 16,
             phases,
             fill,
             gain: Ramp::c(0.85),

@@ -106,8 +106,8 @@ mod tests {
     }
 
     /// A melodic phrase (one bar) that actually plays a note (vs. all-rests).
-    fn note_phrase() -> Vec<[Option<f32>; 16]> {
-        let mut g = [None; 16];
+    fn note_phrase() -> Vec<Vec<Option<f32>>> {
+        let mut g = vec![None; 16];
         g[0] = Some(440.0);
         vec![g]
     }
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn drum_phase_beyond_section_warns() {
         let mut s = sec("x", 4, vec![4], false); // section has ONE phase
-        s.kick.phases = vec![[false; 16], [true; 16]]; // …but kick defines a p1 → never plays
+        s.kick.phases = vec![vec![false; 16], vec![true; 16]]; // …but kick defines a p1 → never plays
         let w = validate(&[s]);
         assert_eq!(w.len(), 1);
         assert!(w[0].contains("`x.kick`") && w[0].contains("never plays"));
@@ -158,7 +158,7 @@ mod tests {
     fn melodic_only_p1_is_flagged_silent() {
         let mut s = sec("x", 4, vec![4], false);
         // p0 is all-rests, the real line sits in p1 → the whole lane plays SILENT
-        s.bass.phases = vec![vec![[None; 16]], note_phrase()];
+        s.bass.phases = vec![vec![vec![None; 16]], note_phrase()];
         let w = validate(&[s]);
         assert!(w.iter().any(|m| m.contains("SILENT")));
         assert!(w.iter().any(|m| m.contains("p1+ phrases are ignored")));

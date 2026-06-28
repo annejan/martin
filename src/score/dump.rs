@@ -3,7 +3,7 @@
 //! live here too (the parsers are in `parse`).
 
 use super::Score;
-use super::types::{Chord, Inst, NoteLane, Ramp, Section};
+use super::types::{Chord, Inst, Lane, NoteLane, Ramp, Section};
 
 impl Score {
     /// Serialize back to the tracker DSL — `MARTIN_SCORE_DUMP` writes the built-in this way for a
@@ -56,11 +56,16 @@ impl Score {
                 .collect::<Vec<_>>()
                 .join(",");
             o.push_str(&format!(
-                "section {} {} {}{}\n",
+                "section {} {} {}{}{}\n",
                 s.name,
                 s.bars,
                 ph,
-                if s.fill { " fill" } else { "" }
+                if s.fill { " fill" } else { "" },
+                if s.grid != 16 {
+                    format!(" grid:{}", s.grid)
+                } else {
+                    String::new() // default grid emits nothing → constant-grid scores dump unchanged
+                }
             ));
         }
         for s in &self.sections {
@@ -103,11 +108,11 @@ impl Score {
             ] {
                 let lane = s.lane(inst);
                 for (p, grid) in lane.phases.iter().enumerate() {
-                    if lane.any(grid) {
+                    if Lane::any(grid) {
                         o.push_str(&format!("{}.{name} p{p}: {}\n", s.name, pat_str(grid)));
                     }
                 }
-                if s.fill && lane.any(&lane.fill) {
+                if s.fill && Lane::any(&lane.fill) {
                     o.push_str(&format!(
                         "{}.{name} fill: {}\n",
                         s.name,
@@ -206,7 +211,7 @@ fn note_name(freq: f32) -> String {
     )
 }
 
-fn notes_str(g: &[Option<f32>; 16]) -> String {
+fn notes_str(g: &[Option<f32>]) -> String {
     let toks: Vec<String> = g
         .iter()
         .map(|n| n.map(note_name).unwrap_or_else(|| ".".into()))
@@ -218,8 +223,12 @@ fn notes_str(g: &[Option<f32>; 16]) -> String {
 }
 
 /// A whole melodic phrase (1+ bars) on one line — each bar's `notes_str`, joined by 3 spaces.
-fn notes_phrase(phrase: &[[Option<f32>; 16]]) -> String {
-    phrase.iter().map(notes_str).collect::<Vec<_>>().join("   ")
+fn notes_phrase(phrase: &[Vec<Option<f32>>]) -> String {
+    phrase
+        .iter()
+        .map(|b| notes_str(b))
+        .collect::<Vec<_>>()
+        .join("   ")
 }
 
 fn chord_str(c: &Chord) -> String {
@@ -228,7 +237,7 @@ fn chord_str(c: &Chord) -> String {
     format!("{letter}{}", if c.minor { "m" } else { "" })
 }
 
-fn pat_str(p: &[bool; 16]) -> String {
+fn pat_str(p: &[bool]) -> String {
     let mut s = String::with_capacity(19);
     for (i, &b) in p.iter().enumerate() {
         if i > 0 && i % 4 == 0 {
