@@ -180,8 +180,13 @@ def bars_of(slots):
             for b in range(0, len(slots), 16)]
 
 
+FOUR_ON_FLOOR = {"kick": "x... x... x... x...", "snare": ".... x... .... x...",
+                 "hat": "..x. ..x. ..x. ..xx"}
+
+
 def drum_bar(notes, div, a, b):
-    """One representative 1-bar kick/snare/hat pattern from GM channel 9, accumulated over bars [a,b)."""
+    """One representative 1-bar kick/snare/hat pattern from GM channel 9, accumulated over bars [a,b).
+    Falls back to a canonical four-on-the-floor when the source has no usable drum channel."""
     spb = max(div // 4, 1); tpb = div * 4
     sets = {"kick": {35, 36}, "snare": {38, 40, 37}, "hat": {42, 44, 46, 39, 54}}
     out = {}
@@ -193,6 +198,8 @@ def drum_bar(notes, div, a, b):
                 if 0 <= sl < 16:
                     row[sl] = "x"
         out[kind] = " ".join("".join(row[i:i + 4]) for i in range(0, 16, 4))
+    if "x" not in out["kick"]:  # no real drums → lay a house floor so it still grooves
+        return dict(FOUR_ON_FLOOR)
     return out
 
 
@@ -240,11 +247,19 @@ def build_score(path, out, args):
                   f"pitch {m['lo']}-{m['hi']:<3} {('<-- ' + tag.upper()) if tag else ''}")
         return
     bpm = args.bpm or bpm
+    if not 40 <= bpm <= 250:  # a misread tempo meta (the sonata read 25) → a sane default
+        print(f"  (tempo {bpm} looks wrong — using 120; pass --bpm to set it)", file=sys.stderr)
+        bpm = 120
     voc, bas, fil = roles["vocal"], roles["bass"], roles["fill"]
     tpb = div * 4
     a = min((s for s, e, p, c in notes if c == voc), default=0) // tpb  # vocal's first bar
-    VOC = grid(notes, div, voc, "lead", 48, 96); VOC = bars_of(VOC)[a:a + 16]
-    BAS = bars_of(grid(notes, div, bas, "bass", 24, 60))[a:a + 16] if bas is not None else ["."] * 16
+    # No separate bass channel (a single-channel piano piece) → SPLIT the lead channel by pitch: the
+    # left hand (low notes) becomes the bass, the right hand (high) stays the lead.
+    split = bas is None
+    lead_lo = 55 if split else 48
+    bsrc = voc if split else bas
+    VOC = bars_of(grid(notes, div, voc, "lead", lead_lo, 96))[a:a + 16]
+    BAS = bars_of(grid(notes, div, bsrc, "bass", 24, lead_lo - 1))[a:a + 16]
     TIM = bars_of(grid(notes, div, fil, "lead", 40, 96))[a:a + 16] if fil is not None else None
     while len(VOC) < 16: VOC.append(". . . .  . . . .  . . . .  . . . .")
     while len(BAS) < 16: BAS.append(". . . .  . . . .  . . . .  . . . .")
@@ -253,7 +268,7 @@ def build_score(path, out, args):
     DR = drum_bar(notes, div, a + 4, a + 12)
     CH = []; prev = None
     for bi in range(a, a + 16):
-        prev = bar_chord(notes, div, bas if bas is not None else voc, bi, prev); CH.append(prev)
+        prev = bar_chord(notes, div, bsrc, bi, prev); CH.append(prev)
 
     def sl(arr, n):
         return [arr[i % len(arr)] for i in range(n)]
@@ -305,13 +320,13 @@ def build_score(path, out, args):
                 L.append(f"{n}.arp p0: " + "  ".join(x.strip() for x in sl(FILL, nb)))
     L.append("")
     for n, r, nb, tot in lines:
-        if bas is not None:
-            L.append(f"{n}.bass p0: " + "  ".join(x.strip() for x in sl(BAS, nb)))
+        L.append(f"{n}.bass p0: " + "  ".join(x.strip() for x in sl(BAS, nb)))
 
     open(out, "w").write("\n".join(L) + "\n")
     rn = lambda c: f"ch{c + 1}" if c is not None else "-"
+    bass_tag = "ch{} (split)".format(bsrc + 1) if split else rn(bas)
     print(f"wrote {out}: bpm {bpm}, {len(lines)} sections | "
-          f"vocal={rn(voc)} bass={rn(bas)} drums={rn(roles['drums'])} fill={rn(fil)}")
+          f"vocal={rn(voc)} bass={bass_tag} drums={rn(roles['drums'])} fill={rn(fil)}")
 
 
 def main():
