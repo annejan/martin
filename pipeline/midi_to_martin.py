@@ -115,11 +115,14 @@ def detect_roles(meta):
         m = meta[c]; s = 0
         nm = m["name"].lower()
         if any(w in nm for w in VOCAL_WORDS):
-            s += 100
+            s += 1000                  # a LABELLED vocal always wins (the jantje rule)
         if m["program"] in LEAD_PROGS:
-            s += 30
-        s += m["avg"] * 0.3            # lead tends to sit high-ish, but label wins
-        s -= 0.01 * m["n"]             # the vocal is usually SPARSER than a busy comp
+            s += 40
+        s += m["avg"]                  # leads sit high in register
+        # density sweet-spot (matters when nothing is labelled — a GM instrumental): the melody is
+        # ACTIVE but not the busiest comp. Penalise a too-sparse line (CHARANG's 65 notes ≠ the tune).
+        if m["n"] < 120:
+            s -= (120 - m["n"]) * 0.5
         return s
 
     def score_bass(c):
@@ -224,6 +227,11 @@ def build_score(path, out, args):
         v = getattr(args, k)
         if v is not None:
             roles[k] = v - 1  # CLI is 1-based
+    # an override can collide with the auto-picked fill (e.g. --vocal 4 when fill was 4) → re-pick a
+    # distinct fill from the remaining melodic channels so the gap-fill isn't a no-op/double.
+    if roles["fill"] is not None and roles["fill"] in (roles["vocal"], roles["bass"]):
+        rest = [c for c in meta if c != 9 and c not in (roles["vocal"], roles["bass"])]
+        roles["fill"] = max(rest, key=lambda c: meta[c]["n"], default=None)
     if out is None:  # dry run — print the role map
         print(f"{path}: bpm {bpm}, div {div}")
         for c in sorted(meta):
