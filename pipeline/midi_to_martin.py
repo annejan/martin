@@ -279,9 +279,10 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a):
          f"bpm {bpm}",
          "chords " + " ".join(CH),
          style_set(args, True),
-         "", f"section song {nb} {nb}", "",
-         f"song.kick p0: {DR['kick']}", f"song.snare p0: {DR['snare']}", f"song.hat p0: {DR['hat']}", "",
-         "song.lead p0: " + "  ".join(x.strip() for x in LEAD)]
+         "", f"section song {nb} {nb}", ""]
+    if not args.no_drums:  # solo piano / ambient sources have no drums + don't want a house floor over them
+        L += [f"song.kick p0: {DR['kick']}", f"song.snare p0: {DR['snare']}", f"song.hat p0: {DR['hat']}", ""]
+    L.append("song.lead p0: " + "  ".join(x.strip() for x in LEAD))
     if HARM:
         L.append("song.arp p0: " + "  ".join(x.strip() for x in HARM))
     L.append("song.bass p0: " + "  ".join(x.strip() for x in BASS))
@@ -404,6 +405,8 @@ def main():
     ap.add_argument("--arrange", default="song", choices=list(ARRANGES), help="section structure")
     ap.add_argument("--style", default="clean", choices=list(STYLES),
                     help="voice/mix palette (clean|synthpop|dance|rock|orchestral)")
+    ap.add_argument("--no-drums", action="store_true",
+                    help="omit the kit (for solo-piano / ambient sources — no house floor over them)")
     ap.add_argument("--faithful", action="store_true",
                     help="play the song THROUGH at its own tempo (lead+bass+harmony+real drums, natural "
                          "mix) instead of a looped dance remix")
