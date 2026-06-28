@@ -215,6 +215,33 @@ def bar_chord(notes, div, chan, bi, prev):
     return NOTE_NAMES[r] + ("m" if minor else "")
 
 
+# Voice/mix palettes (the `set` line). Genre-appropriate instrumentation beats one fixed voice set —
+# validated by ear (Never Ending Story / You Spin Me Round wanted the 80s palette, not the clean one).
+STYLES = {
+    "clean": "set lead=0.78 leadsw=0 arp=0.42 arpsw=2 basssw=2 sub=0.5 supersaw=0.1 choir=0.06 padsw=5 "
+             "stabsw=1 donk=0 house=0 reverb=0.32 sidechain=0.55 widen=1.7 makeup=1.14 ceiling=0.95 "
+             "shimmer=0.08 hats=0.4 snares=0.48 atmosphere=0.06 drumsw=1 oversample=1",
+    "synthpop": "set lead=0.84 leadsw=1 arp=0.42 arpsw=3 basssw=2 sub=0.46 supersaw=0.3 choir=0.22 "
+                "padsw=2 stabsw=1 donk=0.1 house=0.08 reverb=0.44 sidechain=0.4 widen=1.95 makeup=1.12 "
+                "ceiling=0.95 shimmer=0.28 hats=0.4 snares=0.52 atmosphere=0.05 drumsw=2 oversample=1",
+    "dance": "set lead=0.8 leadsw=0 arp=0.5 arpsw=5 basssw=4 sub=0.5 supersaw=0.18 choir=0.0 padsw=5 "
+             "stabsw=2 donk=0.16 house=0.14 reverb=0.32 sidechain=0.78 widen=1.8 makeup=1.16 "
+             "ceiling=0.94 shimmer=0.12 hats=0.42 snares=0.5 atmosphere=0.08 drumsw=1 oversample=1",
+    "rock": "set lead=0.85 leadsw=4 arp=0.3 arpsw=5 basssw=3 sub=0.5 supersaw=0.12 choir=0.0 padsw=5 "
+            "stabsw=2 donk=0 house=0 reverb=0.28 sidechain=0.35 widen=1.6 makeup=1.16 ceiling=0.94 "
+            "shimmer=0.04 hats=0.42 snares=0.56 atmosphere=0.04 drumsw=0 oversample=1",
+    "orchestral": "set lead=0.72 leadsw=0 arp=0.36 arpsw=2 basssw=2 sub=0.5 supersaw=0.26 choir=0.3 "
+                  "padsw=4 stabsw=0 donk=0 house=0 reverb=0.52 sidechain=0.2 widen=1.8 makeup=1.1 "
+                  "ceiling=0.95 shimmer=0.18 hats=0.3 snares=0.42 atmosphere=0.1 drumsw=1 oversample=1",
+}
+
+
+def style_set(args, faithful):
+    """The `set` line for the chosen --style; faithful mode softens the pump (natural, not a club mix)."""
+    s = STYLES.get(args.style, STYLES["clean"])
+    return s.replace("sidechain=0.55", "sidechain=0.32") if faithful and args.style == "clean" else s
+
+
 # Arrangement presets: (section_name, role, bars). Roles drive the drums/voice mix.
 ARRANGES = {
     "song": [("intro", "intro", 8), ("v1", "verse", 16), ("c1", "chorus", 16),
@@ -251,9 +278,7 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a):
          "# once at its own tempo — lead + bass + harmony + the real drum groove, natural mix (no pump).",
          f"bpm {bpm}",
          "chords " + " ".join(CH),
-         ("set lead=0.7 leadsw=0 arp=0.4 arpsw=2 basssw=2 sub=0.5 supersaw=0.14 choir=0.12 padsw=5 "
-          "stabsw=0 donk=0 house=0 reverb=0.34 sidechain=0.32 widen=1.6 makeup=1.1 ceiling=0.95 "
-          "hats=0.36 snares=0.44 atmosphere=0.06 drumsw=1 oversample=1"),
+         style_set(args, True),
          "", f"section song {nb} {nb}", "",
          f"song.kick p0: {DR['kick']}", f"song.snare p0: {DR['snare']}", f"song.hat p0: {DR['hat']}", "",
          "song.lead p0: " + "  ".join(x.strip() for x in LEAD)]
@@ -326,9 +351,7 @@ def build_score(path, out, args):
     L.append("# labelled vocal, clean bass, drums transcribed from the source, riff fills the vocal's gaps.")
     L.append(f"bpm {bpm}")
     L.append("chords " + " ".join(allch))
-    L.append("set lead=0.82 leadsw=0 arp=0.46 arpsw=2 basssw=2 sub=0.5 supersaw=0.0 choir=0 padsw=5 "
-             "stabsw=1 donk=0 house=0 reverb=0.34 sidechain=0.6 widen=1.7 makeup=1.14 ceiling=0.95 "
-             "shimmer=0.08 hats=0.4 snares=0.48 atmosphere=0.08 drumsw=1 oversample=1")
+    L.append(style_set(args, False))
     L.append("")
     for n, r, nb, tot in lines:
         L.append(f"section {n} {tot} {nb} fill" if r in ("chorus", "peak", "build")
@@ -379,6 +402,8 @@ def main():
     ap.add_argument("--fill", type=int, help="force the fill/riff channel (1-based)")
     ap.add_argument("--bpm", type=int, help="override the tempo")
     ap.add_argument("--arrange", default="song", choices=list(ARRANGES), help="section structure")
+    ap.add_argument("--style", default="clean", choices=list(STYLES),
+                    help="voice/mix palette (clean|synthpop|dance|rock|orchestral)")
     ap.add_argument("--faithful", action="store_true",
                     help="play the song THROUGH at its own tempo (lead+bass+harmony+real drums, natural "
                          "mix) instead of a looped dance remix")
