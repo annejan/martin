@@ -104,14 +104,15 @@ worst overloads — a *Shot* is one engine subject, a *Scene* is a narrative spa
 The **Score** (`score.txt`, tracker-DSL) is the **master timeline**; everything else is timed against
 it. It is unchanged by this doc — only named consistently.
 
-- **Score** — `bpm`, key. Owns the clock: `beat = 60/bpm s`, `bar = 4 beats`, 16 steps/bar.
+- **Score** — `bpm`, key. Owns the clock: `beat = 60/bpm s` (default); a `bar` is `grid/4` beats, where `grid` is the section's slots-per-bar (default 16 = 4/4; `grid:12` = 3/4, `grid:14` = 7/8). An optional `tempo @bar:N=BPM` map varies the tempo per bar (rubato). No tempo line + all-16 grids = the classic single-tempo 16-step grid.
 - **Section** — `section <name> <bars> [phases] [fill]`. The **time-grid**, named by EDM arrangement
   (`intro · build · drop · breakdown · climax · outro`). Each Section owns its own chords / patterns /
   dynamics. **Sections are musical truth, not narrative** (see §7).
 - **Phase** (`p0..pN`) — drum-energy layers within a Section; melodic lanes ignore phases and loop
   `p0` continuously. **Fill** — the optional trailing flourish bar.
 - **Lane** — a sequenced channel. *Drum lanes*: `kick / snare / hat / stab`. *Note lanes*:
-  `lead / arp / bass` (16-step grids that loop). *Chords*: a per-bar cycle.
+  `lead / arp / bass` (multi-bar phrases on the section's `grid`-slot grid — default 16 — that loop).
+  *Chords*: a per-bar cycle.
 - **Dynamics** — `gain / sub / mids` automation curves, with `a>b` linear **ramps** per Section.
 - **FX layer** — demoscene accents (`wall / house / donk / shimmer / riser / jet / impact / bang`),
   default-by-section or overridden via `<section>.fx:`. Riser/transition **flavours**: `riser` (noise

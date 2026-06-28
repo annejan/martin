@@ -77,8 +77,9 @@ build.rs     synthesizes the demo's gitignored .ply at build time; bundles asset
 > **`reuse`** — make `reuse lint` green again (classify + annotate new files). Use them for those tasks.
 
 **Nightly toolchain is required** (`bevy_gaussian_splatting` default features use GATs behind
-`nightly_generic_alias`). `rust-toolchain.toml` pins the `nightly` channel (unpinned date — rides
-current nightly). Linux build deps: `libudev-dev libasound2-dev libwayland-dev libxkbcommon-dev`.
+`nightly_generic_alias`). `rust-toolchain.toml` pins a **dated** nightly (`nightly-2026-04-26`, not
+rolling `nightly`) + the `rustfmt`/`clippy` components it needs. Linux build deps: `libudev-dev
+libasound2-dev libwayland-dev libxkbcommon-dev`.
 
 ```bash
 cargo run --release                              # the default demo (windowed)

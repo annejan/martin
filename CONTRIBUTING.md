@@ -12,8 +12,10 @@ production). Patches welcome. This file is the short version; see **README.md** 
 ## Build & run
 
 A **nightly** toolchain is required — `bevy_gaussian_splatting`'s default features use
-`nightly_generic_alias` (GATs). `rust-toolchain.toml` selects the `nightly` channel; it is
-deliberately **not pinned to a date** (we ride current nightly).
+`nightly_generic_alias` (GATs). `rust-toolchain.toml` pins a **dated** nightly (currently
+`nightly-2026-04-26`) — deliberately **not** rolling `nightly`, so a nightly regression/ICE can't break
+the build before a compo; bump the date deliberately and re-verify. It also lists the `rustfmt` +
+`clippy` components the dated nightly needs (the CI fmt/clippy gates inherit this file).
 
 ```bash
 # Linux build deps (udev/alsa for bevy_gaussian_splatting, wayland/xkbcommon for winit):

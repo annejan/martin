@@ -142,7 +142,7 @@ close-up — keep the drop's backdrop dark and let the bloom + screen-tear be th
 Splats are **not real 3D when they render**: each cloud sorts per-cloud by its *centre* depth and
 alpha-blends with **no z-buffer between clouds**. Everything below follows from that. Vet every scene
 in **`pipeline/show_layout.py`** (GPU-free, <1 s) BEFORE rendering; martin renders are spot-checks ONE
-at a time (`MARTIN_BUDGET≈6000 MARTIN_RES=640x360`) — never batches (concurrent martins wedge the box).
+at a time (`MARTIN_MORPH_COUNT=6000 MARTIN_RES=640x360`) — never batches (concurrent martins wedge the box).
 
 1. **No object overlap.** Props in each other's footprint clip/fight. The tool flags it from the real
    `.ply` extent (the tent is *wide* — eyeballing under-sizes it).

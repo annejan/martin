@@ -44,13 +44,14 @@ Transform the "Op de Camping" (Ome Henk, 1995) demoscene track from a basic plac
 ## Score DSL (score.txt)
 - `bpm <bpm>` 
 - `chords: <chord list>` — global chord progression, cycles per bar.
-- `section <name> <bars> <phase-bars,csv> [fill]` — defines sections. Phase bars are comma-separated (e.g. `8,8,8,8 fill`). `fill` means the last bar is a fill.
+- `tempo @bar:N=BPM @bar:M=BPM …` — OPTIONAL tempo changes / rubato; `bpm` is the bar-0 default, absent = constant tempo.
+- `section <name> <bars> <phase-bars,csv> [fill] [grid:N]` — defines sections. Phase bars are comma-separated (e.g. `8,8,8,8 fill`). `fill` means the last bar is a fill. `grid:N` = slots per bar (a slot is a 16th, so the bar is N/4 beats): default 16 = 4/4, `grid:12` = 3/4, `grid:14` = 7/8 (odd meter).
 - `section.chords:` — per-section chord override.
-- Per-section drum patterns: `<section>.kick|snare|hat|stab p0|p1|p2|p3|fill: <16 steps (x=hit .=rest)>`
-- Per-section melodic lanes: `<section>.lead|arp|bass p0: <16 notes per bar, multi-bar phrase>`
+- Per-section drum patterns: `<section>.kick|snare|hat|stab p0|p1|p2|p3|fill: <grid steps (x=hit .=rest); default 16>`
+- Per-section melodic lanes: `<section>.lead|arp|bass p0: <grid notes per bar, multi-bar phrase>`
   - Melody loops continuously ignoring drum phase boundaries (uses only p0).
   - Drum phases look up by index: `phase_at(bar_into_section)` returns which phase (0,1,2,3,255=fill).
-  - Undefined phase = silence `[false; 16]`.
+  - Undefined phase = silence (an all-rest grid of the section's length; patterns/notes are `Vec`, not a fixed-16 array).
 - Dynamics: `gain|sub|mids <section> <value_or_ramp>` — e.g. `gain build 0.25>1.1` ramps across section.
 
 ## Audio Architecture (src/audio/)
@@ -150,7 +151,7 @@ The maths the tool implements (kept here as the reference) — **calibrated, exa
   not splat count, that fills the disk).
 
 ## Testing
-- `cargo test` — 54 tests pass.
+- `cargo test` — the GPU-free unit suite (parsers/timeline/score/effects) must stay green (~165 tests).
 - `MARTIN_SCORE_DUMP=<path>` writes normalized score dump for debugging.
 
 ## Common Pitfalls

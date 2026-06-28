@@ -1,19 +1,18 @@
 # SHADER-BLUEPRINT.md — per-particle transition phase (the one deliberate fork edit)
 
-> **STATUS: BLUEPRINT / REFERENCE ONLY — DO NOT APPLY YET.**
+> **STATUS: SHIPPED — this is now the design RECORD, not a pending plan.**
 >
-> This is the companion reference that `DESIGN.md` §5 points to. It is martin's
-> *single* deliberate fork-shader edit, and it is **gated behind
-> `DESIGN.md` OQ#12** ("do the one deliberate per-particle-phase edit now, or stay
-> data-only?" — i.e. *do step 8 at all*). That is a morning **co-design** decision,
-> not a thing to arrive pre-written. Nothing here is to be committed until OQ#12
-> says "yes, do step 8."
+> The per-particle transition edit landed: in the fork shader (the `martin` branch of
+> `bevy_gaussian_splatting`) **and** app-side. The variants live on the `Entrance` enum in
+> `src/scene/effects.rs` (`Typewriter`/`Wipe`/`Sparkle`/`Slither`/`Vortex`/`PenWrite`/`Shockwave` + the
+> string→mode map), wired through `src/scene/{compose.rs, sequence/director.rs}` and `src/text.rs`
+> (the pen-write curve). The `DESIGN.md` OQ#12 "do step 8?" question was answered **yes**. Keep this
+> file as the *why*; the line numbers below are historical — re-grep the symbols against the consumed
+> fork rev (`Cargo.lock`) if you touch the shader.
 >
-> **Hard guarantee this doc is built around:** with `transition_mode == 0` the
-> shader must be **byte-identical to today** — every existing user, and every golden
-> frame martin already records, is unchanged. The edit is *append-only* (new uniform
-> fields after the true struct end) and *default-off*. If mode 0 ever differs by a
-> bit, the edit is wrong.
+> **The guarantee it was built around still holds:** with `transition_mode == 0` the shader is
+> byte-identical to a no-transition render — the edit is append-only (uniform fields after the true
+> struct end) and default-off.
 >
 > Co-written by annejan & Kloot, deFEEST. Made on AMD · Vulkan · Bevy.
 

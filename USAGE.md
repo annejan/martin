@@ -104,7 +104,8 @@ nicer interfaces that both expand into it:
   in the show file, versioned with the demo. **The setting name is the env var minus `MARTIN_`,
   lowercased.**
 - **Run modes + a few overrides are `--flags`** (see [Command line](#command-line) above) — `--record`,
-  `--shot`, `--serve`, `--quality`, … Each compiles to its `MARTIN_*` with overwrite.
+  `--shot`, `--serve`, `--benchmark`, … Each compiles to its `MARTIN_*` with overwrite. (Quality is not
+  a flag — set it via `MARTIN_QUALITY` or `.show [settings] quality`.)
 
 Precedence: **CLI flag > env var > `.show` `[settings]` > built-in default**. The reference below
 documents the underlying vars (the IR + the `record.sh` / CI escape hatch); for authoring, prefer the
