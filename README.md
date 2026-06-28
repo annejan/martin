@@ -11,20 +11,23 @@ heavier clouds and the `sh3` view-dependent profile (see [build profiles](#build
 spirit, all-AMD dev box. 🪩
 
 ```bash
-cargo +nightly run --release     # a splat assembles out of a ball cloud
+cargo +nightly run --release                     # the default demo — a splat assembles out of a ball cloud
+cargo run --release -- <show.show>               # run a .show config (or --production <name>)
+cargo run --release -- <show.show> --validate    # dry-run: print the resolved timeline + exit
 #   free-orbit: ←/→ yaw · ↑/↓ pitch · W/S zoom · A/D & Q/E pan · M mark waypoint · Space restart · F11/F fs
-./record.sh out.mp4              # render the whole timeline to ./out.mp4
+./record.sh out.mp4                              # render the whole timeline to ./out.mp4
 ```
 
 It's **one sequence engine**: every run is a timeline of *parts* (splat-text or splats) that
 each assemble out of a ball cloud, then morph into the next (per-Gaussian, on the GPU), with
-HDR bloom on black. The `MARTIN_*` env vars compose the show — there's no config file. Built on
-Bevy 0.19 + `bevy_gaussian_splatting` 8.0.0 (our fork — the `martin` branch of
-[`annejan/bevy_gaussian_splatting`](https://github.com/annejan/bevy_gaussian_splatting),
-a git dep), wgpu → Vulkan, nightly toolchain (the `nightly` channel, unpinned — we ride
-current nightly).
+HDR bloom on black. A show is a **`.show` file** — the config — that you run with `martin <show>`
+(or `--production <name>`); it expands into `MARTIN_*` env vars (the internal IR), which a CLI
+layers run-mode flags on top of (`--record`/`--shot`/`--validate`/…). Precedence: **CLI flag > env
+> `.show` [settings] > default**. Built on Bevy 0.19 + `bevy_gaussian_splatting` 8.0.0 (our fork —
+the `martin` branch of [`annejan/bevy_gaussian_splatting`](https://github.com/annejan/bevy_gaussian_splatting),
+a git dep), wgpu → Vulkan, nightly toolchain (a **dated** pin, `nightly-2026-04-26`, not rolling).
 
-- **[`USAGE.md`](USAGE.md)** — the full env-var reference and the `MARTIN_SEQ` timeline.
+- **[`USAGE.md`](USAGE.md)** — the CLI + `.show` file format + the `MARTIN_*` env reference.
 - **[`ART-DIRECTION.md`](ART-DIRECTION.md)** — how to **shoot and prep good splats** for the
   demo (capture recipe, lighting, the two splat "flavours", cleanup).
 - **[`productions/`](productions/README.md)** — one folder per demo (showbook, show, bundle,
@@ -119,9 +122,9 @@ build is debug-only, for fast iteration).
 
 ### Effects & env vars — mix and match
 
-Everything is driven by env vars; combine them to taste. All splat positions/scales are
-particles in the *same* system, so any of these morphs into any other. Full reference in
-**[`USAGE.md`](USAGE.md)**.
+A `.show` file sets these (its `[settings]` block + sections); the same knobs are also `MARTIN_*`
+env vars you can combine ad-hoc for a quick experiment. All splat positions/scales are particles in
+the *same* system, so any of these morphs into any other. Full reference in **[`USAGE.md`](USAGE.md)**.
 
 | Env var | Effect |
 |---|---|
