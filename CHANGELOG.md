@@ -54,7 +54,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   every section at the default 16 grid + no `tempo` line hits a `uniform` fast path and renders
   **byte-for-byte identical** to before — verified: a fresh rebuild of the previous commit and this one
   produce the same WAV md5 for the built-in score (and every shipped production score is uniform).
-  Composes with tempo automation. The MIDI converter still emits 4/4; odd-meter emission is next.
+  Composes with tempo automation. `pipeline/midi_to_martin.py --faithful` reads the MIDI's time
+  signatures (FF 58) and auto-emits one section per bar at the right grid (`--no-meter` force-fits 4/4),
+  so Golden Brown plays its real 3/4↔4/4 meter and Clair de Lune keeps both its 6/8↔9/8 meter and its
+  rubato (the tempo map composes on top).
 - **Tempo automation (rubato) in the score DSL** — an optional `tempo @bar:N=BPM @bar:M=BPM …` line
   steps the tempo at bar boundaries (piecewise-constant per bar); `bpm N` stays the bar-0 default.
   The slot↔seconds map is now piecewise-per-bar (a cumulative `bar_secs` prefix table behind two

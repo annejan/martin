@@ -27,6 +27,8 @@ pipeline/midi_to_martin.py song.mid
 | `--faithful` | play the song **through once** at its own tempo: lead + bass + harmony + the real drums, natural mix |
 | `--style` | voice/mix palette: `clean` (default) · `synthpop` · `dance` · `rock` · `orchestral` |
 | `--no-drums` | omit the kit (solo-piano / ambient — no house floor over it) |
+| `--no-meter` | ignore odd time signatures — force-fit the song to 4/4 (default: read FF 58, emit `grid:N`) |
+| `--no-tempo-map` | ignore the MIDI's tempo changes — render at one steady tempo |
 | `--vocal/--bass/--fill N` | force a 1-based channel when the auto-detect picks wrong |
 | `--bpm N` | override the tempo (also rescues a misread tempo meta) |
 
@@ -48,21 +50,21 @@ Tested clean on: Björk *Human Behaviour*, Haddaway *What Is Love*, R.E.M. *Shin
 
 ## Known limits — `martin`'s score model (the "pick up later" list)
 
-The score DSL is **fixed 4/4 with a 16-slot (16th-note) grid**. The `16` is the array *type* of every
-note/drum bar (`[Option<f32>; 16]`, `[bool; 16]`) — wired through
-`src/score/{parse,types,dump,validate,mod}.rs` + `src/audio/render.rs`. Tempo automation is **done**
-(see below); odd meter/triplets remain the boundary.
+The score DSL grid is a 16th-note grid. Both big limits are now **done**: tempo automation (rubato)
+and variable grid (odd meter) — see below. The only remaining boundary is genuine *triplets within a
+beat* that aren't a compound-meter bar (rare); those still quantise to 16ths.
 
-### Golden Brown (The Stranglers) — odd meter + triplets
-- It alternates **3/4 ×3 then 4/4** (a 13/8 feel) and the signature harpsichord is in **triplets**.
-- On a 4/4 16th grid the triplets quantise to 16ths and the bars don't fit the meter → the notes are
-  right but the **rhythm/swing shifts**, so it's not recognisable.
-- **To fix:** a per-score subdivision (e.g. `grid 12`/`24` for triplets) AND a variable
-  beats-per-bar / time-signature. **Scope:** a real refactor — the fixed `[…; 16]` arrays become a
-  flexible length (Vec or const-generic) across the whole score subsystem, plus the timing math and the
-  section/anchor maths. Doable but a deliberate ~1-2 day project with careful regression of every
-  existing score (camping/intro/beach/… all parse via the `[;16]` arrays); gate it behind a per-score
-  opt-in (default 16) so existing content stays byte-identical. **Risk: medium-high.**
+### Golden Brown (The Stranglers) — odd meter — ✅ DONE (variable grid)
+- It alternates **3/4 ×3 then 4/4** (the 13-beat cycle).
+- **Fixed:** the score DSL now has a per-section `grid:N` (slots per bar, default 16) — `grid:12` is a
+  3/4 bar, `grid:16` a 4/4 bar — and `--faithful` reads the MIDI's **time signatures** (FF 58) and emits
+  one section per bar at the right grid (so a non-4/4 source auto-routes to the variable-grid renderer).
+  The per-bar slot/note arrays became `Vec` and the timeline carries a cumulative `bar_slot0` table;
+  an all-16-grid score is byte-identical to before. The tempo map composes on top, so a rubato
+  compound-meter piece (Clair de Lune in 6/8↔9/8) keeps both its meter AND its breathing.
+  `--no-meter` force-fits to 4/4. See `USAGE.md` § The score file (`grid:N`).
+- **Still 4/4-grid-quantised** (not a meter issue): genuine *triplets within a beat* that aren't a
+  compound-meter bar. Most "odd" pieces are meter, which this covers.
 
 ### Clair de Lune (Debussy) — rubato — ✅ DONE (tempo automation)
 - An impressionist solo-piano piece that lives on **rubato** (freely pushing/pulling the tempo).

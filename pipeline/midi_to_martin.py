@@ -49,6 +49,7 @@ def parse(path):
     _fmt, ntrk, div = struct.unpack(">HHH", d[8:14])
     tempo = 500000
     tempos = []  # (abs_tick, usec_per_quarter) — the rubato curve, for the tempo map
+    sigs = []    # (abs_tick, numerator, denominator) — time-signature changes (odd meter)
     notes = []
     chan_name, chan_prog = {}, {}
     pos = 14
@@ -71,6 +72,8 @@ def parse(path):
                 elif meta == 0x51:
                     tempo = int.from_bytes(body[i:i + 3], "big")
                     tempos.append((t, tempo))
+                elif meta == 0x58 and mlen >= 2:
+                    sigs.append((t, body[i], 2 ** body[i + 1]))  # numerator, 2^denominator
                 i += mlen
             elif status in (0xF0, 0xF7):
                 mlen, i = _varlen(body, i); i += mlen
@@ -104,7 +107,7 @@ def parse(path):
         ps = [p for s, e, p, ch in notes if ch == c]
         meta[c] = {"name": chan_name.get(c, ""), "program": chan_prog.get(c),
                    "n": len(ps), "lo": min(ps), "hi": max(ps), "avg": sum(ps) // len(ps)}
-    return div, bpm, notes, meta, tempos
+    return div, bpm, notes, meta, tempos, sigs
 
 
 def tempo_curve(tempos, div, a, end, fallback_bpm):
@@ -334,8 +337,132 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a, tempos=None, 
           f"bass={rn(bsrc)} harm={rn(fil)} drums={rn(roles['drums'])}")
 
 
+def has_odd_meter(sigs):
+    """True if the MIDI carries a non-4/4 time signature (so it needs the variable-grid renderer)."""
+    return any((n, d) != (4, 4) for _t, n, d in sigs)
+
+
+def bars_meter(sigs, end_tick, div):
+    """Per-bar (start_16th_slot, grid) covering [0, end_tick), from the time-signature map. A slot is a
+    16th (div/4 ticks); a num/den bar is `num*16/den` slots and `num*4*div/den` ticks (3/4 → 12, 4/4 → 16)."""
+    spb = max(div // 4, 1)
+    sigs = sorted(sigs) if sigs else [(0, 4, 4)]
+    bars, si, t = [], 0, 0
+    while t < end_tick and len(bars) < 4000:
+        while si + 1 < len(sigs) and sigs[si + 1][0] <= t:
+            si += 1
+        num, den = sigs[si][1], sigs[si][2]
+        bars.append((t // spb, max(1, num * 16 // den)))
+        t += max(spb, num * 4 * div // den)
+    return bars
+
+
+def fmt_slots(slots):
+    """Format a bar's slots (note tuples) as tokens grouped in 4s with a double space between groups."""
+    t = [tok(x) for x in slots]
+    return "  ".join(" ".join(t[i:i + 4]) for i in range(0, len(t), 4))
+
+
+def drum_meter(notes, div, start16, g):
+    """A `g`-slot kick/snare/hat pattern for the bar starting at absolute 16th `start16`."""
+    spb = max(div // 4, 1)
+    sets = {"kick": {35, 36}, "snare": {38, 40, 37}, "hat": {42, 44, 46, 39, 54}}
+    out = {}
+    for kind, ps in sets.items():
+        row = ["."] * g
+        for s, e, p, c in notes:
+            if c == 9 and p in ps:
+                sl = round(s / spb) - start16
+                if 0 <= sl < g:
+                    row[sl] = "x"
+        out[kind] = "  ".join("".join(row[i:i + 4]) for i in range(0, g, 4))
+    return out
+
+
+def chord_in(notes, div, chan, lo16, hi16, prev):
+    """Chord name from the `chan` notes whose onset 16th is in [lo16, hi16) — root + minor heuristic."""
+    spb = max(div // 4, 1)
+    bn = [p for s, e, p, c in notes if c == chan and lo16 <= round(s / spb) < hi16]
+    if not bn:
+        return prev or "C"
+    r = min(bn) % 12
+    pcs = {p % 12 for p in bn}
+    minor = (r + 3) % 12 in pcs and (r + 4) % 12 not in pcs
+    return NOTE_NAMES[r] + ("m" if minor else "")
+
+
+def _faithful_meter(out, args, div, bpm, notes, roles, voc, bas, fil, sigs, tempos=None, suppress=False):
+    """A FAITHFUL rendition of an ODD-METER piece (Golden Brown's 3/4↔4/4): one section PER BAR, each
+    with `grid:N` from the time signature, so the meter is real instead of force-fitted to 4/4. The
+    rubato tempo map composes on top (one section per bar ⇒ score bar k = MIDI bar k)."""
+    spb = max(div // 4, 1)
+    end_tick = max(e for s, e, p, c in notes)
+    bars = bars_meter(sigs, end_tick, div)
+    # tempo map over the meter bars (so a rubato compound-meter piece — Clair de Lune in 9/8 — keeps its
+    # breathing): map each set-tempo tick → the meter bar it lands in, base = bar-0 tempo.
+    tline = ""
+    if not suppress and tempos:
+        starts16 = [s for s, _g in bars] + [bars[-1][0] + bars[-1][1]]
+        per_bar = {}
+        for tk, usec in tempos:
+            t16 = tk // spb
+            k = next((j for j in range(len(bars)) if starts16[j] <= t16 < starts16[j + 1]), 0)
+            per_bar.setdefault(k, max(1, round(60_000_000 / usec)))
+        bpm = per_bar.get(0, bpm)
+        pts, last = [], bpm
+        for k in sorted(per_bar):
+            if k != 0 and per_bar[k] != last:
+                pts.append((k, per_bar[k]))
+            last = per_bar[k]
+        tline = "tempo " + " ".join(f"@bar:{k}={v}" for k, v in pts) if pts else ""
+    split = bas is None
+    bsrc = voc if split else bas
+    if split:
+        lead_lo, lead_hi, bass_hi = 55, 104, 54
+    else:
+        pr = [p for s, e, p, c in notes if c == voc]
+        lead_lo, lead_hi = (min(pr), max(pr)) if pr else (48, 100)
+        bass_hi = 60
+    flat_lead = grid(notes, div, voc, "lead", lead_lo, lead_hi)
+    flat_bass = grid(notes, div, bsrc, "bass", 21, bass_hi)
+    flat_harm = grid(notes, div, fil, "lead", 45, 100) if fil is not None else None
+    slc = lambda flat, s, g: [flat[s + j] if s + j < len(flat) else None for j in range(g)]
+    chords, prev = [], None
+    for s, g in bars:
+        prev = chord_in(notes, div, bsrc, s, s + g, prev)
+        chords.append(prev)
+    L = [
+        f'# {args.title or "song"} — FAITHFUL odd-meter (midi_to_martin.py): one section per bar,',
+        "# grid:N per the time signature so 3/4↔4/4 (Golden Brown) plays in its real meter.",
+        f"bpm {bpm}",
+        *([tline] if tline else []),
+        "chords " + " ".join(chords),
+        style_set(args, True),
+        "",
+    ]
+    for k, (s, g) in enumerate(bars):
+        L.append(f"section b{k} 1 grid:{g}")
+    L.append("")
+    for k, (s, g) in enumerate(bars):
+        nm = f"b{k}"
+        L.append(f"{nm}.lead p0: {fmt_slots(slc(flat_lead, s, g))}")
+        if flat_harm is not None:
+            L.append(f"{nm}.arp p0: {fmt_slots(slc(flat_harm, s, g))}")
+        L.append(f"{nm}.bass p0: {fmt_slots(slc(flat_bass, s, g))}")
+        if not args.no_drums:
+            d = drum_meter(notes, div, s, g)
+            for kind in ("kick", "snare", "hat"):
+                if "x" in d[kind]:
+                    L.append(f"{nm}.{kind} p0: {d[kind]}")
+    open(out, "w").write("\n".join(L) + "\n")
+    rn = lambda c: f"ch{c + 1}" if c is not None else "-"
+    metres = sorted({g for _s, g in bars})
+    print(f"wrote {out}: FAITHFUL ODD-METER, bpm {bpm}, {len(bars)} bars, grids {metres} | "
+          f"vocal={rn(voc)} bass={rn(bsrc)} harm={rn(fil)}")
+
+
 def build_score(path, out, args):
-    div, bpm, notes, meta, tempos = parse(path)
+    div, bpm, notes, meta, tempos, sigs = parse(path)
     roles = detect_roles(meta)
     for k in ("vocal", "bass", "fill"):
         v = getattr(args, k)
@@ -364,6 +491,11 @@ def build_score(path, out, args):
     tpb = div * 4
     a = min((s for s, e, p, c in notes if c == voc), default=0) // tpb  # vocal's first bar
     if args.faithful:
+        # an odd-meter source (non-4/4 time signature) → the variable-grid renderer, unless overridden.
+        if has_odd_meter(sigs) and not args.no_meter:
+            return _faithful_meter(
+                out, args, div, bpm, notes, roles, voc, bas, fil, sigs, tempos, suppress_tempo
+            )
         return _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a, tempos, suppress_tempo)
     # No separate bass channel (a single-channel piano piece) → SPLIT the lead channel by pitch: the
     # left hand (low notes) becomes the bass, the right hand (high) stays the lead.
@@ -454,6 +586,8 @@ def main():
     ap.add_argument("--bpm", type=int, help="override the tempo (forces one steady tempo, no rubato map)")
     ap.add_argument("--no-tempo-map", action="store_true",
                     help="ignore the MIDI's tempo changes (render at one steady tempo)")
+    ap.add_argument("--no-meter", action="store_true",
+                    help="ignore odd time signatures (force-fit the song to 4/4)")
     ap.add_argument("--arrange", default="song", choices=list(ARRANGES), help="section structure")
     ap.add_argument("--style", default="clean", choices=list(STYLES),
                     help="voice/mix palette (clean|synthpop|dance|rock|orchestral)")
