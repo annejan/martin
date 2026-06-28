@@ -1040,11 +1040,15 @@ tempo @bar:8=96 @bar:16=132 @bar:24=72
 # chord progression, one per bar, cycling (a note + optional `m` = minor): drives bass + stab
 chords Am F C G
 
-# section <name> <bars> <phase-bars,csv> [fill] [grid:N]
+# OPTIONAL swing (jazz/shuffle): global, 0 = straight, 1 = triplet feel. Per-section `swing:N` overrides.
+swing 0.6
+
+# section <name> <bars> <phase-bars,csv> [fill] [grid:N] [swing:N]
 section intro      8             # 8 bars, one phase, no fill
 section build     20  9,10 fill  # 20 bars = phase0 (9 bars) + phase1 (10) + 1 fill bar
 section drop      28  13,14 fill
 section waltz      8  grid:12     # ODD METER: 12 slots/bar = a 3/4 bar (a slot is always a 16th)
+section head      16  swing:0     # straight head over a swung tune (per-section override)
 
 # <section>.<kick|snare|hat|stab>  p<N>|fill:  16 steps   (x = hit, . = rest; spaces ignored)
 build.kick  p0:   x... .... .... x...
@@ -1072,6 +1076,13 @@ mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
   written per phase like the drums.
 - **16 steps per bar** (16th notes); patterns you don't write are silent. A tie with no preceding note
   is just a rest; an untied note keeps its fixed length (so adding ties never changes existing tracks).
+- **`swing N` (jazz / shuffle).** Global `swing N` (0 = straight, 1 = exact triplet feel; ratio
+  `r = 0.5 + swing/6`) pushes the off-8ths late for a jazz/shuffle groove — the long-short "dah-dúh".
+  Per-section `swing:N` on the section line overrides it (a straight head over a swung tune). It warps
+  the within-beat timing in the slot↔seconds funnel, so **everything** (lead, arp, bass, drums, the
+  off-beat stabs, and the visual beat-pump) swings coherently, and it composes with `grid`/`tempo`.
+  Only applies on `grid % 4 == 0` bars (whole 8th-note pairs). `swing 0` (default) = byte-identical to
+  before. The MIDI converter emits it from `--swing N` or estimates it with `--auto-swing`.
 - **`grid:N` (odd meter / tuplets).** A section defaults to a **16-slot** bar (4/4 sixteenths). Add
   `grid:N` on the `section` line to change the slots per bar — a slot stays a 16th-note, so the bar's
   duration is `N/4` beats: `grid:12` = a **3/4** bar, `grid:14` = **7/8**, `grid:20` = **5/4**. Patterns

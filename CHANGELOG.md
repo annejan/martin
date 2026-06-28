@@ -46,6 +46,18 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Added
 
+- **Swing / shuffle in the score DSL** — a global `swing N` (0 = straight, 1 = exact triplet feel;
+  ratio `r = 0.5 + swing/6`) plus a per-section `swing:N` override push the off-8ths late for a
+  jazz/shuffle groove. It's a piecewise-linear within-beat warp inside the slot↔seconds funnel
+  (`swing_warp`/`swing_unwarp`, an exact bijection — adversarially design-reviewed), so the lead, arp,
+  bass, drums, the off-beat dance stabs, AND the visual beat-pump all swing coherently, and it composes
+  with `grid` + `tempo`. Only applies on `grid % 4 == 0` bars (whole 8th-note pairs; validate warns
+  otherwise). The synth's existing per-bed micro-swing (`groove`) is suppressed when the grid swings so
+  the off-beats don't double-swing. `swing 0` (default) keeps the `uniform` fast path — **byte-for-byte
+  identical**, verified against the previous commit's built-in WAV md5. `pipeline/midi_to_martin.py`
+  emits it from `--swing N` or estimates it from off-8th onset lateness with `--auto-swing`; a new
+  `--style jazz` palette (breathy-sax lead, vibes arp, finger bass, brushy kit) pairs with it. So the
+  Pink Panther theme finally swings.
 - **Variable grid / odd meter in the score DSL** — a section can declare `grid:N` (slots per bar,
   default 16); a slot stays a 16th-note so the bar is `N/4` beats: `grid:12` = 3/4, `grid:14` = 7/8,
   etc. The per-bar slot/note arrays became `Vec` (were `[_; 16]`) and the timeline now carries a

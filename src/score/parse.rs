@@ -72,6 +72,7 @@ impl Score {
     /// Parse a tracker-DSL score (see `to_dsl` for the shape / `USAGE.md` for the grammar).
     pub fn from_str(text: &str) -> Result<Score, String> {
         let mut bpm = 140.0_f32;
+        let mut swing = 0.0_f32; // global swing default (the `swing N` line)
         let mut tempo: Vec<TempoPoint> = Vec::new();
         let mut chords: Vec<Chord> = Vec::new();
         let mut sections: Vec<Section> = Vec::new();
@@ -217,6 +218,19 @@ impl Score {
                         return Err(format!("line {ln}: bpm must be > 0 (got {bpm})"));
                     }
                 }
+                // `swing N` — global swing (0 = straight, 1 = exact triplet feel). Per-section
+                // `swing:N` on a section line overrides it. Absent = straight (byte-identical).
+                "swing" => {
+                    swing = it
+                        .next()
+                        .and_then(pf)
+                        .ok_or_else(|| format!("line {ln}: swing needs a number"))?;
+                    if !(0.0..=1.0).contains(&swing) {
+                        return Err(format!(
+                            "line {ln}: swing must be 0..=1 (0=straight, 1=triplet), got {swing}"
+                        ));
+                    }
+                }
                 // `tempo @bar:8=96 @bar:16=132 ...` — tempo CHANGES at bar boundaries (rubato). `bpm`
                 // stays the bar-0 default; each pair steps the tempo from that bar on. Sorted/deduped
                 // below; absent ⇒ constant tempo (byte-identical to a plain `bpm N` score).
@@ -262,6 +276,7 @@ impl Score {
                     let mut phases = vec![bars];
                     let mut fill = false;
                     let mut grid = 16usize;
+                    let mut sec_swing = f32::NAN; // NAN = inherit the global `swing` (resolved below)
                     for tok in it {
                         if tok.eq_ignore_ascii_case("fill") {
                             fill = true;
@@ -275,6 +290,12 @@ impl Score {
                                 .ok_or_else(|| {
                                     format!("line {ln}: grid must be 1..={MAX_GRID}, got `{g}`")
                                 })?;
+                        } else if let Some(v) = tok.strip_prefix("swing:") {
+                            // per-section swing override (0 = straight, 1 = triplet).
+                            sec_swing =
+                                pf(v).filter(|x| (0.0..=1.0).contains(x)).ok_or_else(|| {
+                                    format!("line {ln}: swing: must be 0..=1, got `{v}`")
+                                })?;
                         } else {
                             let ph: Vec<u32> =
                                 tok.split(',').filter_map(|x| x.parse().ok()).collect();
@@ -285,6 +306,7 @@ impl Score {
                     }
                     let mut sec = Section::empty(name, bars, phases, fill);
                     sec.grid = grid;
+                    sec.swing = sec_swing;
                     sections.push(sec);
                 }
                 "chords" => {
@@ -332,8 +354,16 @@ impl Score {
         // sorted ascending by bar; first pair wins on a duplicate bar (the MIDI tool emits one per bar).
         tempo.sort_by_key(|p| p.bar);
         tempo.dedup_by_key(|p| p.bar);
+        // a section with no `swing:` (NaN) inherits the global `swing` — resolve before Score::new,
+        // which reads each section's swing to build the per-bar table.
+        for s in &mut sections {
+            if s.swing.is_nan() {
+                s.swing = swing;
+            }
+        }
         let mut score = Score::new(bpm, tempo, chords, sections);
         score.params = params;
+        score.swing = swing;
         Ok(score)
     }
 

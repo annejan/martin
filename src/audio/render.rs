@@ -251,7 +251,13 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             }
             if b >= 6 {
                 for s in 0..8 {
-                    let st = base + s as f32 * beat * 0.5;
+                    // 8th-note hats: when the score swings, route through the funnel so the off-8ths
+                    // swing; otherwise keep the EXACT old `base + s*beat*0.5` (float-identical).
+                    let st = if score.any_swing() {
+                        score.slot_to_secs((b as i64 * 16 + s as i64 * 2) as f32)
+                    } else {
+                        base + s as f32 * beat * 0.5
+                    };
                     let pan = if s % 2 == 0 { -0.45 } else { 0.45 };
                     ev(&mut lanes[L_DRUMS], st, move |b2, _| {
                         render_into(b2, st, 0.07, 0.07, pan, hat_pick(drumsw))
@@ -266,7 +272,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             1 => 0.15,
             _ => -0.05,
         };
-        let gt = groove(t, score.beat_at(t), 0x55, 0.003, 0.004);
+        let gt = groove(t, score.beat_at(t), 0x55, 0.003, 0.004, score.is_swung(t));
         let drumsw = dsw(gt);
         let gated = score.param_at(gt, "gatesnare", 0.0) > 0.5; // 80s gated-reverb snare per section
         let amp = snare_amp * vel(t, score.beat_at(t), 0x55);
@@ -280,7 +286,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     }
     for (i, t) in score.hits(Inst::Hat).into_iter().enumerate() {
         let pan = if i % 2 == 0 { 0.65 } else { -0.65 };
-        let gt = groove(t, score.beat_at(t), 0x77, 0.006, 0.0);
+        let gt = groove(t, score.beat_at(t), 0x77, 0.006, 0.0, score.is_swung(t));
         let drumsw = dsw(gt);
         let amp = hats_amp * vel(t, score.beat_at(t), 0x77);
         ev(&mut lanes[L_DRUMS], gt, move |b, _| {
@@ -289,7 +295,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     }
     for t in score.hits(Inst::Stab) {
         let m = score.levels(t).mids;
-        let gt = groove(t, score.beat_at(t), 0x6E, 0.004, 0.0);
+        let gt = groove(t, score.beat_at(t), 0x6E, 0.004, 0.0, score.is_swung(t));
         let amp = (0.10 + 0.10 * m) * vel(t, score.beat_at(t), 0x6E);
         let tri = score.chord_at(t).triad();
         let stabv = stab_pick(isw(gt, "stabsw"));
@@ -333,7 +339,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     let climax = section_window(score, "climax");
     for (t, f, hold) in score.lead_notes() {
         let v = vel(t, beat, 0x1A);
-        let gt = groove(t, beat, 0x3A, 0.005, 0.005);
+        let gt = groove(t, beat, 0x3A, 0.005, 0.005, score.is_swung(t));
         let lamp = score.param_at(t, "lead", 0.82) * v;
         let dur = 0.6 + hold; // a `-`/`_` tie holds the note past its slot; hold==0 = unchanged
         let in_climax = climax
@@ -352,7 +358,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     // ---- ECHO lane (lead echo source; ping-pong + dry-subtract happens in produce) ----
     for (t, f, hold) in score.lead_notes() {
         let v = vel(t, beat, 0x1A);
-        let gt = groove(t, beat, 0x3A, 0.005, 0.005);
+        let gt = groove(t, beat, 0x3A, 0.005, 0.005, score.is_swung(t));
         let amp = 0.30 * v;
         let lv = (v * 0.7).max(0.25);
         let dur = 0.5 + hold;
@@ -366,7 +372,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     for (i, (t, f, hold)) in score.arp_notes().into_iter().enumerate() {
         let pan = if i % 2 == 0 { 0.7 } else { -0.7 };
         let v = vel(t, beat, 0x2B);
-        let gt = groove(t, beat, 0x9C, 0.006, 0.0);
+        let gt = groove(t, beat, 0x9C, 0.006, 0.0, score.is_swung(t));
         let dur = 0.2 + hold;
         let arpsw = isw(gt, "arpsw");
         let ag = score.param_at(gt, "arp", 0.20); // arp-lane gain knob (`set arp=…`); default = old fixed level
@@ -380,7 +386,7 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     for (t, f, hold) in score.bass_notes() {
         let v = vel(t, beat, 0xB5);
         let amp = (0.20 + 0.18 * score.levels(t).sub_bass) * v;
-        let gt = groove(t, beat, 0xB5, 0.003, 0.0);
+        let gt = groove(t, beat, 0xB5, 0.003, 0.0, score.is_swung(t));
         let basssw = isw(gt, "basssw");
         ev(&mut lanes[L_BASS], gt, move |bd, _| {
             let (dur, voice): (f32, Box<dyn fundsp::prelude32::AudioUnit>) = if wooz {
@@ -499,15 +505,27 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
                 continue;
             }
             if let Some((s0, s1)) = section_window(score, &sec.name) {
+                // off-beat stabs ("and" = slot 2 of each beat). When the score swings, drive on the
+                // beat index through the funnel so they push late; otherwise keep the EXACT old
+                // `t += beat` accumulation (float-identical for every non-swung score).
+                let swung = score.any_swing();
+                let mut bi = (s0 / beat).ceil() as i64;
                 let mut t = (s0 / beat).ceil() * beat + hb;
-                while t < s1 {
+                loop {
+                    if swung {
+                        t = score.slot_to_secs((bi * 4 + 2) as f32);
+                    }
+                    if t >= s1 {
+                        break;
+                    }
                     let m = score.levels(t).mids;
-                    let gt = groove(t, beat, seed, 0.004, 0.0);
+                    let gt = groove(t, beat, seed, 0.004, 0.0, score.is_swung(t));
                     let amp = (score.param_at(t, tok, def) + mids_k * m) * vel(t, beat, seed);
                     let tri = score.chord_at(t).triad();
                     ev(&mut lanes[L_STABS], gt, move |bd, _| {
                         chord_spread(bd, gt, dur, amp, spread, tri, voice)
                     });
+                    bi += 1;
                     t += beat;
                 }
             }
@@ -531,15 +549,25 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             continue;
         }
         if let Some((s0, s1)) = section_window(score, &sec.name) {
+            // off-beat casio stabs (swing-aware via the funnel; straight = the exact old accumulation).
+            let swung = score.any_swing();
+            let mut bi = (s0 / beat).ceil() as i64;
             let mut t = (s0 / beat).ceil() * beat + half;
-            while t < s1 {
+            loop {
+                if swung {
+                    t = score.slot_to_secs((bi * 4 + 2) as f32);
+                }
+                if t >= s1 {
+                    break;
+                }
                 let m = score.levels(t).mids;
-                let gt = groove(t, beat, 0x4C, 0.005, 0.0);
+                let gt = groove(t, beat, 0x4C, 0.005, 0.0, score.is_swung(t));
                 let amp = (0.05 + 0.06 * m) * vel(t, beat, 0x4C);
                 let tri = score.chord_at(t).triad();
                 ev(&mut lanes[L_STABS], gt, move |bd, _| {
                     chord_spread(bd, gt, half * 0.95, amp, 0.5, tri, casio)
                 });
+                bi += 1;
                 t += beat;
             }
         }

@@ -54,9 +54,14 @@ pub struct Score {
     /// Cumulative SLOT count at the start of each bar, length `total_bars + 1` — maps slot↔bar when
     /// bars have different `grid`s. With all-16 grids it is exactly `bar_slot0[b] == b * 16`.
     bar_slot0: Vec<i64>,
-    /// `tempo` empty AND every section grid == 16 — then the funnels take the exact old single-multiply
-    /// fast path and the whole timeline is byte-for-byte identical to a pre-tempo, pre-grid score.
+    /// `tempo` empty AND every section grid == 16 AND no swing — then the funnels take the exact old
+    /// single-multiply fast path and the whole timeline is byte-for-byte identical to a pre-tempo,
+    /// pre-grid, pre-swing score.
     uniform: bool,
+    /// Global swing default (the `swing N` line); per-section `swing:` overrides resolve into `bar_swing`.
+    pub swing: f32,
+    /// Per-bar swing amount (length `total_bars`), from each bar's section. 0 = straight.
+    bar_swing: Vec<f32>,
     /// Free-form mix/fx knobs from `set <key>=<value>` lines — the synth reads these (with built-in
     /// defaults) so the SOUND can be tuned by editing the score file (no recompile), not the engine.
     params: std::collections::HashMap<String, f32>,
@@ -77,12 +82,17 @@ impl Score {
             bar += s.bars;
         }
         let total_bars = bar;
-        // Per-bar grid (slots): the section a bar falls in sets it (16 = 4/4 sixteenths, the default).
+        // Per-bar grid (slots) + per-bar swing: the section a bar falls in sets them (16 = 4/4
+        // sixteenths, swing 0 = straight — the defaults).
         let mut bar_grid = vec![16usize; total_bars as usize];
+        let mut bar_swing = vec![0.0f32; total_bars as usize];
         for s in &sections {
             for b in s.start_bar..s.start_bar + s.bars {
                 if let Some(g) = bar_grid.get_mut(b as usize) {
                     *g = s.grid.max(1);
+                }
+                if let Some(sw) = bar_swing.get_mut(b as usize) {
+                    *sw = s.swing;
                 }
             }
         }
@@ -110,7 +120,9 @@ impl Score {
             acc += (g as f32 / 4.0) * (60.0 / cur_bpm); // grid/4 beats at the current tempo
             slot_acc += g as i64;
         }
-        let uniform = tempo.is_empty() && bar_grid.iter().all(|&g| g == 16);
+        let uniform = tempo.is_empty()
+            && bar_grid.iter().all(|&g| g == 16)
+            && bar_swing.iter().all(|&s| s == 0.0);
         // a score with no `chords` line still needs harmony — default to a single A-minor.
         let chords = if chords.is_empty() {
             vec![Chord {
@@ -129,6 +141,8 @@ impl Score {
             bar_secs,
             bar_slot0,
             uniform,
+            swing: 0.0,
+            bar_swing,
             params: std::collections::HashMap::new(),
         }
     }
@@ -205,6 +219,43 @@ impl Score {
         let b = bar.min(self.total_bars.saturating_sub(1)) as usize;
         (self.bar_secs[b + 1] - self.bar_secs[b]) / self.bar_grid(bar) as f32
     }
+    // --- swing: a piecewise-linear within-beat warp. `r` = the swing ratio (0.5 = straight, 2/3 =
+    // triplet). `swing_warp` maps the straight within-beat fraction f∈[0,1) to the swung position;
+    // `swing_unwarp` is its exact inverse. Continuous at f=0.5 (both pieces = r), monotonic, bijective.
+    #[inline]
+    fn swing_warp(f: f32, r: f32) -> f32 {
+        if f < 0.5 {
+            2.0 * f * r
+        } else {
+            r + (2.0 * f - 1.0) * (1.0 - r)
+        }
+    }
+    #[inline]
+    fn swing_unwarp(g: f32, r: f32) -> f32 {
+        if g <= r {
+            g / (2.0 * r)
+        } else {
+            0.5 + (g - r) / (2.0 * (1.0 - r))
+        }
+    }
+    /// The swing ratio for `bar`, or `None` when the bar is straight (the funnel then takes the exact
+    /// linear path — byte-identical). Swing only applies on `grid % 4 == 0` bars (a whole number of
+    /// 8th-note pairs); `r = 0.5 + swing/6` so `swing 1` is exactly the triplet ratio 2/3.
+    #[inline]
+    fn bar_r(&self, bar: u32) -> Option<f32> {
+        let s = *self.bar_swing.get(bar as usize)?;
+        (s != 0.0 && self.bar_grid(bar) % 4 == 0).then(|| 0.5 + s.clamp(0.0, 1.0) / 6.0)
+    }
+    /// Whether the bar at time `t` swings — the synth's groove layer reads this to avoid double-swinging.
+    pub(crate) fn is_swung(&self, t: f32) -> bool {
+        self.bar_r(self.bar_idx_at(t)).is_some()
+    }
+    /// Whether ANY bar swings — the synth uses this to keep its hardcoded off-beat dance layers on the
+    /// EXACT old `t += beat` accumulation when nothing swings (byte-identical), routing through the
+    /// funnel only when swing is actually in play.
+    pub(crate) fn any_swing(&self) -> bool {
+        self.bar_swing.iter().any(|&s| s != 0.0)
+    }
     /// Seconds at the start of bar `bar` (clamped to the track).
     pub fn bar_start_secs(&self, bar: u32) -> f32 {
         let bar = (bar as usize).min(self.total_bars as usize);
@@ -241,7 +292,16 @@ impl Score {
         }
         let bar = self.bar_of_slot(slot as i64);
         let rem = slot - self.bar_slot0[bar as usize] as f32;
-        self.bar_start_secs(bar) + rem * self.slot_len_of_bar(bar)
+        let sl = self.slot_len_of_bar(bar);
+        match self.bar_r(bar) {
+            None => self.bar_start_secs(bar) + rem * sl, // straight — byte-identical
+            Some(r) => {
+                // warp the within-beat fraction (a beat = 4 slots); whole beats pass through unchanged.
+                let bi = (rem / 4.0).floor();
+                let f = rem / 4.0 - bi;
+                self.bar_start_secs(bar) + (bi + Self::swing_warp(f, r)) * 4.0 * sl
+            }
+        }
     }
     /// INVERSE funnel: seconds → absolute slot index (floored). Keeps the forward epsilon nudge
     /// (per the local slot length) so an exact boundary time floors to the right slot, not one early.
@@ -259,7 +319,19 @@ impl Score {
             Err(b) => (b - 1).min(self.total_bars.saturating_sub(1) as usize),
         } as u32;
         let sl = self.slot_len_of_bar(bar);
-        let into = ((t - self.bar_start_secs(bar) + sl * 1e-3) / sl).floor() as i64;
+        let into = match self.bar_r(bar) {
+            None => ((t - self.bar_start_secs(bar) + sl * 1e-3) / sl).floor() as i64, // straight
+            Some(r) => {
+                // invert the warp in the BEAT-fraction domain; nudge BEFORE unwarp so an exact swung
+                // onset floors forward (the post-warp slot lengths are uneven — a seconds nudge would
+                // be wrong near the off-beat).
+                let bl = 4.0 * sl;
+                let pb = (t - self.bar_start_secs(bar)) / bl;
+                let bi = pb.floor();
+                let frac = Self::swing_unwarp((pb - bi + 1e-3).min(1.0), r);
+                (4.0 * bi + 4.0 * frac).floor() as i64
+            }
+        };
         self.bar_slot0[bar as usize] + into.clamp(0, self.bar_grid(bar) - 1)
     }
     /// Total bar count (the playable timeline length in bars).
@@ -743,6 +815,89 @@ mod tests {
         assert!((s.anchor_seconds("bar:2").unwrap() - 4.0).abs() < 1e-4);
         assert!((s.anchor_seconds("bar:3").unwrap() - 8.0).abs() < 1e-4);
         assert!((s.beat_at(5.0) - 1.0).abs() < 1e-4); // 5 s is in bar 2 (@60) → beat = 1.0 s
+    }
+
+    #[test]
+    fn swing_warp_unwarp_roundtrip() {
+        for &r in &[0.5_f32, 0.55, 0.6, 2.0 / 3.0] {
+            // identity anchors + the off-8th lands at r
+            assert!((Score::swing_warp(0.0, r) - 0.0).abs() < 1e-6);
+            assert!((Score::swing_warp(0.5, r) - r).abs() < 1e-6);
+            let mut prev = -1.0;
+            for i in 0..1000 {
+                let f = i as f32 / 1000.0;
+                let g = Score::swing_warp(f, r);
+                assert!(g > prev, "swing_warp must be monotonic (r={r}, f={f})");
+                prev = g;
+                assert!(
+                    (Score::swing_unwarp(g, r) - f).abs() < 1e-5,
+                    "inverse failed r={r} f={f}"
+                );
+            }
+        }
+        // r = 0.5 (straight) is the identity
+        for i in 0..100 {
+            let f = i as f32 / 100.0;
+            assert!((Score::swing_warp(f, 0.5) - f).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn swing_zero_is_byte_identical() {
+        let s = Score::builtin();
+        assert_eq!(s.swing, 0.0);
+        assert!(
+            s.uniform,
+            "a straight 16-grid score must stay on the fast path"
+        );
+        // a swing:0 section is still uniform → exact old arithmetic
+        let z = Score::from_str("bpm 120\nswing 0\nsection a 4 4\n").unwrap();
+        assert!(z.uniform);
+        let sl = z.beat() / 4.0;
+        for slot in [0, 1, 2, 4, 16, 33, 64] {
+            assert!((z.slot_to_secs(slot as f32) - slot as f32 * sl).abs() < 1e-4);
+        }
+    }
+
+    #[test]
+    fn swing_pushes_the_offbeat_and_inverts() {
+        // swing 1 = triplet (r = 2/3): the "and" (slot 2) lands at 2/3 of the beat, downbeats stay put.
+        let s = Score::from_str("bpm 120\nswing 1\nsection a 2 2\n").unwrap();
+        assert!(!s.uniform);
+        let beat = 0.5; // 120 bpm
+        assert!((s.slot_to_secs(0.0) - 0.0).abs() < 1e-4);
+        assert!((s.slot_to_secs(2.0) - beat * 2.0 / 3.0).abs() < 1e-4); // the swung "and"
+        assert!((s.slot_to_secs(4.0) - beat).abs() < 1e-4); // downbeat of beat 2, unmoved
+        assert!((s.slot_to_secs(16.0) - 4.0 * beat).abs() < 1e-4); // bar boundary unmoved
+        // inverse round-trips every slot (the epsilon stress)
+        for slot in 0..s.total_slots() {
+            assert_eq!(
+                s.secs_to_slot(s.slot_to_secs(slot as f32)),
+                slot,
+                "slot {slot}"
+            );
+        }
+    }
+
+    #[test]
+    fn swing_round_trips_through_dsl() {
+        // global swing + a per-section straight override (straight intro / swung body)
+        let dsl = "bpm 120\nswing 0.6\nsection intro 2 2 swing:0\nsection body 4 4\n";
+        let a = Score::from_str(dsl).unwrap();
+        let b = Score::from_str(&a.to_dsl()).unwrap();
+        assert_eq!(a.swing, b.swing);
+        assert!((a.sections[0].swing - 0.0).abs() < 1e-6); // intro overrode to straight
+        assert!((a.sections[1].swing - 0.6).abs() < 1e-6); // body inherits the global
+        assert_eq!(a.to_dsl(), b.to_dsl());
+        assert!(a.to_dsl().contains("swing 0.6") && a.to_dsl().contains("swing:0"));
+    }
+
+    #[test]
+    fn swing_only_on_four_divisible_grids() {
+        // a 3/4 bar (grid:12, divisible by 4 → swings) vs a 7/8 bar (grid:14 → no swing).
+        let s = Score::from_str("bpm 120\nswing 1\nsection a 1 grid:14\n").unwrap();
+        // grid 14 % 4 != 0 → bar_r None → straight even with swing 1
+        assert!((s.slot_to_secs(2.0) - 2.0 * (s.beat() / 4.0)).abs() < 1e-4);
     }
 
     #[test]

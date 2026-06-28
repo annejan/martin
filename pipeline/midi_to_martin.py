@@ -266,6 +266,11 @@ STYLES = {
     "orchestral": "set lead=0.72 leadsw=0 arp=0.36 arpsw=2 basssw=2 sub=0.5 supersaw=0.26 choir=0.3 "
                   "padsw=4 stabsw=0 donk=0 house=0 reverb=0.52 sidechain=0.2 widen=1.8 makeup=1.1 "
                   "ceiling=0.95 shimmer=0.18 hats=0.3 snares=0.42 atmosphere=0.1 drumsw=1 oversample=1",
+    # jazz: breathy sax-ish lead, vibes-glass arp, finger/upright bass, soft brushy kit, warm room,
+    # no acid/supersaw/pump. Pair with a `swing` directive for the long-short feel (set --swing).
+    "jazz": "set lead=0.88 leadsw=2 arp=0.3 arpsw=3 basssw=2 sub=0.42 supersaw=0.04 choir=0.03 padsw=5 "
+            "stabsw=1 donk=0 house=0 reverb=0.44 sidechain=0.22 widen=1.7 makeup=1.12 ceiling=0.95 "
+            "shimmer=0.05 hats=0.3 snares=0.36 atmosphere=0.04 drumsw=1 oversample=1",
 }
 
 
@@ -318,9 +323,11 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a, tempos=None, 
     CH = []; prev = None
     for bi in range(a, a + nb):
         prev = bar_chord(notes, div, bsrc, bi, prev); CH.append(prev)
+    sw = swing_value(args, notes, div, voc)
     L = [f'# {args.title or "song"} — FAITHFUL rendition (midi_to_martin.py --faithful): the song through',
          "# once at its own tempo — lead + bass + harmony + the real drum groove, natural mix (no pump).",
          f"bpm {bpm}",
+         *( [f"swing {sw}"] if sw > 0 else [] ),
          *( [tline] if tline else [] ),
          "chords " + " ".join(CH),
          style_set(args, True),
@@ -340,6 +347,38 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a, tempos=None, 
 def has_odd_meter(sigs):
     """True if the MIDI carries a non-4/4 time signature (so it needs the variable-grid renderer)."""
     return any((n, d) != (4, 4) for _t, n, d in sigs)
+
+
+def detect_swing(notes, div, chan):
+    """Estimate swing (0..1) from how late the off-8th onsets land vs a straight grid, for channel
+    `chan`. Looks at notes whose nearest 16th is the off-8th (slot 2 of a beat); the median within-beat
+    fraction r_obs maps to swing = clamp(6*(r_obs-0.5), 0, 1). Too few off-8ths → 0 (straight)."""
+    spb = max(div // 4, 1)
+    beat = 4 * spb
+    fracs = []
+    for s, e, p, c in notes:
+        if c != chan:
+            continue
+        sl = round(s / spb) % 4
+        if sl == 2:  # the "and" of a beat — the slot swing pushes
+            fracs.append((s % beat) / beat)
+    if len(fracs) < 8:
+        return 0.0
+    fracs.sort()
+    r_obs = fracs[len(fracs) // 2]  # median within-beat fraction of the off-8ths
+    return max(0.0, min(1.0, 6.0 * (r_obs - 0.5)))
+
+
+def swing_value(args, notes, div, lead_chan):
+    """The swing amount to emit: --swing wins; else --auto-swing estimates it from the lead channel."""
+    if args.swing and args.swing > 0:
+        return max(0.0, min(1.0, args.swing))
+    if getattr(args, "auto_swing", False):
+        sw = detect_swing(notes, div, lead_chan)
+        if sw > 0.05:
+            print(f"  (auto-swing: detected ~{sw:.2f} from off-8th timing)", file=sys.stderr)
+            return round(sw, 2)
+    return 0.0
 
 
 def bars_meter(sigs, end_tick, div):
@@ -431,10 +470,12 @@ def _faithful_meter(out, args, div, bpm, notes, roles, voc, bas, fil, sigs, temp
     for s, g in bars:
         prev = chord_in(notes, div, bsrc, s, s + g, prev)
         chords.append(prev)
+    sw = swing_value(args, notes, div, voc)
     L = [
         f'# {args.title or "song"} — FAITHFUL odd-meter (midi_to_martin.py): one section per bar,',
         "# grid:N per the time signature so 3/4↔4/4 (Golden Brown) plays in its real meter.",
         f"bpm {bpm}",
+        *([f"swing {sw}"] if sw > 0 else []),
         *([tline] if tline else []),
         "chords " + " ".join(chords),
         style_set(args, True),
@@ -597,6 +638,10 @@ def main():
                     help="play the song THROUGH at its own tempo (lead+bass+harmony+real drums, natural "
                          "mix) instead of a looped dance remix")
     ap.add_argument("--title", help="score title comment")
+    ap.add_argument("--swing", type=float, default=0.0,
+                    help="swing 0..1 (0=straight, 1=triplet) — emits a `swing N` line for the jazz feel")
+    ap.add_argument("--auto-swing", action="store_true",
+                    help="estimate swing from how late the off-8th notes land in the MIDI")
     a = ap.parse_args()
     build_score(a.midi, a.out, a)
 

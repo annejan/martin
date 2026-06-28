@@ -145,10 +145,16 @@ pub(crate) fn vel(t: f32, beat: f32, seed: u32) -> f32 {
 /// Humanize an onset time: swing the odd 16ths late + lay the lane back a touch + a little jitter, so
 /// the groove pushes/pulls instead of sitting dead on the quantize grid (the second machine tell). The
 /// kick and the sidechain source stay dead-on — only the bed voices are grooved.
-pub(super) fn groove(t: f32, beat: f32, seed: u32, jit: f32, lay: f32) -> f32 {
+pub(super) fn groove(t: f32, beat: f32, seed: u32, jit: f32, lay: f32, swung: bool) -> f32 {
     let sl = beat / 4.0;
     let s = (t / sl).round() as i64;
-    let swing = if s.rem_euclid(2) == 1 { 0.10 * sl } else { 0.0 };
+    // the score's own `swing` (applied in the slot↔seconds funnel) already pushed the off-beats — only
+    // add groove's hardcoded micro-swing when the grid is NOT swung, else the off-beats double-swing.
+    let swing = if !swung && s.rem_euclid(2) == 1 {
+        0.10 * sl
+    } else {
+        0.0
+    };
     let j = pseudo_noise((t * 4099.0) as usize ^ seed as usize) * jit;
     (t + swing + lay + j).max(0.0)
 }

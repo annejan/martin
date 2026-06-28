@@ -49,6 +49,15 @@ pub(super) fn validate(sections: &[Section]) -> Vec<String> {
         }
     }
     for s in sections {
+        // swing only applies on bars whose grid is a whole number of 8th-note pairs (grid % 4 == 0);
+        // an odd-meter section with swing set would silently render straight — flag it.
+        if s.swing != 0.0 && s.grid % 4 != 0 {
+            w.push(format!(
+                "section `{}`: swing {} is ignored — its grid {} isn't divisible by 4 (no whole \
+                 8th-note pairs to swing)",
+                s.name, s.swing, s.grid
+            ));
+        }
         let declared = s.phases.iter().sum::<u32>() + u32::from(s.fill);
         if declared != s.bars {
             w.push(format!(

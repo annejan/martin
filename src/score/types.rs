@@ -160,6 +160,10 @@ pub struct Section {
     /// bar's DURATION is `grid/4` beats — `grid:12` is a 3/4 bar, `grid:14` a 7/8 bar, etc. (odd
     /// meter). A whole odd-meter riff cycle can be one big bar (e.g. `grid:52` for |3/4 3/4 3/4 4/4|).
     pub grid: usize,
+    /// Swing amount 0..1 (0 = straight, 1 = exact triplet feel; ratio r = 0.5 + swing/6). Pushes the
+    /// off-8ths late for a jazz/shuffle groove. Per-section override of the global `swing` line; only
+    /// applies on `grid % 4 == 0` bars. 0 everywhere = byte-identical to a no-swing score.
+    pub swing: f32,
     pub phases: Vec<u32>, // bars per phase; if `fill`, the final bar of the section is the fill
     pub fill: bool,
     pub gain: Ramp,
@@ -190,6 +194,7 @@ impl Section {
             name,
             bars,
             grid: 16,
+            swing: 0.0,
             phases,
             fill,
             gain: Ramp::c(0.85),

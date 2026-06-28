@@ -12,6 +12,10 @@ impl Score {
         let mut o = String::new();
         o.push_str("# martin score — tracker DSL. Edit + load with MARTIN_SCORE=<this file>.\n");
         o.push_str(&format!("bpm {}\n", fnum(self.bpm)));
+        // global swing — emitted only when set, so a straight score dumps byte-identical to before.
+        if self.swing != 0.0 {
+            o.push_str(&format!("swing {}\n", fnum(self.swing)));
+        }
         // tempo map (rubato) — emitted only when present, so a constant-tempo score dumps byte-identical
         // to before. Already sorted/deduped at parse, so the line is deterministic + idempotent.
         if !self.tempo.is_empty() {
@@ -56,7 +60,7 @@ impl Score {
                 .collect::<Vec<_>>()
                 .join(",");
             o.push_str(&format!(
-                "section {} {} {}{}{}\n",
+                "section {} {} {}{}{}{}\n",
                 s.name,
                 s.bars,
                 ph,
@@ -65,6 +69,11 @@ impl Score {
                     format!(" grid:{}", s.grid)
                 } else {
                     String::new() // default grid emits nothing → constant-grid scores dump unchanged
+                },
+                if s.swing != self.swing {
+                    format!(" swing:{}", fnum(s.swing)) // per-section override (differs from global)
+                } else {
+                    String::new()
                 }
             ));
         }
