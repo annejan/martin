@@ -117,12 +117,13 @@ def detect_roles(meta):
         if any(w in nm for w in VOCAL_WORDS):
             s += 1000                  # a LABELLED vocal always wins (the jantje rule)
         if m["program"] in LEAD_PROGS:
-            s += 40
-        s += m["avg"]                  # leads sit high in register
-        # density sweet-spot (matters when nothing is labelled — a GM instrumental): the melody is
-        # ACTIVE but not the busiest comp. Penalise a too-sparse line (CHARANG's 65 notes ≠ the tune).
-        if m["n"] < 120:
-            s -= (120 - m["n"]) * 0.5
+            s += 30
+        s += min(m["avg"], 75) * 0.8   # prefer a high register, but CAP it — an extreme-high accent
+        #                                (one note at 84) is not "more melody" than a mid-high line.
+        if m["avg"] < 52:              # a melody isn't in the bass (a synth-bass pulse on a lead patch)
+            s -= (52 - m["avg"]) * 2
+        if m["n"] < 40:                # nor is it a 5-note accent — a real line is moderately active
+            s -= (40 - m["n"]) * 2
         return s
 
     def score_bass(c):
@@ -261,14 +262,23 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a):
     parts — lead + bass + a harmony voice + the real drum groove — in ONE long section, instead of a
     looped 16-bar dance remix with a four-on-the-floor laid over it. Natural mix (no heavy pump)."""
     tpb = div * 4
+    a = min((s for s, e, p, c in notes), default=0) // tpb  # the SONG's start, not the lead's entry —
+    #   else featuring a late-entering lead (an atmospheric harp) would lop off the whole intro.
     end = max(e for s, e, p, c in notes) // tpb + 1
     nb = max(end - a, 1)
     split = bas is None
-    lead_lo = 55 if split else 48
     bsrc = voc if split else bas
+    # capture the lead channel's OWN register (else a low-register lead, e.g. a synth-bass pulse the
+    # detector mistook for the tune, falls entirely below a hardcoded floor → an EMPTY lead).
+    if split:
+        lead_lo, lead_hi, bass_hi = 55, 104, 54
+    else:
+        pr = [p for s, e, p, c in notes if c == voc]
+        lead_lo, lead_hi = (min(pr), max(pr)) if pr else (48, 100)
+        bass_hi = 60
     pad = lambda arr: [(arr[i] if i < len(arr) else ". . . .  . . . .  . . . .  . . . .") for i in range(nb)]
-    LEAD = pad(bars_of(grid(notes, div, voc, "lead", lead_lo, 100))[a:end])
-    BASS = pad(bars_of(grid(notes, div, bsrc, "bass", 21, lead_lo - 1))[a:end])
+    LEAD = pad(bars_of(grid(notes, div, voc, "lead", lead_lo, lead_hi))[a:end])
+    BASS = pad(bars_of(grid(notes, div, bsrc, "bass", 21, bass_hi))[a:end])
     HARM = pad(bars_of(grid(notes, div, fil, "lead", 45, 100))[a:end]) if fil is not None else None
     DR = drum_bar(notes, div, a + 8, a + 16)  # a representative groove (1-bar loop)
     CH = []; prev = None
@@ -323,10 +333,15 @@ def build_score(path, out, args):
     # No separate bass channel (a single-channel piano piece) → SPLIT the lead channel by pitch: the
     # left hand (low notes) becomes the bass, the right hand (high) stays the lead.
     split = bas is None
-    lead_lo = 55 if split else 48
     bsrc = voc if split else bas
-    VOC = bars_of(grid(notes, div, voc, "lead", lead_lo, 96))[a:a + 16]
-    BAS = bars_of(grid(notes, div, bsrc, "bass", 24, lead_lo - 1))[a:a + 16]
+    if split:
+        lead_lo, lead_hi, bass_hi = 55, 96, 54
+    else:  # capture the lead channel's own register (never an empty lead)
+        pr = [p for s, e, p, c in notes if c == voc]
+        lead_lo, lead_hi = (min(pr), max(pr)) if pr else (48, 96)
+        bass_hi = 60
+    VOC = bars_of(grid(notes, div, voc, "lead", lead_lo, lead_hi))[a:a + 16]
+    BAS = bars_of(grid(notes, div, bsrc, "bass", 24, bass_hi))[a:a + 16]
     TIM = bars_of(grid(notes, div, fil, "lead", 40, 96))[a:a + 16] if fil is not None else None
     while len(VOC) < 16: VOC.append(". . . .  . . . .  . . . .  . . . .")
     while len(BAS) < 16: BAS.append(". . . .  . . . .  . . . .  . . . .")
