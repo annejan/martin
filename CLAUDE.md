@@ -66,7 +66,7 @@ src/
 assets/      shipped art, fonts, shaders (bg.wgsl/post.wgsl), score.txt, .show examples
 productions/ one folder per demo (intro, camping, austin/nyc/cities, …) — theme-specific content
 parts/       reusable, tested building blocks (sequences/signatures)
-pipeline/    CUDA-free splat-creation + tooling scripts (python/bash), incl. show_layout.py, blender_bridge.py
+pipeline/    CUDA-free splat-creation + tooling scripts (python/bash), incl. show_layout.py, blender_bridge.py, blender_cities_bridge.py (Blender→[camera] waypoint authoring)
 build.rs     synthesizes the demo's gitignored .ply at build time; bundles assets for --features bundle
 ```
 
