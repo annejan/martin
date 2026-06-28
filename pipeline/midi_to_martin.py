@@ -136,9 +136,11 @@ def detect_roles(meta):
 
     vocal = max(mel, key=score_vocal) if mel else None
     bass = max([c for c in mel if c != vocal], key=score_bass, default=None)
-    # fill = the most melodic remaining channel (a riff to answer the vocal's holes)
+    # fill = the busiest remaining MELODIC riff — but not a percussion patch (GM 112-119: agogo/
+    # woodblock/taiko…) or an extreme-high ostinato, which read as clang, not a counter-melody.
     rest = [c for c in mel if c not in (vocal, bass)]
-    fill = max(rest, key=lambda c: meta[c]["n"], default=None)
+    musical = [c for c in rest if not 112 <= (meta[c]["program"] or 0) <= 119 and meta[c]["avg"] < 88]
+    fill = max(musical or rest, key=lambda c: meta[c]["n"], default=None)
     return {"vocal": vocal, "bass": bass, "drums": drums, "fill": fill}
 
 
