@@ -1032,6 +1032,10 @@ show. The shipped example is **`assets/score.txt`**.
 ```
 bpm 140
 
+# OPTIONAL tempo automation (rubato): tempo CHANGES at bar boundaries; `bpm` is the bar-0 default.
+# Omit entirely for a constant tempo (then the score renders byte-identically to before).
+tempo @bar:8=96 @bar:16=132 @bar:24=72
+
 # chord progression, one per bar, cycling (a note + optional `m` = minor): drives bass + stab
 chords Am F C G
 
@@ -1066,6 +1070,13 @@ mids  intro 0.5  build 0.7  drop 0.9  breakdown 0.6  climax 1  outro 0.45
   written per phase like the drums.
 - **16 steps per bar** (16th notes); patterns you don't write are silent. A tie with no preceding note
   is just a rest; an untied note keeps its fixed length (so adding ties never changes existing tracks).
+- **`tempo` (rubato).** `bpm N` is the bar-0 tempo; an optional `tempo @bar:N=BPM @bar:M=BPM …` line
+  steps the tempo at those bars (piecewise-constant per bar). It makes the grid breathe — a slow bar
+  is literally longer in seconds — so a rubato piece (e.g. a Debussy transcription) flows instead of
+  sounding metronomic. **Both** the synth and every `@@anchor`/section time follow the map, so the
+  visuals stay sample-locked through a tempo change. Leave the line out for a constant tempo (then the
+  output is byte-identical to a single-`bpm` score). The MIDI converter
+  (`pipeline/midi_to_martin.py --faithful`) emits this line automatically from a MIDI's tempo events.
 - A section's `<bars>` is its total length; `<phase-bars>` is how the kit pattern changes *within*
   it (plus a trailing fill bar when `fill`). Section **names** are what `@@anchor` matches — so a
   custom score with custom section names re-anchors the show to them.

@@ -215,11 +215,11 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
         let root = score.chord_at(kt).root;
         let drumsw = dsw(kt);
         let basssw = isw(kt, "basssw");
-        let kamp = 0.92 * (0.9 + 0.1 * vel(kt, beat, 0));
+        let kamp = 0.92 * (0.9 + 0.1 * vel(kt, score.beat_at(kt), 0));
         ev(&mut lanes[L_DRUMS], kt, move |_b, k| {
             kick_pick(drumsw, k, kt, root, kamp)
         });
-        let v = vel(kt, beat, 0x88);
+        let v = vel(kt, score.beat_at(kt), 0x88);
         let bf = bass_freq(score.chord_at(kt).root);
         ev(&mut lanes[L_DRUMS], kt, move |b, _| {
             render_into(b, kt, 0.25, 0.18 * v, 0.0, bass_pick(basssw, bf, v))
@@ -266,10 +266,10 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
             1 => 0.15,
             _ => -0.05,
         };
-        let gt = groove(t, beat, 0x55, 0.003, 0.004);
+        let gt = groove(t, score.beat_at(t), 0x55, 0.003, 0.004);
         let drumsw = dsw(gt);
         let gated = score.param_at(gt, "gatesnare", 0.0) > 0.5; // 80s gated-reverb snare per section
-        let amp = snare_amp * vel(t, beat, 0x55);
+        let amp = snare_amp * vel(t, score.beat_at(t), 0x55);
         ev(&mut lanes[L_DRUMS], gt, move |b, _| {
             if gated {
                 render_into(b, gt, 0.5, amp, pan, snare_gated())
@@ -280,17 +280,17 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     }
     for (i, t) in score.hits(Inst::Hat).into_iter().enumerate() {
         let pan = if i % 2 == 0 { 0.65 } else { -0.65 };
-        let gt = groove(t, beat, 0x77, 0.006, 0.0);
+        let gt = groove(t, score.beat_at(t), 0x77, 0.006, 0.0);
         let drumsw = dsw(gt);
-        let amp = hats_amp * vel(t, beat, 0x77);
+        let amp = hats_amp * vel(t, score.beat_at(t), 0x77);
         ev(&mut lanes[L_DRUMS], gt, move |b, _| {
             render_into(b, gt, 0.12, amp, pan, hat_pick(drumsw))
         });
     }
     for t in score.hits(Inst::Stab) {
         let m = score.levels(t).mids;
-        let gt = groove(t, beat, 0x6E, 0.004, 0.0);
-        let amp = (0.10 + 0.10 * m) * vel(t, beat, 0x6E);
+        let gt = groove(t, score.beat_at(t), 0x6E, 0.004, 0.0);
+        let amp = (0.10 + 0.10 * m) * vel(t, score.beat_at(t), 0x6E);
         let tri = score.chord_at(t).triad();
         let stabv = stab_pick(isw(gt, "stabsw"));
         ev(&mut lanes[L_DRUMS], gt, move |b, _| {
@@ -393,16 +393,20 @@ pub(super) fn collect_events(score: &Score) -> [Vec<Event>; LANES] {
     }
 
     // ---- PAD lane: one sustained chord per bar ----
-    let nbars = (score.demo_len() / bar).ceil() as usize;
-    for b in 0..nbars {
-        let t = b as f32 * bar;
+    // Walk by BAR INDEX (not t += bar) so the pad onset + its sustain length follow the tempo map:
+    // under rubato a slow bar gets a longer-ringing chord and the chord-change lands with the melody.
+    // `bar`/`6.0*bar`/`2.0*bar` here stay NOMINAL (the intro-swell shaping is a coarse ramp, tempo-
+    // insensitive). Constant tempo → bar_start_secs(b) == b*bar, bar_len_at == bar → byte-identical.
+    for b in 0..score.total_bars() {
+        let t = score.bar_start_secs(b);
+        let barlen = score.bar_len_at(t);
         let m = score.levels(t).mids;
         let intro_pad = ((t - 6.0 * bar) / (2.0 * bar)).clamp(0.0, 1.0);
         let amp = (0.06 + 0.10 * m) * intro_pad;
         let pan_spread = 0.5 + 0.25 * (t * 0.4 / bar * std::f32::consts::TAU).sin();
         let tri = score.chord_at(t).triad();
         ev(&mut lanes[L_PAD], t, move |bd, _| {
-            chord_spread(bd, t, bar, amp, pan_spread, tri, pad)
+            chord_spread(bd, t, barlen, amp, pan_spread, tri, pad)
         });
     }
 

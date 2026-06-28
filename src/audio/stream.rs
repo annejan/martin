@@ -230,7 +230,7 @@ impl SubAtmo {
                 si
             } else {
                 let s = &score.sections[self.section];
-                if t >= (s.start_bar + s.bars) as f32 * score.bar() {
+                if t >= score.bar_start_secs(s.start_bar + s.bars) {
                     let si = score.section_index_at(t);
                     self.section = si;
                     si
@@ -348,7 +348,7 @@ impl MasterChain {
                 si
             } else {
                 let s = &score.sections[self.section];
-                if t >= (s.start_bar + s.bars) as f32 * score.bar() {
+                if t >= score.bar_start_secs(s.start_bar + s.bars) {
                     let si = score.section_index_at(t);
                     self.section = si;
                     si

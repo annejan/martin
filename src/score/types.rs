@@ -32,6 +32,16 @@ impl Ramp {
     }
 }
 
+/// A tempo change: from bar `bar` onward (until the next point), the track runs at `bpm`. The list on
+/// `Score` is sorted ascending by bar; an EMPTY list means constant tempo (the `bpm` line alone) —
+/// then every timeline conversion is byte-identical to a single-tempo score. Lets rubato pieces
+/// (Clair de Lune / Chanson Triste) breathe: their MIDI encodes the rubato as dense set-tempo steps.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TempoPoint {
+    pub bar: u32,
+    pub bpm: f32,
+}
+
 /// One instrument's pattern within a section: a 16-step grid per phase, plus the fill-bar grid.
 #[derive(Clone, Default)]
 pub struct Lane {

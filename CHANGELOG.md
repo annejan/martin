@@ -46,6 +46,17 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Added
 
+- **Tempo automation (rubato) in the score DSL** — an optional `tempo @bar:N=BPM @bar:M=BPM …` line
+  steps the tempo at bar boundaries (piecewise-constant per bar); `bpm N` stays the bar-0 default.
+  The slot↔seconds map is now piecewise-per-bar (a cumulative `bar_secs` prefix table behind two
+  funnels, `slot_to_secs`/`secs_to_slot`), so a slow bar is literally longer in seconds and a rubato
+  piece (e.g. a Debussy transcription) breathes instead of sounding metronomic. **Both** the synth
+  (notes, pad, drum accents) and every `@@anchor`/section time follow the map, so visuals stay
+  sample-locked through a tempo change. A score with **no** `tempo` line renders **byte-identical** to
+  before (the funnels keep a constant-tempo fast path). `pipeline/midi_to_martin.py --faithful` now
+  emits the line automatically from a MIDI's set-tempo events (`--no-tempo-map`/`--bpm` force one
+  steady tempo). Documented in `USAGE.md`; deferred (constant-tempo today, documented): tempo-syncing
+  the procedural dance layers (wall/shimmer/stab/build walks) and a true intra-bar linear ramp.
 - **Four tropical splatgen shapes: `palm`, `parasol`, `cocktail`, `crab`** — procedural beach props for
   the summer demo (`splatgen palm assets/palm.ply`, or `splat:palm.ply` in a show). A leaning palm with
   drooping fronds + coconuts, a red/white striped beach parasol, a martini cocktail (glass + liquid +

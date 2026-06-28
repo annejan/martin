@@ -48,6 +48,7 @@ def parse(path):
     assert d[:4] == b"MThd", "not a MIDI"
     _fmt, ntrk, div = struct.unpack(">HHH", d[8:14])
     tempo = 500000
+    tempos = []  # (abs_tick, usec_per_quarter) — the rubato curve, for the tempo map
     notes = []
     chan_name, chan_prog = {}, {}
     pos = 14
@@ -69,6 +70,7 @@ def parse(path):
                     tname = body[i:i + mlen].decode("latin-1", "replace").strip()
                 elif meta == 0x51:
                     tempo = int.from_bytes(body[i:i + 3], "big")
+                    tempos.append((t, tempo))
                 i += mlen
             elif status in (0xF0, 0xF7):
                 mlen, i = _varlen(body, i); i += mlen
@@ -102,7 +104,34 @@ def parse(path):
         ps = [p for s, e, p, ch in notes if ch == c]
         meta[c] = {"name": chan_name.get(c, ""), "program": chan_prog.get(c),
                    "n": len(ps), "lo": min(ps), "hi": max(ps), "avg": sum(ps) // len(ps)}
-    return div, bpm, notes, meta
+    return div, bpm, notes, meta, tempos
+
+
+def tempo_curve(tempos, div, a, end, fallback_bpm):
+    """From the MIDI's set-tempo events (the rubato curve) → (base_bpm, "tempo @bar:N=BPM ..." line).
+    Bars are made OUTPUT-relative: the score's bar 0 is the song's first bar `a`, so a MIDI event at bar
+    B emits `@bar:(B-a)`. The base is the tempo in effect AT the start (the last event with bar <= a).
+    First-event-per-bar wins; a step that doesn't change the rounded BPM is dropped."""
+    if not tempos:
+        return fallback_bpm, ""
+    tpb = div * 4
+    per_bar = {}  # midi bar -> bpm (first event in the bar wins)
+    for tick, usec in tempos:
+        bar = tick // tpb
+        per_bar.setdefault(bar, max(1, round(60_000_000 / usec)))
+    base = fallback_bpm
+    for bar in sorted(per_bar):  # tempo in effect at the song's start = last event at/before bar a
+        if bar <= a:
+            base = per_bar[bar]
+    pts, last = [], base
+    for bar in sorted(per_bar):
+        if not a < bar < end:  # only steps inside the rendered span; bar a is the base
+            continue
+        if per_bar[bar] != last:
+            pts.append((bar - a, per_bar[bar]))
+            last = per_bar[bar]
+    line = "tempo " + " ".join(f"@bar:{b}={v}" for b, v in pts) if pts else ""
+    return base, line
 
 
 def detect_roles(meta):
@@ -257,7 +286,7 @@ def empty_bar(b):
     return all(t in (".", "-") for t in b.split())
 
 
-def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a):
+def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a, tempos=None, suppress=False):
     """A reasonably TRUE rendition: the song played THROUGH once at its own tempo with all the main
     parts — lead + bass + a harmony voice + the real drum groove — in ONE long section, instead of a
     looped 16-bar dance remix with a four-on-the-floor laid over it. Natural mix (no heavy pump)."""
@@ -266,6 +295,8 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a):
     #   else featuring a late-entering lead (an atmospheric harp) would lop off the whole intro.
     end = max(e for s, e, p, c in notes) // tpb + 1
     nb = max(end - a, 1)
+    # the rubato tempo map (output-bar-relative). Suppressed by --bpm / --no-tempo-map / a misread tempo.
+    bpm, tline = (bpm, "") if suppress else tempo_curve(tempos, div, a, end, bpm)
     split = bas is None
     bsrc = voc if split else bas
     # capture the lead channel's OWN register (else a low-register lead, e.g. a synth-bass pulse the
@@ -287,6 +318,7 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a):
     L = [f'# {args.title or "song"} — FAITHFUL rendition (midi_to_martin.py --faithful): the song through',
          "# once at its own tempo — lead + bass + harmony + the real drum groove, natural mix (no pump).",
          f"bpm {bpm}",
+         *( [tline] if tline else [] ),
          "chords " + " ".join(CH),
          style_set(args, True),
          "", f"section song {nb} {nb}", ""]
@@ -303,7 +335,7 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a):
 
 
 def build_score(path, out, args):
-    div, bpm, notes, meta = parse(path)
+    div, bpm, notes, meta, tempos = parse(path)
     roles = detect_roles(meta)
     for k in ("vocal", "bass", "fill"):
         v = getattr(args, k)
@@ -322,14 +354,17 @@ def build_score(path, out, args):
                   f"pitch {m['lo']}-{m['hi']:<3} {('<-- ' + tag.upper()) if tag else ''}")
         return
     bpm = args.bpm or bpm
+    forced = args.bpm is not None  # a forced single tempo suppresses the rubato map
     if not 40 <= bpm <= 250:  # a misread tempo meta (the sonata read 25) → a sane default
         print(f"  (tempo {bpm} looks wrong — using 120; pass --bpm to set it)", file=sys.stderr)
         bpm = 120
+        forced = True
+    suppress_tempo = forced or args.no_tempo_map  # a forced/misread tempo → one steady tempo, no map
     voc, bas, fil = roles["vocal"], roles["bass"], roles["fill"]
     tpb = div * 4
     a = min((s for s, e, p, c in notes if c == voc), default=0) // tpb  # vocal's first bar
     if args.faithful:
-        return _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a)
+        return _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a, tempos, suppress_tempo)
     # No separate bass channel (a single-channel piano piece) → SPLIT the lead channel by pitch: the
     # left hand (low notes) becomes the bass, the right hand (high) stays the lead.
     split = bas is None
@@ -416,7 +451,9 @@ def main():
     ap.add_argument("--vocal", type=int, help="force the vocal channel (1-based)")
     ap.add_argument("--bass", type=int, help="force the bass channel (1-based)")
     ap.add_argument("--fill", type=int, help="force the fill/riff channel (1-based)")
-    ap.add_argument("--bpm", type=int, help="override the tempo")
+    ap.add_argument("--bpm", type=int, help="override the tempo (forces one steady tempo, no rubato map)")
+    ap.add_argument("--no-tempo-map", action="store_true",
+                    help="ignore the MIDI's tempo changes (render at one steady tempo)")
     ap.add_argument("--arrange", default="song", choices=list(ARRANGES), help="section structure")
     ap.add_argument("--style", default="clean", choices=list(STYLES),
                     help="voice/mix palette (clean|synthpop|dance|rock|orchestral)")

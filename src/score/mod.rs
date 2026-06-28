@@ -17,7 +17,7 @@ mod parse;
 mod types;
 mod validate;
 
-pub use types::{Chord, Inst, Levels, NoteLane, Ramp, Section};
+pub use types::{Chord, Inst, Levels, NoteLane, Ramp, Section, TempoPoint};
 
 const SLOTS_PER_BAR: i64 = 16;
 const BEATS_PER_BAR: f32 = 4.0;
@@ -43,10 +43,15 @@ pub const SECTION_FADE: f32 = 0.12;
 /// A whole score: tempo + an ordered list of sections (which carry their own patterns + dynamics).
 #[derive(Clone)]
 pub struct Score {
-    pub bpm: f32,
-    pub chords: Vec<Chord>, // per-bar chord progression (cycles); drives bass + stab
+    pub bpm: f32,               // base / bar-0 tempo (the `bpm N` line)
+    pub tempo: Vec<TempoPoint>, // tempo changes (sorted by bar); EMPTY = constant tempo (= today)
+    pub chords: Vec<Chord>,     // per-bar chord progression (cycles); drives bass + stab
     pub sections: Vec<Section>,
     total_bars: u32,
+    /// Cumulative seconds at the START of each bar, length `total_bars + 1` — the prefix sum that makes
+    /// the slot↔seconds map piecewise-constant-per-bar. With an empty `tempo` it is exactly
+    /// `bar_secs[b] == b * bar()`, so every conversion stays byte-identical to a single-tempo score.
+    bar_secs: Vec<f32>,
     /// Free-form mix/fx knobs from `set <key>=<value>` lines — the synth reads these (with built-in
     /// defaults) so the SOUND can be tuned by editing the score file (no recompile), not the engine.
     params: std::collections::HashMap<String, f32>,
@@ -55,11 +60,36 @@ pub struct Score {
 impl Score {
     /// Lay out the sections (cumulative `start_bar`, total length) — the single place section
     /// timing is derived, so the file and the built-in agree.
-    fn new(bpm: f32, chords: Vec<Chord>, mut sections: Vec<Section>) -> Self {
+    fn new(
+        bpm: f32,
+        tempo: Vec<TempoPoint>,
+        chords: Vec<Chord>,
+        mut sections: Vec<Section>,
+    ) -> Self {
         let mut bar = 0;
         for s in &mut sections {
             s.start_bar = bar;
             bar += s.bars;
+        }
+        let total_bars = bar;
+        // Prefix-sum the per-bar seconds: each bar runs at the latest tempo point with `point.bar <= b`
+        // (default `bpm`). Piecewise-constant per bar → the cumulative table is a simple running sum, and
+        // the slot↔seconds inverse is an exact per-bar binary-search. Empty `tempo` ⇒ every bar is the
+        // same length ⇒ `bar_secs[b] == b * 4 * (60/bpm)` ⇒ byte-identical to before.
+        let mut bar_secs = Vec::with_capacity(total_bars as usize + 1);
+        let mut acc = 0.0f32;
+        let mut cur_bpm = bpm;
+        let mut ti = 0;
+        for b in 0..=total_bars {
+            bar_secs.push(acc);
+            if b == total_bars {
+                break;
+            }
+            while ti < tempo.len() && tempo[ti].bar <= b {
+                cur_bpm = tempo[ti].bpm;
+                ti += 1;
+            }
+            acc += BEATS_PER_BAR * (60.0 / cur_bpm); // one bar at the current tempo
         }
         // a score with no `chords` line still needs harmony — default to a single A-minor.
         let chords = if chords.is_empty() {
@@ -72,9 +102,11 @@ impl Score {
         };
         Self {
             bpm,
+            tempo,
             chords,
             sections,
-            total_bars: bar,
+            total_bars,
+            bar_secs,
             params: std::collections::HashMap::new(),
         }
     }
@@ -107,14 +139,91 @@ impl Score {
     }
 
     // --- grid ---------------------------------------------------------------------------------
+    // `beat()`/`bar()` are the NOMINAL (bar-0 / base) lengths — used where one representative value is
+    // wanted (fixed delay times, default travel durations). For position-correct timing under tempo
+    // automation use `beat_at(t)` / `bar_len_at(t)` / `bar_start_secs(b)`, and convert slot↔seconds
+    // ONLY through `slot_to_secs` / `secs_to_slot` (the two funnels). With an empty `tempo` all of these
+    // collapse to the constant-tempo formulas, so existing scores render byte-identically.
     pub fn beat(&self) -> f32 {
         60.0 / self.bpm
     }
     pub fn bar(&self) -> f32 {
         BEATS_PER_BAR * self.beat()
     }
+    // Every funnel below has a CONSTANT-TEMPO fast path (`tempo.is_empty()`) that reproduces the exact
+    // old single-multiply formula — so a score with no `tempo` line is byte-for-byte identical (the
+    // accumulated table would otherwise differ by a ULP and break the round-trip / anchor asserts).
+    /// Nominal 16th-slot length (constant-tempo / bar-0).
+    #[inline]
     fn slot_len(&self) -> f32 {
         self.beat() / 4.0
+    }
+    /// Seconds spanned by one 16th-slot inside `bar` (the bar's length / 16).
+    #[inline]
+    fn slot_len_of_bar(&self, bar: u32) -> f32 {
+        let b = bar.min(self.total_bars.saturating_sub(1)) as usize;
+        (self.bar_secs[b + 1] - self.bar_secs[b]) / SLOTS_PER_BAR as f32
+    }
+    /// Seconds at the start of bar `bar` (clamped to the track).
+    pub fn bar_start_secs(&self, bar: u32) -> f32 {
+        let bar = (bar as usize).min(self.total_bars as usize);
+        if self.tempo.is_empty() {
+            bar as f32 * self.bar()
+        } else {
+            self.bar_secs[bar]
+        }
+    }
+    /// Local beat length (s) at time `t` — the bar-at-`t`'s length / 4.
+    pub fn beat_at(&self, t: f32) -> f32 {
+        if self.tempo.is_empty() {
+            self.beat()
+        } else {
+            self.slot_len_of_bar(self.bar_idx_at(t)) * 4.0
+        }
+    }
+    /// Local bar length (s) at time `t`.
+    pub fn bar_len_at(&self, t: f32) -> f32 {
+        if self.tempo.is_empty() {
+            self.bar()
+        } else {
+            let b = (self.bar_idx_at(t) as usize).min(self.total_bars as usize);
+            self.bar_secs[(b + 1).min(self.total_bars as usize)] - self.bar_secs[b]
+        }
+    }
+    /// FORWARD funnel: an absolute 16th-slot index → seconds. Fractional `slot` lerps inside its bar.
+    pub(crate) fn slot_to_secs(&self, slot: f32) -> f32 {
+        if slot <= 0.0 {
+            return 0.0;
+        }
+        if self.tempo.is_empty() {
+            return slot * self.slot_len();
+        }
+        let bar = (slot as i64 / SLOTS_PER_BAR).min(self.total_bars as i64) as u32;
+        let rem = slot - (bar as i64 * SLOTS_PER_BAR) as f32;
+        self.bar_start_secs(bar) + rem * self.slot_len_of_bar(bar)
+    }
+    /// INVERSE funnel: seconds → absolute 16th-slot index (floored). Keeps the forward epsilon nudge
+    /// (per the local slot length) so an exact boundary time floors to the right slot, not one early.
+    fn secs_to_slot(&self, t: f32) -> i64 {
+        if self.tempo.is_empty() {
+            let sl = self.slot_len();
+            return ((t + sl * 1e-3) / sl).floor() as i64;
+        }
+        let bar = match self
+            .bar_secs
+            .binary_search_by(|x| x.partial_cmp(&t).unwrap_or(std::cmp::Ordering::Less))
+        {
+            Ok(b) => b.min(self.total_bars.saturating_sub(1) as usize),
+            Err(0) => 0,
+            Err(b) => (b - 1).min(self.total_bars.saturating_sub(1) as usize),
+        } as u32;
+        let sl = self.slot_len_of_bar(bar);
+        let into = ((t - self.bar_start_secs(bar) + sl * 1e-3) / sl).floor() as i64;
+        bar as i64 * SLOTS_PER_BAR + into.clamp(0, SLOTS_PER_BAR - 1)
+    }
+    /// Total bar count (the playable timeline length in bars).
+    pub fn total_bars(&self) -> u32 {
+        self.total_bars
     }
     pub fn demo_len(&self) -> f32 {
         // CAP the reported length: the streaming synth sizes its up-front buffers from `demo_len()*sr`
@@ -123,15 +232,40 @@ impl Score {
         // track is anywhere near 10 min — clamp here so the allocation is bounded; `score::validate`
         // separately WARNS (fatal under strict) when a score is this long. (The recorder has its own
         // 1800 s clamp; this is the audio-buffer backstop.)
-        (self.total_bars as f32 * self.bar()).min(MAX_DEMO_SECS)
+        let total = if self.tempo.is_empty() {
+            self.total_bars as f32 * self.bar()
+        } else {
+            self.bar_secs[self.total_bars as usize]
+        };
+        total.min(MAX_DEMO_SECS)
     }
 
     fn abs_slot(&self, t: f32) -> i64 {
-        let sl = self.slot_len();
-        ((t + sl * 1e-3) / sl).floor() as i64
+        self.secs_to_slot(t)
     }
     fn bar_idx_at(&self, t: f32) -> u32 {
         (self.abs_slot(t).max(0) / SLOTS_PER_BAR) as u32
+    }
+
+    /// Structural lint of the tempo map (alongside `validate`'s section lints): a point past the
+    /// score's length never fires, and a crawling tempo can balloon `demo_len` past the buffer clamp.
+    pub(crate) fn tempo_warnings(&self) -> Vec<String> {
+        let mut w = Vec::new();
+        for p in &self.tempo {
+            if p.bar >= self.total_bars {
+                w.push(format!(
+                    "tempo @bar:{} is past the score's {} bars — it never takes effect",
+                    p.bar, self.total_bars
+                ));
+            }
+            if p.bpm < 20.0 {
+                w.push(format!(
+                    "tempo @bar:{} = {} BPM is extremely slow — playback may hit the {:.0}s cap",
+                    p.bar, p.bpm, MAX_DEMO_SECS
+                ));
+            }
+        }
+        w
     }
 
     // --- sections -----------------------------------------------------------------------------
@@ -148,7 +282,7 @@ impl Score {
         idx
     }
     pub fn section_start_secs(&self, idx: usize) -> f32 {
-        self.sections[idx].start_bar as f32 * self.bar()
+        self.bar_start_secs(self.sections[idx].start_bar)
     }
 
     // --- patterns -----------------------------------------------------------------------------
@@ -162,11 +296,10 @@ impl Score {
     /// Every hit time (s) for `inst` across the whole track, in order — the synth builds a voice at
     /// each. Forward enumeration: walk every 16th-note slot and keep the ones that fire.
     pub fn hits(&self, inst: Inst) -> Vec<f32> {
-        let sl = self.slot_len();
         let slots = self.total_bars as i64 * SLOTS_PER_BAR;
         (0..slots)
             .filter_map(|s| {
-                let t = s as f32 * sl;
+                let t = self.slot_to_secs(s as f32);
                 self.lane_hits(inst, t)[(s % SLOTS_PER_BAR) as usize].then_some(t)
             })
             .collect()
@@ -214,24 +347,26 @@ impl Score {
     /// tie slots after the onset, so the synth can hold the note instead of the fixed slot length. A
     /// note with no ties has `hold == 0.0` → byte-identical to before (every existing score uses `.`).
     fn note_line(&self, pick: fn(&Section) -> &NoteLane) -> Vec<(f32, f32, f32)> {
-        let sl = self.slot_len();
         let slots = self.total_bars as i64 * SLOTS_PER_BAR;
-        let val = |s: i64| self.note_grid(s as f32 * sl, pick)[(s % SLOTS_PER_BAR) as usize];
+        let secs = |s: i64| self.slot_to_secs(s as f32);
+        let val = |s: i64| self.note_grid(secs(s), pick)[(s % SLOTS_PER_BAR) as usize];
         let mut out = Vec::new();
         for s in 0..slots {
             // emit on a real onset only; a tie (NaN) is consumed by the note before it, a rest skipped.
             if let Some(f) = val(s)
                 && !f.is_nan()
             {
-                let onset_sec = self.section_index_at(s as f32 * sl);
+                let onset_si = self.section_index_at(secs(s));
                 let mut hold = 0i64;
                 while s + 1 + hold < slots
                     && val(s + 1 + hold).is_some_and(|v| v.is_nan())
-                    && self.section_index_at((s + 1 + hold) as f32 * sl) == onset_sec
+                    && self.section_index_at(secs(s + 1 + hold)) == onset_si
                 {
                     hold += 1;
                 }
-                out.push((s as f32 * sl, f, hold as f32 * sl));
+                // hold = the tie span's seconds, SUMMED per slot (each spanned slot has its own length
+                // once tempo varies) — not `count * one_slot`. Constant tempo → identical.
+                out.push((secs(s), f, secs(s + 1 + hold) - secs(s + 1)));
             }
         }
         out
@@ -266,7 +401,8 @@ impl Score {
         pick: &F,
     ) -> f32 {
         let s = &self.sections[si];
-        let dur = (s.bars as f32 * self.bar()).max(1e-3);
+        let dur = (self.bar_start_secs(s.start_bar + s.bars) - self.bar_start_secs(s.start_bar))
+            .max(1e-3);
         let p = ((t - self.section_start_secs(si)) / dur).clamp(0.0, 1.0);
         pick(s).at(p)
     }
@@ -339,19 +475,35 @@ impl Score {
                 .iter()
                 .position(|x| x.name == *name)
                 .map(|i| self.section_start_secs(i)),
-            AnchorKind::Bar(b) => Some(b * self.bar()),
-            AnchorKind::Beat(b) => Some(b * self.beat()),
+            // bar/beat positions go through the funnel so an anchor lands at the right WALL-CLOCK time
+            // under tempo automation (a beat = 4 slots, a bar = 16). Constant tempo → `b*bar()`/`b*beat()`.
+            AnchorKind::Bar(b) => Some(self.slot_to_secs(b * SLOTS_PER_BAR as f32)),
+            AnchorKind::Beat(b) => Some(self.slot_to_secs(b * 4.0)),
             AnchorKind::Seconds(s) => Some(*s),
-            AnchorKind::Offset(base, sign, amount, unit) => {
-                let off = sign
-                    * amount
-                    * match unit {
-                        OffsetUnit::Bar => self.bar(),
-                        OffsetUnit::Beat => self.beat(),
-                        OffsetUnit::Seconds => 1.0,
-                    };
-                self.cue(base).map(|b| b + off)
-            }
+            AnchorKind::Offset(base, sign, amount, unit) => self.cue(base).map(|b| {
+                // constant tempo → the exact old formula (`base + amount * bar()/beat()`). Under tempo
+                // automation a musical offset is measured in SLOTS at the base's location's tempo and
+                // mapped back, so `@@drop+2bar` means 2 musical bars at the drop's tempo; raw-seconds
+                // offsets are always wall-clock (never warped).
+                if self.tempo.is_empty() {
+                    return b + sign
+                        * amount
+                        * match unit {
+                            OffsetUnit::Bar => self.bar(),
+                            OffsetUnit::Beat => self.beat(),
+                            OffsetUnit::Seconds => 1.0,
+                        };
+                }
+                match unit {
+                    OffsetUnit::Seconds => b + sign * amount,
+                    OffsetUnit::Beat => {
+                        self.slot_to_secs(self.secs_to_slot(b) as f32 + sign * amount * 4.0)
+                    }
+                    OffsetUnit::Bar => self.slot_to_secs(
+                        self.secs_to_slot(b) as f32 + sign * amount * SLOTS_PER_BAR as f32,
+                    ),
+                }
+            }),
         }
     }
 
@@ -494,6 +646,63 @@ mod tests {
             prev = sec.start_bar;
         }
         assert_eq!(s.section_start_secs(0), 0.0);
+    }
+
+    #[test]
+    fn empty_tempo_is_byte_identical_to_constant() {
+        // no `tempo` line ⇒ the funnels collapse to the constant-tempo formulas, exactly.
+        let s = Score::builtin();
+        assert!(s.tempo.is_empty());
+        let sl = s.beat() / 4.0;
+        for slot in [0, 1, 4, 16, 17, 64, 100] {
+            assert!((s.slot_to_secs(slot as f32) - slot as f32 * sl).abs() < 1e-3);
+            assert_eq!(s.secs_to_slot(s.slot_to_secs(slot as f32)), slot); // round-trips with the epsilon
+        }
+        // a constant-tempo score dumps NO tempo line (additivity invariant).
+        assert!(!s.to_dsl().contains("tempo "));
+    }
+
+    #[test]
+    fn tempo_map_warps_the_grid() {
+        // bars 0,1 @120 (bar = 2.0s); bars 2,3 @60 (bar = 4.0s).
+        let s = Score::from_str("bpm 120\ntempo @bar:2=60\nsection a 4 4\n").unwrap();
+        assert_eq!(s.tempo, vec![TempoPoint { bar: 2, bpm: 60.0 }]);
+        assert!((s.slot_to_secs(0.0) - 0.0).abs() < 1e-4);
+        assert!((s.slot_to_secs(16.0) - 2.0).abs() < 1e-4); // end of bar 0
+        assert!((s.slot_to_secs(32.0) - 4.0).abs() < 1e-4); // start of bar 2
+        assert!((s.slot_to_secs(48.0) - 8.0).abs() < 1e-4); // bar 2 is 4 s long
+        assert!((s.demo_len() - 12.0).abs() < 1e-4); // 2*2 + 2*4
+        assert_eq!(s.secs_to_slot(4.0), 32); // exact downbeat floors forward, not one slot early
+        // a beat in a slow bar is longer; an anchor lands at the warped wall-clock time.
+        assert!((s.anchor_seconds("bar:2").unwrap() - 4.0).abs() < 1e-4);
+        assert!((s.anchor_seconds("bar:3").unwrap() - 8.0).abs() < 1e-4);
+        assert!((s.beat_at(5.0) - 1.0).abs() < 1e-4); // 5 s is in bar 2 (@60) → beat = 1.0 s
+    }
+
+    #[test]
+    fn tempo_map_round_trips_through_dsl() {
+        let dsl = "bpm 120\ntempo @bar:2=60 @bar:4=90\nsection a 6 6\n";
+        let a = Score::from_str(dsl).unwrap();
+        let b = Score::from_str(&a.to_dsl()).unwrap();
+        assert_eq!(a.tempo, b.tempo);
+        assert_eq!(a.to_dsl(), b.to_dsl()); // idempotent
+        for slot in [0.0, 16.0, 32.0, 48.0, 64.0, 96.0] {
+            assert!((a.slot_to_secs(slot) - b.slot_to_secs(slot)).abs() < 1e-4);
+        }
+    }
+
+    #[test]
+    fn tempo_lints_and_errors() {
+        // a point past the score's length warns (never fires).
+        let s = Score::from_str("bpm 120\ntempo @bar:99=80\nsection a 4 4\n").unwrap();
+        assert!(
+            s.tempo_warnings()
+                .iter()
+                .any(|w| w.contains("never takes effect"))
+        );
+        // a bad tempo bpm is a hard parse error (matches the `bpm` guard).
+        assert!(Score::from_str("bpm 120\ntempo @bar:2=0\nsection a 4 4\n").is_err());
+        assert!(Score::from_str("bpm 120\ntempo 2=80\nsection a 4 4\n").is_err()); // missing `bar` prefix
     }
 
     #[test]
@@ -650,7 +859,7 @@ mod tests {
         assert_eq!(t, 0.0);
         assert!((f - note_freq("C4").unwrap()).abs() < 1.0, "C4, got {f}");
         assert!(
-            (hold - 2.0 * s.slot_len()).abs() < 1e-6,
+            (hold - 2.0 * (s.beat() / 4.0)).abs() < 1e-6,
             "2 tie slots held: {hold}"
         );
         // no ties → hold 0 (the render duration is then unchanged → byte-identical audio).

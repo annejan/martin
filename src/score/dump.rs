@@ -12,6 +12,20 @@ impl Score {
         let mut o = String::new();
         o.push_str("# martin score — tracker DSL. Edit + load with MARTIN_SCORE=<this file>.\n");
         o.push_str(&format!("bpm {}\n", fnum(self.bpm)));
+        // tempo map (rubato) — emitted only when present, so a constant-tempo score dumps byte-identical
+        // to before. Already sorted/deduped at parse, so the line is deterministic + idempotent.
+        if !self.tempo.is_empty() {
+            o.push_str("tempo ");
+            o.push_str(
+                &self
+                    .tempo
+                    .iter()
+                    .map(|p| format!("@bar:{}={}", p.bar, fnum(p.bpm)))
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            );
+            o.push('\n');
+        }
         o.push_str(&format!(
             "chords {}\n\n",
             self.chords

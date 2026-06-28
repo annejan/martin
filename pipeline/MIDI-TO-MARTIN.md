@@ -48,10 +48,10 @@ Tested clean on: Björk *Human Behaviour*, Haddaway *What Is Love*, R.E.M. *Shin
 
 ## Known limits — `martin`'s score model (the "pick up later" list)
 
-The score DSL is **fixed 4/4 with a 16-slot (16th-note) grid and ONE tempo (`bpm N`) per score**. The
-`16` is the array *type* of every note/drum bar (`[Option<f32>; 16]`, `[bool; 16]`) — wired through
-`src/score/{parse,types,dump,validate,mod}.rs` + `src/audio/render.rs` — and there is no tempo
-automation. Two songs we tried fall outside that box:
+The score DSL is **fixed 4/4 with a 16-slot (16th-note) grid**. The `16` is the array *type* of every
+note/drum bar (`[Option<f32>; 16]`, `[bool; 16]`) — wired through
+`src/score/{parse,types,dump,validate,mod}.rs` + `src/audio/render.rs`. Tempo automation is **done**
+(see below); odd meter/triplets remain the boundary.
 
 ### Golden Brown (The Stranglers) — odd meter + triplets
 - It alternates **3/4 ×3 then 4/4** (a 13/8 feel) and the signature harpsichord is in **triplets**.
@@ -64,17 +64,19 @@ automation. Two songs we tried fall outside that box:
   existing score (camping/intro/beach/… all parse via the `[;16]` arrays); gate it behind a per-score
   opt-in (default 16) so existing content stays byte-identical. **Risk: medium-high.**
 
-### Clair de Lune (Debussy) — rubato
-- An impressionist solo-piano piece that lives on **rubato** (freely pushing/pulling the tempo) and
-  expressive micro-timing.
-- martin plays it at one rigid tempo on the 16th grid → notes + harmony are faithful but it sounds
-  **metronomic**, not flowing.
-- **To fix (lighter than the above):** add **tempo automation** to the score — a `tempo @bar=…` /
-  per-section tempo (jantje does this with a `CMD_SETTEMPO` per bar). That alone would let the timing
-  breathe without touching the note grid. A "nicer Clair de Lune" also wants softer, more piano-like
-  lead/pad voices (the current `orchestral` palette is close but a touch synthetic). **Risk: low-ish**
-  (tempo automation is additive; the grid stays 16/4-4).
+### Clair de Lune (Debussy) — rubato — ✅ DONE (tempo automation)
+- An impressionist solo-piano piece that lives on **rubato** (freely pushing/pulling the tempo).
+- **Fixed:** the score DSL now has a `tempo @bar:N=BPM …` line (piecewise-constant per bar) and
+  `--faithful` emits it automatically from the MIDI's set-tempo events. The slot↔seconds map is
+  piecewise-per-bar, so the timing breathes — a slow bar is literally longer — and both the synth and
+  the `@@anchor`s follow it. A score with no `tempo` line is byte-identical to before. See `USAGE.md`
+  § The score file. (A "nicer Clair de Lune" still wants softer, more piano-like lead/pad voices than
+  the `orchestral` palette — that's a voice job, not a timing one.)
+- **Still deferred** (constant-tempo dance scores are unaffected today): the procedural dance layers
+  (wall/shimmer/stab/build walks in `render.rs`) use the nominal tempo, and tempo is bar-stepped (no
+  true intra-bar linear ramp). A rubato piece with those layers would desync them; classical
+  (notes + pad, no drums) is fully covered.
 
-**Verdict:** everything in **4/4 at a steady tempo** (most pop/dance/rock) renders well today. Odd
-meters/triplets and rubato are the boundary; tempo automation (for rubato) is the cheaper, lower-risk
-win to pick up first.
+**Verdict:** **4/4 at a steady tempo** (most pop/dance/rock) renders well, and **4/4 rubato** (classical
+transcriptions) now breathes via the tempo map. Odd meters / triplets (Golden Brown) are the remaining
+boundary — that's the deliberate grid refactor above.

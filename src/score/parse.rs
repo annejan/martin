@@ -2,7 +2,7 @@
 //! built-in) and `from_str` (the line-by-line parser), plus the small token parsers. The reverse
 //! direction (a `Score` back to text) is in `dump`; the structural lint in `validate`.
 
-use super::types::{Chord, Ramp, Section};
+use super::types::{Chord, Ramp, Section, TempoPoint};
 use super::validate::{strict_scores, validate};
 use super::{DEFAULT_SCORE, Score};
 
@@ -45,7 +45,8 @@ impl Score {
                 // phase the section lacks, an ignored melodic p1+). Warnings don't fail the load — the
                 // show still plays — UNLESS `MARTIN_SCORE_STRICT` is set (authoring / CI), then they're
                 // fatal so a broken score can't slip through.
-                let warnings = validate(&s.sections);
+                let mut warnings = validate(&s.sections);
+                warnings.extend(s.tempo_warnings());
                 for w in &warnings {
                     eprintln!("score: warning: {w}");
                 }
@@ -68,6 +69,7 @@ impl Score {
     /// Parse a tracker-DSL score (see `to_dsl` for the shape / `USAGE.md` for the grammar).
     pub fn from_str(text: &str) -> Result<Score, String> {
         let mut bpm = 140.0_f32;
+        let mut tempo: Vec<TempoPoint> = Vec::new();
         let mut chords: Vec<Chord> = Vec::new();
         let mut sections: Vec<Section> = Vec::new();
         let mut params: std::collections::HashMap<String, f32> = std::collections::HashMap::new();
@@ -208,6 +210,33 @@ impl Score {
                         return Err(format!("line {ln}: bpm must be > 0 (got {bpm})"));
                     }
                 }
+                // `tempo @bar:8=96 @bar:16=132 ...` — tempo CHANGES at bar boundaries (rubato). `bpm`
+                // stays the bar-0 default; each pair steps the tempo from that bar on. Sorted/deduped
+                // below; absent ⇒ constant tempo (byte-identical to a plain `bpm N` score).
+                "tempo" => {
+                    for tok in it {
+                        let (bar_tok, bpm_tok) = tok.split_once('=').ok_or_else(|| {
+                            format!("line {ln}: tempo needs @bar:N=BPM, got `{tok}`")
+                        })?;
+                        let bar: u32 = bar_tok
+                            .trim_start_matches('@')
+                            .strip_prefix("bar")
+                            .map(|s| s.trim_start_matches(':'))
+                            .and_then(|s| s.parse().ok())
+                            .ok_or_else(|| {
+                                format!("line {ln}: tempo position must be @bar:N, got `{bar_tok}`")
+                            })?;
+                        let b = pf(bpm_tok).ok_or_else(|| {
+                            format!("line {ln}: tempo bpm not a number `{bpm_tok}`")
+                        })?;
+                        if b <= 0.0 || b.is_nan() || b > 1000.0 {
+                            return Err(format!(
+                                "line {ln}: tempo bpm must be in (0, 1000] (got {b})"
+                            ));
+                        }
+                        tempo.push(TempoPoint { bar, bpm: b });
+                    }
+                }
                 "section" => {
                     let name = it
                         .next()
@@ -280,7 +309,10 @@ impl Score {
         if sections.is_empty() {
             return Err("no sections defined".into());
         }
-        let mut score = Score::new(bpm, chords, sections);
+        // sorted ascending by bar; first pair wins on a duplicate bar (the MIDI tool emits one per bar).
+        tempo.sort_by_key(|p| p.bar);
+        tempo.dedup_by_key(|p| p.bar);
+        let mut score = Score::new(bpm, tempo, chords, sections);
         score.params = params;
         Ok(score)
     }
