@@ -1,0 +1,324 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Anne Jan Brouwer <brouwer@annejan.com>
+# SPDX-License-Identifier: MIT
+"""MIDI → a complete, CLEAN martin score (the tracker DSL). One command turns a karaoke/GM song MIDI
+into a martin `.txt` score that sounds like the song instead of mush — the lessons learned from the
+jantje project (the user's MIDI→C64-SID arranger), applied to martin's own synth:
+
+  * LEAD = the channel LABELLED the vocal (track name `Melody`/`Vocal`/`CANTO` or a lead GM patch) —
+    NOT the highest-pitched one. A clean sustained lead reads as "the singing".
+  * BASS = the labelled/low bass channel, on a clean bass voice.
+  * DRUMS = the song's OWN groove, transcribed from the GM drum channel (kick/snare/hat) — not a
+    generic four-on-the-floor bonk laid on top.
+  * FILL = a signature riff channel dropped ONLY into the vocal's whole-bar rest holes (it answers her
+    phrases); never crammed over a busy vocal.
+  * per-bar chords from the bass so the pad/stab follow the harmony (no held-wrong-chord clash).
+  * minimal + clean: lead + bass + drums (+ the gap-fill). Nothing else stacked, no brutal saws.
+
+    pipeline/midi_to_martin.py song.mid out.txt                       # auto-detect everything
+    pipeline/midi_to_martin.py song.mid out.txt --vocal 4 --bass 2 --fill 3 --bpm 130 --arrange song
+
+Channels are 1-BASED on the CLI (matching jantje's midi_inspect display); internally 0-based.
+Run with no out.txt to just PRINT the detected role map (a dry-run, like midi_inspect + midi_arrange).
+"""
+import argparse
+import struct
+import sys
+
+NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+# GM program families that read as a lead/vocal vs a bass.
+LEAD_PROGS = set(range(64, 80)) | set(range(80, 88))  # reed/pipe(sax,flute) + synth-lead
+BASS_PROGS = set(range(32, 40))                        # acoustic/electric/synth bass
+VOCAL_WORDS = ("vocal", "melody", "canto", "lead", "voce", "sing", "vox", "voix")
+BASS_WORDS = ("bass", "bas")
+
+
+def _varlen(d, i):
+    v = 0
+    while True:
+        b = d[i]; i += 1; v = (v << 7) | (b & 0x7F)
+        if not b & 0x80:
+            return v, i
+
+
+def parse(path):
+    """Full parse → (div, bpm, notes, meta). notes = [(start,end,pitch,chan)]; meta maps each channel
+    to {name, program, n, lo, hi} (track name from FF 03 / FF 04, GM program from 0xC0)."""
+    d = open(path, "rb").read()
+    assert d[:4] == b"MThd", "not a MIDI"
+    _fmt, ntrk, div = struct.unpack(">HHH", d[8:14])
+    tempo = 500000
+    notes = []
+    chan_name, chan_prog = {}, {}
+    pos = 14
+    for _ in range(ntrk):
+        if d[pos:pos + 4] != b"MTrk":
+            break
+        ln = struct.unpack(">I", d[pos + 4:pos + 8])[0]
+        body = d[pos + 8:pos + 8 + ln]
+        i = 0; t = 0; status = 0; on = {}; tname = None; tchans = set()
+        while i < len(body):
+            dt, i = _varlen(body, i); t += dt
+            b = body[i]
+            if b & 0x80:
+                status = b; i += 1
+            ev, ch = status & 0xF0, status & 0x0F
+            if status == 0xFF:
+                meta = body[i]; i += 1; mlen, i = _varlen(body, i)
+                if meta in (0x03, 0x04) and tname is None:
+                    tname = body[i:i + mlen].decode("latin-1", "replace").strip()
+                elif meta == 0x51:
+                    tempo = int.from_bytes(body[i:i + 3], "big")
+                i += mlen
+            elif status in (0xF0, 0xF7):
+                mlen, i = _varlen(body, i); i += mlen
+            elif ev == 0xC0:
+                chan_prog[ch] = body[i]; tchans.add(ch); i += 1
+            elif ev == 0x90:
+                pitch, vel = body[i], body[i + 1]; i += 2; tchans.add(ch)
+                if vel > 0:
+                    on[(ch, pitch)] = t
+                else:
+                    s = on.pop((ch, pitch), None)
+                    if s is not None:
+                        notes.append((s, t, pitch, ch))
+            elif ev == 0x80:
+                pitch = body[i]; i += 2; s = on.pop((ch, pitch), None)
+                if s is not None:
+                    notes.append((s, t, pitch, ch))
+            elif ev in (0xA0, 0xB0, 0xE0):
+                i += 2
+            elif ev == 0xD0:
+                i += 1
+            else:
+                i += 1
+        if tname:
+            for c in tchans:
+                chan_name.setdefault(c, tname)
+        pos += 8 + ln
+    bpm = round(60_000_000 / tempo)
+    meta = {}
+    for c in sorted({n[3] for n in notes}):
+        ps = [p for s, e, p, ch in notes if ch == c]
+        meta[c] = {"name": chan_name.get(c, ""), "program": chan_prog.get(c),
+                   "n": len(ps), "lo": min(ps), "hi": max(ps), "avg": sum(ps) // len(ps)}
+    return div, bpm, notes, meta
+
+
+def detect_roles(meta):
+    """Pick (vocal, bass, drums, fill) channels from the metadata, jantje-style: the LABELLED vocal
+    beats the highest one. Returns a dict of 0-based channels (any may be None)."""
+    drums = 9 if 9 in meta else None
+    mel = [c for c in meta if c != 9]
+
+    def score_vocal(c):
+        m = meta[c]; s = 0
+        nm = m["name"].lower()
+        if any(w in nm for w in VOCAL_WORDS):
+            s += 100
+        if m["program"] in LEAD_PROGS:
+            s += 30
+        s += m["avg"] * 0.3            # lead tends to sit high-ish, but label wins
+        s -= 0.01 * m["n"]             # the vocal is usually SPARSER than a busy comp
+        return s
+
+    def score_bass(c):
+        m = meta[c]; s = 0
+        if any(w in m["name"].lower() for w in BASS_WORDS):
+            s += 100
+        if m["program"] in BASS_PROGS:
+            s += 40
+        s += (108 - m["avg"]) * 0.5   # low register
+        return s
+
+    vocal = max(mel, key=score_vocal) if mel else None
+    bass = max([c for c in mel if c != vocal], key=score_bass, default=None)
+    # fill = the most melodic remaining channel (a riff to answer the vocal's holes)
+    rest = [c for c in mel if c not in (vocal, bass)]
+    fill = max(rest, key=lambda c: meta[c]["n"], default=None)
+    return {"vocal": vocal, "bass": bass, "drums": drums, "fill": fill}
+
+
+# --- note-grid (16 slots/bar; mono: highest for lead, lowest for bass) -----------------------------
+def grid(notes, div, chan, lane, lo, hi):
+    spb = max(div // 4, 1)
+    sel = [n for n in notes if n[3] == chan and lo <= n[2] <= hi]
+    last = max((e for s, e, p, c in sel), default=0)
+    nsl = (((last // spb) + 16) // 16) * 16
+    starts = {}
+    for s, e, p, c in sel:
+        sl = round(s / spb)
+        if sl >= nsl:
+            continue
+        cur = starts.get(sl)
+        if cur is None or (p > cur[0] if lane == "lead" else p < cur[0]):
+            starts[sl] = (p, e)
+    out = [None] * nsl; held = -1; hs = None
+    for sl in range(nsl):
+        if sl in starts:
+            p, e = starts[sl]; out[sl] = ("n", p); held = round(e / spb); hs = sl
+        elif hs is not None and sl < held:
+            out[sl] = ("t",)
+    return out
+
+
+def tok(x):
+    if x is None:
+        return "."
+    if x[0] == "t":
+        return "-"
+    p = x[1]
+    return f"{NOTE_NAMES[p % 12]}{p // 12 - 1}"
+
+
+def bars_of(slots):
+    return ["  ".join(" ".join(tok(slots[b + g + k] if b + g + k < len(slots) else None)
+                                for k in range(4)) for g in range(0, 16, 4))
+            for b in range(0, len(slots), 16)]
+
+
+def drum_bar(notes, div, a, b):
+    """One representative 1-bar kick/snare/hat pattern from GM channel 9, accumulated over bars [a,b)."""
+    spb = max(div // 4, 1); tpb = div * 4
+    sets = {"kick": {35, 36}, "snare": {38, 40, 37}, "hat": {42, 44, 46, 39, 54}}
+    out = {}
+    for kind, ps in sets.items():
+        row = ["."] * 16
+        for s, e, p, c in notes:
+            if c == 9 and p in ps and a * tpb <= s < b * tpb:
+                sl = round((s % tpb) / spb)
+                if 0 <= sl < 16:
+                    row[sl] = "x"
+        out[kind] = " ".join("".join(row[i:i + 4]) for i in range(0, 16, 4))
+    return out
+
+
+def bar_chord(notes, div, chan, bi, prev):
+    tpb = div * 4
+    bn = [p for s, e, p, c in notes if c == chan and bi * tpb <= s < (bi + 1) * tpb]
+    if not bn:
+        return prev or "C"
+    r = min(bn) % 12; pcs = {p % 12 for p in bn}
+    minor = (r + 3) % 12 in pcs and (r + 4) % 12 not in pcs
+    return NOTE_NAMES[r] + ("m" if minor else "")
+
+
+# Arrangement presets: (section_name, role, bars). Roles drive the drums/voice mix.
+ARRANGES = {
+    "song": [("intro", "intro", 8), ("v1", "verse", 16), ("c1", "chorus", 16),
+             ("v2", "verse", 16), ("c2", "peak", 16), ("out", "out", 8)],
+    "short": [("intro", "intro", 8), ("verse", "verse", 16), ("chorus", "peak", 16), ("out", "out", 8)],
+    "dance": [("intro", "intro", 8), ("build", "build", 8), ("drop", "chorus", 16),
+              ("break", "verse", 8), ("peak", "peak", 16), ("out", "out", 8)],
+}
+
+
+def empty_bar(b):
+    return all(t in (".", "-") for t in b.split())
+
+
+def build_score(path, out, args):
+    div, bpm, notes, meta = parse(path)
+    roles = detect_roles(meta)
+    for k in ("vocal", "bass", "fill"):
+        v = getattr(args, k)
+        if v is not None:
+            roles[k] = v - 1  # CLI is 1-based
+    if out is None:  # dry run — print the role map
+        print(f"{path}: bpm {bpm}, div {div}")
+        for c in sorted(meta):
+            m = meta[c]; tag = next((r for r, ch in roles.items() if ch == c), "")
+            print(f"  ch{c + 1:2} {m['name'][:18]:18} prog={m['program']} n={m['n']:5} "
+                  f"pitch {m['lo']}-{m['hi']:<3} {('<-- ' + tag.upper()) if tag else ''}")
+        return
+    bpm = args.bpm or bpm
+    voc, bas, fil = roles["vocal"], roles["bass"], roles["fill"]
+    tpb = div * 4
+    a = min((s for s, e, p, c in notes if c == voc), default=0) // tpb  # vocal's first bar
+    VOC = grid(notes, div, voc, "lead", 48, 96); VOC = bars_of(VOC)[a:a + 16]
+    BAS = bars_of(grid(notes, div, bas, "bass", 24, 60))[a:a + 16] if bas is not None else ["."] * 16
+    TIM = bars_of(grid(notes, div, fil, "lead", 40, 96))[a:a + 16] if fil is not None else None
+    while len(VOC) < 16: VOC.append(". . . .  . . . .  . . . .  . . . .")
+    while len(BAS) < 16: BAS.append(". . . .  . . . .  . . . .  . . . .")
+    FILL = ([f if empty_bar(v) else ". . . .  . . . .  . . . .  . . . ."
+             for v, f in zip(VOC, (TIM + ["."] * 16)[:16])] if TIM else None)
+    DR = drum_bar(notes, div, a + 4, a + 12)
+    CH = []; prev = None
+    for bi in range(a, a + 16):
+        prev = bar_chord(notes, div, bas if bas is not None else voc, bi, prev); CH.append(prev)
+
+    def sl(arr, n):
+        return [arr[i % len(arr)] for i in range(n)]
+
+    secs = ARRANGES.get(args.arrange, ARRANGES["song"])
+    allch = []; lines = []
+    for n, r, nb in secs:
+        fill = r in ("chorus", "peak", "build")
+        tot = nb + 1 if fill else nb
+        lines.append((n, r, nb, tot)); c = sl(CH, nb); allch += c + ([c[-1]] if fill else [])
+
+    L = []
+    L.append(f'# {args.title or path} — clean martin score (pipeline/midi_to_martin.py). LEAD = the')
+    L.append("# labelled vocal, clean bass, drums transcribed from the source, riff fills the vocal's gaps.")
+    L.append(f"bpm {bpm}")
+    L.append("chords " + " ".join(allch))
+    L.append("set lead=0.82 leadsw=0 arp=0.46 arpsw=2 basssw=2 sub=0.5 supersaw=0.0 choir=0 padsw=5 "
+             "stabsw=1 donk=0 house=0 reverb=0.34 sidechain=0.6 widen=1.7 makeup=1.14 ceiling=0.95 "
+             "shimmer=0.08 hats=0.4 snares=0.48 atmosphere=0.08 drumsw=1 oversample=1")
+    L.append("")
+    for n, r, nb, tot in lines:
+        L.append(f"section {n} {tot} {nb} fill" if r in ("chorus", "peak", "build")
+                 else f"section {n} {nb} {nb}")
+    L.append("")
+    for n, r, nb, tot in lines:
+        L.append(f"{n}.kick p0: {DR['kick']}")
+        L.append(f"{n}.snare p0: {DR['snare']}")
+        L.append(f"{n}.hat p0: {DR['hat'] if any(c == 'x' for c in DR['hat']) else '..x. ..x. ..x. ..xx'}")
+        if r in ("chorus", "peak", "build"):
+            L.append(f"{n}.kick fill: {DR['kick']}")
+            L.append(f"{n}.snare fill: ..x. ..x. x.x. xxxx")
+            L.append(f"{n}.hat fill: xxxx xxxx xxxx xxxx")
+            L.append(f"{n}.fx: wall riser" + (" shimmer" if r == "peak" else ""))
+        if r == "intro":
+            L.append(f"{n}.set lead=0 arp=0")
+        if r == "build":
+            L.append(f"{n}.set lead=0.4")
+            L.append(f"{n}.fx: riser")
+        if r == "out":
+            L.append(f"{n}.set reverb=0.5 arp=0")
+    L.append("")
+    for n, r, nb, tot in lines:
+        if r != "intro":
+            L.append(f"{n}.lead p0: " + "  ".join(x.strip() for x in sl(VOC, nb)))
+    if FILL:
+        L.append("")
+        for n, r, nb, tot in lines:
+            if r in ("verse", "chorus", "peak"):
+                L.append(f"{n}.arp p0: " + "  ".join(x.strip() for x in sl(FILL, nb)))
+    L.append("")
+    for n, r, nb, tot in lines:
+        if bas is not None:
+            L.append(f"{n}.bass p0: " + "  ".join(x.strip() for x in sl(BAS, nb)))
+
+    open(out, "w").write("\n".join(L) + "\n")
+    rn = lambda c: f"ch{c + 1}" if c is not None else "-"
+    print(f"wrote {out}: bpm {bpm}, {len(lines)} sections | "
+          f"vocal={rn(voc)} bass={rn(bas)} drums={rn(roles['drums'])} fill={rn(fil)}")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("midi")
+    ap.add_argument("out", nargs="?", help="output .txt (omit to just print the detected role map)")
+    ap.add_argument("--vocal", type=int, help="force the vocal channel (1-based)")
+    ap.add_argument("--bass", type=int, help="force the bass channel (1-based)")
+    ap.add_argument("--fill", type=int, help="force the fill/riff channel (1-based)")
+    ap.add_argument("--bpm", type=int, help="override the tempo")
+    ap.add_argument("--arrange", default="song", choices=list(ARRANGES), help="section structure")
+    ap.add_argument("--title", help="score title comment")
+    a = ap.parse_args()
+    build_score(a.midi, a.out, a)
+
+
+if __name__ == "__main__":
+    main()
