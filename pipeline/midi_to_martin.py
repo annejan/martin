@@ -227,6 +227,43 @@ def empty_bar(b):
     return all(t in (".", "-") for t in b.split())
 
 
+def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a):
+    """A reasonably TRUE rendition: the song played THROUGH once at its own tempo with all the main
+    parts — lead + bass + a harmony voice + the real drum groove — in ONE long section, instead of a
+    looped 16-bar dance remix with a four-on-the-floor laid over it. Natural mix (no heavy pump)."""
+    tpb = div * 4
+    end = max(e for s, e, p, c in notes) // tpb + 1
+    nb = max(end - a, 1)
+    split = bas is None
+    lead_lo = 55 if split else 48
+    bsrc = voc if split else bas
+    pad = lambda arr: [(arr[i] if i < len(arr) else ". . . .  . . . .  . . . .  . . . .") for i in range(nb)]
+    LEAD = pad(bars_of(grid(notes, div, voc, "lead", lead_lo, 100))[a:end])
+    BASS = pad(bars_of(grid(notes, div, bsrc, "bass", 21, lead_lo - 1))[a:end])
+    HARM = pad(bars_of(grid(notes, div, fil, "lead", 45, 100))[a:end]) if fil is not None else None
+    DR = drum_bar(notes, div, a + 8, a + 16)  # a representative groove (1-bar loop)
+    CH = []; prev = None
+    for bi in range(a, a + nb):
+        prev = bar_chord(notes, div, bsrc, bi, prev); CH.append(prev)
+    L = [f'# {args.title or "song"} — FAITHFUL rendition (midi_to_martin.py --faithful): the song through',
+         "# once at its own tempo — lead + bass + harmony + the real drum groove, natural mix (no pump).",
+         f"bpm {bpm}",
+         "chords " + " ".join(CH),
+         ("set lead=0.7 leadsw=0 arp=0.4 arpsw=2 basssw=2 sub=0.5 supersaw=0.14 choir=0.12 padsw=5 "
+          "stabsw=0 donk=0 house=0 reverb=0.34 sidechain=0.32 widen=1.6 makeup=1.1 ceiling=0.95 "
+          "hats=0.36 snares=0.44 atmosphere=0.06 drumsw=1 oversample=1"),
+         "", f"section song {nb} {nb}", "",
+         f"song.kick p0: {DR['kick']}", f"song.snare p0: {DR['snare']}", f"song.hat p0: {DR['hat']}", "",
+         "song.lead p0: " + "  ".join(x.strip() for x in LEAD)]
+    if HARM:
+        L.append("song.arp p0: " + "  ".join(x.strip() for x in HARM))
+    L.append("song.bass p0: " + "  ".join(x.strip() for x in BASS))
+    open(out, "w").write("\n".join(L) + "\n")
+    rn = lambda c: f"ch{c + 1}" if c is not None else "-"
+    print(f"wrote {out}: FAITHFUL, bpm {bpm}, {nb} bars | vocal={rn(voc)} "
+          f"bass={rn(bsrc)} harm={rn(fil)} drums={rn(roles['drums'])}")
+
+
 def build_score(path, out, args):
     div, bpm, notes, meta = parse(path)
     roles = detect_roles(meta)
@@ -253,6 +290,8 @@ def build_score(path, out, args):
     voc, bas, fil = roles["vocal"], roles["bass"], roles["fill"]
     tpb = div * 4
     a = min((s for s, e, p, c in notes if c == voc), default=0) // tpb  # vocal's first bar
+    if args.faithful:
+        return _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a)
     # No separate bass channel (a single-channel piano piece) → SPLIT the lead channel by pitch: the
     # left hand (low notes) becomes the bass, the right hand (high) stays the lead.
     split = bas is None
@@ -338,6 +377,9 @@ def main():
     ap.add_argument("--fill", type=int, help="force the fill/riff channel (1-based)")
     ap.add_argument("--bpm", type=int, help="override the tempo")
     ap.add_argument("--arrange", default="song", choices=list(ARRANGES), help="section structure")
+    ap.add_argument("--faithful", action="store_true",
+                    help="play the song THROUGH at its own tempo (lead+bass+harmony+real drums, natural "
+                         "mix) instead of a looped dance remix")
     ap.add_argument("--title", help="score title comment")
     a = ap.parse_args()
     build_score(a.midi, a.out, a)
