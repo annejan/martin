@@ -13,8 +13,8 @@ exists, and `midi_inspect.py` (in jantje) for reading a MIDI's track names.
 ## Quick use
 
 ```sh
-# auto-detect everything, a faithful playthrough at the song's own tempo
-pipeline/midi_to_martin.py song.mid out.txt --faithful --style synthpop
+# auto-detect everything (roles + meter + tempo + the voice palette), a faithful playthrough
+pipeline/midi_to_martin.py song.mid out.txt --faithful
 MARTIN_SCORE=out.txt ./target/release/martin --synth-wav out.wav
 
 # print the detected role map (a dry run) — no out file
@@ -25,7 +25,8 @@ pipeline/midi_to_martin.py song.mid
 |---|---|
 | (default) | a clean **dance remix**: a looped 16-bar block staged into sections (`--arrange song\|short\|dance`) |
 | `--faithful` | play the song **through once** at its own tempo: lead + bass + harmony + the real drums, natural mix |
-| `--style` | voice/mix palette: `clean` (default) · `synthpop` · `dance` · `rock` · `orchestral` |
+| `--style` | voice/mix palette: **`auto`** (default — picks one from the GM instruments) · `clean` · `synthpop` · `dance` · `rock` · `orchestral` · `jazz` |
+| `--swing N` / `--auto-swing` | jazz/shuffle: emit a `swing N` line (0=straight, 1=triplet), or estimate it from the off-8th onset timing |
 | `--no-drums` | omit the kit (solo-piano / ambient — no house floor over it) |
 | `--no-meter` | ignore odd time signatures — force-fit the song to 4/4 (default: read FF 58, emit `grid:N`) |
 | `--no-tempo-map` | ignore the MIDI's tempo changes — render at one steady tempo |
@@ -44,6 +45,12 @@ pipeline/midi_to_martin.py song.mid
 - **Single-channel** (a solo piano) → the lead channel is **pitch-split**: low notes (LH) become the
   bass, high notes (RH) stay the lead. **No drum channel** → a four-on-the-floor fallback (or `--no-drums`).
 - per-bar chords are read from the bass so the pad/stab follow the harmony.
+- **`--style auto`** (the default) picks the **voice palette** from the GM instrument families
+  (note-weighted): distortion guitar + drums → `rock`; sax/brass combo + drums → `jazz`; synth
+  lead/pad heavy → `synthpop`; an orchestration / drumless classical → `orchestral`; else `clean`.
+  It prints its pick; force one with `--style <name>`. (Verified on this session's covers: Pink
+  Panther → jazz, Money → rock, Never Ending Story / You Spin Me Round / Blade Runner → synthpop,
+  Clair de Lune / Mars → orchestral, Take Five → jazz.)
 
 Tested clean on: Björk *Human Behaviour*, Haddaway *What Is Love*, R.E.M. *Shiny Happy People*, the
 *Godfather* theme, Rick Astley, *Never Ending Story*, *You Spin Me Round*.

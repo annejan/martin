@@ -24,6 +24,7 @@ Run with no out.txt to just PRINT the detected role map (a dry-run, like midi_in
 import argparse
 import struct
 import sys
+from collections import Counter
 
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 # GM program families that read as a lead/vocal vs a bass.
@@ -175,6 +176,44 @@ def detect_roles(meta):
     musical = [c for c in rest if not 112 <= (meta[c]["program"] or 0) <= 119 and meta[c]["avg"] < 88]
     fill = max(musical or rest, key=lambda c: meta[c]["n"], default=None)
     return {"vocal": vocal, "bass": bass, "drums": drums, "fill": fill}
+
+
+def auto_style(meta, has_drums):
+    """Pick a `--style` palette from the MIDI's GM instrument families (note-weighted), so 80s synth
+    songs render synthpop, a sax/brass combo jazz, a distorted-guitar band rock, drumless classical
+    orchestral — no manual --style guess. Returns a style name (default `clean`)."""
+    fam = Counter()
+    for c, m in meta.items():
+        if c == 9:
+            continue
+        p = m["program"] or 0
+        n = m["n"]
+        if 29 <= p <= 31:
+            fam["distguitar"] += n          # overdrive / distortion guitar → rock
+        elif p in (50, 51, 62, 63) or 80 <= p <= 95:
+            fam["synth"] += n               # SynthStrings / SynthBrass + synth lead/pad (the 80s tell)
+        elif 56 <= p <= 61:
+            fam["brass"] += n               # real trumpet / trombone / brass section
+        elif 64 <= p <= 67:
+            fam["sax"] += n                 # sax (the jazz / Pink-Panther tell)
+        elif 68 <= p <= 79:
+            fam["wind"] += n                # oboe / clarinet / flute
+        elif 40 <= p <= 49 or 52 <= p <= 55:
+            fam["strings"] += n             # real strings + ensemble / choir / orchestra hit
+    total = sum(fam.values()) or 1
+    frac = lambda k: fam[k] / total
+    orch = frac("strings") + frac("wind") + frac("brass")
+    if has_drums and frac("distguitar") > 0.12:
+        return "rock"
+    if has_drums and fam["sax"] > 0 and frac("sax") + frac("brass") > 0.10:
+        return "jazz"
+    if frac("synth") > 0.30:
+        return "synthpop"
+    if orch > 0.45 and frac("synth") < 0.15:
+        return "orchestral"                  # an orchestration (even with a light kit) → lush + soft
+    if not has_drums:
+        return "orchestral"                  # solo piano / ambient classical → lush + soft
+    return "clean"
 
 
 # --- note-grid (16 slots/bar; mono: highest for lead, lowest for bass) -----------------------------
@@ -514,8 +553,12 @@ def build_score(path, out, args):
     if roles["fill"] is not None and roles["fill"] in (roles["vocal"], roles["bass"]):
         rest = [c for c in meta if c != 9 and c not in (roles["vocal"], roles["bass"])]
         roles["fill"] = max(rest, key=lambda c: meta[c]["n"], default=None)
+    # auto-style: pick the palette from the GM instrument families unless the user forced one.
+    if args.style == "auto":
+        args.style = auto_style(meta, roles["drums"] is not None)
+        print(f"  (auto-style: {args.style})", file=sys.stderr)
     if out is None:  # dry run — print the role map
-        print(f"{path}: bpm {bpm}, div {div}")
+        print(f"{path}: bpm {bpm}, div {div}, style {args.style}")
         for c in sorted(meta):
             m = meta[c]; tag = next((r for r, ch in roles.items() if ch == c), "")
             print(f"  ch{c + 1:2} {m['name'][:18]:18} prog={m['program']} n={m['n']:5} "
@@ -630,8 +673,9 @@ def main():
     ap.add_argument("--no-meter", action="store_true",
                     help="ignore odd time signatures (force-fit the song to 4/4)")
     ap.add_argument("--arrange", default="song", choices=list(ARRANGES), help="section structure")
-    ap.add_argument("--style", default="clean", choices=list(STYLES),
-                    help="voice/mix palette (clean|synthpop|dance|rock|orchestral)")
+    ap.add_argument("--style", default="auto", choices=["auto", *STYLES],
+                    help="voice/mix palette; `auto` (default) picks one from the GM instruments "
+                         "(clean|synthpop|dance|rock|orchestral|jazz)")
     ap.add_argument("--no-drums", action="store_true",
                     help="omit the kit (for solo-piano / ambient sources — no house floor over them)")
     ap.add_argument("--faithful", action="store_true",

@@ -46,6 +46,13 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Added
 
+- **`midi_to_martin.py --style auto`** (now the default) — picks the voice/mix palette from the MIDI's
+  GM instrument families (note-weighted) so the conversion no longer needs a hand-guessed `--style`:
+  distortion guitar + drums → `rock`, sax/brass combo + drums → `jazz`, synth lead/pad heavy →
+  `synthpop`, an orchestration / drumless classical → `orchestral`, else `clean`. Prints its pick;
+  `--style <name>` still forces one. Verified against this session's covers (Pink Panther → jazz,
+  Money → rock, Never Ending Story / You Spin Me Round / Blade Runner → synthpop, Clair de Lune /
+  Mars → orchestral, Take Five → jazz).
 - **Swing / shuffle in the score DSL** — a global `swing N` (0 = straight, 1 = exact triplet feel;
   ratio `r = 0.5 + swing/6`) plus a per-section `swing:N` override push the off-8ths late for a
   jazz/shuffle groove. It's a piecewise-linear within-beat warp inside the slot↔seconds funnel
