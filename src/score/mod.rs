@@ -22,11 +22,25 @@ pub use types::{Chord, Inst, Levels, NoteLane, Ramp, Section, TempoPoint};
 const SLOTS_PER_BAR: i64 = 16;
 const BEATS_PER_BAR: f32 = 4.0;
 
-/// Hard ceiling on a score's playable length (seconds) — the streaming synth allocates ~16 buffers of
-/// `demo_len()*sr`, so an absurdly-long score (a `section … x 10000`, hundreds of section lines) must
-/// not be able to demand tens of GB. Real tracks are ~90–170 s; 10 min is far past any demo.
-/// [`Score::demo_len`] clamps to this; [`validate`] warns (fatal under strict) before you get here.
+/// Default ceiling on a score's playable length (seconds) — the streaming synth allocates ~16 buffers
+/// of `demo_len()*sr`, so an absurdly-long score (a `section … x 10000`, hundreds of section lines)
+/// must not be able to demand tens of GB. Real demos are ~90–170 s; 10 min is far past any demo.
+/// [`Score::demo_len`] clamps to [`max_demo_secs`]; [`validate`] warns (fatal under strict) first.
 pub(crate) const MAX_DEMO_SECS: f32 = 600.0;
+/// Hard upper bound on the env override — ~40 min caps the buffer allocation (~7 GB of lane buffers).
+const MAX_DEMO_SECS_CEILING: f32 = 2400.0;
+
+/// The playable-length cap, overridable with `MARTIN_MAX_DEMO_SECS=<secs>` for a long-form one-off (a
+/// full 24-min Echoes), clamped to [`MAX_DEMO_SECS_CEILING`] so the synth buffer stays bounded. Unset
+/// or invalid → the default [`MAX_DEMO_SECS`].
+pub(crate) fn max_demo_secs() -> f32 {
+    std::env::var("MARTIN_MAX_DEMO_SECS")
+        .ok()
+        .and_then(|v| v.parse::<f32>().ok())
+        .filter(|&s| s > 0.0)
+        .map(|s| s.min(MAX_DEMO_SECS_CEILING))
+        .unwrap_or(MAX_DEMO_SECS)
+}
 
 /// Aggregate bar ceiling for the `validate` heads-up (the per-section guard is `parse::MAX_BARS`;
 /// this catches the SUM across many sections). ~real tracks are tens of bars.
@@ -350,7 +364,7 @@ impl Score {
         } else {
             self.bar_secs[self.total_bars as usize]
         };
-        total.min(MAX_DEMO_SECS)
+        total.min(max_demo_secs())
     }
 
     fn abs_slot(&self, t: f32) -> i64 {
