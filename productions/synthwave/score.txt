@@ -1,0 +1,47 @@
+# An ORIGINAL martin background loop — moody demoscene synthwave in A minor, 124 BPM.
+# Hand-composed using the jantje lessons: clean sustained lead = the singing, clean bass,
+# four-on-floor in the drops, a sparkly arp riff in the lead's gaps, per-bar chords, build→drop arc.
+bpm 124
+
+# i–VI–III–VII in Am — the classic synthwave turnaround
+chords Am F C G
+
+# intro (pad+arp) → build (add bass+kick) → drop (full + lead) → break → climax (lead up) → outro
+section intro    4
+section build    8  8
+section drop     8  8
+section break    4
+section climax   8  8
+section outro    4
+
+# --- DRUMS: four-on-floor with a backbeat snare, building hats ---
+build.kick  p0: x... .... x... ....
+drop.kick   p0: x... x... x... x...
+drop.snare  p0: .... x... .... x...
+drop.hat    p0: ..x. ..x. ..x. ..xx
+climax.kick p0: x... x... x... x...
+climax.snare p0: .... x... .... x...
+climax.hat  p0: x.x. x.x. x.x. x.xx
+
+# --- LEAD: the singing line (one 4-bar phrase over Am F C G; held notes = the voice sustaining) ---
+drop.lead   p0: A4 - - .  E5 - - D5  C5 - - .  E5 - - .   F5 - - .  E5 - - .  C5 - - .  A4 - - .   G4 - - .  C5 - E5 -  G5 - - .  E5 - - .   D5 - - .  B4 - - .  G4 - B4 -  D5 - - .
+# climax repeats the phrase an octave up (brighter, the lift)
+climax.lead p0: A5 - - .  E6 - - D6  C6 - - .  E6 - - .   F6 - - .  E6 - - .  C6 - - .  A5 - - .   G5 - - .  C6 - E6 -  G6 - - .  E6 - - .   D6 - - .  B5 - - .  G5 - B5 -  D6 - - .
+
+# --- ARP: a continuous sparkly 16th counter-line (the riff that fills under/around the lead) ---
+intro.arp   p0: A4 C5 E5 C5  A4 C5 E5 C5  F4 A4 C5 A4  F4 A4 C5 A4   C5 E5 G5 E5  C5 E5 G5 E5  G4 B4 D5 B4  G4 B4 D5 B4
+drop.arp    p0: A4 C5 E5 C5  A4 C5 E5 C5  F4 A4 C5 A4  F4 A4 C5 A4   C5 E5 G5 E5  C5 E5 G5 E5  G4 B4 D5 B4  G4 B4 D5 B4
+climax.arp  p0: A5 E5 C5 E5  A5 E5 C5 E5  A5 F5 C5 F5  A5 F5 C5 F5   G5 E5 C5 E5  G5 E5 C5 E5  D5 B4 G4 B4  D5 B4 G4 B4
+
+# --- BASS: clean root motion, root on 1 + the fifth/walk into the next bar (the jantje clean bass) ---
+build.bass  p0: A2 - - - - - - - A2 - - - E2 - - -   F2 - - - - - - - F2 - - - C3 - - -   C2 - - - - - - - C2 - - - G2 - - -   G2 - - - - - - - G2 - - - D3 - - -
+drop.bass   p0: A2 - - - - - - - A2 - - - E2 - - -   F2 - - - - - - - F2 - - - C3 - - -   C2 - - - - - - - C2 - - - G2 - - -   G2 - - - - - - - G2 - - - D3 - - -
+climax.bass p0: A2 - A2 - E2 - A2 - A2 - A2 - E2 - - -   F2 - F2 - C3 - F2 - F2 - F2 - C3 - - -   C2 - C2 - G2 - C2 - C2 - C2 - G2 - - -   G2 - G2 - D3 - G2 - G2 - G2 - D3 - - -
+
+# --- dynamics: build the energy into the drop, lift again into the climax, fade the outro ---
+gain  intro 0.45  build 0.6>0.85  drop 1  break 0.55  climax 1  outro 0.7>0.2
+sub   intro 0.2   build 0.3>0.7   drop 0.9 break 0.3   climax 1  outro 0.5
+mids  intro 0.5   build 0.6       drop 0.85 break 0.5  climax 1  outro 0.4
+
+# --- voices: synthwave palette — vocal-saw lead (the singing), Juno pad, glass-pluck arp, sub bass ---
+set lead=0.8 leadsw=1 arp=0.4 arpsw=3 basssw=2 sub=0.5 supersaw=0.22 choir=0.16 padsw=2 stabsw=1 reverb=0.4 sidechain=0.55 widen=1.85 makeup=1.12 ceiling=0.95 shimmer=0.2 hats=0.4 snares=0.5 drumsw=1 oversample=1

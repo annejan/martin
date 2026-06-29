@@ -1,0 +1,61 @@
+# martin — SYNTHWAVE: a bold neon space-journey on martin's OWN music (no copyright). ~70s, 124 BPM.
+# A demoscene "spend the CPU, dazzle the eye" showcase: procedural shapes ball-pulse morph through a
+# rocket→saturn→ufo→helix→torus space arc, explosive entrances on the drop, a fullscreen blinder into
+# the climax, neon backdrops + sparks. Plays with: martin --production synthwave
+#
+#   cargo run --release -- --production synthwave
+#
+# Section starts (s, 124 BPM, bar=1.935s): intro 0 · build 7.7 · drop 23.2 · break 38.7 · climax 46.5
+#   · outro 61.9 · end 69.7.
+
+# --- settings (each → MARTIN_<KEY>) ---
+kind = demo
+budget       = 120000
+ply = assets/galaxy.ply              # .ply root = assets/ so the `splat:` shapes resolve
+score = productions/synthwave/score.txt
+bg_dim = 0.30
+flash = 0.6                          # bloom flash on the @@anchored cuts
+beat = 0.34                          # neon beat-pump on the kick
+particles = sparks                   # hot specks bursting — the synthwave glow
+particle_at = @@drop                 # they ignite on the drop
+particle_out = @@outro               # and clear as it ends
+
+# --- the reel. Backbone = the per-gaussian ~morph with a ball-pulse (the 3rd @ number): each shape
+#     DISPERSES to a fuzzy sphere and REASSEMBLES into the next, radial + flowing. Explosive entrances
+#     (~explode/~vortex) only on the drop accents. Deforms are rotational (twist/spiral/turbulence). ---
+[reel]
+# ---- INTRO (0–7.7) · open on a galaxy swirling out of black, neon stars wake
+splat:galaxy.ply              @@intro    @5,2.4,1.4 ~morph     ^twist        backdrop:stars   # the galaxy swirls in
+# ---- BUILD (7.7–23.2) · the galaxy ball-pulse morphs into the ringed planet, the grid wakes
+splat:saturn.ply              @@build    @5,1.6,1.5 ~morph     ^spiral       backdrop:grid    # Saturn forms, rings tilt
+# ---- DROP (23.2–38.7) · the party: a rocket EXPLODES in, then morphs hard between space shapes
+splat:rocket.ply              @@drop     @5.5,1.3,1.7 ~explode ^turbulence   backdrop:warp    # rocket blasts together on the kick
+splat:ufo.ply                 @@bar:16   @5,1.4,1.6 ~morph     ^twist        backdrop:bolt    # the saucer warps in
+splat:supershape.ply          @@bar:18   @5,1.4,1.6 ~morph     ^turbulence   backdrop:kaleido # rainbow bloom
+text:S Y N T H W A V E         @@bar:19   @4,1.2     ~typewriter ^wave        backdrop:grid    # the title, per-char
+# ---- BREAKDOWN (38.7–46.5) · calm on black — buys the climax its headroom
+text:martin · splats · music  @@break    @6,2.4     ~outline    ^wave raster:position backdrop:off # the disciplines, rainbow outline
+# ---- CLIMAX (46.5–61.9) · the big finish: a blinder, then helix + torus tumble, the ufo returns
+shader:bolt                   @@climax   @1.4,0.3                                            # 1-bar fullscreen blinder
+splat:helix.ply               @@bar:25   @6,1.3,1.5 ~vortex    ^spiral       backdrop:warp    # the double helix spins up out of a vortex
+splat:torus.ply rot:62,0,18   @@bar:28   @5.5,1.3,1.6 ~morph   ^spiral       backdrop:kaleido # a tilted donut that tumbles
+splat:ufo.ply                 @@bar:30   @5.5,1.5,1.5 ~morph   ^turbulence   backdrop:bolt    # the saucer buzzes back through
+# ---- OUTRO (61.9–69.7) · the signature, read head-on, then evaporate to black
+text:deFEEST                  @@outro    @5,3.5     ~pen-write  ^wave  exit:evaporate  backdrop:stars # the handwriting signature, rises away
+
+# --- the camera: FRONT-FACING (yaw ~1.1–1.7 — text faces us). Energy from push-ins (drop/climax) +
+#     pull-backs (breakdown/outro); the climax helix/torus get a pulled-back ARC so they read big. ---
+[camera]
+t=0.0     pos=0,0,0    dist=2.8   yaw=1.45   pitch=0.10   # open on the galaxy swirl, head-on
+t=7.7     pos=0,0,0    dist=2.5   yaw=1.35   pitch=0.16   # ease in as Saturn forms
+t=16.0    pos=0.2,0,0  dist=2.7   yaw=1.58   pitch=0.18   # drift right around the ringed planet
+t=23.2    pos=0,0,0    dist=1.9   yaw=1.45   pitch=0.22   # DROP — push in hard on the rocket blast
+t=31.0    pos=0.25,0,0 dist=2.2   yaw=1.62   pitch=0.18   # arc right across the party (frontal)
+t=38.7    pos=0,0,0    dist=3.0   yaw=1.40   pitch=0.10   # fall back + centre for the calm break
+t=46.5    pos=0,0,0    dist=2.0   yaw=1.45   pitch=0.16   # CLIMAX blinder — brief slam
+t=48.5    pos=0,0,0    dist=2.75  yaw=1.26   pitch=0.14   # helix: pulled back so it reads full…
+t=54.0    pos=0,0,0    dist=2.75  yaw=1.66   pitch=0.30   # …camera arcs over it → the helix turns
+t=55.5    pos=0,0,0    dist=3.1   yaw=1.20   pitch=0.10   # torus: wide + low, room around the donut…
+t=60.0    pos=0,0,0    dist=3.1   yaw=1.60   pitch=0.32   # …arc up-and-over → the donut tumbles
+t=61.9    pos=0,0,0    dist=3.0   yaw=1.42   pitch=0.06   # settle DEAD-ON for the pen-write signature
+t=68.0    pos=0,0,0    dist=3.4   yaw=1.45   pitch=0.05   # one gentle pull-back as it evaporates to black
