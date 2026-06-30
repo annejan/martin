@@ -1,0 +1,55 @@
+# martin — CITIES · ENERGY: the THREE strong aerial city splats (Austin → NYC → Seattle — Chicago
+# dropped, it's the flat capture that collapsed to top-down) flown as a gorgeous WIDE GRAZING DRONE
+# tour — the sexy tilted-aerial look, banking + orbiting non-stop, pair=match ghostly morphs between,
+# the morphs punched as KILL-SHOTS. Harmonic colour tint so it pops instead of going grey. LOCAL
+# captures only (Google Maps Content, not shippable — see pipeline/AERIAL-CITIES.md).
+#
+#   MARTIN_SHOW=productions/cities/cities-energy.show MARTIN_RES=480x270 MARTIN_PREVIEW_FPS=8 \
+#     MARTIN_MORPH_COUNT=250000 ./record.sh cities-energy.mp4
+
+[settings]
+kind = demo
+pair = match
+budget = 1200000
+ply = austin_run/exports/austin_tight.ply
+score = productions/cities/score-easy.txt
+beat = 0.16
+flash = 0.4                    # a soft bloom kiss on the city↔city morph cuts (the kill-shots)
+tint_music = 1                 # harmonic tint: cool in the calm, warm on the lifts — colour energy, less grey
+bloom = on
+
+[reel]
+# 3 strong cities, ~26 bars each, pair=match straight morph (bulge 0) flowing skyline → skyline.
+splat:austin_tight.ply        @@bar:0    @26,3.5,0  ~morph   backdrop:stars   # AUSTIN
+splat:nyc_tight.ply           @@bar:26   @26,2.5,0  ~morph   backdrop:stars   # → NEW YORK (kill-shot morph)
+splat:seattle_tight.ply       @@bar:52   @20,2.5,0  ~morph   backdrop:stars   # → SEATTLE (kill-shot morph)
+text:deFEEST · CITIES         @@bar:72   @4,3       ~pen-write ^wave  exit:evaporate  backdrop:stars
+
+# THE SEXY WIDE GRAZING DRONE LOOK, LOCKED + carried through: dist 0.88–1.15 (the drone height where
+# the whole city reads with tilt/depth), pitch 0.38–0.46 (the gorgeous tilted-aerial angle), NEVER
+# closer (top-down trap). Relentless: it banks + orbits continuously (yaw sweeps), pos drifts over the
+# dense core (|x|,|z| < 0.14). Each morph = a wide dramatic pull-up KILL-SHOT.
+[camera]
+# --- AUSTIN ---
+t=@@bar:0    pos=0,0.08,0       dist=1.05  yaw=1.10   pitch=0.42   # establish: the sexy wide grazing skyline
+t=@@bar:5    pos=-0.10,0.07,0.06 dist=0.92 yaw=0.55   pitch=0.40   # bank left, downtown sweeps across
+t=@@bar:10   pos=0.10,0.07,-0.05 dist=0.95 yaw=1.95   pitch=0.42   # orbit right, grazing the towers
+t=@@bar:15   pos=-0.06,0.08,0.05 dist=0.90 yaw=3.10   pitch=0.40   # bank back across the cluster
+t=@@bar:20   pos=0.06,0.07,-0.04 dist=0.96 yaw=4.30   pitch=0.42   # keep orbiting, never settle
+t=@@bar:24   pos=0,0.10,0       dist=1.15  yaw=1.30   pitch=0.46   # pull wide → KILL-SHOT into the NYC morph
+# --- NEW YORK ---
+t=@@bar:26   pos=0,0.07,0       dist=0.92  yaw=1.15   pitch=0.40   # NYC slams in, banking grazing dive
+t=@@bar:31   pos=-0.11,0.06,0.06 dist=0.86 yaw=0.50   pitch=0.39   # bank low-and-across Manhattan, towers rake
+t=@@bar:36   pos=0.11,0.06,-0.05 dist=0.88 yaw=1.95   pitch=0.40   # orbit the skyline the other way
+t=@@bar:41   pos=-0.05,0.07,0.05 dist=0.90 yaw=3.20   pitch=0.40   # bank back, skyline raking past
+t=@@bar:46   pos=0.05,0.06,-0.04 dist=0.88 yaw=4.40   pitch=0.39   # keep banking, relentless
+t=@@bar:50   pos=-0.04,0.09,0.04 dist=1.12 yaw=1.40   pitch=0.45   # pull wide → KILL-SHOT into the Seattle morph
+# --- SEATTLE ---
+t=@@bar:52   pos=0,0.07,0       dist=0.92  yaw=1.15   pitch=0.40   # Seattle slams in, grazing bank
+t=@@bar:57   pos=-0.11,0.06,0.06 dist=0.86 yaw=0.50   pitch=0.39   # bank across downtown, towers rake
+t=@@bar:62   pos=0.11,0.06,-0.05 dist=0.88 yaw=2.00   pitch=0.40   # orbit the skyline
+t=@@bar:67   pos=-0.05,0.07,0.05 dist=0.90 yaw=3.30   pitch=0.40   # bank back, low-and-wide
+t=@@bar:71   pos=0.05,0.10,0.0  dist=1.10  yaw=4.30   pitch=0.45   # big wide bank → the climax pose
+# --- OUTRO ---
+t=@@bar:72   pos=0,0.10,0       dist=1.25  yaw=1.30   pitch=0.44   # wide + level for deFEEST · CITIES
+t=@@bar:78   pos=0,0.09,0       dist=2.0   yaw=1.45   pitch=0.40   # final glide out as it evaporates

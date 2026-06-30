@@ -1,0 +1,40 @@
+# martin — CITIES · EASY: the smooth four-city morph tour, slowed RIGHT down over a chill soul ballad
+# ("Easy" — easy like Sunday morning). Same pair=match ghostly skyline→skyline morph as cities.show, but
+# bar-anchored over the calm ~3-min track with long, gentle holds and slow drifting orbits — no dives,
+# no flash. LOCAL captures only (Google Maps Content, not shippable — see pipeline/AERIAL-CITIES.md).
+#
+#   MARTIN_SHOW=productions/cities/cities-easy.show ./record.sh cities-easy.mp4
+#
+# Austin → New York → Chicago → Seattle, one long ~44s breath each, then the ©Google credits.
+
+[settings]
+kind = demo
+pair = match                  # nearest same-colour pairing: grass→grass, tower→tower — coherent ghostly morph
+budget = 1200000              # tight files hold up to ~2M; lower MARTIN_MORPH_COUNT for a preview
+ply = austin_run/exports/austin_tight.ply
+score = productions/cities/score-easy.txt
+beat = 0.08                   # barely-there beat-pump — easy going
+flash = 0.0                   # NO cut-flash; the morph just flows
+
+[reel]
+# straight morph (bulge = 0, the 3rd @): each city flows directly into the next over the slow track.
+splat:austin_tight.ply        @@bar:0    @9,3.5,0   ~morph                backdrop:stars   # AUSTIN assembles, camera drifts
+splat:nyc_tight.ply           @@bar:18   @11,2.5,0  ~morph                backdrop:stars   # AUSTIN → NEW YORK
+splat:chicago_tight.ply       @@bar:36   @6,2,0     ~morph                backdrop:stars   # NEW YORK → CHICAGO
+splat:seattle_tight.ply       @@bar:54   @11,2.5,0  ~morph                backdrop:stars   # CHICAGO → SEATTLE
+text:deFEEST · CITIES         @@bar:70   @5,3       ~pen-write ^wave      backdrop:stars   # the signature
+text:Imagery ©Google          @@bar:74   @4,2.5     ~fade ^wave  exit:evaporate  backdrop:stars # credit, evaporates
+
+# camera: slow drifting orbits around each skyline — wide, level-ish, gentle yaw sweeps + soft dist
+# breathing. No dives. Each city gets a long lazy pass; the morph flows the skyline into the next.
+[camera]
+t=@@bar:0    pos=0,0.1,0    dist=1.3   yaw=1.25   pitch=0.36   # AUSTIN: high + wide, begin the slow orbit
+t=@@bar:14   pos=0,0.1,0    dist=1.0   yaw=1.62   pitch=0.30   # …drift around + ease down
+t=@@bar:18   pos=0,0.11,0   dist=1.0   yaw=1.20   pitch=0.26   # NEW YORK (post-morph), level out
+t=@@bar:32   pos=-0.25,0.1,0 dist=0.95 yaw=1.66   pitch=0.24   # …slow bank across Manhattan
+t=@@bar:36   pos=0,0.1,0    dist=1.1   yaw=1.22   pitch=0.30   # CHICAGO: wide lazy orbit
+t=@@bar:50   pos=0.2,0.1,0  dist=0.95  yaw=1.64   pitch=0.26   # …drift the other way
+t=@@bar:54   pos=0,0.11,0   dist=1.05  yaw=1.24   pitch=0.28   # SEATTLE: gentle pass
+t=@@bar:68   pos=-0.2,0.1,0 dist=1.0   yaw=1.58   pitch=0.26   # …final slow bank
+t=@@bar:70   pos=0,0.1,0    dist=1.6   yaw=1.45   pitch=0.32   # pull back + level for the credits
+t=@@bar:78   pos=0,0.1,0    dist=2.3   yaw=1.45   pitch=0.22   # gentle pull-out to black
