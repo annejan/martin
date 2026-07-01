@@ -114,7 +114,17 @@ fn screenshot(args: &Value) -> Result<Value, String> {
         .and_then(Value::as_str)
         .unwrap_or("/tmp/martin_mcp_shot.png")
         .to_string();
-    bridge(&json!({"cmd": "screenshot", "path": path}))?;
+    let reply = bridge(&json!({"cmd": "screenshot", "path": path}))?;
+    // The bridge's own {"ok": false, "error": …} (e.g. "no render target yet" before a show is
+    // loaded) was previously discarded here — the caller fell through to the file-poll below and got
+    // a generic "No such file or directory" instead of the actual reason. Surface it directly.
+    if !reply.get("ok").and_then(Value::as_bool).unwrap_or(false) {
+        return Err(reply
+            .get("error")
+            .and_then(Value::as_str)
+            .unwrap_or("bridge error")
+            .to_string());
+    }
     // the PNG lands a frame or two after the reply (GPU readback) — poll with backoff.
     let bytes = (|| -> std::io::Result<Vec<u8>> {
         for wait in [100, 200, 400, 800] {

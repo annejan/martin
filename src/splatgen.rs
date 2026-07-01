@@ -21,13 +21,16 @@ const ALPHA: f32 = 0.60; // per-splat opacity — soft. At high counts overlap s
 
 /// The DEFAULT-arm opacity/radius (the demoscene morph shapes: galaxy/knot/helix/torus/supershape/…),
 /// overridable at generation time so the airy-vs-solid balance can be tuned + A/B'd without editing
-/// the constant: `MARTIN_GEN_ALPHA` (0<a≤1) and `MARTIN_GEN_SPLAT` (>0). Unset/invalid → the defaults.
+/// the constant: `MARTIN_GEN_ALPHA` (0<a<1) and `MARTIN_GEN_SPLAT` (>0). Unset/invalid → the defaults.
 /// (Named shapes with an explicit size_of/opacity_of arm — flame/pine/rocket/… — are unaffected.)
+/// The upper bound is an OPEN interval: `write_ply` converts opacity to a logit `(op/(1-op)).ln()`,
+/// so `op == 1.0` would divide by zero → `+inf` baked into the `.ply` (the shader's sigmoid still
+/// recovers 1.0 from it, so it's not a visible defect, just a nonsense stored value — reject it).
 fn gen_alpha() -> f32 {
     std::env::var("MARTIN_GEN_ALPHA")
         .ok()
         .and_then(|v| v.parse::<f32>().ok())
-        .filter(|a| a.is_finite() && *a > 0.0 && *a <= 1.0)
+        .filter(|a| a.is_finite() && *a > 0.0 && *a < 1.0)
         .unwrap_or(ALPHA)
 }
 fn gen_splat() -> f32 {
