@@ -328,7 +328,12 @@ impl Score {
             .bar_secs
             .binary_search_by(|x| x.partial_cmp(&t).unwrap_or(std::cmp::Ordering::Less))
         {
-            Ok(b) => b.min(self.total_bars.saturating_sub(1) as usize),
+            // an exact hit on the END sentinel bar_secs[total_bars] is t == the track end: the forward
+            // funnel maps total_slots() there, so return it directly. The general path below would clamp
+            // bar → total_bars-1 then into → grid-1 and yield total_slots()-1 — a broken round-trip (the
+            // uniform fast path returns total_slots() here, so this also keeps the two paths consistent).
+            Ok(b) if b >= self.total_bars as usize => return self.total_slots(),
+            Ok(b) => b,
             Err(0) => 0,
             Err(b) => (b - 1).min(self.total_bars.saturating_sub(1) as usize),
         } as u32;
@@ -825,6 +830,10 @@ mod tests {
         assert!((s.slot_to_secs(48.0) - 8.0).abs() < 1e-4); // bar 2 is 4 s long
         assert!((s.demo_len() - 12.0).abs() < 1e-4); // 2*2 + 2*4
         assert_eq!(s.secs_to_slot(4.0), 32); // exact downbeat floors forward, not one slot early
+        // the EXACT track-end round-trips: slot_to_secs(total_slots) → demo_len, and back → total_slots
+        // (NOT total_slots-1). Non-uniform scores hit the funnel; the old clamp path returned 63 here.
+        assert!((s.slot_to_secs(64.0) - 12.0).abs() < 1e-4);
+        assert_eq!(s.secs_to_slot(s.slot_to_secs(64.0)), 64);
         // a beat in a slow bar is longer; an anchor lands at the warped wall-clock time.
         assert!((s.anchor_seconds("bar:2").unwrap() - 4.0).abs() < 1e-4);
         assert!((s.anchor_seconds("bar:3").unwrap() - 8.0).abs() < 1e-4);
