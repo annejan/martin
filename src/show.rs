@@ -276,6 +276,7 @@ fn canonical_key(key: &str) -> &str {
 /// wrong-default render); it's advisory, not an allowlist that blocks unknown keys.
 const SETTINGS_KEYS: &[&str] = &[
     "4d_test",
+    "additive",
     "beat",
     "bench",
     "benchmark",

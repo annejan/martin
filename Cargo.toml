@@ -117,4 +117,4 @@ strip = false
 # Pinned to an immutable REV (not just the branch) so a force-push/rebase of the fork — or a routine
 # `cargo update` — can't silently repoint the engine's renderer to unreviewed commits before a deadline.
 # To pull new shader edits: push the fork branch, then bump this rev deliberately (+ `cargo update -p …`).
-bevy_gaussian_splatting = { git = "https://github.com/annejan/bevy_gaussian_splatting", rev = "e4787a88fd923d53b3f90666c236dd9d7700d04a" }
+bevy_gaussian_splatting = { git = "https://github.com/annejan/bevy_gaussian_splatting", rev = "608c7d17541b6cb77848d09e5f0c848075e9db30" }

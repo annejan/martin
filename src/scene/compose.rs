@@ -695,6 +695,8 @@ pub(crate) fn build_composition(
             // a per-object `dscale:` multiplies it (shrink just a backdrop's disks, keep the props full).
             global_scale: crate::envvar::or("MARTIN_SPLAT_SCALE", 1.0_f32)
                 * obj.disk_scale.unwrap_or(1.0),
+            // MARTIN_ADDITIVE: emissive One+One glow blend (see build.rs) — for glow content on black.
+            additive: crate::envvar::or("MARTIN_ADDITIVE", 0) != 0,
             ..default()
         };
         let tf = Transform {

@@ -19,6 +19,25 @@ const ALPHA: f32 = 0.60; // per-splat opacity — soft. At high counts overlap s
 // counts (e.g. camp props ~12k via morph_count) it gives the airy, translucent splat look. See
 // memory martin-diorama-safe-z / the density "diminishing returns" finding (140k was ~10x wasteful).
 
+/// The DEFAULT-arm opacity/radius (the demoscene morph shapes: galaxy/knot/helix/torus/supershape/…),
+/// overridable at generation time so the airy-vs-solid balance can be tuned + A/B'd without editing
+/// the constant: `MARTIN_GEN_ALPHA` (0<a≤1) and `MARTIN_GEN_SPLAT` (>0). Unset/invalid → the defaults.
+/// (Named shapes with an explicit size_of/opacity_of arm — flame/pine/rocket/… — are unaffected.)
+fn gen_alpha() -> f32 {
+    std::env::var("MARTIN_GEN_ALPHA")
+        .ok()
+        .and_then(|v| v.parse::<f32>().ok())
+        .filter(|a| a.is_finite() && *a > 0.0 && *a <= 1.0)
+        .unwrap_or(ALPHA)
+}
+fn gen_splat() -> f32 {
+    std::env::var("MARTIN_GEN_SPLAT")
+        .ok()
+        .and_then(|v| v.parse::<f32>().ok())
+        .filter(|s| s.is_finite() && *s > 0.0)
+        .unwrap_or(SPLAT)
+}
+
 /// Every shape `gen_shape` knows how to synthesize (for the `splatgen` CLI's `list` + validation).
 /// `allow(dead_code)`: used by the `splatgen` bin, unreferenced when this file is included by `build.rs`.
 #[allow(dead_code)]
@@ -1236,7 +1255,7 @@ fn opacity_of(name: &str, rgb: &[f32; 3]) -> f32 {
                 0.9
             }
         }
-        _ => ALPHA, // everything else: the soft default
+        _ => gen_alpha(), // everything else: the soft default (MARTIN_GEN_ALPHA)
     }
 }
 
@@ -1298,7 +1317,7 @@ fn size_of(name: &str, rgb: &[f32; 3]) -> f32 {
                 0.020 // solid shell / claw / leg
             }
         }
-        _ => SPLAT, // the default
+        _ => gen_splat(), // the default (MARTIN_GEN_SPLAT)
     }
 }
 

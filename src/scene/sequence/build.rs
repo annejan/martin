@@ -436,6 +436,9 @@ fn finalize_build(
                 // MARTIN_SPLAT_SCALE shrinks every splat disk (default 1.0). Overdraw is the dominant
                 // GPU cost, so <1 (e.g. 0.8) cuts fill on a weak GPU — at the cost of a sparser cloud.
                 global_scale: crate::envvar::or("MARTIN_SPLAT_SCALE", 1.0_f32),
+                // MARTIN_ADDITIVE: emissive One+One blend — overlapping translucent splats GLOW on black
+                // instead of alpha-saturating to a solid blob (the nebula/neon look). Off = alpha-over.
+                additive: crate::envvar::or("MARTIN_ADDITIVE", 0) != 0,
                 ..default()
             },
             Transform::from_rotation(entity_rot).with_translation(reel_pos),

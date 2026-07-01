@@ -46,6 +46,15 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Added
 
+- **`MARTIN_ADDITIVE` — additive/emissive glow blend** (renderer fork §10, opt-in). `=1` (or a `.show
+  [settings] additive = 1`) composites splats with `One+One` so overlapping translucent gaussians
+  *accumulate light and glow* on black — the nebula/neon demoscene look — instead of alpha-over
+  saturating to a solid opaque blob. A/B on the procedural `galaxy`: a flat muddy disk became a glowing
+  spiral with visible arms + a white-hot core. For glow content on a dark background (no occlusion in
+  additive mode); solid captures / bright-backdrop shows stay off. Default off = byte-identical.
+- **`splatgen` `MARTIN_GEN_ALPHA` / `MARTIN_GEN_SPLAT`** — override the default-shape per-splat opacity /
+  radius at generation time (the demoscene morph shapes: galaxy/knot/helix/torus/…) to tune the
+  airy-vs-solid balance without editing the constant. Named art shapes (flame/pine/…) are unaffected.
 - **`midi_to_martin.py --style auto`** (now the default) — picks the voice/mix palette from the MIDI's
   GM instrument families (note-weighted) so the conversion no longer needs a hand-guessed `--style`:
   distortion guitar + drums → `rock`, sax/brass combo + drums → `jazz`, synth lead/pad heavy →
@@ -265,6 +274,20 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Fixed
 
+- **Over-budget `--record` fails fast instead of OOMing mid-dump.** When a scene's estimated peak
+  resident gaussians cross the `MARTIN_SPLAT_WARN` soft cap, a `--record` run now exits 1 *before* the
+  dump (a long unattended render would otherwise die partway with a wgpu buffer Validation Error — a
+  silent truncated clip). Live playback stays a warning.
+- **`midi_to_martin.py`: last-note drop + malformed-MIDI crashes.** A final note starting in the last
+  half-16th of the last bar was silently dropped (floor-allocated grid vs rounded placement) — now
+  clamped into the last slot. A 0 time-division / 0-usec tempo meta / a no-note MIDI raised a raw Python
+  traceback — now a clean `ValueError` / graceful degrade.
+- **Non-uniform `secs_to_slot` off-by-one at the exact track end.** A tempo-map / variable-grid / swing
+  score round-tripped the final instant to `total_slots()-1`; now returns `total_slots()` (was
+  practically unreachable — the synth samples the half-open interval — but the funnel invariant matters).
+- **Non-finite tokens rejected in `.show` scalars + `@hold,morph,bulge` timing.** `nan`/`inf` parsed as
+  valid f32 and slipped past `.clamp()`; a non-finite `hold` poisoned the cumulative shot-start cursor
+  for the rest of a reel. Now finite-checked at the parse boundary.
 - **A single `[camera]` keyframe now drives the camera (held static pose).** An inline `[camera]` track
   with exactly one timed keyframe was silently ignored — the `is_track` gate requires ≥2 keys, so a lone
   pose fell through to the `build_*` auto-frame and the authored camera was lost (a sharp authoring
