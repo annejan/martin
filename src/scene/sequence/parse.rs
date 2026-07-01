@@ -113,6 +113,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         let mut disk = None;
         let mut aniso = None;
         let mut font = None;
+        let mut additive = None;
         // Pull each modifier token out of the line by its sigil/prefix. A token carrying a known
         // prefix is ALWAYS consumed (never leaks into the head/text) — if it fails to parse we warn,
         // so a typo (`~explod`, `^wave2`) is a visible error, not a silently-dropped effect.
@@ -181,6 +182,12 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
                     }
                 } else if let Some(f) = tok.strip_prefix("font:") {
                     font = Some(f.to_string()); // `font:<name>` → a `text:` font (defeest/…)
+                } else if let Some(a) = tok.strip_prefix("additive:") {
+                    // `additive:0|1` → per-shot emissive glow blend override (else MARTIN_ADDITIVE).
+                    match finite_f32(a) {
+                        Some(v) => additive = Some(v != 0.0),
+                        None => eprintln!("seq: bad 'additive:{a}' (need 0 or 1) — ignored"),
+                    }
                 } else if let Some(res) = crate::scene::effects::parse_fx_modifier(tok) {
                     // the shared `~entrance` / `^deform[:amp]` / `tint:` modifiers (see effects.rs).
                     use crate::scene::effects::FxMod;
@@ -260,6 +267,7 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
             disk,
             aniso,
             font,
+            additive,
         });
     }
     parts
@@ -360,6 +368,16 @@ mod tests {
         assert_eq!(parse_raster("nope"), None);
         // a bad raster: token leaves the part with no override (falls back to MARTIN_RASTER/color)
         assert_eq!(parts("text:HI raster:bogus")[0].raster, None);
+    }
+
+    #[test]
+    fn parse_seq_reads_additive_token() {
+        assert_eq!(parts("text:HI additive:1")[0].additive, Some(true));
+        assert_eq!(parts("text:HI additive:0")[0].additive, Some(false));
+        // unset → None (falls back to MARTIN_ADDITIVE, resolved at build time onto BuiltShot).
+        assert_eq!(parts("text:HI")[0].additive, None);
+        // a non-finite/unparseable value is rejected, not silently coerced to true/false.
+        assert_eq!(parts("text:HI additive:nan")[0].additive, None);
     }
 
     #[test]

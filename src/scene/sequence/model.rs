@@ -41,6 +41,7 @@ pub(crate) struct Shot {
     pub aniso: Option<f32>, // `aniso:<f>` → per-part anisotropic mesh splats (>1 stretches each sample
     // into an ellipsoid along the surface grain, area-preserving), None = round
     pub font: Option<String>, // `font:<name>` → pick a `text:` font (e.g. `defeest`); None = default font.ttf
+    pub additive: Option<bool>, // `additive:0|1` → per-shot emissive glow blend override; None = MARTIN_ADDITIVE
 }
 
 impl Shot {
@@ -73,6 +74,7 @@ impl Shot {
             disk: None,
             aniso: None,
             font: None,
+            additive: None,
         }
     }
 }
@@ -108,6 +110,7 @@ pub(crate) struct BuiltShot {
     pub flash: Option<f32>, // per-shot cut-bloom strength (`flash:N`); None = global MARTIN_FLASH
     pub beat: Option<f32>,  // per-shot beat-bounce scale (`beat:N`); None = 1.0, 0 = still
     pub raster: RasterizeMode,
+    pub additive: bool, // resolved per-shot emissive glow blend (`additive:`/MARTIN_ADDITIVE)
     pub ease: Ease, // morph-curve shaping (`ease:`); applied to the blend factor in the director
     pub freeze: Option<f32>, // `freeze:N` deform quantization grid (steps/bar); None = smooth
     pub start: f32, // absolute start time (s) of this shot

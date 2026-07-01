@@ -129,6 +129,7 @@ pub(crate) struct Prop {
     // into gaussians) — a DIFFERENT knob from `dscale:` (a render-time multiplier). Threaded into
     // sample_content; was silently dropped, so a compose mesh's `disk:`/`aniso:` had no effect.
     aniso: Option<f32>, // `aniso:V`: mesh-sampling anisotropy (stretch the sampled splats).
+    additive: Option<bool>, // `additive:0|1`: per-object emissive glow blend; None = MARTIN_ADDITIVE
 }
 
 impl Prop {
@@ -288,6 +289,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         let mut disk_scale = None;
         let mut disk = None;
         let mut aniso = None;
+        let mut additive = None;
         // travel: parsed raw here (needs `score` + the object's `in` cue, both resolved after the loop)
         let mut travel_raw: Option<(Vec3, Option<String>, Option<f32>)> = None;
         let toks: Vec<&str> = s
@@ -348,6 +350,14 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                     match finite_f32(n) {
                         Some(d) => aniso = Some(d.max(0.0)),
                         None => eprintln!("compose: bad 'aniso:{n}' (need a finite float) — ignored"),
+                    }
+                    return false;
+                }
+                // `additive:0|1` — per-object emissive glow blend override (else MARTIN_ADDITIVE).
+                if let Some(n) = t.strip_prefix("additive:") {
+                    match finite_f32(n) {
+                        Some(v) => additive = Some(v != 0.0),
+                        None => eprintln!("compose: bad 'additive:{n}' (need 0 or 1) — ignored"),
                     }
                     return false;
                 }
@@ -500,6 +510,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
             disk_scale,
             disk,
             aniso,
+            additive,
         });
     }
     out
@@ -695,8 +706,10 @@ pub(crate) fn build_composition(
             // a per-object `dscale:` multiplies it (shrink just a backdrop's disks, keep the props full).
             global_scale: crate::envvar::or("MARTIN_SPLAT_SCALE", 1.0_f32)
                 * obj.disk_scale.unwrap_or(1.0),
-            // MARTIN_ADDITIVE: emissive One+One glow blend (see build.rs) — for glow content on black.
-            additive: crate::envvar::or("MARTIN_ADDITIVE", 0) != 0,
+            // per-object `additive:0|1` (see build.rs) > MARTIN_ADDITIVE — for glow content on black.
+            additive: obj
+                .additive
+                .unwrap_or_else(|| crate::envvar::or("MARTIN_ADDITIVE", 0) != 0),
             ..default()
         };
         let tf = Transform {

@@ -132,6 +132,10 @@ pub(crate) fn shot_director(
     if cs.rasterize_mode != want_raster {
         cs.rasterize_mode = want_raster;
     }
+    // per-shot emissive glow blend (additive:/MARTIN_ADDITIVE), resolved at build time onto BuiltShot.
+    if cs.additive != s.additive {
+        cs.additive = s.additive;
+    }
     // the ball-pulse shader effect belongs to the plain Morph entrance (prev → next through a
     // ball); source-based transitions carry their own motion, so they don't pulse.
     cs.bulge = if arriving && s.entrance == Entrance::Morph {

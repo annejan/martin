@@ -133,6 +133,13 @@ fn build_cpu(inputs: BuildInputs) -> BuildOutput {
         .iter()
         .map(|p| p.raster.unwrap_or(global_raster))
         .collect();
+    // per-shot emissive glow blend: explicit `additive:0|1` > MARTIN_ADDITIVE. Resolved once here (not
+    // per-frame) so the director just applies the concrete bool, same pattern as `raster` above.
+    let global_additive = crate::envvar::or("MARTIN_ADDITIVE", 0) != 0;
+    let additives: Vec<bool> = parts
+        .iter()
+        .map(|p| p.additive.unwrap_or(global_additive))
+        .collect();
     let transitions: Vec<Entrance> = parts
         .iter()
         .enumerate()
@@ -256,6 +263,7 @@ fn build_cpu(inputs: BuildInputs) -> BuildOutput {
         &transitions,
         &deforms,
         &rasters,
+        &additives,
         &starts,
         n,
         content_radius,
@@ -436,9 +444,13 @@ fn finalize_build(
                 // MARTIN_SPLAT_SCALE shrinks every splat disk (default 1.0). Overdraw is the dominant
                 // GPU cost, so <1 (e.g. 0.8) cuts fill on a weak GPU — at the cost of a sparser cloud.
                 global_scale: crate::envvar::or("MARTIN_SPLAT_SCALE", 1.0_f32),
-                // MARTIN_ADDITIVE: emissive One+One blend — overlapping translucent splats GLOW on black
-                // instead of alpha-saturating to a solid blob (the nebula/neon look). Off = alpha-over.
-                additive: crate::envvar::or("MARTIN_ADDITIVE", 0) != 0,
+                // MARTIN_ADDITIVE / per-shot `additive:`: emissive One+One blend — overlapping
+                // translucent splats GLOW on black instead of alpha-saturating to a solid blob (the
+                // nebula/neon look). Off = alpha-over. Not set here (defaults false via `..default()`,
+                // same as `rasterize_mode`) — `shot_director` applies the resolved per-shot value every
+                // frame from `BuiltShot.additive`, including frame 0 (deterministic capture modes build
+                // the whole reel inline before frame 0, so the director's first tick still lands before
+                // any frame is written/captured).
                 ..default()
             },
             Transform::from_rotation(entity_rot).with_translation(reel_pos),
@@ -525,6 +537,7 @@ fn build_shots(
     transitions: &[Entrance],
     deforms: &[Option<Deform>],
     rasters: &[RasterizeMode],
+    additives: &[bool],
     starts: &[f32],
     n: usize,
     content_radius: f32,
@@ -617,6 +630,7 @@ fn build_shots(
             flash: shot.flash.or((tr == Entrance::Cut).then_some(0.8)),
             beat: shot.beat,
             raster: rasters[idx],
+            additive: additives[idx],
             ease: shot.ease,
             freeze: shot.freeze,
             start: starts[idx],

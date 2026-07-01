@@ -402,6 +402,13 @@ the whole show's default with **`MARTIN_RASTER=<mode>`**; a part's `raster:` tok
 `position` looks great on anything — e.g. `text:deFEEST ~outline raster:position` = outline-revealed
 letters in a position-colour rainbow.
 
+**Per-part additive glow** (`additive:0|1`, reel) / `additive:0|1` (compose, per-object): overrides
+`MARTIN_ADDITIVE` for just this part/object. Switches cleanly at the part boundary the director already
+tracks (no new render pass) — so a reel can flow a normal alpha-over shape into a glowing additive one
+and back, e.g. `splat:galaxy.ply additive:1 @6,2 ~morph backdrop:off` next to a plain part. Land the
+switch on a low-visibility moment (mid-`~morph` dispersion, or an `exit:evaporate`/entrance fade) to mask
+the instant blend-mode change and read as a smooth glow-in/glow-out instead of a hard cut.
+
 **`font:<name>`** (on a `text:` part) — pick the glyph font for filled text (`text:` and `~outline`).
 Built in: the default bold `font.ttf`, and **`defeest`** (aliases `brand`/`hardpixel`) = the blocky
 deFEEST display font for branded titles, e.g. `text:PonyCamp ~outline font:defeest`. Unknown name →

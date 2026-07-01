@@ -52,6 +52,13 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   saturating to a solid opaque blob. A/B on the procedural `galaxy`: a flat muddy disk became a glowing
   spiral with visible arms + a white-hot core. For glow content on a dark background (no occlusion in
   additive mode); solid captures / bright-backdrop shows stay off. Default off = byte-identical.
+- **Per-part/per-object `additive:0|1`** — a reel `splat:`/etc. part or a compose object can override
+  the global `MARTIN_ADDITIVE` for just itself (`Shot.additive`/`Prop.additive`, resolved once at build
+  onto `BuiltShot`, applied every frame by `shot_director` alongside `raster:` — same pipeline-key
+  specialization pattern, no new render pass). Lets a reel flow a normal shape into a glowing one and
+  back; land the switch on a low-opacity moment (mid-morph dispersion, an evaporate/entrance fade) to
+  read as a smooth glow transition instead of a hard cut. Verified: `additive:1`/`additive:0` on the
+  same shape render visibly different (glowing vs. flat-opaque) at the same splat count.
 - **`splatgen` `MARTIN_GEN_ALPHA` / `MARTIN_GEN_SPLAT`** — override the default-shape per-splat opacity /
   radius at generation time (the demoscene morph shapes: galaxy/knot/helix/torus/…) to tune the
   airy-vs-solid balance without editing the constant. Named art shapes (flame/pine/…) are unaffected.
