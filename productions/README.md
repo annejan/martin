@@ -38,10 +38,11 @@ Current productions:
   *is* the transition. All four captures (austin/nyc/chicago/seattle) are baked; `cities.show` /
   `cities-easy.show` fly all four, `cities-energy.show` is a tighter wide-grazing-drone cut over just
   the three strongest captures (chicago's flatter capture collapses to top-down at drone angles).
-  **`cities-neon.show`** alternates the real captures (normal alpha-over, crisp) with glowing procedural
-  energy-bursts (`MARTIN_ADDITIVE`/per-shot `additive:1`) as the city-to-city transitions — additive
-  barely changes a real capture (thin near-opaque surface, little splat overlap — A/B tested), so it's
-  saved for the bursts where it actually glows. Same gitignored-capture / ©Google constraints as above.
+  **`cities-neon.show`** is the rainbow-city reveal: the real captures render `raster:position` (colour
+  by XYZ — a rainbow gradient across the whole skyline) for their whole hold, the same technique as the
+  "RAINBOW shader city" kill-shot in cities-defeest but sustained instead of a flash. On an original
+  Halcyon-esque score (`score-neon.txt`, own composition). Same gitignored-capture / ©Google constraints
+  as above.
   Also here: **cities-defeest** (the shareable causal loop — city tour balls into a bitterbal → the
   deFEEST logo → back) and **city-bite**.
 - **synthwave** (`kind = demo`) — a bold neon space-journey on **martin's own composed music** (no
