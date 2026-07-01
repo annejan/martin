@@ -1,0 +1,50 @@
+# An ORIGINAL martin background loop — dreamy, driving ambient-techno for the neon-city-fly.
+# Halcyon-esque (Orbital): warm uplifting I-V-vi-IV progression, a hypnotic 16th arp instead of a
+# foreground lead, a pumping pad under a steady four-on-floor, gentle (not aggressive) drums, lots of
+# reverb/shimmer wash. Hand-composed using the jantje lessons: clean bass, minimal, per-bar chords.
+bpm 128
+
+# C–G–Am–F — the classic warm/uplifting turnaround (I-V-vi-IV)
+chords C G Am F
+
+# intro (pad only, hushed) → groove1/groove2 (full pulse, the cities) → break (a breath) →
+# lift (brighter, the final city) → outro (fades out)
+section intro    4
+section groove1  24
+section groove2  24
+section break    4
+section lift     20
+section outro    20
+
+# --- DRUMS: gentle four-on-floor, no aggressive backbeat snare (dreamy, not EDM-hard) ---
+groove1.kick  p0: x... x... x... x...
+groove1.hat   p0: ..x. ..x. ..x. ..x.
+groove2.kick  p0: x... x... x... x...
+groove2.hat   p0: ..x. ..x. ..x. ..x.
+lift.kick     p0: x... x... x... x...
+lift.hat      p0: ..x. ..x. ..x. ..xx
+lift.snare    p0: .... .... x... ....
+outro.kick    p0: x... x... x... ....
+
+# --- ARP: the hypnotic 16th arpeggio (the main voice — no separate foreground lead), one bar
+#     per chord (C, G, Am, F), 4-bar phrase loops automatically for the whole section ---
+intro.arp    p0: C5 - - .  . . . .  . . . .  . . . .   G4 - - .  . . . .  . . . .  . . . .   A4 - - .  . . . .  . . . .  . . . .   F4 - - .  . . . .  . . . .  . . . .
+groove1.arp  p0: C4 E4 G4 E4  C4 E4 G4 E4  C4 E4 G4 E4  C4 E4 G4 E4   G3 B3 D4 B3  G3 B3 D4 B3  G3 B3 D4 B3  G3 B3 D4 B3   A3 C4 E4 C4  A3 C4 E4 C4  A3 C4 E4 C4  A3 C4 E4 C4   F3 A3 C4 A3  F3 A3 C4 A3  F3 A3 C4 A3  F3 A3 C4 A3
+groove2.arp  p0: C4 E4 G4 E4  C4 E4 G4 E4  C4 E4 G4 E4  C4 E4 G4 E4   G3 B3 D4 B3  G3 B3 D4 B3  G3 B3 D4 B3  G3 B3 D4 B3   A3 C4 E4 C4  A3 C4 E4 C4  A3 C4 E4 C4  A3 C4 E4 C4   F3 A3 C4 A3  F3 A3 C4 A3  F3 A3 C4 A3  F3 A3 C4 A3
+break.arp    p0: C4 - E4 -  G4 - E4 -  . . . .  . . . .   G3 - B3 -  D4 - B3 -  . . . .  . . . .   A3 - C4 -  E4 - C4 -  . . . .  . . . .   F3 - A3 -  C4 - A3 -  . . . .  . . . .
+lift.arp     p0: C5 E5 G5 E5  C5 E5 G5 E5  C4 E4 G4 E4  C4 E4 G4 E4   G4 B4 D5 B4  G4 B4 D5 B4  G3 B3 D4 B3  G3 B3 D4 B3   A4 C5 E5 C5  A4 C5 E5 C5  A3 C4 E4 C4  A3 C4 E4 C4   F4 A4 C5 A4  F4 A4 C5 A4  F3 A3 C4 A3  F3 A3 C4 A3
+outro.arp    p0: C4 E4 G4 E4  C4 E4 G4 E4  C4 E4 G4 E4  C4 E4 G4 E4   G3 B3 D4 B3  G3 B3 D4 B3  G3 B3 D4 B3  G3 B3 D4 B3   A3 C4 E4 C4  A3 C4 E4 C4  A3 C4 E4 C4  A3 C4 E4 C4   F3 A3 C4 A3  F3 A3 C4 A3  F3 A3 C4 A3  F3 A3 C4 A3
+
+# --- BASS: clean, pulsing on the kick (retriggered each beat) — the jantje clean bass, 4-bar phrase ---
+groove1.bass p0: C2 - - - C2 - - - C2 - - - C2 - - -   G2 - - - G2 - - - G2 - - - G2 - - -   A2 - - - A2 - - - A2 - - - A2 - - -   F2 - - - F2 - - - F2 - - - F2 - - -
+groove2.bass p0: C2 - - - C2 - - - C2 - - - C2 - - -   G2 - - - G2 - - - G2 - - - G2 - - -   A2 - - - A2 - - - A2 - - - A2 - - -   F2 - - - F2 - - - F2 - - - F2 - - -
+lift.bass    p0: C2 - C2 - C2 - C2 -  C2 - C2 - C2 - C2 -   G2 - G2 - G2 - G2 -  G2 - G2 - G2 - G2 -   A2 - A2 - A2 - A2 -  A2 - A2 - A2 - A2 -   F2 - F2 - F2 - F2 -  F2 - F2 - F2 - F2 -
+outro.bass   p0: C2 - - - C2 - - - C2 - - - C2 - - -   G2 - - - G2 - - - G2 - - - G2 - - -   A2 - - - A2 - - - A2 - - - A2 - - -   F2 - - - F2 - - - F2 - - - F2 - - -
+
+# --- dynamics: hushed intro, sustained groove, a breath, brighter lift, long fade-out ---
+gain  intro 0.35  groove1 0.75  groove2 0.78  break 0.5  lift 0.95  outro 0.6>0.15
+sub   intro 0.15  groove1 0.6   groove2 0.6   break 0.25 lift 0.8   outro 0.4>0.1
+mids  intro 0.4   groove1 0.65  groove2 0.68  break 0.45 lift 0.85  outro 0.4>0.15
+
+# --- voices: dreamy palette — pumping pad, breathy arp, clean sub bass, lots of reverb/shimmer wash ---
+set lead=0.0 arp=0.55 arpsw=2 basssw=2 sub=0.55 supersaw=0.05 choir=0.22 padsw=3 stabsw=0 donk=0 house=0 reverb=0.5 sidechain=0.5 widen=1.9 makeup=1.1 ceiling=0.94 shimmer=0.28 hats=0.32 snares=0.4 atmosphere=0.08 drumsw=1 oversample=1
