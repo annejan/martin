@@ -71,6 +71,24 @@ pub(crate) fn cap_count(label: &str, n: usize) -> usize {
 pub(crate) fn warn_splat_budget(label: &str, splats: usize) {
     let cap = crate::envvar::or("MARTIN_SPLAT_WARN", 2_000_000usize);
     if splats > cap {
+        // In `--record` this is a HARD stop, not a warning: a long unattended dump that crosses the
+        // heuristic danger line doesn't panic mid-render — the GPU upload just dies with a wgpu buffer
+        // "Validation Error" and frames silently stop, wasting the whole (possibly 10+ minute) session.
+        // Fail fast + loud BEFORE the dump starts instead (this runs once at scene build, pre-render) —
+        // same "don't hang/waste a long headless run" principle as the disk-preflight in record.sh and
+        // the asset-LoadState::Failed handling above. Live playback stays a warning (you see it happen
+        // and can Ctrl-C); raise MARTIN_SPLAT_WARN if you've verified your hardware handles more.
+        if std::env::var_os("MARTIN_RECORD").is_some() {
+            error!(
+                "{label}: ~{:.2}M gaussians resident — over the {:.2}M soft cap (MARTIN_SPLAT_WARN), \
+                 and this is a --record run: refusing to start a long dump that would likely OOM the GPU \
+                 mid-render. Lower MARTIN_MORPH_COUNT / the .show `budget`, or raise MARTIN_SPLAT_WARN if \
+                 you've verified this hardware handles it.",
+                splats as f32 / 1e6,
+                cap as f32 / 1e6,
+            );
+            std::process::exit(1);
+        }
         warn!(
             "{label}: ~{:.2}M gaussians resident — over the {:.2}M soft cap (MARTIN_SPLAT_WARN). A long \
              record may OOM the GPU mid-render; lower MARTIN_MORPH_COUNT or the .show `budget`.",
