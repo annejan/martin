@@ -281,6 +281,16 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Fixed
 
+- **A non-monotonic part timeline no longer desyncs the reveal from the music.** Two unanchored parts
+  laid end-to-end could overrun into a later part's fixed `@@anchor` (found in
+  `productions/bitterbal/cosmic-snack.show` — the kill-shot reveal landed 1.6s late relative to its own
+  `[sync]` flash/beat cues). `active_shot()` now does a full scan (correct regardless of authoring
+  mistakes) instead of an early break that assumed sorted starts, and `--validate` now warns with the
+  exact culprits when a timeline isn't monotonic, catching this class of bug before a render.
+- **`record.sh`'s disk-preflight now sees the sequence/compose length, not just the audio's.** The fit
+  check previously derived the show's length only from the synth's audio duration; a reel/compose that
+  outlasts its score (or `MARTIN_MUTE`, which had no audio at all) could pass the check while actually
+  rendering longer. It now also parses `--validate`'s reported durations and takes the max.
 - **Over-budget `--record` fails fast instead of OOMing mid-dump.** When a scene's estimated peak
   resident gaussians cross the `MARTIN_SPLAT_WARN` soft cap, a `--record` run now exits 1 *before* the
   dump (a long unattended render would otherwise die partway with a wgpu buffer Validation Error — a
