@@ -146,16 +146,21 @@ impl SeqState {
     }
 }
 
-/// Index of the active shot at time `t`: the last shot whose absolute start (from the cue
+/// Index of the active shot at time `t`: the highest-index shot whose absolute start (from the cue
 /// timeline — `@@anchor` or laid end-to-end) has arrived. Shared by `shot_director` and `flypath`.
+///
+/// A FULL scan, not an early-break on the first future start: `starts` is normally non-decreasing,
+/// but an `@@anchor` can land a shot BEFORE an earlier, unanchored one that was laid end-to-end (a
+/// content bug, not an engine one — e.g. two long relatively-timed shots overrunning into a fixed
+/// `@@drop` anchor). An early break would then silently freeze on a stale index across the anchored
+/// shot's whole span instead of just skipping the shot whose start it jumped past. `starts` is tiny
+/// (one show's part count), so the full scan costs nothing measurable.
 pub(crate) fn active_shot(starts: &[f32], t: f32) -> usize {
     debug_assert!(!starts.is_empty(), "active_shot: empty timeline");
     let mut idx = 0;
     for (i, &start) in starts.iter().enumerate() {
         if t >= start {
             idx = i;
-        } else {
-            break;
         }
     }
     idx

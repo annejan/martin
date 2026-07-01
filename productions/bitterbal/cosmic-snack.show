@@ -26,8 +26,8 @@ bg_dim   = 0.5
 [reel]
 splat:aegg.ply      @@intro      @5,2     ~fade                                       backdrop:stars     # THE AEgg, adrift in deep space 🥚
 splat:galaxy.ply    @@build      @5,2     ~swirl  beat:0.7  ^spiral:0.25              backdrop:fractal   # …it HATCHES → unfurls into a whole galaxy 🌌
-splat:star.ply                   @4.5,1.8 ~morph  ^turbulence:0.2                     backdrop:rings     # …a burst of starfire ✨ (montage glimpse)
-splat:helix.ply                  @4.5,2.1 ~morph  ^spiral:0.2                         backdrop:tunnel    # …cosmic DNA spirals out 🧬
+splat:star.ply                   @1.3,1.0 ~morph  ^turbulence:0.2                     backdrop:rings     # …a burst of starfire ✨ (montage glimpse — quick, fits before @@drop)
+splat:helix.ply                  @1.3,1.0 ~morph  ^spiral:0.2                         backdrop:tunnel    # …cosmic DNA spirals out 🧬 (quick — @@drop fires right after)
 mesh:bitterbal.glb  @@drop       @4,1.5   ~shockwave  ease:snap  tint:fry  flash:0.9  beat:1.8  backdrop:stars   # …IT'S ALL A BITTERBAL 🟤 (cosmic kill-shot reveal)
 mesh:bitterbal.glb  @@breakdown  @3,2     ~morph  ^turbulence:0.3  tint:fry           backdrop:stars     # it hovers, glistening hot, while the snack-rain falls
 mesh:bitterbal.glb  @@climax     @4,2     ~ball   flock:14  tint:fry  flash:0.6  beat:1.9  ^turbulence:0.4  backdrop:stars   # the peak — the giant bal balls up glorious (stars, not fractal: keep the bal the hero)

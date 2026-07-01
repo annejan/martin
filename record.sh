@@ -50,6 +50,13 @@ echo "    faster for big .ply clouds)"
 cargo build --release --manifest-path "$HERE/Cargo.toml"
 BIN="$(find "$HERE/target/release" -maxdepth 1 -type f -executable -name martin | head -n1)"
 
+# CONTENT duration (GPU-free, cheap): `--validate` prints the score/sequence/compose lengths (each a
+# "~Ns" tail). The disk-fit check below previously derived the show's length ONLY from the synth's
+# audio duration — a reel/compose that outlasts its score wasn't seen, and MARTIN_MUTE (no audio at
+# all) skipped the length check entirely. Take the max of every "~Ns" in the dry run instead.
+VALIDATE_LOG=$("$BIN" --validate 2>&1 || true)
+CONTENT_SECS=$(echo "$VALIDATE_LOG" | grep -oE '~[0-9]+\.?[0-9]*s' | tr -d '~s' | sort -n | tail -1)
+
 # Render the synth to a WAV FIRST, then mux it in (honours MARTIN_SCORE; skipped by MARTIN_MUTE).
 # Audio BEFORE the frame capture: a long 1.2M capture can wedge the RADV GPU, and the synth pass
 # still boots Bevy (inits the renderer) — doing it first means it runs on a fresh, un-wedged GPU.
@@ -87,14 +94,20 @@ if [ -z "${MARTIN_MUTE:-}" ]; then
     mkdir -p "$CACHE_DIR" 2>/dev/null && [ -n "$KEY" ] && cp "$WAV" "$CACHED" 2>/dev/null || true
   fi
   AUDIO=(-i "$WAV" -c:a aac -shortest)
-  # Will the whole PNG dump fit? Now that we know the show length, abort BEFORE the long capture if it
-  # won't (the case the GB floor misses: plenty free generally, but not enough for THIS long render).
-  if [ -n "$SHOW_SECS" ] && awk "BEGIN{exit !($SHOW_SECS > $FIT_SECS)}"; then
-    NEED_GB=$(awk "BEGIN{printf \"%.0f\", $SHOW_SECS*${MARTIN_PREVIEW_FPS:-60}*$PERFRAME_MB/1024}")
-    echo "==> ERROR: this ${SHOW_SECS}s show needs ~${NEED_GB} GB of frames but only ${AVAIL_GB} GB is free (~${FIT_SECS}s fits)." >&2
-    echo "    Point TMPDIR at a bigger disk, or lower MARTIN_PREVIEW_FPS / MARTIN_RES / MARTIN_SS." >&2
-    rm -rf "$FR"; exit 1
-  fi
+  # The audio duration ≈ the score's length; take the max with CONTENT_SECS (sequence/compose can
+  # legitimately outlast the score) so the fit-check below sees the render's ACTUAL length.
+  SHOW_SECS=$(printf '%s\n%s\n' "$SHOW_SECS" "$CONTENT_SECS" | grep -oE '[0-9]+\.?[0-9]*' | sort -n | tail -1)
+fi
+# Will the whole PNG dump fit? Now that we know the show length (audio when present, else the
+# content-only CONTENT_SECS — e.g. MARTIN_MUTE, previously unchecked here), abort BEFORE the long
+# capture if it won't (the case the GB floor misses: plenty free generally, but not enough for THIS
+# long render).
+SHOW_SECS="${SHOW_SECS:-$CONTENT_SECS}"
+if [ -n "$SHOW_SECS" ] && awk "BEGIN{exit !($SHOW_SECS > $FIT_SECS)}"; then
+  NEED_GB=$(awk "BEGIN{printf \"%.0f\", $SHOW_SECS*${MARTIN_PREVIEW_FPS:-60}*$PERFRAME_MB/1024}")
+  echo "==> ERROR: this ${SHOW_SECS}s show needs ~${NEED_GB} GB of frames but only ${AVAIL_GB} GB is free (~${FIT_SECS}s fits)." >&2
+  echo "    Point TMPDIR at a bigger disk, or lower MARTIN_PREVIEW_FPS / MARTIN_RES / MARTIN_SS." >&2
+  rm -rf "$FR"; exit 1
 fi
 
 echo "==> recording the timeline -> $FR"

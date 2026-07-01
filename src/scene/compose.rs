@@ -211,19 +211,26 @@ impl Prop {
     }
 }
 
-impl Composition {
-    /// How long to record a composition stage: enough for every object to have appeared (and any
-    /// fade-out to finish), plus a tail. The recorder uses this since a compose stage has no morph
-    /// timeline to derive an end from.
-    pub(crate) fn record_secs(&self) -> f32 {
-        let mut end = 0.0_f32;
-        for o in &self.objects {
-            end = end.max(o.appear.max(0.0));
-            if o.out < f32::MAX {
-                end = end.max(o.out + o.fade);
-            }
+/// How long to record a composition stage: enough for every object to have appeared (and any
+/// fade-out to finish), plus a tail. The recorder uses this since a compose stage has no morph
+/// timeline to derive an end from. A free fn (not just `Composition::record_secs`) so `--validate`
+/// can print it from a bare `&[Prop]` too, without needing a built `Composition` — `record.sh` parses
+/// it (alongside the sequence line) to catch a reel/compose that outlasts the score.
+pub(crate) fn compose_record_secs(objects: &[Prop]) -> f32 {
+    let mut end = 0.0_f32;
+    for o in objects {
+        end = end.max(o.appear.max(0.0));
+        if o.out < f32::MAX {
+            end = end.max(o.out + o.fade);
         }
-        (end + 8.0).max(12.0)
+    }
+    (end + 8.0).max(12.0)
+}
+
+impl Composition {
+    /// See [`compose_record_secs`].
+    pub(crate) fn record_secs(&self) -> f32 {
+        compose_record_secs(&self.objects)
     }
 }
 

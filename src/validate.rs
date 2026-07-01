@@ -65,6 +65,22 @@ pub fn report(
 
     if !seq.parts.is_empty() {
         let starts = shot_starts(&seq.parts);
+        // A non-monotonic timeline (an `@@anchor` landing before an earlier, unanchored part that was
+        // laid end-to-end and overran into it) desyncs the reveal from the music: `active_shot` picks
+        // by highest surviving index, so the anchored part's own moment is fine, but everything between
+        // the overrun and the anchor plays too late/gets skipped. Warn with the exact culprits so an
+        // author can shorten the overrunning part(s) or move the anchor — caught by hand once already
+        // (productions/bitterbal/cosmic-snack.show) before this check existed.
+        for w in starts.windows(2) {
+            if w[1] < w[0] {
+                eprintln!(
+                    "seq: part timeline is NOT monotonic — a part starts at {:.1}s right after one \
+                     starting at {:.1}s. An earlier unanchored part likely overran into a fixed \
+                     @@anchor; shorten its hold/morph or move the anchor.",
+                    w[1], w[0]
+                );
+            }
+        }
         let end = show_end(&seq.parts, &starts);
         println!(
             "\nsequence: {} parts, ~{:.0}s total, {} gaussians/part",
@@ -102,10 +118,15 @@ pub fn report(
         // cloud (+ ×2 for a ~entrance source cloud), mirroring the compose sample math.
         let default = crate::envvar::or("MARTIN_MORPH_COUNT", 120_000usize);
         let resident: usize = compose.iter().map(|o| o.resident_estimate(default)).sum();
+        // record duration (a compose stage has no morph timeline to derive an end from). record.sh
+        // parses this (alongside the sequence line) to catch a reel/compose that outlasts the score,
+        // which its own audio-duration-only estimate can't see.
+        let record_secs = crate::scene::compose::compose_record_secs(compose);
         println!(
-            "\ncompose:  {} objects, ~{:.2}M gaussians peak resident",
+            "\ncompose:  {} objects, ~{:.2}M gaussians peak resident, ~{:.0}s record duration",
             compose.len(),
             resident as f32 / 1e6,
+            record_secs,
         );
         let cap = crate::envvar::or("MARTIN_SPLAT_WARN", 2_000_000usize);
         if resident > cap {
