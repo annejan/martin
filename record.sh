@@ -62,7 +62,11 @@ if [ -z "${MARTIN_MUTE:-}" ]; then
   # MARTIN_NO_SYNTH_CACHE=1 to force a re-render (e.g. when overriding a synth param via env).
   SCORE_FILE="${MARTIN_SCORE:-}"
   if [ -z "$SCORE_FILE" ] && [ -n "${MARTIN_SHOW:-}" ] && [ -f "${MARTIN_SHOW:-}" ]; then
-    SCORE_FILE=$(grep -oE '^[[:space:]]*score[[:space:]]*=[[:space:]]*[^#]+' "$MARTIN_SHOW" | head -1 | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//')
+    # a `.show` with NO `score =` line is valid (falls back to the built-in default) — grep then finds
+    # no match and exits 1, which under `pipefail` + `set -e` would silently kill the whole script right
+    # here (no error printed — it's a plain assignment, not a checked command). `|| true` keeps the
+    # legitimate no-match case from aborting; SCORE_FILE just stays empty and the line 68 fallback fires.
+    SCORE_FILE=$(grep -oE '^[[:space:]]*score[[:space:]]*=[[:space:]]*[^#]+' "$MARTIN_SHOW" | head -1 | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
   fi
   if [ -n "$SCORE_FILE" ] && [ ! -f "$SCORE_FILE" ] && [ -f "$HERE/$SCORE_FILE" ]; then SCORE_FILE="$HERE/$SCORE_FILE"; fi
   if [ -z "$SCORE_FILE" ] || [ ! -f "$SCORE_FILE" ]; then SCORE_FILE="$HERE/assets/score.txt"; fi
