@@ -14,7 +14,7 @@ use bevy_gaussian_splatting::{
 use crate::camera::{DEFAULT_PITCH, FRONT_YAW, OrbitCam};
 use crate::capture::RecordState;
 use crate::morph::resample_morton;
-use crate::scene::content::{PartContent, parse_source, sample_content};
+use crate::scene::content::{PartContent, parse_source, part_gaussians, sample_content_owned};
 use crate::scene::effects::{Deform, Ease, Entrance, source_cloud};
 use crate::scene::sequence::{SeqState, Sequence};
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, SeqClock, cloud_base_rotation};
@@ -609,7 +609,115 @@ pub(crate) fn build_composition(
     let mut placed: Vec<(Vec3, f32)> = Vec::new(); // (centre, radius) per object, for framing
     let mut any_model = false;
     let mut resident = 0usize; // running estimate of peak resident gaussians (for the OOM warning)
+
+    // #7 — the reel got per-object parallelism (build.rs); this stage sampled one object at a time.
+    // A Model/GlMesh prop is spawned directly (async asset load, no CPU sampling — stays serial, cheap,
+    // main-thread-only Bevy API). Everything else's CPU-heavy chain (sample → normalize → resample/
+    // cluster → tint → alpha) has NO cross-object dependency (unlike the reel's shared `scene_norm`,
+    // compose normalizes every object to the same constant `NORMALIZE_EXTENT` independently) — so it
+    // can run fully in parallel, producing an owned `shaped: Vec<Gaussian3d>` per object. Only the
+    // final `assets.add`/`commands.spawn` (main-thread-only) stays serial, in a later pass.
+    //
+    // Splat-content pre-extraction (the only step needing `&Assets`) happens HERE, serially, mirroring
+    // build.rs's `presampled` — so the parallel closure below is asset-free (`sample_content_owned`).
+    struct Prepared {
+        obj_count: usize,
+        sample_n: usize,
+        presample: Option<Vec<Gaussian3d>>,
+    }
+    let mut prepared: Vec<Option<Prepared>> = Vec::with_capacity(comp.objects.len());
     for obj in &comp.objects {
+        if matches!(obj.content, PartContent::Model(_) | PartContent::GlMesh(_)) {
+            prepared.push(None);
+            continue;
+        }
+        // `count:N` overrides the scene-wide density for THIS object; `field:N` splits it across N swarm
+        // copies. Sample a MESH at this final per-object count (passed into sample_content_owned) so its
+        // disk size matches the eventual density — sampling high then downsampling left mesh disks too
+        // small for the thinned spacing → holes (most visible on the big props, e.g. horses, at 1080p).
+        // MARTIN_COUNT_SCALE thins EVERY prop (count: or default) — lets QUALITY scale a count-bound
+        // compose stage, which a per-object `count:` would otherwise pin past MARTIN_MORPH_COUNT.
+        let obj_count = crate::scene::cap_count(
+            "compose",
+            ((obj.count.unwrap_or(count) as f32 * crate::scene::count_scale()).round() as usize)
+                .max(64),
+        );
+        // Peak resident: its shape cloud + (for a SPATIAL `~entrance`) its source cloud → ×2. `~fade`
+        // is the plain opacity path now (no source cloud), so it counts ×1.
+        let doubles = matches!(obj.entrance, Some(t) if t != Entrance::Fade);
+        resident += obj_count * if doubles { 2 } else { 1 };
+        let sample_n = match obj.field {
+            Some(n) => (obj_count / n.max(1)).max(2_000),
+            None => obj_count,
+        };
+        let presample = matches!(obj.content, PartContent::Splats(_)).then(|| {
+            part_gaussians(
+                &obj.content,
+                &state,
+                &assets,
+                &root.0,
+                obj.disk,
+                obj.aniso,
+                Some(sample_n),
+                obj.font.as_deref(),
+            )
+        });
+        prepared.push(Some(Prepared {
+            obj_count,
+            sample_n,
+            presample,
+        }));
+    }
+
+    let shaped_all: Vec<Option<Vec<Gaussian3d>>> = {
+        use rayon::prelude::*;
+        comp.objects
+            .par_iter()
+            .zip(prepared.par_iter_mut())
+            .map(|(obj, prep)| {
+                let prep = prep.as_mut()?;
+                let mut raw = sample_content_owned(
+                    &obj.content,
+                    obj.entrance,
+                    prep.presample.take(),
+                    &root.0,
+                    obj.disk,
+                    obj.aniso,
+                    Some(prep.sample_n),
+                    obj.font.as_deref(),
+                );
+                if raw.is_empty() {
+                    return None;
+                }
+                crate::morph::normalize_to(&mut raw, NORMALIZE_EXTENT); // centre + ~2 units across
+                // `field:N` scatters the object into N seeded copies (a swarm), sized to frame as one —
+                // the reel's `flock:` for the stage. Downsample per copy to keep the total near budget.
+                let mut shaped = match obj.field {
+                    Some(n) => {
+                        let per = (prep.obj_count / n.max(1)).max(2_000);
+                        crate::morph::cluster_of(&resample_morton(raw, per), n)
+                    }
+                    None => resample_morton(raw, prep.obj_count),
+                };
+                // `tint:` recolours the sampled cloud (e.g. a deep-fried bitterbal) before it's frozen
+                // into the shape + its entrance source — so both the held look + assemble-in are tinted.
+                if let Some(tint) = obj.tint {
+                    crate::scene::colorize::apply(&mut shaped, tint);
+                }
+                // `alpha:V` — bake per-object translucency into splat opacity (a glass mug, a ghost).
+                if let Some(a) = obj.alpha {
+                    for g in &mut shaped {
+                        let sc = g.scale_opacity.scale;
+                        let op = g.scale_opacity.opacity;
+                        g.scale_opacity = [sc[0], sc[1], sc[2], op * a].into();
+                    }
+                }
+                Some(shaped)
+            })
+            .collect()
+    };
+
+    for (obj, shaped) in comp.objects.iter().zip(shaped_all) {
         // A real glTF mesh prop: rendered as PBR geometry alongside the splats (no flip — glTF is
         // Y-up native; the splats are flipped to match). It shares the camera + depth buffer, so it
         // composites with the splat clouds. Spawned, not sampled to gaussians. Both `model:` and `glb:`
@@ -636,64 +744,7 @@ pub(crate) fn build_composition(
             any_model = true;
             continue;
         }
-        // `~outline`/`~pen-write` text builds the special stroke gaussians (shared with the reel via
-        // `sample_content`) so the per-particle reveal traces real handwriting; else `part_gaussians`.
-        // `count:N` overrides the scene-wide density for THIS object; `field:N` splits it across N swarm
-        // copies. Sample a MESH at this final per-object count (passed into sample_content) so its disk
-        // size matches the eventual density — sampling high then downsampling left mesh disks too small
-        // for the thinned spacing → holes (most visible on the big props, e.g. the horses, at 1080p).
-        // MARTIN_COUNT_SCALE thins EVERY prop (count: or default) — lets QUALITY scale a count-bound
-        // compose stage, which a per-object `count:` would otherwise pin past MARTIN_MORPH_COUNT.
-        let obj_count = crate::scene::cap_count(
-            "compose",
-            ((obj.count.unwrap_or(count) as f32 * crate::scene::count_scale()).round() as usize)
-                .max(64),
-        );
-        // Peak resident: its shape cloud + (for a SPATIAL `~entrance`) its source cloud → ×2. `~fade`
-        // is the plain opacity path now (no source cloud), so it counts ×1.
-        let doubles = matches!(obj.entrance, Some(t) if t != Entrance::Fade);
-        resident += obj_count * if doubles { 2 } else { 1 };
-        let sample_n = match obj.field {
-            Some(n) => (obj_count / n.max(1)).max(2_000),
-            None => obj_count,
-        };
-        let mut raw = sample_content(
-            &obj.content,
-            obj.entrance,
-            &state,
-            &assets,
-            &root.0,
-            obj.disk,
-            obj.aniso,
-            Some(sample_n),
-            obj.font.as_deref(),
-        );
-        if raw.is_empty() {
-            continue;
-        }
-        crate::morph::normalize_to(&mut raw, NORMALIZE_EXTENT); // centre + ~2 units across
-        // `field:N` scatters the object into N seeded copies (a swarm), sized to frame as one — the
-        // reel's `flock:` for the stage. Downsample per copy to keep the total near the budget.
-        let mut shaped = match obj.field {
-            Some(n) => {
-                let per = (obj_count / n.max(1)).max(2_000);
-                crate::morph::cluster_of(&resample_morton(raw, per), n)
-            }
-            None => resample_morton(raw, obj_count),
-        };
-        // `tint:` recolours the sampled cloud (e.g. a deep-fried bitterbal) before it's frozen into
-        // the shape + its entrance source — so both the held look and the assemble-in are tinted.
-        if let Some(tint) = obj.tint {
-            crate::scene::colorize::apply(&mut shaped, tint);
-        }
-        // `alpha:V` — bake per-object translucency into the splat opacity (a glass beer mug, a ghost).
-        if let Some(a) = obj.alpha {
-            for g in &mut shaped {
-                let sc = g.scale_opacity.scale;
-                let op = g.scale_opacity.opacity;
-                g.scale_opacity = [sc[0], sc[1], sc[2], op * a].into();
-            }
-        }
+        let Some(mut shaped) = shaped else { continue };
         let rot = Quat::from_euler(
             EulerRot::XYZ,
             obj.rot.x.to_radians(),

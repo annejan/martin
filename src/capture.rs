@@ -363,12 +363,15 @@ fn live_end(
 }
 
 /// FPS + splat-count metrics. `MARTIN_FPS=1` logs every ~0.5 s; the **`I`** key toggles that live
-/// and logs one snapshot immediately.
+/// and logs one snapshot immediately. `smoothed_fps`/`smoothed_ms` are updated every frame so the
+/// on-screen overlay (`fps_overlay`) reads them without needing `FrameTimeDiagnosticsPlugin`.
 #[derive(Resource)]
 pub(crate) struct FpsLog {
     pub enabled: bool,
     pub accum: f32,
     pub frames: u32,
+    pub smoothed_fps: f32,
+    pub smoothed_ms: f32,
 }
 
 fn fps_log(
@@ -384,14 +387,15 @@ fn fps_log(
     }
     f.accum += time.delta_secs();
     f.frames += 1;
+    // running smoothed values for the on-screen overlay (always updated, not just on log).
+    f.smoothed_fps = f.frames as f32 / f.accum.max(1e-6);
+    f.smoothed_ms = 1000.0 * f.accum / f.frames.max(1) as f32;
     if (f.enabled && f.accum >= 0.5) || snap {
-        let fps = f.frames as f32 / f.accum.max(1e-6);
-        let ms = 1000.0 * f.accum / f.frames.max(1) as f32;
         // gaussians rendered per part (the morph budget; 0 = each part's native count).
         let splats = seq.map(|s| s.budget).unwrap_or(0);
         info!(
-            "metrics: {fps:.1} fps ({ms:.1} ms/frame) · {splats} splats/part · t={:.2}",
-            clock.t
+            "metrics: {:.1} fps ({:.1} ms/frame) · {splats} splats/part · t={:.2}",
+            f.smoothed_fps, f.smoothed_ms, clock.t
         );
         f.accum = 0.0;
         f.frames = 0;
@@ -438,10 +442,11 @@ fn setup_fps_overlay(mut commands: Commands) {
     ));
 }
 
-/// Toggle the HUD on `I`; while shown, refresh it from the smoothed FPS diagnostic each frame.
+/// Toggle the HUD on `I`; while shown, refresh it from `FpsLog` (no `FrameTimeDiagnosticsPlugin`
+/// dependency — runs with or without `MARTIN_DIAG`).
 fn fps_overlay(
     keys: Res<ButtonInput<KeyCode>>,
-    diagnostics: Res<bevy::diagnostic::DiagnosticsStore>,
+    fps_log: Res<FpsLog>,
     clock: Res<SeqClock>,
     seq: Option<Res<Sequence>>,
     mut q: Query<(&mut Visibility, &mut Text), With<FpsOverlay>>,
@@ -459,11 +464,8 @@ fn fps_overlay(
     if *vis != Visibility::Visible {
         return;
     }
-    let fps = diagnostics
-        .get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS)
-        .and_then(|d| d.smoothed())
-        .unwrap_or(0.0);
-    let ms = if fps > 0.0 { 1000.0 / fps } else { 0.0 };
+    let fps = fps_log.smoothed_fps;
+    let ms = fps_log.smoothed_ms;
     // gaussians per part (the morph budget; 0 = each part's native count, as the console metric reports).
     let splats = seq.map(|s| s.budget).unwrap_or(0);
     let splats = if splats == 0 {
@@ -531,6 +533,8 @@ impl Plugin for CapturePlugin {
             enabled: std::env::var("MARTIN_FPS").is_ok(),
             accum: 0.0,
             frames: 0,
+            smoothed_fps: 0.0,
+            smoothed_ms: 0.0,
         })
         .add_systems(Startup, (setup_record_target, setup_fps_overlay))
         .add_systems(

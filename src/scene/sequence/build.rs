@@ -18,6 +18,7 @@ use crate::morph::{ball_of, resample_morton};
 use crate::scene::content::{PartContent, part_gaussians, sample_content_owned};
 use crate::scene::effects::{BALL_SHELL, Deform, Entrance, source_cloud};
 use crate::scene::gl_dissolve::spawn_gl_dissolve;
+use crate::waypoints::{Waypoints, is_timed};
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, cloud_base_rotation};
 
 /// The union AABB `(min, max)` over every shot's raw gaussians — the extent raw (non-normalized) mode
@@ -293,6 +294,7 @@ pub(crate) fn build_sequence(
     asset_server: Res<AssetServer>,
     mut cam: Query<&mut OrbitCam>,
     mut task: ResMut<SeqBuildTask>,
+    marks: Option<Res<Waypoints>>,
 ) {
     let (Some(seq), Some(mut state)) = (seq, state) else {
         return;
@@ -313,6 +315,7 @@ pub(crate) fn build_sequence(
                 &mut cam,
                 &seq,
                 &mut state,
+                marks.as_deref(),
             );
         }
         return;
@@ -380,6 +383,7 @@ pub(crate) fn build_sequence(
             &mut cam,
             &seq,
             &mut state,
+            marks.as_deref(),
         );
     } else {
         // live: hand the heavy build to a worker; the next frames poll it while the loader animates.
@@ -392,6 +396,8 @@ pub(crate) fn build_sequence(
 /// Main-thread finalize of a completed `build_cpu`: upload the initial window, spawn the single morph
 /// entity, frame the union, spawn any `glb:` dissolve meshes, and publish the shots into `SeqState`.
 /// Everything here needs the Bevy world (assets/commands/camera) — kept off the worker on purpose.
+/// `marks` is the camera waypoints — when a `.show` `[camera]` track (inline + timed) is present,
+/// `flypath` drives the camera from it, so we skip `seed_orbit_framing` (which would overwrite).
 #[allow(clippy::too_many_arguments)]
 fn finalize_build(
     out: BuildOutput,
@@ -401,6 +407,7 @@ fn finalize_build(
     cam: &mut Query<&mut OrbitCam>,
     seq: &Sequence,
     state: &mut SeqState,
+    marks: Option<&Waypoints>,
 ) {
     let BuildOutput {
         mut shots,
@@ -460,16 +467,21 @@ fn finalize_build(
     // Frame the union once (camera never pops between parts); apply the same rotation to the centre
     // so the camera looks at the post-transform world centre. The seeding itself (MARTIN_ZOOM/YAW/
     // PITCH and the MARTIN_CAMERAS capture-pose override) lives in `camera::seed_orbit_framing`.
+    // Skip when a `.show` `[camera]` track is present — `flypath` already drives the camera from
+    // the authored timeline; this auto-frame would overwrite it for one frame (the build-completion
+    // frame), making the establishing shot flash too-close before the track takes over.
     let center = entity_rot * frame_center;
-    for mut c in cam.iter_mut() {
-        crate::camera::seed_orbit_framing(
-            &mut c,
-            center,
-            content_radius,
-            frame_factor,
-            entity_rot,
-            scene_norm,
-        );
+    if marks.is_none_or(|m| !m.inline || !is_timed(&m.list)) {
+        for mut c in cam.iter_mut() {
+            crate::camera::seed_orbit_framing(
+                &mut c,
+                center,
+                content_radius,
+                frame_factor,
+                entity_rot,
+                scene_norm,
+            );
+        }
     }
 
     // `glb:` parts: render the real mesh AND sample its gaussians from that same mesh (filled by
@@ -681,6 +693,8 @@ pub(crate) fn ensure_window(
 
 /// Add `NoFrustumCulling` to the sequence entity once its Aabb exists, so morph/ball
 /// particles that briefly leave the framed view don't pop out.
+/// `MARTIN_NO_CULL=0` (or `[settings] no_cull = 0`) disables this — enables Bevy's
+/// frustum culling on the morph entity for benchmarking.
 #[allow(clippy::type_complexity)] // a Bevy query filter tuple — verbose by nature
 pub(crate) fn seq_no_cull(
     mut commands: Commands,
@@ -694,6 +708,9 @@ pub(crate) fn seq_no_cull(
         ),
     >,
 ) {
+    if crate::envvar::or("MARTIN_NO_CULL", 1u32) == 0 {
+        return; // MARTIN_NO_CULL=0 → let Bevy cull the entity (benchmark mode)
+    }
     let Some(state) = state else { return };
     let Some(e) = state.entity else { return };
     if q.get(e).is_ok() {
