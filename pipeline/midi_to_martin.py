@@ -48,6 +48,10 @@ def parse(path):
     d = open(path, "rb").read()
     assert d[:4] == b"MThd", "not a MIDI"
     _fmt, ntrk, div = struct.unpack(">HHH", d[8:14])
+    if div == 0:
+        # a 0 time-division is a malformed header; `tpb = div*4` would then ZeroDivisionError deep in
+        # the faithful bar math (end = max(e)//tpb). Fail with a clean message at the boundary instead.
+        raise ValueError(f"{path}: MIDI header time-division is 0 (malformed file)")
     tempo = 500000
     tempos = []  # (abs_tick, usec_per_quarter) — the rubato curve, for the tempo map
     sigs = []    # (abs_tick, numerator, denominator) — time-signature changes (odd meter)
@@ -102,7 +106,7 @@ def parse(path):
             for c in tchans:
                 chan_name.setdefault(c, tname)
         pos += 8 + ln
-    bpm = round(60_000_000 / tempo)
+    bpm = round(60_000_000 / max(1, tempo))  # a 0-usec tempo meta (00 00 00) would divide by zero
     meta = {}
     for c in sorted({n[3] for n in notes}):
         ps = [p for s, e, p, ch in notes if ch == c]
@@ -122,7 +126,7 @@ def tempo_curve(tempos, div, a, end, fallback_bpm):
     per_bar = {}  # midi bar -> bpm (first event in the bar wins)
     for tick, usec in tempos:
         bar = tick // tpb
-        per_bar.setdefault(bar, max(1, round(60_000_000 / usec)))
+        per_bar.setdefault(bar, max(1, round(60_000_000 / max(1, usec))))
     base = fallback_bpm
     for bar in sorted(per_bar):  # tempo in effect at the song's start = last event at/before bar a
         if bar <= a:
@@ -226,7 +230,12 @@ def grid(notes, div, chan, lane, lo, hi):
     for s, e, p, c in sel:
         sl = round(s / spb)
         if sl >= nsl:
-            continue
+            # slot allocation floors `last // spb` but placement ROUNDS `s / spb`, so the final note —
+            # if it starts in the second half of the last 16th of the last bar (a downbeat-adjacent
+            # note with no following bar to round INTO) — rounds one slot past the grid. Clamp it into
+            # the last slot instead of silently dropping it (a ceil-based alloc would instead append a
+            # whole empty bar when the last note ends just before a bar line). Only ever the last note.
+            sl = nsl - 1
         cur = starts.get(sl)
         if cur is None or (p > cur[0] if lane == "lead" else p < cur[0]):
             starts[sl] = (p, e)
@@ -340,7 +349,7 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a, tempos=None, 
     tpb = div * 4
     a = min((s for s, e, p, c in notes), default=0) // tpb  # the SONG's start, not the lead's entry —
     #   else featuring a late-entering lead (an atmospheric harp) would lop off the whole intro.
-    end = max(e for s, e, p, c in notes) // tpb + 1
+    end = max((e for s, e, p, c in notes), default=0) // tpb + 1  # default: a no-note MIDI → 1 empty bar
     nb = max(end - a, 1)
     # the rubato tempo map (output-bar-relative). Suppressed by --bpm / --no-tempo-map / a misread tempo.
     bpm, tline = (bpm, "") if suppress else tempo_curve(tempos, div, a, end, bpm)
@@ -474,7 +483,7 @@ def _faithful_meter(out, args, div, bpm, notes, roles, voc, bas, fil, sigs, temp
     with `grid:N` from the time signature, so the meter is real instead of force-fitted to 4/4. The
     rubato tempo map composes on top (one section per bar ⇒ score bar k = MIDI bar k)."""
     spb = max(div // 4, 1)
-    end_tick = max(e for s, e, p, c in notes)
+    end_tick = max((e for s, e, p, c in notes), default=0)  # a no-note MIDI degrades, doesn't crash
     bars = bars_meter(sigs, end_tick, div)
     # tempo map over the meter bars (so a rubato compound-meter piece — Clair de Lune in 9/8 — keeps its
     # breathing): map each set-tempo tick → the meter bar it lands in, base = bar-0 tempo.
@@ -485,7 +494,7 @@ def _faithful_meter(out, args, div, bpm, notes, roles, voc, bas, fil, sigs, temp
         for tk, usec in tempos:
             t16 = tk // spb
             k = next((j for j in range(len(bars)) if starts16[j] <= t16 < starts16[j + 1]), 0)
-            per_bar.setdefault(k, max(1, round(60_000_000 / usec)))
+            per_bar.setdefault(k, max(1, round(60_000_000 / max(1, usec))))
         bpm = per_bar.get(0, bpm)
         pts, last = [], bpm
         for k in sorted(per_bar):
