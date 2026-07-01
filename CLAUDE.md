@@ -39,7 +39,6 @@ Two ways to stage content (both in `src/scene/`):
 | `pipeline/AERIAL-CITIES.md` | The aerial-city capture pipeline (gitignored, ©Google constraints). |
 | `PERF.md` | The **measured** perf playbook: the two fps regimes (fill/overdraw vs vertex/count), the levers ranked, the `QUALITY` tiers, how to benchmark. |
 | `OPTIMIZATION-BACKLOG.md` | Verified-but-not-done optimizations + already-shipped list (working doc). |
-| `ENGINE-STABILITY-REVIEW.md` | The stability punch-list (input-edge crashes, OOM/anchor hardening) — all-addressed; kept as the record (working doc). |
 | `CHANGELOG.md` | Update this for anything user-facing. |
 
 ## Repository layout
