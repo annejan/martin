@@ -12,7 +12,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Changed
 
-- **Upgraded to Bevy 0.19** (was 0.18) + `bevy_gaussian_splatting` 8.0.0 (our `martin` fork rebased
+- **Upgraded to Bevy 0.19** (was 0.18) + `bevy_gaussian_splatting` 8.0.0 (our `martin-tightcut` fork rebased
   onto upstream's Bevy-0.19 release with a zero-conflict replay of our shader edits). Mechanical API
   churn handled across the engine: rodio-0.22 audio `Source` (`current_span_len`, `NonZero`
   channels/rate, `Decodable` drops `DecoderItem`), `Hdr` moved to `bevy_camera`, glTF scenes spawn via
@@ -27,7 +27,7 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   splat is near-zero alpha (rasterised + blended for almost nothing); trimming it cuts the quad pixel
   area ~36 % with no visible change (it does *not* shrink the gaussians, unlike `SPLAT_SCALE`). Lifts
   every quality tier on an overdraw-bound GPU — the PonyCamp climax went **720p 30→40 fps (+32 %)**,
-  854×480 → 54 fps. Gated on the SH degree (`#if SH_DEGREE > 0`): the **sh3 build = real captures keeps the full 3.0σ** (2.4σ visibly thinned an aerial-city capture — anisotropic splats need the wider tails to blend), so only the synthetic **sh0** build opts in. (`bevy_gaussian_splatting` `martin` branch, `render/gaussian.wgsl`.)
+  854×480 → 54 fps. Gated on the SH degree (`#if SH_DEGREE > 0`): the **sh3 build = real captures keeps the full 3.0σ** (2.4σ visibly thinned an aerial-city capture — anisotropic splats need the wider tails to blend), so only the synthetic **sh0** build opts in. (`bevy_gaussian_splatting` `martin-tightcut` branch, `render/gaussian.wgsl`.)
 - **Live FFT-reactive visuals react from t=0 (no dead zone).** The spectrum band table that drives the
   FFT-reactive backdrop/interludes is now filled by a **causal streaming analyser** (per-band AGC) that a
   background thread appends front-to-back ahead of the playhead — instead of waiting ~9.8 s for the whole

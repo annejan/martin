@@ -2,7 +2,7 @@
 
 > **STATUS: SHIPPED — this is now the design RECORD, not a pending plan.**
 >
-> The per-particle transition edit landed: in the fork shader (the `martin` branch of
+> The per-particle transition edit landed: in the fork shader (the `martin-tightcut` branch of
 > `bevy_gaussian_splatting`) **and** app-side. The variants live on the `Entrance` enum in
 > `src/scene/effects.rs` (`Typewriter`/`Wipe`/`Sparkle`/`Slither`/`Vortex`/`PenWrite`/`Shockwave` + the
 > string→mode map), wired through `src/scene/{compose.rs, sequence/director.rs}` and `src/text.rs`
@@ -126,7 +126,7 @@ let mt = clamp((gaussian_uniforms.time - gaussian_uniforms.time_start) / denom, 
 ## 3. The WGSL diff (`src/render/gaussian.wgsl` in the fork)
 
 > Paths below are **fork-relative** — `src/...` means the `annejan/bevy_gaussian_splatting`
-> `martin` branch (consumed via `[patch.crates-io]`), not this repo. martin no longer keeps a
+> `martin-tightcut` branch (consumed via `[patch.crates-io]`), not this repo. martin no longer keeps a
 > `vendor/` copy.
 
 All references below are anchored to **function/branch markers** in the live file

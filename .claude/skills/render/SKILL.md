@@ -20,15 +20,20 @@ Vet placement GPU-free with `pipeline/show_layout.py <show>` (top-down + screen-
 ## 2. Full render
 ```
 TMPDIR=/home/annejan/.cache/martin-render \
-  MARTIN_RES=1920x1080 MARTIN_FPS=60 \
+  MARTIN_RES=1920x1080 MARTIN_PREVIEW_FPS=60 \
   MARTIN_SHOW=<show> ./record.sh /home/annejan/Videos/<name>_1080p60.mp4
 ```
 - **`TMPDIR` MUST be a real disk**, not `/tmp` (RAM tmpfs → "Disk quota exceeded" mid-render). `record.sh` now disk-pre-flights and aborts early if it won't fit.
 - Run it **in the background** (renders are minutes long; you're re-invoked on completion).
 - Render **one at a time** — concurrent renders wedge the iGPU.
 
-## 3. If it OOMs (the GPU-budget trap)
-The 860M OOMs ~2.5M resident gaussians. Symptoms: at build a `WARN: ~X.XM gaussians resident — over the … soft cap`, or the render **dies mid-way** with a wgpu buffer *Validation Error* (no panic, frames just stop, mp4 short/invalid). Fix: lower **`MARTIN_MORPH_COUNT`** for the record only (e.g. `=70000`) — the `.show` `budget` stays high for live play. Explosive `~entrance` parts (explode/shockwave/shatter/vortex/implode) each add an origin cloud, so they push the count up fast.
+## 3. If it's over budget (the GPU-budget trap)
+The 860M OOMs ~2.5M resident gaussians. A `--record` over the `MARTIN_SPLAT_WARN` soft cap (default 2M)
+now **fails fast, before any frames are written**: an `ERROR: … refusing to start a long dump` and
+`exit 1` — not a mid-render death. (Live playback just logs a `WARN` and plays on.) Fix: lower
+**`MARTIN_MORPH_COUNT`** for the record only (e.g. `=70000`) — the `.show` `budget` stays high for live
+play. Explosive `~entrance` parts (explode/shockwave/shatter/vortex/implode) each add an origin cloud,
+so they push the count up fast.
 
 ## 4. Verify
 ```

@@ -34,10 +34,10 @@ object at a time. **Risk:** the loop interleaves `commands.spawn` (main-thread) 
 the CPU sampling, and `sample_content` borrows `&assets`/`&state` — needs a sample→spawn split + `Send`
 plumbing. Startup wall-clock only (record/shot build inline; live windowed loads benefit).
 
-### Fork-shader batch (`bgs-fork`, branch `martin`)  ·  the full clone→edit→A/B→push→repoint dance
-Confirm the local checkout matches the pinned commit (`Cargo.lock` rev `e4787a8`); then path-patch
-martin to `../bgs-fork`, edit, rebuild **sh0 AND sh3**, A/B both, push the `martin` branch, repoint the
-git dep + `cargo update`.
+### Fork-shader batch (`../bgs-fork`, branch `martin-tightcut`)  ·  the full clone→edit→A/B→push→repoint dance
+Confirm the local checkout matches the pinned commit (`Cargo.lock` rev `608c7d17`); then path-patch
+martin to `../bgs-fork`, edit, rebuild **sh0 AND sh3**, A/B both, push the `martin-tightcut` branch,
+repoint the git dep + `cargo build` (re-resolves the lock to the new rev).
 - **#5 — dead-discard + alpha early-out** (`gaussian.wgsl:705-707` `dist²>9` never fires; ~21 % of every
   quad is sub-1 %-alpha fill). Clean but **modest** (saves shading, not rasterization).
 - ~~**#4 — move the PNG dump off-thread**~~ **TRIED 2026-06-26 → NO-OP, dropped.** Built it (martin-side,

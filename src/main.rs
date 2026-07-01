@@ -10,7 +10,7 @@
 //! CLI flags (`cli`) compile to the same env with overwrite. There is no config file beyond the show.
 //!
 //! Rendering: our `bevy_gaussian_splatting` fork (GPU blend + radix depth sort + HDR
-//! bloom on black), pulled in as a git dep (the `martin` branch of
+//! bloom on black), pulled in as a git dep (the `martin-tightcut` branch of
 //! `annejan/bevy_gaussian_splatting`). This file is just the wiring — each feature lives behind
 //! a plugin: `CameraPlugin`, `ScenePlugin`, `CapturePlugin`, `MusicPlugin`. See `USAGE.md` for
 //! the env reference and the fork's `CHANGES.md` for the shader edits.

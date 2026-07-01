@@ -49,7 +49,7 @@ the top of `assets/score.txt`, plus `assets/tropical.txt` / `assets/rain.txt` fo
 
 ## The splat-renderer fork
 
-`bevy_gaussian_splatting` is patched to our fork (the `martin` branch of
+`bevy_gaussian_splatting` is patched to our fork (the `martin-tightcut` branch of
 `annejan/bevy_gaussian_splatting`) via `[patch.crates-io]` in `Cargo.toml`; `Cargo.lock` pins the
 exact commit. Keep edits **minimal, gated, and documented** (see the branch's `CHANGES.md`) so they
 stay easy to rebase onto upstream and to submit back as a PR later. Edit shaders by committing to the

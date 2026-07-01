@@ -23,8 +23,10 @@ pipeline/midi_to_martin.py song.mid
 
 | flag | what |
 |---|---|
-| (default) | a clean **dance remix**: a looped 16-bar block staged into sections (`--arrange song\|short\|dance`) |
+| (default) | a clean **dance remix**: a looped 16-bar block staged into sections |
+| `--arrange song\|short\|dance` | section structure for the dance-remix path (default `song`) |
 | `--faithful` | play the song **through once** at its own tempo: lead + bass + harmony + the real drums, natural mix |
+| `--title STR` | the score's title comment |
 | `--style` | voice/mix palette: **`auto`** (default — picks one from the GM instruments) · `clean` · `synthpop` · `dance` · `rock` · `orchestral` · `jazz` |
 | `--swing N` / `--auto-swing` | jazz/shuffle: emit a `swing N` line (0=straight, 1=triplet), or estimate it from the off-8th onset timing |
 | `--no-drums` | omit the kit (solo-piano / ambient — no house floor over it) |

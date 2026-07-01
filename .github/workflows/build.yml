@@ -53,7 +53,7 @@ jobs:
   # is even built). NON-BLOCKING on purpose (`continue-on-error`): lavapipe is slower + flakier than the
   # iGPU and won't reproduce RADV-specific black frames, so this is a "didn't go fully black / didn't
   # crash on launch" net, not a required check — `pipeline/smoke-shows.py` on real RADV stays the
-  # pre-push ritual. See ENGINE-STABILITY-REVIEW.md § M1.
+  # pre-push ritual.
   smoke:
     name: gpu smoke (lavapipe)
     runs-on: ubuntu-latest

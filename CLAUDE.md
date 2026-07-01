@@ -11,7 +11,7 @@ deeper doc disagree, the deeper doc wins — keep this one short and link out.
 ## What martin is
 
 A music-synced **Gaussian-splat demoscene engine** built on **Bevy 0.19 + `bevy_gaussian_splatting`
-8.0.0** (our `martin` fork branch), rendering through **wgpu → Vulkan** with **no CUDA/ROCm**. It flies a camera around 3D
+8.0.0** (our `martin-tightcut` fork branch), rendering through **wgpu → Vulkan** with **no CUDA/ROCm**. It flies a camera around 3D
 splats while they **morph into one another** (per-Gaussian, on the GPU), with HDR bloom on black,
 all driven by a synth track. A show is a **`.show` file** (run it: `martin <show>` / `--production
 <name>`); it expands into `MARTIN_*` env vars — the internal IR — which a **CLI** layers run-mode flags
@@ -135,8 +135,8 @@ single-binary build of the **intro** production (with a strict score-validate st
   lives in `productions/<name>/`. The test for new work: scene blocks / density ramps / camera regimes
   → engine; a specific demo's scenes/captures → that production's folder; reusable tested blocks →
   `parts/`. See `productions/README.md`.
-- **The splat-renderer fork.** `bevy_gaussian_splatting` is patched to our fork (the `martin` branch
-  of `annejan/bevy_gaussian_splatting`) via `[patch.crates-io]` in `Cargo.toml`; `Cargo.lock` pins the
+- **The splat-renderer fork.** `bevy_gaussian_splatting` is patched to our fork (the `martin-tightcut`
+  branch of `annejan/bevy_gaussian_splatting`) via `[patch.crates-io]` in `Cargo.toml`; `Cargo.lock` pins the
   exact commit. Keep fork edits **minimal, gated, and documented** (the branch's `CHANGES.md`). Edit
   shaders by committing to the branch + `cargo update -p bevy_gaussian_splatting`; for heavy local
   iteration, point the patch at a checkout (`path = "../bgs-fork"`).
