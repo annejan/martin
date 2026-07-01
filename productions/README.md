@@ -44,6 +44,11 @@ Current productions:
   copyright concerns — every asset is procedural or repo-tracked): a galaxy → Saturn → rocket → ufo →
   supershape → helix → torus → ufo arc via `splat:`/`splatgen`, an explosive drop entrance, a fullscreen
   blinder into the climax, neon backdrops + sparks.
+- **nebula** (`kind = demo`) — the **`MARTIN_ADDITIVE` glow showcase**: the same procedural space shapes
+  (galaxy/Saturn/helix/supershape/torus/knot) ball-pulse morph on PURE BLACK with the emissive One+One
+  blend — overlapping translucent splats accumulate light and glow instead of alpha-saturating to a
+  muddy blob. Reuses synthwave's own score (same music, no re-authoring). The outro `deFEEST` signature
+  is `additive:0` (a direct use of the per-shot override) so it reads crisp instead of blowing out.
 - **born2defeest** (`kind = demo`) — the **original hardstyle BornHack 2026 demo** (~220 s, 145 BPM): a
   full 6-scene `[reel]` arc (deFEEST logo → host-camp build + ægg hatch → party drop → "Wij zijn deFEEST"
   breakdown → climax → credits/fade) with its own `score.txt` and full `[camera]`/`[sync]`/`[caption]`
