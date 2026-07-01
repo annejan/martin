@@ -12,6 +12,10 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Changed
 
+- **Batch synth ~30% faster (~3.6s → ~2.5s on the builtin score).** The parallel render was pinned by
+  the single fattest lane (`L_WALL`, 12 supersaw/choir voices per bar) while other cores idled; it's now
+  chunked and rendered in parallel, then summed — an exact reconstruction (verified byte-identical WAV
+  md5 against a clean pre-change build), not an approximation.
 - **Upgraded to Bevy 0.19** (was 0.18) + `bevy_gaussian_splatting` 8.0.0 (our `martin-tightcut` fork rebased
   onto upstream's Bevy-0.19 release with a zero-conflict replay of our shader edits). Mechanical API
   churn handled across the engine: rodio-0.22 audio `Source` (`current_span_len`, `NonZero`

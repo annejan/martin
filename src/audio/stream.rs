@@ -512,20 +512,56 @@ fn produce_impl(score: &Score, mut sink: impl FnMut(&[f32]), parallel: bool) {
     // by lane-vs-segment interleave → matches the sequential path to float epsilon.
     if parallel {
         use rayon::prelude::*;
+        // render one lane's events into a fresh zeroed (buf, kb), firing each event's render closure
+        // in order. Shared by the plain per-lane path below and the chunked L_WALL path (each chunk is
+        // just a sub-slice of one lane's events, rendered the identical way).
+        fn render_events(events: &mut [Event], stereo: usize) -> (Vec<f32>, Vec<f32>) {
+            let mut buf = vec![0f32; stereo];
+            let mut kb = vec![0f32; stereo];
+            for ev in events.iter_mut() {
+                let render =
+                    std::mem::replace(&mut ev.render, Box::new(|_: &mut [f32], _: &mut [f32]| {}));
+                render(&mut buf, &mut kb);
+            }
+            (buf, kb)
+        }
         let rendered: Vec<(Vec<f32>, Vec<f32>)> = lanes
             .as_mut_slice()
             .par_iter_mut()
-            .map(|lane| {
-                let mut buf = vec![0f32; stereo];
-                let mut kb = vec![0f32; stereo];
-                for ev in lane.iter_mut() {
-                    let render = std::mem::replace(
-                        &mut ev.render,
-                        Box::new(|_: &mut [f32], _: &mut [f32]| {}),
-                    );
-                    render(&mut buf, &mut kb);
+            .enumerate()
+            .map(|(li, lane)| {
+                // L_WALL is the single fattest lane (12 supersaw/choir voices per bar-event), so a
+                // flat one-task-per-lane split pins the whole batch render on it while the other 9
+                // lanes' threads finish early and idle. ITS events are bar-quantized and render_into
+                // (audio/mod.rs) writes EXACTLY `dur` samples per event with a hard boundary (the 4ms
+                // release fade is INSIDE that window, no tail beyond it) — so no two of L_WALL's own
+                // events ever touch the same sample index. Splitting into chunks, rendering each into
+                // its OWN zeroed buffer, and summing is therefore an EXACT reconstruction (at every
+                // index, at most one chunk is non-zero, so 0.0 + x == x — no float reassociation),
+                // not merely epsilon-close like the lane-vs-segment reorder the comment above already
+                // accepts. Verified: a WAV md5 before/after this change is byte-identical.
+                if li == L_WALL && lane.len() > 1 {
+                    let n_chunks = rayon::current_num_threads().min(lane.len());
+                    let per = lane.len().div_ceil(n_chunks);
+                    lane.chunks_mut(per)
+                        .collect::<Vec<_>>()
+                        .into_par_iter()
+                        .map(|chunk| render_events(chunk, stereo))
+                        .reduce(
+                            || (vec![0f32; stereo], vec![0f32; stereo]),
+                            |(mut ba, mut ka), (bb, kb)| {
+                                for (d, s) in ba.iter_mut().zip(&bb) {
+                                    *d += *s;
+                                }
+                                for (d, s) in ka.iter_mut().zip(&kb) {
+                                    *d += *s;
+                                }
+                                (ba, ka)
+                            },
+                        )
+                } else {
+                    render_events(lane, stereo)
                 }
-                (buf, kb)
             })
             .collect();
         for (li, (buf, kb)) in rendered.into_iter().enumerate() {

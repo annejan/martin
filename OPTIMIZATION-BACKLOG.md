@@ -17,16 +17,25 @@ cache · causal FFT analyser · cine post-FX · camera spline · FPS HUD · perf
 SORT_BITS / QUALITY / VSYNC / BLOOM / fullscreen) · fork §9 quad-cut (sh0) · Bevy 0.19. **This round:**
 trimmed splat features (−51 crates) · `b-fast` no-LTO profile · parallel `smoke-shows.py` · sh0 sort
 default 24-bit · compose `disk:`/`aniso:` honoured · `--validate` peak-resident heads-up · `~fade` on
-the opacity path (no doubled cloud).
+the opacity path (no doubled cloud). **2026-07-01:** #6 batch-synth rebalance (below) — ~30% faster
+score render (~3.6s → ~2.5s on the builtin score), verified byte-identical.
 
 ## Remaining — delicate, needs care
 
-### #6 — Rebalance the batch synth into even chunks  ·  ~−3 s per *score* render
-`stream.rs:33,513-530`. The rayon synth is pinned by the single fattest lane (`L_WALL`: 12 supersaw/
-choir voices per-sample over a full bar) while ~6 of 16 cores idle. Even-chunk split shaves ~3–3.5 s
-off every score-change render (the WAV cache only covers visual-only reruns).
-**Risk:** audio determinism — the render must stay byte-identical (cache + record-safety). The epsilon
-test (`stream.rs:746`, 1e-4) permits the reorder, but **verify with a WAV byte-diff before/after.**
+### ~~#6 — Rebalance the batch synth into even chunks~~ — SHIPPED 2026-07-01
+`stream.rs`'s parallel batch render now chunks `L_WALL` (the single fattest lane — 12 supersaw/choir
+voices per bar-event) into `min(rayon::current_num_threads(), lane.len())` pieces, renders each into
+its own zeroed buffer in parallel, and sums the results — an EXACT reconstruction, not an approximation:
+`render_into` (audio/mod.rs) writes exactly `dur` samples per event with a hard boundary (the 4ms
+release fade is *inside* that window, no tail beyond it), so L_WALL's bar-quantized events never touch
+the same sample index — at every index at most one chunk is non-zero, so summing is `0.0 + x == x`,
+bit-exact. Verified with the required WAV byte-diff: a fresh isolated-worktree rebuild of the pre-change
+commit vs the new code produces the identical builtin-score WAV md5 (`b417cf46b6f9f411642cf312f9d5167d`
+— the same hash this session's earlier tempo/grid/swing work already established as the byte-identity
+baseline). Measured ~3.6s → ~2.5s (3 runs each) on the builtin score.txt. Scoped to L_WALL only (the
+diagnosed bottleneck) rather than generalized to every lane, to keep the change small and the
+correctness argument airtight — a lane whose events *could* overlap would need the reorder-to-epsilon
+argument instead, not this exact one.
 
 ### #7 — `par_iter` the compose-stage build  ·  K-core startup-build win (live only)
 `compose.rs` build loop. The reel got per-object parallelism; compose samples/normalizes/resamples one
