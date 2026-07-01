@@ -10,6 +10,14 @@ use crate::scene::effects::Departure;
 use crate::scene::parent_dir;
 use crate::score;
 
+/// Parse a scalar strictly finite: reject `nan`/`inf`/`-inf` (`f32::from_str` accepts these literals,
+/// so a bare `.parse()` lets them through). `hold`/`morph` durations feed a RUNNING cumulative cursor
+/// (`model.rs`: `cursor = start + part.morph + part.hold`) — one non-finite value poisons every
+/// subsequent shot's start time for the rest of the sequence, not just its own.
+fn finite_f32(s: &str) -> Option<f32> {
+    s.trim().parse::<f32>().ok().filter(|f| f.is_finite())
+}
+
 /// `raster:<mode>` / `MARTIN_RASTER=<mode>` → the fork's RasterizeMode (the debug-shading views from
 /// the upstream viewer: colour is the normal render, the rest visualise a channel). None on a bad name.
 pub(crate) fn parse_raster(s: &str) -> Option<RasterizeMode> {
@@ -200,15 +208,25 @@ pub(crate) fn parse_seq(spec: &str, score: &score::Score) -> Vec<Shot> {
         };
         let (mut hold, mut morph, mut bulge) = (1.5_f32, 3.0_f32, 0.9_f32);
         if let Some(t) = timing {
-            let nums: Vec<f32> = t.split(',').filter_map(|x| x.trim().parse().ok()).collect();
-            if let Some(v) = nums.first() {
-                hold = *v;
-            }
-            if let Some(v) = nums.get(1) {
-                morph = *v;
-            }
-            if let Some(v) = nums.get(2) {
-                bulge = *v;
+            // parse EACH slot BY INDEX (not filter+collect): the old filter_map DROPPED a bad/non-finite
+            // token and shifted the rest into the wrong slot (`@nan,2,1` → hold=2, morph=1 — silently
+            // wrong timing), the same class of bug `vec3_csv` above already fixed for positions. A bad
+            // slot now just keeps its own default and warns; the other slots are unaffected.
+            for (i, tok) in t.split(',').take(3).enumerate() {
+                let tok = tok.trim();
+                if tok.is_empty() {
+                    continue; // an omitted slot keeps its default silently
+                }
+                match finite_f32(tok) {
+                    Some(v) => match i {
+                        0 => hold = v,
+                        1 => morph = v,
+                        _ => bulge = v,
+                    },
+                    None => eprintln!(
+                        "seq: bad @hold,morph,bulge component '{tok}' in '{t}' — keeping the default"
+                    ),
+                }
             }
         }
         let Some(content) = parse_source(head) else {

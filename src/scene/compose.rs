@@ -320,34 +320,34 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                 // `alpha:V` — per-object translucency (0..1), baked into the cloud's splat opacity at
                 // build (a glass beer mug, a ghost, a haze). The scene-wide fade-in animates on top.
                 if let Some(n) = t.strip_prefix("alpha:") {
-                    match n.parse::<f32>() {
-                        Ok(a) => alpha = Some(a.clamp(0.0, 1.0)),
-                        Err(_) => eprintln!("compose: bad 'alpha:{n}' (need 0..1) — ignored"),
+                    match finite_f32(n) {
+                        Some(a) => alpha = Some(a.clamp(0.0, 1.0)),
+                        None => eprintln!("compose: bad 'alpha:{n}' (need a finite 0..1) — ignored"),
                     }
                     return false;
                 }
                 // `dscale:V` — per-object splat-DISK size (a local MARTIN_SPLAT_SCALE). <1 shrinks just
                 // this object's disks → kills a full-screen backdrop's overdraw without thinning the props.
                 if let Some(n) = t.strip_prefix("dscale:") {
-                    match n.parse::<f32>() {
-                        Ok(d) => disk_scale = Some(d.max(0.0)),
-                        Err(_) => eprintln!("compose: bad 'dscale:{n}' (need a float) — ignored"),
+                    match finite_f32(n) {
+                        Some(d) => disk_scale = Some(d.max(0.0)),
+                        None => eprintln!("compose: bad 'dscale:{n}' (need a finite float) — ignored"),
                     }
                     return false;
                 }
                 // `disk:V` / `aniso:V` — MESH-sampling knobs (splat size + anisotropy as a mesh is
                 // sampled into gaussians), passed into sample_content. Were silently dropped before.
                 if let Some(n) = t.strip_prefix("disk:") {
-                    match n.parse::<f32>() {
-                        Ok(d) => disk = Some(d.max(0.0)),
-                        Err(_) => eprintln!("compose: bad 'disk:{n}' (need a float) — ignored"),
+                    match finite_f32(n) {
+                        Some(d) => disk = Some(d.max(0.0)),
+                        None => eprintln!("compose: bad 'disk:{n}' (need a finite float) — ignored"),
                     }
                     return false;
                 }
                 if let Some(n) = t.strip_prefix("aniso:") {
-                    match n.parse::<f32>() {
-                        Ok(d) => aniso = Some(d.max(0.0)),
-                        Err(_) => eprintln!("compose: bad 'aniso:{n}' (need a float) — ignored"),
+                    match finite_f32(n) {
+                        Some(d) => aniso = Some(d.max(0.0)),
+                        None => eprintln!("compose: bad 'aniso:{n}' (need a finite float) — ignored"),
                     }
                     return false;
                 }
@@ -369,7 +369,7 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
                             let (a, d) = s.split_once(',').map_or((s, None), |(a, d)| (a, Some(d)));
                             (
                                 (!a.is_empty()).then(|| a.to_string()),
-                                d.and_then(|d| d.trim().parse::<f32>().ok()),
+                                d.and_then(finite_f32),
                             )
                         }
                         None => (None, None),
@@ -503,6 +503,15 @@ pub(crate) fn parse_compose(spec: &str, score: &score::Score) -> Vec<Prop> {
         });
     }
     out
+}
+
+/// Parse a scalar token strictly: reject `nan`/`inf`/`-inf` (Rust's `f32::from_str` accepts these
+/// literals, so a bare `.parse::<f32>()` lets them through) BEFORE the caller's own `.clamp()`/`.max()`
+/// — `f32::clamp` does not sanitize NaN (`NaN.clamp(0,1)` is still NaN), and `inf as u32` elsewhere
+/// saturates to `u32::MAX` (a duration this large would wedge a frame-count loop). System-boundary
+/// check: every free-form `key:value` scalar in a `.show`/compose token should parse through this.
+fn finite_f32(s: &str) -> Option<f32> {
+    s.trim().parse::<f32>().ok().filter(|f| f.is_finite())
 }
 
 /// Parse `x,y,z` POSITION-STRICTLY and reject non-finite. The old `filter_map(parse.ok())` dropped a bad
