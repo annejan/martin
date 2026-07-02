@@ -744,7 +744,7 @@ pub(crate) fn build_composition(
             any_model = true;
             continue;
         }
-        let Some(mut shaped) = shaped else { continue };
+        let Some(shaped) = shaped else { continue };
         let rot = Quat::from_euler(
             EulerRot::XYZ,
             obj.rot.x.to_radians(),

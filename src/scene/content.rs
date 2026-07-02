@@ -227,29 +227,14 @@ pub(crate) fn sample_non_splat(
     }
 }
 
-/// Sample a placement's gaussians, applying the text-effect specials that need a *different* builder:
+/// The asset-free content sampler, applying the text-effect specials that need a *different* builder:
 /// `~outline` traces filled-letter outlines and `~pen-write` builds single-stroke handwriting (both
-/// drive the per-particle reveal shader). Everything else falls through to [`part_gaussians`]. Shared
-/// by the reel (`build_sequence`) and the stage (`compose`) so the text-effect handling can't drift.
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn sample_content(
-    content: &PartContent,
-    entrance: Option<crate::scene::effects::Entrance>,
-    state: &SeqState,
-    assets: &Assets<PlanarGaussian3d>,
-    root: &std::path::Path,
-    disk: Option<f32>,
-    aniso: Option<f32>,
-    count: Option<usize>,
-    font: Option<&str>,
-) -> Vec<Gaussian3d> {
-    text_effect_sample(content, entrance, font)
-        .unwrap_or_else(|| part_gaussians(content, state, assets, root, disk, aniso, count, font))
-}
-
-/// Asset-free twin of [`sample_content`] for the off-thread reel build: `Splats` parts are pre-extracted
-/// on the main thread (`presample`); everything else samples from fs+compute via [`sample_non_splat`].
-/// Same text-effect head as `sample_content` (shared `text_effect_sample`) so the two can't drift.
+/// drive the per-particle reveal shader) via the shared `text_effect_sample` head. `Splats` parts are
+/// pre-extracted on the main thread (`presample`, via [`part_gaussians`] — the only content that needs
+/// `&Assets`); everything else samples from fs+compute via [`sample_non_splat`]. Shared by the reel
+/// (`build_sequence`) and the stage (`compose`) so the text-effect handling can't drift. (An
+/// asset-borrowing twin `sample_content` existed while compose still sampled inline on the main
+/// thread; both call sites now pre-extract + use this, so it was removed.)
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn sample_content_owned(
     content: &PartContent,
