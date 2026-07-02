@@ -16,6 +16,12 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   the single fattest lane (`L_WALL`, 12 supersaw/choir voices per bar) while other cores idled; it's now
   chunked and rendered in parallel, then summed — an exact reconstruction (verified byte-identical WAV
   md5 against a clean pre-change build), not an approximation.
+- **Compose-stage build parallelized** (a sample→spawn split: `splat:` content pre-extracted serially,
+  then every object's sample→normalize→resample→tint→alpha chain runs across cores via rayon, with only
+  the Bevy `assets.add`/`commands.spawn` left serial). Live windowed startup of a many-object stage now
+  uses all cores; record/shot builds were already inline and are unaffected. Also: the live FPS overlay
+  no longer needs `MARTIN_DIAG` (reads the engine's own `FpsLog`), the establishing camera no longer
+  pops on first play when a `[camera]` track is present, and `no_cull` is settable from a `.show`.
 - **Upgraded to Bevy 0.19** (was 0.18) + `bevy_gaussian_splatting` 8.0.0 (our `martin-tightcut` fork rebased
   onto upstream's Bevy-0.19 release with a zero-conflict replay of our shader edits). Mechanical API
   churn handled across the engine: rodio-0.22 audio `Source` (`current_span_len`, `NonZero`

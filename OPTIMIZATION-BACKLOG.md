@@ -37,11 +37,15 @@ diagnosed bottleneck) rather than generalized to every lane, to keep the change 
 correctness argument airtight — a lane whose events *could* overlap would need the reorder-to-epsilon
 argument instead, not this exact one.
 
-### #7 — `par_iter` the compose-stage build  ·  K-core startup-build win (live only)
-`compose.rs` build loop. The reel got per-object parallelism; compose samples/normalizes/resamples one
-object at a time. **Risk:** the loop interleaves `commands.spawn` (main-thread) + glTF-scene spawns with
-the CPU sampling, and `sample_content` borrows `&assets`/`&state` — needs a sample→spawn split + `Send`
-plumbing. Startup wall-clock only (record/shot build inline; live windowed loads benefit).
+### ~~#7 — `par_iter` the compose-stage build~~ — SHIPPED 2026-07-02 (martin a8df0d2)
+Done exactly per the risk callout's prescription: a **sample→spawn split**. Pass 1 (serial, main
+thread): classify each object + pre-extract `splat:` content out of `&Assets` (mirroring the reel's
+`presampled`), so the heavy pass is asset-free. Pass 2 (rayon `par_iter`): the full CPU chain —
+`sample_content_owned` → normalize → resample/cluster → tint → alpha — per object, in parallel;
+compose has no cross-object dependency (every object normalizes to the same constant extent), so
+this is embarrassingly parallel. Pass 3 (serial): `assets.add` + `commands.spawn` only. Model/GlMesh
+props stay on the serial path (async asset load, no CPU sampling). Startup wall-clock only, as
+predicted (record/shot builds were already inline; live windowed loads benefit). 171 tests green.
 
 ### Fork-shader batch (`../bgs-fork`, branch `martin-tightcut`)  ·  the full clone→edit→A/B→push→repoint dance
 Confirm the local checkout matches the pinned commit (`Cargo.lock` rev `608c7d17`); then path-patch
