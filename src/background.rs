@@ -187,6 +187,7 @@ fn update_bg(
     sync: Option<Res<crate::sync::SyncTrack>>,
     // the score drives the harmonic `warmth` tint (chord major/minor + section energy).
     score: Option<Res<crate::music::ScoreRes>>,
+    time: Res<Time>,
     mut dim_static: Local<Option<f32>>,
     mut sidechain: Local<Option<f32>>,
     mut tint_music: Local<Option<bool>>,
@@ -218,15 +219,15 @@ fn update_bg(
         })
         .unwrap_or(0.0);
     let mut mode = default_mode.and_then(|d| d.0);
-    if let (Some(seq), Some(state)) = (seq, state)
-        && state.built
-    {
-        let active = active_shot(state.starts(), clock.t);
-        if let Some(m) = seq.parts[..=active.min(seq.parts.len().saturating_sub(1))]
-            .iter()
-            .rev()
-            .find_map(|p| p.backdrop)
-        {
+    if let Some(seq) = seq {
+        // Always resolve the backdrop from the active shot — even before `state.built`, so the
+        // background shader is visible during loading (not a black screen). Before built, there
+        // are no shot starts, so fall back to the first part's backdrop.
+        let active = state
+            .filter(|s| s.built)
+            .map(|s| active_shot(s.starts(), clock.t).min(seq.parts.len().saturating_sub(1)))
+            .unwrap_or(0);
+        if let Some(m) = seq.parts[..=active].iter().rev().find_map(|p| p.backdrop) {
             mode = Some(m);
         }
     }
@@ -246,7 +247,7 @@ fn update_bg(
             {
                 m.data.mode = md;
             }
-            m.data.time = clock.t;
+            m.data.time = time.elapsed_secs();
             m.data.beat = beat.as_vec4();
             m.data.spectrum_lo = spectrum.as_vec4_lo();
             m.data.spectrum_hi = spectrum.as_vec4_hi();

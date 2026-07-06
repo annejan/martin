@@ -259,6 +259,17 @@ fn flypath(
                 cam.yaw = w.yaw;
                 cam.pitch = w.pitch;
             }
+            // Blend from the auto-framed distance (close) to the authored track distance
+            // over the first ~2s so the logo is visible from frame one.
+            if let Some(s) = state.as_ref().filter(|s| s.built && s.cam_start_dist > 0.0) {
+                let t = (clock.t / 2.0).clamp(0.0, 1.0);
+                let smooth = t * t * (3.0 - 2.0 * t); // smoothstep
+                let zoom = crate::envvar::or("MARTIN_ZOOM", 1.0_f32).max(0.1);
+                let start_dist = s.cam_start_dist / zoom;
+                for mut cam in &mut q {
+                    cam.dist = start_dist + (cam.dist - start_dist) * smooth;
+                }
+            }
         }
         return;
     }

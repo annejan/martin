@@ -21,7 +21,15 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   the Bevy `assets.add`/`commands.spawn` left serial). Live windowed startup of a many-object stage now
   uses all cores; record/shot builds were already inline and are unaffected. Also: the live FPS overlay
   no longer needs `MARTIN_DIAG` (reads the engine's own `FpsLog`), the establishing camera no longer
-  pops on first play when a `[camera]` track is present, and `no_cull` is settable from a `.show`.
+  pops on first play when a `[camera]` track is present, and culling is settable from a `.show`
+  (`cull = 1` / `MARTIN_CULL=1` opts INTO Bevy frustum culling for benchmarking; the default stays
+  no-cull so morph/ball particles that briefly leave the framed view don't pop out).
+- **The first seconds are no longer wasted.** The backdrop shader is visible during loading (it used
+  to resolve only after the reel built → a black screen; it now falls back to the first part's
+  `backdrop:` and animates on wall-clock time while the show clock is still frozen), shot 0 starts
+  fully formed (no half-morphed logo on frame one), the camera blends from the auto-framed close
+  distance to the authored track's establishing distance over the first ~2s (the logo reads from
+  frame one instead of hiding tiny at a far keyframe), and the loader fades ~2× faster.
 - **Upgraded to Bevy 0.19** (was 0.18) + `bevy_gaussian_splatting` 8.0.0 (our `martin-tightcut` fork rebased
   onto upstream's Bevy-0.19 release with a zero-conflict replay of our shader edits). Mechanical API
   churn handled across the engine: rodio-0.22 audio `Source` (`current_span_len`, `NonZero`

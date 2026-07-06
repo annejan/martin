@@ -135,6 +135,10 @@ pub(crate) struct SeqState {
     pub starts: Vec<f32>,
     pub built: bool,
     pub entity: Option<Entity>,
+    /// Auto-framed camera distance from the build — use as the starting camera distance
+    /// before the waypoint track takes over (blended over the first ~2s so the logo is
+    /// visible from frame one instead of hiding at the authored keyframe's far distance).
+    pub cam_start_dist: f32,
 }
 
 impl SeqState {

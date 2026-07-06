@@ -18,8 +18,8 @@ use crate::morph::{ball_of, resample_morton};
 use crate::scene::content::{PartContent, part_gaussians, sample_content_owned};
 use crate::scene::effects::{BALL_SHELL, Deform, Entrance, source_cloud};
 use crate::scene::gl_dissolve::spawn_gl_dissolve;
-use crate::waypoints::{Waypoints, is_timed};
 use crate::scene::{AssetRoot, NORMALIZE_EXTENT, cloud_base_rotation};
+use crate::waypoints::{Waypoints, is_timed};
 
 /// The union AABB `(min, max)` over every shot's raw gaussians — the extent raw (non-normalized) mode
 /// frames the camera on.
@@ -464,6 +464,10 @@ fn finalize_build(
         ))
         .id();
 
+    // Store the auto-framed camera distance so flypath can use it as a starting distance
+    // for the first ~2s, making the logo visible from frame one.
+    state.cam_start_dist = content_radius * frame_factor;
+
     // Frame the union once (camera never pops between parts); apply the same rotation to the centre
     // so the camera looks at the post-transform world centre. The seeding itself (MARTIN_ZOOM/YAW/
     // PITCH and the MARTIN_CAMERAS capture-pose override) lives in `camera::seed_orbit_framing`.
@@ -693,8 +697,8 @@ pub(crate) fn ensure_window(
 
 /// Add `NoFrustumCulling` to the sequence entity once its Aabb exists, so morph/ball
 /// particles that briefly leave the framed view don't pop out.
-/// `MARTIN_NO_CULL=0` (or `[settings] no_cull = 0`) disables this — enables Bevy's
-/// frustum culling on the morph entity for benchmarking.
+/// `MARTIN_CULL=1` (or `[settings] cull = 1`) enables Bevy's frustum culling on the morph
+/// entity for benchmarking — default 0 (no cull = all splats drawn).
 #[allow(clippy::type_complexity)] // a Bevy query filter tuple — verbose by nature
 pub(crate) fn seq_no_cull(
     mut commands: Commands,
@@ -708,8 +712,8 @@ pub(crate) fn seq_no_cull(
         ),
     >,
 ) {
-    if crate::envvar::or("MARTIN_NO_CULL", 1u32) == 0 {
-        return; // MARTIN_NO_CULL=0 → let Bevy cull the entity (benchmark mode)
+    if crate::envvar::or("MARTIN_CULL", 0u32) != 0 {
+        return; // MARTIN_CULL=1 → let Bevy cull the entity (benchmark mode)
     }
     let Some(state) = state else { return };
     let Some(e) = state.entity else { return };

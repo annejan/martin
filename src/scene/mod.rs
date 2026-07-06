@@ -314,6 +314,7 @@ fn load_splats(
         starts: Vec::new(),
         built: false,
         entity: None,
+        cam_start_dist: 0.0,
     });
 }
 

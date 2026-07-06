@@ -105,7 +105,9 @@ pub(crate) fn shot_director(
         };
         (lhs, cur_shape, if t >= s.start { 1.0 } else { 0.0 }, false)
     } else {
-        let dt = t - s.start;
+        // Shot 0 uses the full morph as offset so the logo is fully formed from frame one;
+        // later shots morph from their origin (ball/fade/… → shape) like normal.
+        let dt = (t - s.start) + if idx == 0 { s.morph } else { 0.0 };
         let f = (dt / s.morph.max(1e-3)).clamp(0.0, 1.0);
         // lhs: the shot's origin cloud (ball/fade/explode/…), or — for a plain Morph — the prev shape.
         let lhs = match &s.origin {

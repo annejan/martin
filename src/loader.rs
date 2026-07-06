@@ -28,8 +28,8 @@ struct LoaderFill;
 #[derive(Component)]
 struct LoaderFade;
 
-const FADE_OUT: f32 = 0.6; // loader cross-fade time (s) once the show is built
-const MIN_SHOW: f32 = 0.8; // hold the loader at least this long so the logo registers before lift-off
+const FADE_OUT: f32 = 0.3; // loader cross-fade time (s) once the show is built
+const MIN_SHOW: f32 = 0.25; // hold the loader just long enough to register before lift-off
 
 /// Resolve `MARTIN_LOGO` to a texture handle: a `.svg` is rasterized (so it matches the mesh it was
 /// extruded from), anything else is loaded as an image asset (PNG/JPEG). `None` if unset/unreadable.
@@ -79,7 +79,7 @@ fn spawn_loader(
                 row_gap: Val::Px(22.0),
                 ..default()
             },
-            BackgroundColor(Color::BLACK),
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 1.0)),
             GlobalZIndex(1000),
             LoaderRoot,
             LoaderFade,
