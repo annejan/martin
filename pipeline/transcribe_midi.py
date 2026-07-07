@@ -11,7 +11,7 @@ lowest of the bass channel. Drums map GM percussion → kick/snare/hat. Stab = a
 
 Emits per-section lead/bass/stab/kick/snare/hat phrases + per-bar chords from the bass root. A starting
 point: hand-tune the arrangement/sections afterwards (it transcribes notes, not musical structure)."""
-import argparse, collections, sys
+import argparse, collections
 import mido
 
 NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
@@ -147,7 +147,6 @@ def main():
         name = f"s{si + 1}"
         b0 = si * a.bars_per_section
         nb = min(a.bars_per_section, total_bars - b0)
-        sl0, sl1 = b0 * 16, (b0 + nb) * 16
         # chords per bar
         chs = [bar_chord(b0 + k) or "Am" for k in range(nb)]
         L.append(f"{name}.chords: " + " ".join(chs))
@@ -185,7 +184,8 @@ def main():
             L.append(f"{name}.stab p0: " + fmt_bar(scells))
         L.append("")
 
-    open(a.out, "w").write("\n".join(L) + "\n")
+    with open(a.out, "w") as f:
+        f.write("\n".join(L) + "\n")
     print(f"transcribed {total_bars} bars → {nsec} sections @ {bpm:g} BPM → {a.out}")
 
 
@@ -204,4 +204,4 @@ def drum_lane(note):
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

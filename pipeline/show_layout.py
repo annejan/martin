@@ -87,47 +87,48 @@ def category(name):
 def parse_show(path):
     """Return (props, cameras). props: list of dicts {name,cat,pos,scale}. cameras: list of dicts."""
     stage, cams, section = [], [], None
-    for raw in open(path):
-        line = raw.split("#", 1)[0].strip()
-        if not line:
-            continue
-        m = re.match(r"\[(\w+)\]", line)
-        if m:
-            section = m.group(1)
-            continue
-        if section == "stage":
-            toks = line.split()
-            head = []
-            i = 0
-            while i < len(toks) and not (
-                toks[i].startswith("@") or toks[i].startswith("*")
-                or toks[i] in ("rot", "spin", "sway", "bob", "drift", "in", "out")
-            ):
-                head.append(toks[i])
-                i += 1
-            name = " ".join(head)
-            name = re.sub(r"^\w+:", "", name)  # strip splat:/mesh:/glb:/...
-            pos, scale, travel = [0.0, 0.0, 0.0], [1.0, 1.0, 1.0], None
-            for t in toks[i:]:
-                if t.startswith("@"):
-                    pos = vec3(t[1:])
-                elif t.startswith("*"):
-                    scale = vec3(t[1:], (1.0, 1.0, 1.0))
-                elif t.startswith("travel:"):
-                    travel = vec3(t[len("travel:"):].split("@", 1)[0])  # eased RESTING target
-            # plot a travel: prop where it COMES TO REST (target), not its off-screen @pos start.
-            stage.append({"name": name, "cat": category(name),
-                          "pos": travel if travel else pos, "scale": scale})
-        elif section == "camera":
-            d = dict(re.findall(r"(\w+)=([-\d.,]+|@@\w+)", line))
-            if "yaw" in d:
-                cams.append({
-                    "t": d.get("t", "?"),
-                    "pos": vec3(d.get("pos", "0,0,0")),
-                    "dist": float(d.get("dist", 5)),
-                    "yaw": float(d.get("yaw", 0)),
-                    "pitch": float(d.get("pitch", 0)),
-                })
+    with open(path) as fh:
+        for raw in fh:
+            line = raw.split("#", 1)[0].strip()
+            if not line:
+                continue
+            m = re.match(r"\[(\w+)\]", line)
+            if m:
+                section = m.group(1)
+                continue
+            if section == "stage":
+                toks = line.split()
+                head = []
+                i = 0
+                while i < len(toks) and not (
+                    toks[i].startswith("@") or toks[i].startswith("*")
+                    or toks[i] in ("rot", "spin", "sway", "bob", "drift", "in", "out")
+                ):
+                    head.append(toks[i])
+                    i += 1
+                name = " ".join(head)
+                name = re.sub(r"^\w+:", "", name)  # strip splat:/mesh:/glb:/...
+                pos, scale, travel = [0.0, 0.0, 0.0], [1.0, 1.0, 1.0], None
+                for t in toks[i:]:
+                    if t.startswith("@"):
+                        pos = vec3(t[1:])
+                    elif t.startswith("*"):
+                        scale = vec3(t[1:], (1.0, 1.0, 1.0))
+                    elif t.startswith("travel:"):
+                        travel = vec3(t[len("travel:"):].split("@", 1)[0])  # eased RESTING target
+                # plot a travel: prop where it COMES TO REST (target), not its off-screen @pos start.
+                stage.append({"name": name, "cat": category(name),
+                              "pos": travel if travel else pos, "scale": scale})
+            elif section == "camera":
+                d = dict(re.findall(r"(\w+)=([-\d.,]+|@@\w+)", line))
+                if "yaw" in d:
+                    cams.append({
+                        "t": d.get("t", "?"),
+                        "pos": vec3(d.get("pos", "0,0,0")),
+                        "dist": float(d.get("dist", 5)),
+                        "yaw": float(d.get("yaw", 0)),
+                        "pitch": float(d.get("pitch", 0)),
+                    })
     return stage, cams
 
 
@@ -209,7 +210,6 @@ def plot_scene_3d(ax, props, fg, asset_dir, elev, azim, cam=None):
         hw, hh = L * math.tan(hfov / 2), L * math.tan(vfov / 2)
         ctr = cw + fwd * L
         corners = [ctr + sr * right * hw + su * tup * hh for sr in (-1, 1) for su in (-1, 1)]
-        P = lambda v: ([v[0]], [v[2]], [v[1]])  # noqa: E731 — to mpl (x, z-depth, y-up)
         for c in corners:  # camera apex → each far corner
             ax.plot([cw[0], c[0]], [cw[2], c[2]], [cw[1], c[1]], color="red", lw=0.8, alpha=0.6)
         loop = [corners[0], corners[1], corners[3], corners[2], corners[0]]  # far rectangle
@@ -385,7 +385,6 @@ def draw(path, cam_idx, hfov, out, asset_dir="assets", az_off=0.0):
             continue
         x, z = o["pos"][0], o["pos"][2]
         inside = ((x - fcx) / fx) ** 2 + ((z - fcz) / fz) ** 2 <= 1.0
-        base = o["pos"][1] - PROP_HALF_H * o["scale"][1]
         ratio = ((x - fcx) / fx) ** 2 + ((z - fcz) / fz) ** 2  # 1.0 = on the ellipse edge
         flag = "" if inside else " OFF-FIELD"
         if inside and ratio > 0.72:  # near the rim → base clips at the horizon ("achter onder")

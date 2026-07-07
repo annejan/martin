@@ -57,7 +57,8 @@ def main():
     ap.add_argument("--radius", type=float, default=0.0, help="fixed splat radius in .ply units (overrides spacing)")
     args = ap.parse_args()
 
-    data = open(args.src, "rb").read()
+    with open(args.src, "rb") as f:
+        data = f.read()
     n, stride, fields, hlen = parse_header(data)
     for need in ("x", "y", "z"):
         if need not in fields:
@@ -120,7 +121,8 @@ def main():
         struct.pack_into("<fff", mv, o, (r - 0.5) / 0.2820948, (g - 0.5) / 0.2820948, (b - 0.5) / 0.2820948)
         o += 12
 
-    open(args.dst, "wb").write(out)
+    with open(args.dst, "wb") as f:
+        f.write(out)
     print(f"wrote {args.dst}: {len(kept)} splats (from {n} points, step {step}), radius {radius:.4f}")
 
 
