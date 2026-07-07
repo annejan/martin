@@ -45,7 +45,8 @@ def _varlen(d, i):
 def parse(path):
     """Full parse → (div, bpm, notes, meta). notes = [(start,end,pitch,chan)]; meta maps each channel
     to {name, program, n, lo, hi} (track name from FF 03 / FF 04, GM program from 0xC0)."""
-    d = open(path, "rb").read()
+    with open(path, "rb") as f:
+        d = f.read()
     assert d[:4] == b"MThd", "not a MIDI"
     _fmt, ntrk, div = struct.unpack(">HHH", d[8:14])
     if div == 0:
@@ -386,7 +387,8 @@ def _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a, tempos=None, 
     if HARM:
         L.append("song.arp p0: " + "  ".join(x.strip() for x in HARM))
     L.append("song.bass p0: " + "  ".join(x.strip() for x in BASS))
-    open(out, "w").write("\n".join(L) + "\n")
+    with open(out, "w") as f:
+        f.write("\n".join(L) + "\n")
     rn = lambda c: f"ch{c + 1}" if c is not None else "-"
     print(f"wrote {out}: FAITHFUL, bpm {bpm}, {nb} bars | vocal={rn(voc)} "
           f"bass={rn(bsrc)} harm={rn(fil)} drums={rn(roles['drums'])}")
@@ -543,7 +545,8 @@ def _faithful_meter(out, args, div, bpm, notes, roles, voc, bas, fil, sigs, temp
             for kind in ("kick", "snare", "hat"):
                 if "x" in d[kind]:
                     L.append(f"{nm}.{kind} p0: {d[kind]}")
-    open(out, "w").write("\n".join(L) + "\n")
+    with open(out, "w") as f:
+        f.write("\n".join(L) + "\n")
     rn = lambda c: f"ch{c + 1}" if c is not None else "-"
     metres = sorted({g for _s, g in bars})
     print(f"wrote {out}: FAITHFUL ODD-METER, bpm {bpm}, {len(bars)} bars, grids {metres} | "
@@ -662,7 +665,8 @@ def build_score(path, out, args):
     for n, r, nb, tot in lines:
         L.append(f"{n}.bass p0: " + "  ".join(x.strip() for x in sl(BAS, nb)))
 
-    open(out, "w").write("\n".join(L) + "\n")
+    with open(out, "w") as f:
+        f.write("\n".join(L) + "\n")
     rn = lambda c: f"ch{c + 1}" if c is not None else "-"
     bass_tag = "ch{} (split)".format(bsrc + 1) if split else rn(bas)
     print(f"wrote {out}: bpm {bpm}, {len(lines)} sections | "

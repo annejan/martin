@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Anne Jan Brouwer <brouwer@annejan.com>
+# SPDX-License-Identifier: MIT
+#
+# Accepted RustSec advisories — blocked by transitive deps or no fix available.
+# These are build-time (wayland-scanner proc-macro) or warnings (ttf-parser
+# unmaintained, latest version used), NOT runtime-exploitable in martin.
+[advisories]
+ignore = [
+    "RUSTSEC-2026-0194",  # quick-xml: quadratic attrs (wayland-scanner, build-time only)
+    "RUSTSEC-2026-0195",  # quick-xml: unbounded ns alloc (wayland-scanner, build-time only)
+    "RUSTSEC-2026-0192",  # ttf-parser: unmaintained (no newer version exists)
+]

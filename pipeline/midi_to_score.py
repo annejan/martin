@@ -25,7 +25,8 @@ def varlen(d, i):
 
 
 def parse(path):
-    d = open(path, "rb").read()
+    with open(path, "rb") as f:
+        d = f.read()
     assert d[:4] == b"MThd", "not a MIDI"
     fmt, ntrk, div = struct.unpack(">HHH", d[8:14])
     tempo = 500000  # default 120 bpm (us per quarter)

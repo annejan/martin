@@ -118,3 +118,7 @@ strip = false
 # `cargo update` — can't silently repoint the engine's renderer to unreviewed commits before a deadline.
 # To pull new shader edits: push the fork branch, then bump this rev deliberately (+ `cargo update -p …`).
 bevy_gaussian_splatting = { git = "https://github.com/annejan/bevy_gaussian_splatting", rev = "608c7d17541b6cb77848d09e5f0c848075e9db30" }
+# quick-xml 0.39→0.40 has RUSTSEC-2026-0194/0195 (quadratic attrs, unbounded ns alloc).
+# Build-time only (wayland-scanner is a proc-macro), NOT runtime-exploitable in martin.
+# Upstream wayland-scanner needs a coordinated release with wayland-client/server;
+# a simple dep bump breaks the generated-code API. Tracked in .cargo/audit.toml.

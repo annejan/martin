@@ -102,7 +102,9 @@ def parse_stage(show_path):
     """Return [{line, kind, name, pos, scale, rot}] for each `[stage]` object (line = file line index)."""
     path = show_path if os.path.isabs(show_path) else os.path.join(ROOT, show_path)
     out, sec = [], None
-    for li, raw in enumerate(open(path)):
+    with open(path) as fh:
+        ls = fh.readlines()
+    for li, raw in enumerate(ls):
         line = raw.split("#", 1)[0].strip()
         if not line:
             continue
@@ -143,18 +145,19 @@ def parse_camera(show_path):
     """Return [{anchor/t, pos, dist, yaw, pitch}] from the `[camera]` track."""
     path = show_path if os.path.isabs(show_path) else os.path.join(ROOT, show_path)
     out, sec = [], None
-    for raw in open(path):
-        line = raw.split("#", 1)[0].strip()
-        m = re.match(r"\[(\w+)\]", line)
-        if m:
-            sec = m.group(1)
-            continue
-        if sec != "camera" or "=" not in line:
-            continue
-        d = dict(re.findall(r"(\w+)=([-\d.,]+|@@\w+)", line))
-        if "dist" in d:
-            out.append(dict(t=d.get("t", "?"), pos=_vec3(d.get("pos", "0,0,0")),
-                            dist=float(d["dist"]), yaw=float(d.get("yaw", 1.4)), pitch=float(d.get("pitch", 0.12))))
+    with open(path) as fh:
+        for raw in fh:
+            line = raw.split("#", 1)[0].strip()
+            m = re.match(r"\[(\w+)\]", line)
+            if m:
+                sec = m.group(1)
+                continue
+            if sec != "camera" or "=" not in line:
+                continue
+            d = dict(re.findall(r"(\w+)=([-\d.,]+|@@\w+)", line))
+            if "dist" in d:
+                out.append(dict(t=d.get("t", "?"), pos=_vec3(d.get("pos", "0,0,0")),
+                                dist=float(d["dist"]), yaw=float(d.get("yaw", 1.4)), pitch=float(d.get("pitch", 0.12))))
     return out
 
 
@@ -162,15 +165,16 @@ def parse_settings(show_path):
     """Return the top-level / `[settings]` key=value knobs as a dict."""
     path = show_path if os.path.isabs(show_path) else os.path.join(ROOT, show_path)
     out, sec = {}, "settings"
-    for raw in open(path):
-        line = raw.split("#", 1)[0].strip()
-        m = re.match(r"\[(\w+)\]", line)
-        if m:
-            sec = m.group(1)
-            continue
-        if sec == "settings" and "=" in line:
-            k, v = line.split("=", 1)
-            out[k.strip()] = v.strip()
+    with open(path) as fh:
+        for raw in fh:
+            line = raw.split("#", 1)[0].strip()
+            m = re.match(r"\[(\w+)\]", line)
+            if m:
+                sec = m.group(1)
+                continue
+            if sec == "settings" and "=" in line:
+                k, v = line.split("=", 1)
+                out[k.strip()] = v.strip()
     return out
 
 
@@ -384,7 +388,7 @@ def _setup_world():
     sc.render.resolution_x, sc.render.resolution_y = 854, 480   # 16:9 to match martin framing
     try:
         sc.render.engine = "BLENDER_EEVEE_NEXT"
-    except Exception:
+    except Exception:  # older Blender versions lack EEVEE
         pass
     sc.world.use_nodes = True
     sc.world.node_tree.nodes["Background"].inputs[0].default_value = (0.03, 0.04, 0.06, 1)
@@ -463,7 +467,8 @@ def bridge_export(show_path, write=True):
     just returns the patched lines (dry run).
     """
     path = show_path if os.path.isabs(show_path) else os.path.join(ROOT, show_path)
-    lines = open(path).read().split("\n")
+    with open(path) as fh:
+        lines = fh.read().split("\n")
     for ob in bpy.data.objects:
         if "_show_line" not in ob.keys():
             continue
@@ -499,7 +504,8 @@ def bridge_export(show_path, write=True):
         lines = _patch_setting(lines, "particle_spread", "%g,%g,%g" % spv)
     cam = read_camera()
     if write:
-        open(path, "w").write("\n".join(lines))
+        with open(path, "w") as fh:
+            fh.write("\n".join(lines))
         print("bridge_export: wrote", show_path)
     if cam:
         print("camera: t=...  pos=%g,%g,%g  dist=%g  yaw=%.4f  pitch=%.4f" %
