@@ -43,7 +43,7 @@ rayon = "1"
 # MARTIN_* env the .show + bundle expand into, with OVERWRITE so a flag beats env + the .show file.
 clap = { version = "4", features = ["derive"] }
 # Base64-encode screenshots for the MCP server's inline image replies (MARTIN_MCP). Already in-tree.
-base64 = "0.22"
+base64 = "0.23"
 # Load meshes (COLLADA .dae, .obj, .stl, .ply) → triangles, to sample into gaussians (mesh: source).
 mesh-loader = "0.1"
 # glTF (.glb/.gltf) loading for `mesh:` — mesh-loader doesn't do glTF, so a separate path samples it.
