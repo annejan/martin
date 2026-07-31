@@ -1,0 +1,65 @@
+# Clippy → GitHub code scanning. COMPLEMENTS the blocking `clippy` gate in build.yml (that one is
+# `-D warnings`, pass/fail): this run converts the full lint output to SARIF and uploads it, so lints
+# show up as code-scanning alerts with in-diff annotations + history, and a weekly run catches lints
+# newly added to the pinned toolchain. Non-blocking by design (`continue-on-error` on the lint step).
+#
+# Rewritten from GitHub's stock rust-clippy template, which cannot build martin:
+#   • `toolchain: stable` → the pinned nightly (rust-toolchain.toml; GATs need it) via dtolnay's
+#     action — the archived actions-rs/toolchain would override the pin with stable.
+#   • `--all-features` → default features: `sh0`/`sh3` are one-hot MUTUALLY EXCLUSIVE crate features
+#     (see Cargo.toml), so --all-features selects both and cannot compile.
+#   • + the Linux system headers (udev/alsa/wayland/xkbcommon) and the cargo cache, same as build.yml.
+
+name: rust-clippy analyze
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "40 6 * * 5" # Fridays 06:40 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  rust-clippy-analyze:
+    name: Run rust-clippy analyzing
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload the SARIF results
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Linux deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libudev-dev libasound2-dev libwayland-dev libxkbcommon-dev
+
+      # nightly (pinned by rust-toolchain.toml) — the crate needs it (nightly_generic_alias / GATs).
+      - uses: dtolnay/rust-toolchain@5b842231ba77f5c045dba54ac5560fed2db780e2 # nightly
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Install clippy-sarif + sarif-fmt
+        run: cargo install --locked clippy-sarif sarif-fmt
+
+      # Same lint surface as the blocking gate (--all-targets, default features) minus -D warnings:
+      # here EVERY lint is reported to code scanning, not just fatal ones.
+      - name: Run rust-clippy
+        run: cargo clippy --all-targets --message-format=json |
+          clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+        continue-on-error: true
+
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4
+        with:
+          sarif_file: rust-clippy-results.sarif
+          category: rust-clippy # keep distinct from the CodeQL rust analysis
+          wait-for-processing: true

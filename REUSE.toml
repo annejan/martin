@@ -229,6 +229,7 @@ path = [
     ".github/workflows/build.yml",
     ".github/workflows/ponycamp.yml",
     ".github/workflows/codeql.yml",
+    ".github/workflows/rust-clippy.yml",
     ".github/workflows/dependabot-automerge.yml",
     ".github/codeql/codeql-config.yml",
 ]
