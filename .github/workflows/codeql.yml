@@ -68,7 +68,25 @@ jobs:
           build-mode: none # rust/python/actions all use the no-build extractor
           config-file: ./.github/codeql/codeql-config.yml
 
+      # Rust-extractor tuning (CODEQL_EXTRACTOR_RUST_OPTION_* env; ignored by the python/actions
+      # legs — the rust extractor only runs on the rust one). Verified against the extractor's
+      # config source (github/codeql rust/codeql-extractor.yml + rust/extractor/src/config.rs):
+      #   • cargo_features: the extractor DEFAULTS TO ALL FEATURES, which for martin selects
+      #     sh0+sh3 (one-hot, mutually exclusive — sh3 wins) AND `bundle` (whose build.rs runs the
+      #     whole asset-bundling pipeline inside the extractor's cargo check). "default" analyzes
+      #     the configuration we actually ship (sh0, no bundle).
+      #   • cargo_target_dir: by default the extractor's internal cargo check (build scripts +
+      #     proc-macro compilation — the input to macro expansion) uses a fresh scratch dir every
+      #     run; pointing it at the workspace target dir puts it under the rust-cache step above.
+      #   • cargo_all_targets: also load test/bench targets — the unit tests are inline
+      #     #[cfg(test)] modules (cfg(test) is force-extracted), this completes their dev-dep graph.
+      # The pinned nightly (rust-toolchain.toml) is respected as-is: the extractor discovers the
+      # sysroot through the rustup shims, and its proc-macro server comes from that toolchain.
       - name: Perform CodeQL Analysis
+        env:
+          CODEQL_EXTRACTOR_RUST_OPTION_CARGO_FEATURES: default
+          CODEQL_EXTRACTOR_RUST_OPTION_CARGO_TARGET_DIR: ${{ github.workspace }}/target
+          CODEQL_EXTRACTOR_RUST_OPTION_CARGO_ALL_TARGETS: "true"
         uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4
         with:
           category: "/language:${{ matrix.language }}"
