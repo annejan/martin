@@ -128,7 +128,6 @@ def fmt_bars(slots):
     out = []
     for b in range(0, len(slots), 16):
         bar = slots[b:b + 16]
-        groups = ["".ljust(0)]
         cells = [tok(x).rjust(3) for x in bar]
         line = "  ".join(" ".join(cells[g:g + 4]) for g in range(0, 16, 4))
         out.append(line)
