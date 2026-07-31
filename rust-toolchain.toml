@@ -3,7 +3,7 @@
 # `nightly_generic_alias` feature, which requires nightly. PINNED to a known-good DATE (not rolling
 # `nightly`) so a nightly regression / ICE / feature-drop can't break the build the night before the
 # compo — the CI `dtolnay/rust-toolchain` steps inherit this file. Bump deliberately + re-verify.
-channel = "nightly-2026-04-26"
+channel = "nightly-2026-07-30"
 # A DATED nightly doesn't ship rustfmt/clippy unless they're requested — list them so the fmt + clippy
-# CI gates (and any fresh checkout) install them with the toolchain. Required for nightly-2026-04-26.
+# CI gates (and any fresh checkout) install them with the toolchain. Required for nightly-2026-07-30.
 components = ["rustfmt", "clippy"]

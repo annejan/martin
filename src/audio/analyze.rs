@@ -35,7 +35,9 @@ const RELEASE: f32 = 0.12;
 /// Average interleaved-stereo `f32` (the shape `stream::produce` emits) down to mono for analysis.
 pub fn mix_mono(stereo: &[f32]) -> Vec<f32> {
     stereo
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|s| 0.5 * (s[0] + s[1]))
         .collect()
 }
@@ -219,8 +221,13 @@ impl StreamingAnalyzer {
     /// Feed a chunk of interleaved-stereo PCM (the shape `produce` emits); emits every row whose FFT
     /// window is now fully inside the accumulated signal, in order.
     pub fn push_stereo(&mut self, stereo: &[f32], mut emit: impl FnMut([f32; BANDS])) {
-        self.mono
-            .extend(stereo.chunks_exact(2).map(|s| 0.5 * (s[0] + s[1])));
+        self.mono.extend(
+            stereo
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|s| 0.5 * (s[0] + s[1])),
+        );
         let half = WIN as isize / 2;
         while (self.center(self.next_frame) + half) as usize <= self.mono.len() {
             let row = self.emit_row();
