@@ -589,10 +589,12 @@ def build_score(path, out, args):
     if args.faithful:
         # an odd-meter source (non-4/4 time signature) → the variable-grid renderer, unless overridden.
         if has_odd_meter(sigs) and not args.no_meter:
-            return _faithful_meter(
+            _faithful_meter(
                 out, args, div, bpm, notes, roles, voc, bas, fil, sigs, tempos, suppress_tempo
             )
-        return _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a, tempos, suppress_tempo)
+        else:
+            _faithful(out, args, div, bpm, notes, roles, voc, bas, fil, a, tempos, suppress_tempo)
+        return
     # No separate bass channel (a single-channel piano piece) → SPLIT the lead channel by pitch: the
     # left hand (low notes) becomes the bass, the right hand (high) stays the lead.
     split = bas is None
