@@ -612,7 +612,7 @@ fn build_gltf_gaussians(
                     .read_indices()
                     .map(|i| i.into_u32().collect())
                     .unwrap_or_else(|| (0..positions.len() as u32).collect());
-                for t in indices.chunks_exact(3) {
+                for t in indices.as_chunks::<3>().0 {
                     let (a, b, c) = (t[0] as usize, t[1] as usize, t[2] as usize);
                     let (Some(&pa), Some(&pb), Some(&pc)) =
                         (positions.get(a), positions.get(b), positions.get(c))

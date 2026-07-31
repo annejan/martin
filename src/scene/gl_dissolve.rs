@@ -140,7 +140,7 @@ pub(crate) fn sample_gl_mesh(
                 Some(Indices::U32(v)) => v.iter().map(|&i| i as usize).collect(),
                 None => (0..pos.len()).collect(),
             };
-            for t in idxs.chunks_exact(3) {
+            for t in idxs.as_chunks::<3>().0 {
                 let (Some(&pa), Some(&pb), Some(&pc)) =
                     (pos.get(t[0]), pos.get(t[1]), pos.get(t[2]))
                 else {
