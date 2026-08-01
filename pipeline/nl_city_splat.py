@@ -104,7 +104,7 @@ CITIES = {
     # ending on the ABENTEUERHALLEN (the party venue itself). German open data: NRW bDOM50 tiles
     # (RGB from 2024/25 aerial imagery, EPSG:25832 = plain UTM32 meters, license dl-zero = CC0
     # class, no attribution required). Coordinates geocoded via Nominatim → UTM32.
-    "koeln": {"provider": "nrw", "width": 700,
+    "koeln": {"provider": "nrw3d", "width": 700,
               "route": [(356549, 5645283), (356800, 5645000), (357100, 5644723),
                         (357700, 5644650), (358800, 5644560), (360088, 5644507)]},
 }
@@ -222,6 +222,59 @@ def fetch_nrw(e_km: int, n_km: int) -> Path:
     sys.exit(f"bdom50 {e_km}_{n_km}: no year variant found ({last})")
 
 
+NRW_3DM = ("https://www.opengeodata.nrw.de/produkte/geobasis/hm/3dm_l_las/3dm_l_las/"
+           "3dm_32_{e}_{n}_1_nw.laz")
+NRW_DOP_WMS = ("https://www.wms.nrw.de/geobasis/wms_nw_dop?SERVICE=WMS&VERSION=1.3.0"
+               "&REQUEST=GetMap&LAYERS=nw_dop_rgb&STYLES=&CRS=EPSG:25832"
+               "&BBOX={x0},{y0},{x1},{y1}&WIDTH={px}&HEIGHT={px}&FORMAT=image/jpeg")
+DOP_PX = 4000  # 4000 px over 1 km = 25 cm — plenty to color 9.5 pts/m² lidar (33 cm spacing)
+
+
+def fetch_nrw_3dm(e_km: int, n_km: int) -> Path:
+    """Fetch one NRW 3dm laserscan tile (1×1 km, ~9.5 pts/m², NO RGB — LAS PDRF 1). The real
+    lidar: true point structure (see-through trees, sharp edges) vs the bDOM's melted 0.5 m
+    raster surface. Colored separately from the DOP orthophoto (fetch_nrw_dop)."""
+    CACHE.mkdir(parents=True, exist_ok=True)
+    dst = CACHE / f"3dm_{e_km}_{n_km}.laz"
+    if dst.exists() and dst.stat().st_size > 100_000:
+        return dst
+    url = NRW_3DM.format(e=e_km, n=n_km)
+    print(f"  fetch {url}")
+    tmp = dst.with_suffix(".part")
+    with urllib.request.urlopen(url) as r, open(tmp, "wb") as f:
+        while chunk := r.read(1 << 20):
+            f.write(chunk)
+    os.replace(tmp, dst)
+    print(f"  cached {dst} ({dst.stat().st_size / 1e6:.0f} MB)")
+    return dst
+
+
+def fetch_nrw_dop(e_km: int, n_km: int) -> np.ndarray:
+    """One km-tile of the NRW 10 cm orthophoto via WMS, as an RGB array (DOP_PX², 25 cm/px) —
+    the color source for the colorless 3dm lidar. Cached as JPEG."""
+    from PIL import Image
+
+    CACHE.mkdir(parents=True, exist_ok=True)
+    dst = CACHE / f"dop_{e_km}_{n_km}.jpg"
+    if not dst.exists() or dst.stat().st_size < 10_000:
+        url = NRW_DOP_WMS.format(x0=e_km * 1000, y0=n_km * 1000,
+                                 x1=e_km * 1000 + 1000, y1=n_km * 1000 + 1000, px=DOP_PX)
+        print(f"  fetch DOP {e_km}_{n_km} (WMS)")
+        tmp = dst.with_suffix(".part")
+        with urllib.request.urlopen(url) as r, open(tmp, "wb") as f:
+            f.write(r.read())
+        os.replace(tmp, dst)
+    return np.asarray(Image.open(dst).convert("RGB"))
+
+
+def color_from_dop(x, y, e_km, n_km, dop):
+    """Sample per-point RGB (0..1 f32) from a tile's DOP array. WMS row 0 = NORTH edge."""
+    res = 1000.0 / DOP_PX
+    px = np.clip(((x - e_km * 1000) / res).astype(np.int32), 0, DOP_PX - 1)
+    py = np.clip(((n_km * 1000 + 1000 - y) / res).astype(np.int32), 0, DOP_PX - 1)
+    return dop[py, px].astype(np.float32) / 255.0
+
+
 def grid_tiles(route=None, width=0, area=None):
     """1×1 km UTM32 grid cells under a route corridor or area bbox → [(e_km, n_km)] — the NRW
     tile scheme needs no sheet index, the file name IS the grid coordinate."""
@@ -260,16 +313,24 @@ def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
     """Read every subtile under the corridor, crop to it → (xyz, rgb, route)."""
     spec = CITIES[name]
     route, width = spec["route"], spec["width"]
-    nrw = spec.get("provider") == "nrw"
+    provider = spec.get("provider")
+    nrw = provider in ("nrw", "nrw3d")
     tiles = spec.get("tiles") or (
         grid_tiles(route=route, width=width) if nrw else route_tiles(route, width)
     )
     print(f"  route: {len(route)} waypoints, corridor {width} m → {len(tiles)} subtiles: {tiles}")
     pts, cols = [], []
     for tile in tiles:
-        las = laspy.read(fetch_nrw(*tile) if nrw else fetch_any(tile))
-        if "red" not in las.point_format.dimension_names:
-            sys.exit(f"{tile}: no RGB dimensions — expected a colorized tile")
+        if provider == "nrw3d":
+            # FUSION: the real 3dm lidar (9.5 pts/m², colorless) colored per-point from the 10 cm
+            # DOP orthophoto — 2.4× the density of the bDOM raster AND true point structure.
+            las = laspy.read(fetch_nrw_3dm(*tile))
+            dop = fetch_nrw_dop(*tile)
+        else:
+            las = laspy.read(fetch_nrw(*tile) if nrw else fetch_any(tile))
+            if "red" not in las.point_format.dimension_names:
+                sys.exit(f"{tile}: no RGB dimensions — expected a colorized tile")
+            dop = None
         x, y, z = np.asarray(las.x), np.asarray(las.y), np.asarray(las.z)
         keep = _dist_to_polyline(x, y, route) <= width / 2
         keep &= np.asarray(las.classification) != 9
@@ -283,12 +344,15 @@ def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
             sel = np.random.default_rng(len(sel)).choice(sel, size=2_500_000, replace=False)
         # float32 positions: RD coords are ~1e5 m → f32 keeps ~1 cm relative precision, half the RAM.
         pts.append(np.column_stack([x[sel], y[sel], z[sel]]).astype(np.float32))
-        # GeoTiles stores 0-255 in the uint16 RGB fields; NRW bDOM uses full 16-bit — detect.
-        cscale = 65535.0 if int(np.max(las.red[:10000])) > 255 else 255.0
-        rgb = np.column_stack(
-            [np.asarray(las.red)[sel], np.asarray(las.green)[sel], np.asarray(las.blue)[sel]]
-        ).astype(np.float32) / cscale
-        cols.append(rgb)
+        if dop is not None:
+            cols.append(color_from_dop(x[sel], y[sel], tile[0], tile[1], dop))
+        else:
+            # GeoTiles stores 0-255 in the uint16 RGB fields; NRW bDOM uses full 16-bit — detect.
+            cscale = 65535.0 if int(np.max(las.red[:10000])) > 255 else 255.0
+            rgb = np.column_stack(
+                [np.asarray(las.red)[sel], np.asarray(las.green)[sel], np.asarray(las.blue)[sel]]
+            ).astype(np.float32) / cscale
+            cols.append(rgb)
     xyz = np.concatenate(pts)
     rgb = np.clip(np.concatenate(cols), 0.0, 1.0)
     print(f"  {name}: {len(xyz):,} points in corridor")
