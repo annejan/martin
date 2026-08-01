@@ -17,7 +17,9 @@ Show credit line: "hoogtedata AHN (CC0) · kleur GeoTiles · TU Delft / Beeldmat
 Output matches martin's sh0 .ply layout exactly (src/splatgen.rs::write_ply — 14 floats/point:
 xyz, log-scale ×3, logit-opacity, identity quat, f_dc = (rgb-0.5)/0.2820948) and the capture
 orientation convention: the file is Y-DOWN (martin rotates every .ply 180° about X on load), so
-we write y = -height. World after the flip: x=east, y=up, z=-north.
+the FILE gets y = -height and z = +north; the 180° X flip negates BOTH → world: x = east,
+y = up, z = -north (south-positive). The camera emit uses the same mapping (z = -(ry-cy)*s).
+Geography check: denhaag-zee starts SOUTH of the route centre and lands at world z = +0.77.
 
 LAZ facts (verified on the Rotterdam Markthal subtile): point format 8, RGB stored 0-255 in the
 uint16 fields (divide by 255, NOT 65535); classes 1=unclassified (trees/cars) 2=ground 6=building
@@ -419,6 +421,15 @@ def write_segments(name, xyz, rgb, route, args, outdir):
                   args.scale_mult * spacing, args.opacity)
         print(f"splat:{fname}  @{hold:.0f},{morph:.0f},0  ~morph  backdrop:stars")
     print("# --- end generated reel ---")
+    # Shared-frame guard: segments from an OLDER run (different --count/--segments → a slightly
+    # different normalize frame) silently mix with the new set and misalign at the seams. Remove
+    # any {name}_seg* file we did not just write.
+    written = {f"{name.replace('-', '_')}_seg{k}{'_rainbow' if args.rainbow_seg == k else ''}_tight.ply"
+               for k in range(n)}
+    for old in outdir.glob(f"{name.replace('-', '_')}_seg*_tight.ply"):
+        if old.name not in written:
+            print(f"  WARN: removing stale segment from an older run: {old.name}")
+            old.unlink()
     return cx, cy, ground, s
 
 
@@ -568,7 +579,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("city", choices=sorted(CITIES) + ["all"])
     ap.add_argument("--count", type=int, default=1_200_000, help="splats per city")
-    ap.add_argument("--out", default="austin_run/exports", help="output dir (the show's asset root)")
+    ap.add_argument("--out", default="assets/cities", help="output dir (the shows' asset root; gitignored)")
     ap.add_argument("--scale-mult", type=float, default=1.4,
                     help="splat radius = mult × mean point spacing (coverage vs crispness)")
     ap.add_argument("--opacity", type=float, default=0.85)

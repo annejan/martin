@@ -8,7 +8,7 @@
 
 [settings]
 kind = demo
-ply = austin_run/exports/amsterdam_map_tight.ply
+ply = assets/cities/amsterdam_map_tight.ply
 budget = 900000               # single part: shape + assembly ball ≈ 2× resident → under the 2M cap
 normalize = 0
 score = productions/cities/score.txt

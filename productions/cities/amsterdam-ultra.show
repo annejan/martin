@@ -9,7 +9,7 @@
 
 [settings]
 kind = demo
-ply = austin_run/exports/amsterdam_ultra_tight.ply
+ply = assets/cities/amsterdam_ultra_tight.ply
 budget = 16000000
 normalize = 0
 score = productions/cities/score.txt

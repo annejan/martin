@@ -8,7 +8,7 @@
 [settings]
 kind = demo
 # `ply =` doubles as the asset root the [reel] splat: names resolve against — never omit it.
-ply = austin_run/exports/denhaag_zee_tight.ply
+ply = assets/cities/denhaag_zee_tight.ply
 budget = 1800000
 score = productions/cities/score.txt
 flash = 0.25

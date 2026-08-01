@@ -10,8 +10,8 @@
 
 kind = demo
 [settings]
-ply = austin_run/exports/denhaag_zee_seg0_tight.ply
-budget = 900000
+ply = assets/cities/denhaag_zee_seg0_tight.ply
+budget = 700000
 normalize = 0
 pair = match
 score = productions/cities/score.txt

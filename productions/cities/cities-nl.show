@@ -12,13 +12,13 @@
 #   live loop:  MARTIN_LOOP=1 MARTIN_SHOW=productions/cities/cities-nl.show cargo +nightly run --release
 #   record:     MARTIN_SHOW=productions/cities/cities-nl.show ./record.sh cities-nl.mp4
 #
-# defeest.glb / bitterbal.glb / the four *_tight.ply resolve via austin_run/exports/. ~89s, loops.
+# defeest.glb / bitterbal.glb / the four *_tight.ply resolve via assets/cities/. ~89s, loops.
 
 [settings]
 kind = demo
 pair = match
 budget = 1200000              # crisp (override MARTIN_MORPH_COUNT=250000/500000 for previews)
-ply = austin_run/exports/groningen_tight.ply
+ply = assets/cities/groningen_tight.ply
 score = productions/cities/score.txt   # moody A-minor synthwave night-drive (this production's own track)
 flash = 0.25
 bg_dim = 0.4

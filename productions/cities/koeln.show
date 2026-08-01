@@ -3,10 +3,11 @@
 # German open data (NRW bDOM50: RGB from the 2024/25 aerial imagery, license dl-zero = CC0 class,
 # no attribution required — courtesy: "Geodaten © Land NRW, opengeodata.nrw.de"). Unlike the AHN
 # lidar, the bDOM is a colored SURFACE model, so the Rhine shows as colored water, not a black void.
-#   pipeline/nl_city_splat.py koeln --count 1800000 --emit-camera --duration 85 --dist-m 140
+#   pipeline/nl_city_splat.py koeln --segments 3 --count 6000000 --seg-overlap 0.25 \
+#       --rainbow-seg 1 --tile-cap 6000000    (26M corridor points → 3 segments at ~8M, 43 cm splats)
 [settings]
 kind = demo
-ply = austin_run/exports/koeln_seg0_tight.ply
+ply = assets/cities/koeln_seg0_tight.ply
 budget = 8300000              # MAX density (43 cm splats). Window ≈ 4 clouds → 33M resident live/stills; RECORDS must resample: MARTIN_MORPH_COUNT=3000000 + MARTIN_SPLAT_WARN=16000000
 normalize = 0
 pair = match

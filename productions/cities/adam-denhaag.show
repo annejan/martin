@@ -8,7 +8,7 @@
 
 [settings]
 kind = demo
-ply = austin_run/exports/adam_denhaag_seg0_tight.ply
+ply = assets/cities/adam_denhaag_seg0_tight.ply
 budget = 480000               # streaming window holds FOUR clouds — 4×480k = 1.92M resident, under the 2M record cap
 normalize = 0
 pair = match
