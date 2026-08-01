@@ -100,6 +100,13 @@ CITIES = {
     # IJ) at 16M splats ≈ 1 m splat pitch, the maximum this data gives. Fly LOW (the houses are
     # only ~20 m tall): ~80 m camera height reads as a drone shot over the canals.
     "amsterdam-ultra": {"area": (119800, 485800, 122800, 488300)},
+    # KÖLN — the EVOKE greeting: Dom → across the Rhine over the Deutzer Brücke → Deutz → KALK,
+    # ending on the ABENTEUERHALLEN (the party venue itself). German open data: NRW bDOM50 tiles
+    # (RGB from 2024/25 aerial imagery, EPSG:25832 = plain UTM32 meters, license dl-zero = CC0
+    # class, no attribution required). Coordinates geocoded via Nominatim → UTM32.
+    "koeln": {"provider": "nrw", "width": 700,
+              "route": [(356549, 5645283), (356800, 5645000), (357100, 5644723),
+                        (357700, 5644650), (358800, 5644560), (360088, 5644507)]},
 }
 
 
@@ -184,6 +191,60 @@ def route_tiles(route, width):
     return tiles
 
 
+NRW_BDOM = ("https://www.opengeodata.nrw.de/produkte/geobasis/hm/bdom50_las/bdom50_las/"
+            "bdom50_32{e}_{n}_1_nw_{year}.laz")
+
+
+def fetch_nrw(e_km: int, n_km: int) -> Path:
+    """Fetch one NRW bDOM50 tile (1×1 km, EPSG:25832, LAS PDRF 2 = RGB from the 2024/25 aerial
+    imagery — the German sibling of the GeoTiles colorized subtiles; license dl-zero-de/2.0, no
+    attribution required). The year suffix varies by region → try recent years."""
+    CACHE.mkdir(parents=True, exist_ok=True)
+    dst = CACHE / f"bdom50_{e_km}_{n_km}.laz"
+    if dst.exists() and dst.stat().st_size > 100_000:
+        return dst
+    last = None
+    for year in (2025, 2024, 2023, 2022):
+        url = NRW_BDOM.format(e=e_km, n=n_km, year=year)
+        try:
+            print(f"  fetch {url}")
+            tmp = dst.with_suffix(".part")
+            with urllib.request.urlopen(url) as r, open(tmp, "wb") as f:
+                while chunk := r.read(1 << 20):
+                    f.write(chunk)
+            os.replace(tmp, dst)
+            print(f"  cached {dst} ({dst.stat().st_size / 1e6:.0f} MB)")
+            return dst
+        except urllib.error.HTTPError as err:
+            last = err
+            if err.code != 404:
+                raise
+    sys.exit(f"bdom50 {e_km}_{n_km}: no year variant found ({last})")
+
+
+def grid_tiles(route=None, width=0, area=None):
+    """1×1 km UTM32 grid cells under a route corridor or area bbox → [(e_km, n_km)] — the NRW
+    tile scheme needs no sheet index, the file name IS the grid coordinate."""
+    if area:
+        x0, y0, x1, y1 = area
+    else:
+        rx = [p[0] for p in route]
+        ry = [p[1] for p in route]
+        m = width / 2
+        x0, y0, x1, y1 = min(rx) - m, min(ry) - m, max(rx) + m, max(ry) + m
+    cells = []
+    for e in range(int(x0 // 1000), int(x1 // 1000) + 1):
+        for n in range(int(y0 // 1000), int(y1 // 1000) + 1):
+            if route is not None:
+                cx, cy = e * 1000 + 500, n * 1000 + 500
+                sx = np.array([cx, e * 1000.0, e * 1000 + 1000.0, e * 1000.0, e * 1000 + 1000.0])
+                sy = np.array([cy, n * 1000.0, n * 1000.0, n * 1000 + 1250.0, n * 1000 + 1000.0])
+                if _dist_to_polyline(sx, sy, route).min() > width / 2 + 750:
+                    continue
+            cells.append((e, n))
+    return cells
+
+
 def fetch_any(tile: str) -> Path:
     """Fetch a subtile, AHN5 first, AHN4 fallback (AHN5 only covers the Randstad so far)."""
     for src in ("AHN5_T", "AHN4_T"):
@@ -199,13 +260,16 @@ def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
     """Read every subtile under the corridor, crop to it → (xyz, rgb, route)."""
     spec = CITIES[name]
     route, width = spec["route"], spec["width"]
-    tiles = spec.get("tiles") or route_tiles(route, width)
+    nrw = spec.get("provider") == "nrw"
+    tiles = spec.get("tiles") or (
+        grid_tiles(route=route, width=width) if nrw else route_tiles(route, width)
+    )
     print(f"  route: {len(route)} waypoints, corridor {width} m → {len(tiles)} subtiles: {tiles}")
     pts, cols = [], []
     for tile in tiles:
-        las = laspy.read(fetch_any(tile))
+        las = laspy.read(fetch_nrw(*tile) if nrw else fetch_any(tile))
         if "red" not in las.point_format.dimension_names:
-            sys.exit(f"{tile}: no RGB dimensions — expected a GeoTiles colorized subtile")
+            sys.exit(f"{tile}: no RGB dimensions — expected a colorized tile")
         x, y, z = np.asarray(las.x), np.asarray(las.y), np.asarray(las.z)
         keep = _dist_to_polyline(x, y, route) <= width / 2
         keep &= np.asarray(las.classification) != 9
@@ -219,9 +283,11 @@ def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
             sel = np.random.default_rng(len(sel)).choice(sel, size=2_500_000, replace=False)
         # float32 positions: RD coords are ~1e5 m → f32 keeps ~1 cm relative precision, half the RAM.
         pts.append(np.column_stack([x[sel], y[sel], z[sel]]).astype(np.float32))
+        # GeoTiles stores 0-255 in the uint16 RGB fields; NRW bDOM uses full 16-bit — detect.
+        cscale = 65535.0 if int(np.max(las.red[:10000])) > 255 else 255.0
         rgb = np.column_stack(
             [np.asarray(las.red)[sel], np.asarray(las.green)[sel], np.asarray(las.blue)[sel]]
-        ).astype(np.float32) / 255.0
+        ).astype(np.float32) / cscale
         cols.append(rgb)
     xyz = np.concatenate(pts)
     rgb = np.clip(np.concatenate(cols), 0.0, 1.0)
