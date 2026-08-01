@@ -14,6 +14,8 @@ morph_stagger = 0.5
 score = productions/cities/score.txt
 flash = 0.25
 bg_dim = 0.5
+pw_step = 0.35
+pw_splat = 0.004
 
 # The RAINBOW arc: Dom segment in true color -> the middle segment (the Rhine crossing + Deutz)
 # in raster:position rainbow -> back to true color arriving at Kalk. The pair=match seam morphs ARE
@@ -22,6 +24,14 @@ bg_dim = 0.5
 splat:koeln_seg0_tight.ply  @20.3,8,0  ~morph  beat:0.7  backdrop:stars
 splat:koeln_seg1_rainbow_tight.ply  @20.3,8,0  ~morph  beat:1.1  flash:0.4  backdrop:stars
 splat:koeln_seg2_tight.ply  @20.3,8,0  ~morph  beat:0.7  backdrop:stars
+
+# LAYER 2 — the branding: the deFEEST wordmark handwrites in over the RAINBOW city (mid-flight,
+# hanging in the sky ahead of the camera), and EVOKE 2026 fades in above the Abenteuerhallen for
+# the finale orbit + pull-up. Positions sit where the camera LOOKS at those times (it traverses
+# the world here, unlike the orbiting cities shows).
+[stage]
+text:deFEEST     @0.45,0.055,0.17  *0.10  ~pen-write  tint:brand  in breakdown  out outro
+text:EVOKE 2026  @0.92,0.05,0.20  *0.07  ~fade       tint:brand  in climax
 
 [camera]
 t=0.0   pos=-0.9244,0.0131,-0.2027  dist=0.38    yaw=-2.30  pitch=0.78
