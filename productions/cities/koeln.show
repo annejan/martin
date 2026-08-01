@@ -31,8 +31,8 @@ splat:koeln_seg2_tight.ply  @20.3,8,0  ~morph  beat:0.7  backdrop:stars
 # the finale orbit + pull-up. Positions sit where the camera LOOKS at those times (it traverses
 # the world here, unlike the orbiting cities shows).
 [stage]
-text:deFEEST     @0.45,0.055,0.17  *0.10  ~pen-write  tint:brand  in breakdown  out outro
-text:EVOKE 2026  @0.92,0.05,0.20  *0.07  ~fade       tint:brand  in climax
+text:deFEEST     @0.28,0.02,0.17  *0.14  rot 0,-90,0  ~pen-write  tint:brand  in breakdown  out climax
+text:EVOKE 2026  @0.90,0.012,0.20  *0.12  rot 90,0,180  ~fade  tint:brand  in climax
 
 [camera]
 t=0.0   pos=-0.9244,0.0131,-0.2027  dist=0.38    yaw=-2.30  pitch=0.78
