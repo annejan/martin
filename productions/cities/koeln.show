@@ -7,7 +7,7 @@
 [settings]
 kind = demo
 ply = austin_run/exports/koeln_seg0_tight.ply
-budget = 2000000              # 3 segments: window ≈ 4 clouds → ~8M resident, proven at 1080p (needs MARTIN_SPLAT_WARN=10000000 for records)
+budget = 8300000              # MAX density (43 cm splats). Window ≈ 4 clouds → 33M resident live/stills; RECORDS must resample: MARTIN_MORPH_COUNT=3000000 + MARTIN_SPLAT_WARN=16000000
 normalize = 0
 pair = match
 morph_stagger = 0.5

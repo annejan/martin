@@ -309,6 +309,9 @@ def fetch_any(tile: str) -> Path:
     sys.exit(f"{tile}: not on GeoTiles in AHN5_T or AHN4_T")
 
 
+args_tile_cap = [2_500_000]  # set from --tile-cap in main
+
+
 def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
     """Read every subtile under the corridor, crop to it → (xyz, rgb, route)."""
     spec = CITIES[name]
@@ -340,8 +343,8 @@ def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
         # RAM guard for LONG routes (a 55 km flight touches 60+ tiles on a 27 GB box): cap the
         # per-tile intake — 2.5M points/tile is still ~3× any realistic end budget's share.
         # (4M×60 tiles + laspy's own per-tile decompress peak OOM-killed the adam-denhaag run.)
-        if len(sel) > 2_500_000:
-            sel = np.random.default_rng(len(sel)).choice(sel, size=2_500_000, replace=False)
+        if len(sel) > args_tile_cap[0]:
+            sel = np.random.default_rng(len(sel)).choice(sel, size=args_tile_cap[0], replace=False)
         # float32 positions: RD coords are ~1e5 m → f32 keeps ~1 cm relative precision, half the RAM.
         pts.append(np.column_stack([x[sel], y[sel], z[sel]]).astype(np.float32))
         if dop is not None:
@@ -580,6 +583,8 @@ def main():
                          "PER SEGMENT")
     ap.add_argument("--seg-overlap", type=float, default=0.30,
                     help="overlap per seam as a fraction of segment length")
+    ap.add_argument("--tile-cap", type=int, default=2_500_000,
+                    help="per-tile point intake cap (RAM guard; raise for short max-density routes)")
     ap.add_argument("--rainbow-seg", type=int, default=-1,
                     help="bake RAINBOW colors (hue along the arc) into segment K — the pair=match "
                          "seam morphs then fade real color ↔ rainbow per splat")
@@ -588,6 +593,7 @@ def main():
                     help="--emit-camera downward pitch (more land, less sky)")
     ap.add_argument("--alt-m", type=float, default=35.0, help="--emit-camera target height in METERS")
     a = ap.parse_args()
+    args_tile_cap[0] = a.tile_cap
     outdir = Path(a.out)
     outdir.mkdir(parents=True, exist_ok=True)
     names = sorted(n for n in CITIES if "route" not in CITIES[n]) if a.city == "all" else [a.city]
