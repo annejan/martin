@@ -63,7 +63,136 @@ CITIES = {
     # (points spread over 3.5× the area) but stay under the ~2M GPU record cap.
     "maas": {"tiles": ["37HN1_01", "37HN1_02", "37HN1_03", "37HN1_04"],
              "bbox": (90500, 436250, 94000, 437500)},
+    # FLIGHT ROUTE — a polyline the camera flies, cropped to a corridor. No `tiles`: the subtiles
+    # under the corridor are looked up from the cached PDOK kaartbladindex, AHN5→AHN4 fallback per
+    # tile. `--emit-camera` writes the matching `[camera]` waypoints (same normalize transform).
+    # Den Haag: CS → Binnenhof/Hofvijver → a SNAKE through the Zeeheldenkwartier → the dunes →
+    # Scheveningen Pier — the city flows in, winds, and back OUT to the sea.
+    "denhaag-zee": {"route": [(82300, 455250), (81450, 455300), (81100, 455900),
+                              (80450, 455750), (80250, 456650), (79700, 456950),
+                              (79950, 457750), (79350, 458350)],
+                    "width": 700},
 }
+
+
+def _load_kaartbladen():
+    """Cached PDOK kaartbladindex → [(name, x0, y0, x1, y1)] per 5×6.25 km AHN sheet."""
+    import json
+
+    idx = CACHE / "kaartbladindex.json"
+    if not idx.exists():
+        url = ("https://service.pdok.nl/rws/actueel-hoogtebestand-nederland/atom/downloads/"
+               "dsm_05m/kaartbladindex.json")
+        with urllib.request.urlopen(url) as r:
+            idx.write_bytes(r.read())
+    out = []
+    for f in json.loads(idx.read_text())["features"]:
+        g = f["geometry"]
+        ring = g["coordinates"][0] if g["type"] == "Polygon" else g["coordinates"][0][0]
+        xs = [c[0] for c in ring]
+        ys = [c[1] for c in ring]
+        name = f["properties"]["kaartbladNr"].removeprefix("R_")
+        out.append((name, min(xs), min(ys), max(xs), max(ys)))
+    return out
+
+
+def _dist_to_polyline(px, py, route):
+    """Min distance of points (px, py arrays) to the route polyline — vectorized per segment."""
+    best = np.full(len(px), np.inf)
+    for (ax, ay), (bx, by) in zip(route, route[1:]):
+        dx, dy = bx - ax, by - ay
+        L2 = dx * dx + dy * dy
+        t = np.clip(((px - ax) * dx + (py - ay) * dy) / max(L2, 1e-9), 0.0, 1.0)
+        d = np.hypot(px - (ax + t * dx), py - (ay + t * dy))
+        np.minimum(best, d, out=best)
+    return best
+
+
+def route_tiles(route, width):
+    """All GeoTiles subtiles whose 1×1.25 km cell comes within width/2 of the route polyline."""
+    tiles = []
+    margin = width / 2
+    for name, bx0, by0, bx1, by1 in _load_kaartbladen():
+        rx = [p[0] for p in route]
+        ry = [p[1] for p in route]
+        if bx1 < min(rx) - margin or bx0 > max(rx) + margin:
+            continue
+        if by1 < min(ry) - margin or by0 > max(ry) + margin:
+            continue
+        for sub in range(1, 26):
+            col, row = (sub - 1) % 5, (sub - 1) // 5
+            sx0, sy1 = bx0 + col * 1000, by1 - row * 1250
+            # cell-to-polyline distance via the cell's centre + corner sample (cheap, safe margin)
+            cx, cy = sx0 + 500, sy1 - 625
+            samples_x = np.array([cx, sx0, sx0 + 1000, sx0, sx0 + 1000], dtype=float)
+            samples_y = np.array([cy, sy1, sy1, sy1 - 1250, sy1 - 1250], dtype=float)
+            if _dist_to_polyline(samples_x, samples_y, route).min() <= margin + 800:
+                tiles.append(f"{name}_{sub:02d}")
+    return tiles
+
+
+def fetch_any(tile: str) -> Path:
+    """Fetch a subtile, AHN5 first, AHN4 fallback (AHN5 only covers the Randstad so far)."""
+    for src in ("AHN5_T", "AHN4_T"):
+        try:
+            return fetch(tile, src)
+        except urllib.error.HTTPError as e:
+            if e.code != 404:
+                raise
+    sys.exit(f"{tile}: not on GeoTiles in AHN5_T or AHN4_T")
+
+
+def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
+    """Read every subtile under the corridor, crop to it → (xyz, rgb, route)."""
+    spec = CITIES[name]
+    route, width = spec["route"], spec["width"]
+    tiles = spec.get("tiles") or route_tiles(route, width)
+    print(f"  route: {len(route)} waypoints, corridor {width} m → {len(tiles)} subtiles: {tiles}")
+    pts, cols = [], []
+    for tile in tiles:
+        las = laspy.read(fetch_any(tile))
+        if "red" not in las.point_format.dimension_names:
+            sys.exit(f"{tile}: no RGB dimensions — expected a GeoTiles colorized subtile")
+        x, y, z = np.asarray(las.x), np.asarray(las.y), np.asarray(las.z)
+        keep = _dist_to_polyline(x, y, route) <= width / 2
+        keep &= np.asarray(las.classification) != 9
+        if not keep.any():
+            continue
+        pts.append(np.column_stack([x[keep], y[keep], z[keep]]))
+        rgb = np.column_stack(
+            [np.asarray(las.red)[keep], np.asarray(las.green)[keep], np.asarray(las.blue)[keep]]
+        ).astype(np.float32) / 255.0
+        cols.append(rgb)
+    xyz = np.concatenate(pts)
+    rgb = np.clip(np.concatenate(cols), 0.0, 1.0)
+    print(f"  {name}: {len(xyz):,} points in corridor")
+    return xyz, rgb, route
+
+
+def emit_camera(route, cx, cy, ground, s, duration):
+    """Print a `[camera]` track flying the route in the SAME normalize transform as the cloud:
+    martin file coords (x=east, y=-up, z=north) become world (east, up, -north) after the load
+    flip, so a route point (rx, ry) targets world (x=(rx-cx)*s, y=alt*s, z=-(ry-cy)*s). Times
+    follow arc length. Yaw follows the flight direction (calibrate with --yaw-offset if needed)."""
+    seg = [np.hypot(bx - ax, by - ay) for (ax, ay), (bx, by) in zip(route, route[1:])]
+    total = sum(seg)
+    t, acc = [], 0.0
+    for d in [0.0, *seg]:
+        acc += d
+        t.append(acc / total * duration)
+    print("\n# --- generated flight track (paste into the .show) ---")
+    print("[camera]")
+    for i, ((rx, ry), tt) in enumerate(zip(route, t)):
+        x, z = (rx - cx) * s, -(ry - cy) * s
+        # look along the path: direction to the next waypoint (last one keeps the previous heading).
+        # martin's orbit cam sits at target + dist·(cos yaw, ·, sin yaw) LOOKING BACK at the target,
+        # so flying forward means yaw = atan2(dz,dx) + π (calibrated on the denhaag-zee stills).
+        j = min(i, len(route) - 2)
+        dx, dz = (route[j + 1][0] - route[j][0]) * s, -(route[j + 1][1] - route[j][1]) * s
+        yaw = float((np.arctan2(dz, dx) + 2.0 * np.pi) % (2.0 * np.pi) - np.pi)
+        print(f"t={tt:.1f}  pos={x:.2f},{0.05:.2f},{z:.2f}  dist=0.45  "
+              f"yaw={yaw:.2f}  pitch=0.15")
+    print("# --- end generated track ---\n")
 
 SH_C0 = 0.282_094_8  # SH degree-0 basis constant (matches splatgen.rs)
 
@@ -113,9 +242,11 @@ def load_city(name: str) -> tuple[np.ndarray, np.ndarray]:
     return xyz, rgb
 
 
-def to_martin(xyz: np.ndarray, count: int, seed: int) -> tuple[np.ndarray, float]:
+def to_martin(xyz: np.ndarray, count: int, seed: int):
     """RD/NAP → martin file coords: centre, normalize 1/p90 (the capture convention), Y-DOWN
-    (martin's load flip makes it upright), subsample to `count`. Returns (pos f32, spacing)."""
+    (martin's load flip makes it upright), subsample to `count`.
+    Returns (pos f32, spacing, idx, transform (cx, cy, ground, s)) — the transform is what
+    `emit_camera` reuses so a flight track lands in the same world as the cloud."""
     rng = np.random.default_rng(seed)
     if len(xyz) > count:
         idx = rng.choice(len(xyz), size=count, replace=False)
@@ -135,7 +266,7 @@ def to_martin(xyz: np.ndarray, count: int, seed: int) -> tuple[np.ndarray, float
     # footprint is (x1-x0)×(y1-y0) m² holding `count` points → spacing = sqrt(area/count), scaled.
     area = (p[:, 0].max() - p[:, 0].min()) * (p[:, 1].max() - p[:, 1].min())
     spacing = float(np.sqrt(area / len(p)) * s)
-    return pos, spacing, idx
+    return pos, spacing, idx, (float(cx), float(cy), float(ground), float(s))
 
 
 def write_ply(path: Path, name: str, pos: np.ndarray, rgb: np.ndarray, scale: float, opacity: float):
@@ -173,14 +304,26 @@ def main():
                     help="splat radius = mult × mean point spacing (coverage vs crispness)")
     ap.add_argument("--opacity", type=float, default=0.85)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--emit-camera", action="store_true",
+                    help="route entries: print a [camera] track flying the route (same transform)")
+    ap.add_argument("--duration", type=float, default=80.0,
+                    help="flight time in seconds for --emit-camera")
     a = ap.parse_args()
     outdir = Path(a.out)
     outdir.mkdir(parents=True, exist_ok=True)
-    for name in sorted(CITIES) if a.city == "all" else [a.city]:
+    names = sorted(n for n in CITIES if "route" not in CITIES[n]) if a.city == "all" else [a.city]
+    for name in names:
         print(f"{name}:")
-        xyz, rgb = load_city(name)
-        pos, spacing, idx = to_martin(xyz, a.count, a.seed)
-        write_ply(outdir / f"{name}_tight.ply", name, pos, rgb[idx], a.scale_mult * spacing, a.opacity)
+        route = None
+        if "route" in CITIES[name]:
+            xyz, rgb, route = load_route(name)
+        else:
+            xyz, rgb = load_city(name)
+        pos, spacing, idx, (cx, cy, ground, s) = to_martin(xyz, a.count, a.seed)
+        fname = name.replace("-", "_")
+        write_ply(outdir / f"{fname}_tight.ply", name, pos, rgb[idx], a.scale_mult * spacing, a.opacity)
+        if route is not None and a.emit_camera:
+            emit_camera(route, cx, cy, ground, s, a.duration)
 
 
 if __name__ == "__main__":
