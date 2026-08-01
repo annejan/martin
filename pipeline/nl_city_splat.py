@@ -96,16 +96,25 @@ def _load_kaartbladen():
     return out
 
 
-def _dist_to_polyline(px, py, route):
-    """Min distance of points (px, py arrays) to the route polyline — vectorized per segment."""
+def _dist_to_polyline(px, py, route, want_arc=False):
+    """Min distance of points (px, py arrays) to the route polyline — vectorized per segment.
+    With want_arc, also returns each point's ARC LENGTH along the route at its closest approach
+    (what the segment splitter bins on)."""
     best = np.full(len(px), np.inf)
+    arc = np.zeros(len(px)) if want_arc else None
+    acc = 0.0
     for (ax, ay), (bx, by) in zip(route, route[1:]):
         dx, dy = bx - ax, by - ay
-        L2 = dx * dx + dy * dy
-        t = np.clip(((px - ax) * dx + (py - ay) * dy) / max(L2, 1e-9), 0.0, 1.0)
+        L = float(np.hypot(dx, dy))
+        L2 = max(L * L, 1e-9)
+        t = np.clip(((px - ax) * dx + (py - ay) * dy) / L2, 0.0, 1.0)
         d = np.hypot(px - (ax + t * dx), py - (ay + t * dy))
+        if want_arc:
+            closer = d < best
+            arc[closer] = acc + t[closer] * L
         np.minimum(best, d, out=best)
-    return best
+        acc += L
+    return (best, arc) if want_arc else best
 
 
 def route_tiles(route, width):
@@ -169,11 +178,46 @@ def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
     return xyz, rgb, route
 
 
-def emit_camera(route, cx, cy, ground, s, duration):
+def write_segments(name, xyz, rgb, route, args, outdir):
+    """Split a route corridor into overlapping ARC-LENGTH segments — the 'tiles stream in and out'
+    mode. Every segment shares ONE transform (computed over the full corridor subsample), so a
+    `pair=match` morph swaps segment k for k+1 IN PLACE mid-flight: the overlap zone barely moves
+    (same points on both sides of the seam), the tail streams out, the nose streams in. Play with
+    `[settings] normalize = 0` — the engine's per-part re-normalization would break the shared frame.
+    Prints the [reel] block to paste."""
+    n = args.segments
+    pos_all, spacing, idx, (cx, cy, ground, s) = to_martin(xyz, args.count * n, args.seed)
+    rgb_all = rgb[idx]
+    px, py = xyz[idx][:, 0], xyz[idx][:, 1]
+    _, arc = _dist_to_polyline(px, py, route, want_arc=True)
+    total = arc.max()
+    seg_len = total / n
+    ov = args.seg_overlap * seg_len
+    print(f"  segments: {n} × {seg_len:.0f} m (+{ov:.0f} m overlap each side), shared frame")
+    print("\n# --- generated [reel] (paste into the .show; needs [settings] normalize = 0, pair = match) ---")
+    print("[reel]")
+    hold = args.duration / n - args.duration * 0.12
+    morph = args.duration * 0.12
+    for k in range(n):
+        a, b = k * seg_len - ov, (k + 1) * seg_len + ov
+        m = (arc >= a) & (arc < b)
+        seg_pos, seg_rgb = pos_all[m], rgb_all[m]
+        fname = f"{name.replace('-', '_')}_seg{k}_tight.ply"
+        write_ply(outdir / fname, f"{name} seg{k}", seg_pos, seg_rgb,
+                  args.scale_mult * spacing, args.opacity)
+        print(f"splat:{fname}  @{hold:.0f},{morph:.0f},0  ~morph  backdrop:stars")
+    print("# --- end generated reel ---")
+    return cx, cy, ground, s
+
+
+def emit_camera(route, cx, cy, ground, s, duration, dist=0.28, pitch=0.30, alt=0.03):
     """Print a `[camera]` track flying the route in the SAME normalize transform as the cloud:
     martin file coords (x=east, y=-up, z=north) become world (east, up, -north) after the load
-    flip, so a route point (rx, ry) targets world (x=(rx-cx)*s, y=alt*s, z=-(ry-cy)*s). Times
-    follow arc length. Yaw follows the flight direction (calibrate with --yaw-offset if needed)."""
+    flip, so a route point (rx, ry) targets world (x=(rx-cx)*s, y=alt, z=-(ry-cy)*s). Times
+    follow arc length. Yaw follows the flight direction. Defaults fly CLOSE with a downward
+    pitch — more land, less sky; raise `dist` for an overview pass.
+    NOTE: no whitespace padding in `t=` — a padded `t=  0.0` silently parses UNTIMED and the
+    whole track is ignored in favour of the auto-frame."""
     seg = [np.hypot(bx - ax, by - ay) for (ax, ay), (bx, by) in zip(route, route[1:])]
     total = sum(seg)
     t, acc = [], 0.0
@@ -190,8 +234,8 @@ def emit_camera(route, cx, cy, ground, s, duration):
         j = min(i, len(route) - 2)
         dx, dz = (route[j + 1][0] - route[j][0]) * s, -(route[j + 1][1] - route[j][1]) * s
         yaw = float((np.arctan2(dz, dx) + 2.0 * np.pi) % (2.0 * np.pi) - np.pi)
-        print(f"t={tt:.1f}  pos={x:.2f},{0.05:.2f},{z:.2f}  dist=0.45  "
-              f"yaw={yaw:.2f}  pitch=0.15")
+        print(f"t={tt:.1f}  pos={x:.2f},{alt:.2f},{z:.2f}  dist={dist:.2f}  "
+              f"yaw={yaw:.2f}  pitch={pitch:.2f}")
     print("# --- end generated track ---\n")
 
 SH_C0 = 0.282_094_8  # SH degree-0 basis constant (matches splatgen.rs)
@@ -307,7 +351,17 @@ def main():
     ap.add_argument("--emit-camera", action="store_true",
                     help="route entries: print a [camera] track flying the route (same transform)")
     ap.add_argument("--duration", type=float, default=80.0,
-                    help="flight time in seconds for --emit-camera")
+                    help="flight time in seconds for --emit-camera / segment timing")
+    ap.add_argument("--segments", type=int, default=0,
+                    help="route entries: split into N overlapping arc-length segments in ONE shared "
+                         "frame (play with [settings] normalize = 0 + pair = match); --count is "
+                         "PER SEGMENT")
+    ap.add_argument("--seg-overlap", type=float, default=0.30,
+                    help="overlap per seam as a fraction of segment length")
+    ap.add_argument("--dist", type=float, default=0.28, help="--emit-camera orbit distance")
+    ap.add_argument("--pitch", type=float, default=0.30,
+                    help="--emit-camera downward pitch (more land, less sky)")
+    ap.add_argument("--alt", type=float, default=0.03, help="--emit-camera target height")
     a = ap.parse_args()
     outdir = Path(a.out)
     outdir.mkdir(parents=True, exist_ok=True)
@@ -319,11 +373,16 @@ def main():
             xyz, rgb, route = load_route(name)
         else:
             xyz, rgb = load_city(name)
-        pos, spacing, idx, (cx, cy, ground, s) = to_martin(xyz, a.count, a.seed)
-        fname = name.replace("-", "_")
-        write_ply(outdir / f"{fname}_tight.ply", name, pos, rgb[idx], a.scale_mult * spacing, a.opacity)
+        if route is not None and a.segments > 0:
+            cx, cy, ground, s = write_segments(name, xyz, rgb, route, a, outdir)
+        else:
+            pos, spacing, idx, (cx, cy, ground, s) = to_martin(xyz, a.count, a.seed)
+            fname = name.replace("-", "_")
+            write_ply(outdir / f"{fname}_tight.ply", name, pos, rgb[idx],
+                      a.scale_mult * spacing, a.opacity)
         if route is not None and a.emit_camera:
-            emit_camera(route, cx, cy, ground, s, a.duration)
+            emit_camera(route, cx, cy, ground, s, a.duration,
+                        dist=a.dist, pitch=a.pitch, alt=a.alt)
 
 
 if __name__ == "__main__":

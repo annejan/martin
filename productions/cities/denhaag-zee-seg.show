@@ -1,0 +1,31 @@
+# martin — DEN HAAG → ZEE, SEGMENT-STREAMED (the "tiles load in and out" flight): the same snake
+# route as denhaag-zee.show but split into 3 overlapping arc-length segments in ONE shared world
+# frame (pipeline/nl_city_splat.py denhaag-zee --segments 3 --count 900000 --emit-camera).
+# `normalize = 0` keeps the engine from re-centering each part (that would yank segments to the
+# origin); `pair = match` + the overlap zone make each seam a soft in-place dissolve: the tail of
+# the city streams OUT behind the camera while the next stretch streams IN ahead — unlimited
+# flight length under a bounded GPU budget. Data: AHN CC0 · GeoTiles CC-BY (TU Delft).
+# NB full-quality: regenerate with --count <=700000 per segment — two segments are resident
+# during a seam morph, and ~2.5M total OOMs the iGPU at 1080p.
+
+kind = demo
+[settings]
+ply = austin_run/exports/denhaag_zee_seg0_tight.ply
+budget = 900000
+normalize = 0
+pair = match
+score = productions/cities/score.txt
+morph_stagger = 0.4
+[reel]
+splat:denhaag_zee_seg0_tight.ply  @17,10,0  ~morph  backdrop:stars
+splat:denhaag_zee_seg1_tight.ply  @17,10,0  ~morph  backdrop:stars
+splat:denhaag_zee_seg2_tight.ply  @17,10,0  ~morph  backdrop:stars
+[camera]
+t=0.0  pos=0.73,0.03,0.77  dist=0.28  yaw=0.06  pitch=0.30
+t=12.5  pos=0.31,0.03,0.75  dist=0.28  yaw=1.04  pitch=0.30
+t=22.7  pos=0.14,0.03,0.45  dist=0.28  yaw=-0.23  pitch=0.30
+t=32.5  pos=-0.19,0.03,0.52  dist=0.28  yaw=1.35  pitch=0.30
+t=46.0  pos=-0.29,0.03,0.07  dist=0.28  yaw=0.50  pitch=0.30
+t=55.2  pos=-0.56,0.03,-0.07  dist=0.28  yaw=1.87  pitch=0.30
+t=67.5  pos=-0.43,0.03,-0.47  dist=0.28  yaw=0.79  pitch=0.30
+t=80.0  pos=-0.73,0.03,-0.77  dist=0.28  yaw=0.79  pitch=0.30

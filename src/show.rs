@@ -314,6 +314,7 @@ const SETTINGS_KEYS: &[&str] = &[
     "morph_stagger",
     "music",
     "mute",
+    "normalize",
     "cull",
     "pair",
     "pair_color",
