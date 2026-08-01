@@ -258,6 +258,12 @@ fn flypath(
                 cam.dist = w.dist;
                 cam.yaw = w.yaw;
                 cam.pitch = w.pitch;
+                // The track IS the framing: with an authored timed `[camera]`, `build_sequence`
+                // deliberately skips `seed_orbit_framing` (its one-frame auto-frame would flash the
+                // establishing shot too-close), so this is the only place `framed` can be set — and
+                // `shot_driver`/record wait on it before capturing. Without it, MARTIN_SHOT[S] on any
+                // show with a camera track waits forever on a flag nobody sets (hang, 2026-08-01).
+                cam.framed = true;
             }
             // Blend from the auto-framed distance (close) to the authored track distance
             // over the first ~2s so the logo is visible from frame one.
