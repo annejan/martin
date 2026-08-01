@@ -72,6 +72,15 @@ CITIES = {
                               (80450, 455750), (80250, 456650), (79700, 456950),
                               (79950, 457750), (79350, 458350)],
                     "width": 700},
+    # THE LONG ONE — the Randstad flight: Rotterdam Markthal → out over the northwest of town →
+    # Delft (Markt/Oude Kerk) → Rijswijk → Den Haag CS/Binnenhof → the dunes → Scheveningen.
+    # ~24 km; meant for --segments 8+ (the streamed mode) — never as one cloud.
+    "randstad": {"route": [(92500, 437450), (91500, 439000), (89800, 441500),
+                           (87500, 444500), (84350, 447550), (83800, 449800),
+                           (83500, 451800), (82800, 453800), (82300, 455250),
+                           (81450, 455300), (80600, 456300), (79950, 457750),
+                           (79350, 458350)],
+                 "width": 500},
 }
 
 
@@ -167,9 +176,14 @@ def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
         keep &= np.asarray(las.classification) != 9
         if not keep.any():
             continue
-        pts.append(np.column_stack([x[keep], y[keep], z[keep]]))
+        sel = np.flatnonzero(keep)
+        # RAM guard for LONG routes (a 20+ km flight touches 30+ tiles): cap the per-tile intake —
+        # 4M points/tile is still ~3× any realistic end budget's share.
+        if len(sel) > 4_000_000:
+            sel = np.random.default_rng(len(sel)).choice(sel, size=4_000_000, replace=False)
+        pts.append(np.column_stack([x[sel], y[sel], z[sel]]))
         rgb = np.column_stack(
-            [np.asarray(las.red)[keep], np.asarray(las.green)[keep], np.asarray(las.blue)[keep]]
+            [np.asarray(las.red)[sel], np.asarray(las.green)[sel], np.asarray(las.blue)[sel]]
         ).astype(np.float32) / 255.0
         cols.append(rgb)
     xyz = np.concatenate(pts)
@@ -196,8 +210,11 @@ def write_segments(name, xyz, rgb, route, args, outdir):
     print(f"  segments: {n} × {seg_len:.0f} m (+{ov:.0f} m overlap each side), shared frame")
     print("\n# --- generated [reel] (paste into the .show; needs [settings] normalize = 0, pair = match) ---")
     print("[reel]")
-    hold = args.duration / n - args.duration * 0.12
-    morph = args.duration * 0.12
+    # Per segment slot = duration/n, split hold/morph. The morph wants ~12% of the flight but never
+    # more than 60% of its own slot (many segments → the seams dominate; a 0-hold slot broke here).
+    seg_t = args.duration / n
+    morph = min(args.duration * 0.12, seg_t * 0.6)
+    hold = max(seg_t - morph, 1.0)
     for k in range(n):
         a, b = k * seg_len - ov, (k + 1) * seg_len + ov
         m = (arc >= a) & (arc < b)
@@ -210,14 +227,19 @@ def write_segments(name, xyz, rgb, route, args, outdir):
     return cx, cy, ground, s
 
 
-def emit_camera(route, cx, cy, ground, s, duration, dist=0.28, pitch=0.30, alt=0.03):
+def emit_camera(route, cx, cy, ground, s, duration, dist_m=260.0, pitch=0.30, alt_m=35.0):
     """Print a `[camera]` track flying the route in the SAME normalize transform as the cloud:
     martin file coords (x=east, y=-up, z=north) become world (east, up, -north) after the load
     flip, so a route point (rx, ry) targets world (x=(rx-cx)*s, y=alt, z=-(ry-cy)*s). Times
-    follow arc length. Yaw follows the flight direction. Defaults fly CLOSE with a downward
-    pitch — more land, less sky; raise `dist` for an overview pass.
+    follow arc length. Yaw follows the flight direction.
+    `dist_m`/`alt_m` are METERS — normalized units depend on route length (a 24 km route
+    normalizes ~10× smaller than a city block, which made a fixed `dist=0.28` fly km-high on
+    long routes); the generator multiplies by the route's own scale. Defaults fly CLOSE with a
+    downward pitch — more land, less sky.
     NOTE: no whitespace padding in `t=` — a padded `t=  0.0` silently parses UNTIMED and the
     whole track is ignored in favour of the auto-frame."""
+    dist = dist_m * s
+    alt = alt_m * s
     seg = [np.hypot(bx - ax, by - ay) for (ax, ay), (bx, by) in zip(route, route[1:])]
     total = sum(seg)
     t, acc = [], 0.0
@@ -358,10 +380,10 @@ def main():
                          "PER SEGMENT")
     ap.add_argument("--seg-overlap", type=float, default=0.30,
                     help="overlap per seam as a fraction of segment length")
-    ap.add_argument("--dist", type=float, default=0.28, help="--emit-camera orbit distance")
+    ap.add_argument("--dist-m", type=float, default=260.0, help="--emit-camera height/orbit distance in METERS")
     ap.add_argument("--pitch", type=float, default=0.30,
                     help="--emit-camera downward pitch (more land, less sky)")
-    ap.add_argument("--alt", type=float, default=0.03, help="--emit-camera target height")
+    ap.add_argument("--alt-m", type=float, default=35.0, help="--emit-camera target height in METERS")
     a = ap.parse_args()
     outdir = Path(a.out)
     outdir.mkdir(parents=True, exist_ok=True)
@@ -382,7 +404,7 @@ def main():
                       a.scale_mult * spacing, a.opacity)
         if route is not None and a.emit_camera:
             emit_camera(route, cx, cy, ground, s, a.duration,
-                        dist=a.dist, pitch=a.pitch, alt=a.alt)
+                        dist_m=a.dist_m, pitch=a.pitch, alt_m=a.alt_m)
 
 
 if __name__ == "__main__":

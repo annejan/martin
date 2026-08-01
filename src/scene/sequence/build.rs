@@ -230,9 +230,15 @@ fn build_cpu(inputs: BuildInputs) -> BuildOutput {
         // so don't re-normalize it (that would re-fit on the 90th-percentile and shrink the pile).
         if normalize && !matches!(part.content, PartContent::GlMesh(_)) && part.flock.is_none() {
             let norm = crate::morph::normalize_to(raw, NORMALIZE_EXTENT);
+            info!(
+                "part {label}: normalized (center {:?}, scale {:.4})",
+                norm.0, norm.1
+            );
             if i == 0 {
                 scene_norm = norm;
             }
+        } else if !normalize {
+            info!("part {label}: NOT normalized (MARTIN_NORMALIZE=0 — shared authored frame)");
         }
     }
     let n = if budget > 0 {
