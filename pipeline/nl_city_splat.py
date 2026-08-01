@@ -359,6 +359,18 @@ def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
     return xyz, rgb, route
 
 
+def _hsv_to_rgb_np(hsv):
+    """Vectorized HSV→RGB (float 0..1 arrays) — colorsys is per-tuple, useless at 2M points."""
+    h, s, v = hsv[:, 0] * 6.0, hsv[:, 1], hsv[:, 2]
+    i = np.floor(h).astype(np.int32) % 6
+    f = h - np.floor(h)
+    p, q, t = v * (1 - s), v * (1 - s * f), v * (1 - s * (1 - f))
+    r = np.choose(i, [v, q, p, p, t, v])
+    g = np.choose(i, [t, v, v, q, p, p])
+    b = np.choose(i, [p, p, t, v, v, q])
+    return np.stack([r, g, b], axis=1).astype(np.float32)
+
+
 def write_segments(name, xyz, rgb, route, args, outdir):
     """Split a route corridor into overlapping ARC-LENGTH segments — the 'tiles stream in and out'
     mode. Every segment shares ONE transform (computed over the full corridor subsample), so a
@@ -386,8 +398,21 @@ def write_segments(name, xyz, rgb, route, args, outdir):
         a, b = k * seg_len - ov, (k + 1) * seg_len + ov
         m = (arc >= a) & (arc < b)
         seg_pos, seg_rgb = pos_all[m], rgb_all[m]
-        fname = f"{name.replace('-', '_')}_seg{k}_tight.ply"
-        write_ply(outdir / fname, f"{name} seg{k}", seg_pos, seg_rgb,
+        tag = ""
+        if args.rainbow_seg == k:
+            # RAINBOW variant: hue runs along the route arc (with a height shimmer), value keeps
+            # the true-color luminance so the city structure stays readable. A pair=match seam
+            # morph then FADES the real colors into the rainbow per splat — the recolor IS the
+            # transition. (raster:position was a white-out here: a flat low route cloud has
+            # almost no position spread to color by.)
+            frac = (arc[m] - a) / max(b - a, 1e-9)
+            lum = seg_rgb.mean(axis=1)
+            hue = (frac * 3.0 - seg_pos[:, 1] * 8.0) % 1.0
+            hsv = np.stack([hue, np.full_like(hue, 0.9), 0.35 + 0.65 * lum], axis=1)
+            seg_rgb = _hsv_to_rgb_np(hsv)
+            tag = "_rainbow"
+        fname = f"{name.replace('-', '_')}_seg{k}{tag}_tight.ply"
+        write_ply(outdir / fname, f"{name} seg{k}{tag}", seg_pos, seg_rgb,
                   args.scale_mult * spacing, args.opacity)
         print(f"splat:{fname}  @{hold:.0f},{morph:.0f},0  ~morph  backdrop:stars")
     print("# --- end generated reel ---")
@@ -555,6 +580,9 @@ def main():
                          "PER SEGMENT")
     ap.add_argument("--seg-overlap", type=float, default=0.30,
                     help="overlap per seam as a fraction of segment length")
+    ap.add_argument("--rainbow-seg", type=int, default=-1,
+                    help="bake RAINBOW colors (hue along the arc) into segment K — the pair=match "
+                         "seam morphs then fade real color ↔ rainbow per splat")
     ap.add_argument("--dist-m", type=float, default=260.0, help="--emit-camera height/orbit distance in METERS")
     ap.add_argument("--pitch", type=float, default=0.30,
                     help="--emit-camera downward pitch (more land, less sky)")

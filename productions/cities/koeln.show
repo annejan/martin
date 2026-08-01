@@ -6,15 +6,22 @@
 #   pipeline/nl_city_splat.py koeln --count 1800000 --emit-camera --duration 85 --dist-m 140
 [settings]
 kind = demo
-ply = austin_run/exports/koeln_tight.ply
-budget = 900000               # single part: shape + assembly ball ≈ 2× resident, record-safe
+ply = austin_run/exports/koeln_seg0_tight.ply
+budget = 2000000              # 3 segments: window ≈ 4 clouds → ~8M resident, proven at 1080p (needs MARTIN_SPLAT_WARN=10000000 for records)
 normalize = 0
+pair = match
+morph_stagger = 0.5
 score = productions/cities/score.txt
 flash = 0.25
 bg_dim = 0.5
 
+# The RAINBOW arc: Dom segment in true color -> the middle segment (the Rhine crossing + Deutz)
+# in raster:position rainbow -> back to true color arriving at Kalk. The pair=match seam morphs ARE
+# the color transitions: the city recolors around you mid-flight. Slots: 85/3 = 28.3 s.
 [reel]
-splat:koeln_tight.ply  @79,10,0  ~morph  beat:0.7  backdrop:stars
+splat:koeln_seg0_tight.ply  @20.3,8,0  ~morph  beat:0.7  backdrop:stars
+splat:koeln_seg1_rainbow_tight.ply  @20.3,8,0  ~morph  beat:1.1  flash:0.4  backdrop:stars
+splat:koeln_seg2_tight.ply  @20.3,8,0  ~morph  beat:0.7  backdrop:stars
 
 [camera]
 t=0.0   pos=-0.9244,0.0131,-0.2027  dist=0.38    yaw=-2.30  pitch=0.78
