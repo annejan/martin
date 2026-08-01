@@ -210,7 +210,12 @@ fn build_cpu(inputs: BuildInputs) -> BuildOutput {
     // Normalize each part to a common "normal" size (always on — there is no disable knob). Sources
     // vary wildly — a COLMAP scene spans hundreds of units, a TRELLIS object ~1 — so without
     // this they'd frame inconsistently and morph badly. We log the raw extent first.
-    let normalize = true; // always frame each part to a common extent (parts vary wildly in raw scale)
+    // Default: frame each part to a common extent (parts vary wildly in raw scale). `normalize = 0`
+    // (`MARTIN_NORMALIZE=0`) keeps every part's authored coordinates AS-IS — for content prepared in
+    // one SHARED world frame (e.g. nl_city_splat.py route segments, where a mid-flight morph must
+    // swap segment k for k+1 in place; per-part centroid/p90 re-fitting would yank each segment back
+    // to the origin and break the seam).
+    let normalize = crate::envvar::or("MARTIN_NORMALIZE", 1.0_f32) > 0.5;
     let mut scene_norm = (Vec3::ZERO, 1.0); // part 0's (center, scale) — to transform camera poses
     for (i, (raw, part)) in raws.iter_mut().zip(&parts).enumerate() {
         let label = part.content.label();
@@ -225,9 +230,15 @@ fn build_cpu(inputs: BuildInputs) -> BuildOutput {
         // so don't re-normalize it (that would re-fit on the 90th-percentile and shrink the pile).
         if normalize && !matches!(part.content, PartContent::GlMesh(_)) && part.flock.is_none() {
             let norm = crate::morph::normalize_to(raw, NORMALIZE_EXTENT);
+            info!(
+                "part {label}: normalized (center {:?}, scale {:.4})",
+                norm.0, norm.1
+            );
             if i == 0 {
                 scene_norm = norm;
             }
+        } else if !normalize {
+            info!("part {label}: NOT normalized (MARTIN_NORMALIZE=0 — shared authored frame)");
         }
     }
     let n = if budget > 0 {

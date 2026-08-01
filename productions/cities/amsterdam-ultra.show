@@ -1,0 +1,38 @@
+# martin — AMSTERDAM ULTRA: the canal-ring core at SOURCE density. 3×2.5 km (Jordaan ↔ Artis,
+# Leidseplein ↔ the IJ), 16M splats ≈ 1 m pitch — individual houses, boats, trees. The flight is a
+# LOW drone line (the houses are only ~20 m tall): overview → dive to ~80 m over the Leidseplein →
+# follow the canal-ring ARC (Prinsengracht → Westerkerk → the IJ curve → CS → Nieuwmarkt) with the
+# yaw turning continuously along the bow → arrive over the DAM, half-orbit, pull up. Water = black
+# veins. Data: AHN CC0 · GeoTiles CC-BY (TU Delft).
+#   pipeline/nl_city_splat.py amsterdam-ultra --count 16000000
+# Records resample via MARTIN_MORPH_COUNT (6M proven); stills/live take the full 16M.
+
+[settings]
+kind = demo
+ply = assets/cities/amsterdam_ultra_tight.ply
+budget = 16000000
+normalize = 0
+score = productions/cities/score.txt
+flash = 0.25
+bg_dim = 0.5
+
+[reel]
+splat:amsterdam_ultra_tight.ply  @79,10,0  ~morph  beat:0.6  backdrop:stars
+
+[camera]
+t=0.0          pos=0,0.006,0          dist=2.0   yaw=-1.3  pitch=1.05
+t=@@drop       pos=-0.359,0.009,0.478 dist=0.14  yaw=1.59  pitch=0.50
+t=30.0         pos=-0.329,0.009,0.090 dist=0.078 yaw=1.59  pitch=0.46
+t=@@breakdown  pos=-0.347,0.009,-0.138 dist=0.078 yaw=2.10  pitch=0.46
+t=@@climax     pos=-0.060,0.009,-0.449 dist=0.078 yaw=2.90  pitch=0.46
+t=60.0         pos=0.299,0.009,-0.508 dist=0.078 yaw=3.60  pitch=0.46
+t=70.0         pos=0.359,0.009,-0.030 dist=0.078 yaw=4.30  pitch=0.46
+t=@@outro      pos=0.060,0.009,-0.090 dist=0.09  yaw=4.70  pitch=0.45
+t=83.0         pos=0.060,0.009,-0.090 dist=0.07  yaw=5.80  pitch=0.38
+t=88.5         pos=0,0.006,0          dist=1.9   yaw=6.60  pitch=1.05
+
+[sync]
+t=@@intro      flash=0.3   bg_dim=0.55  beat=0.8
+t=@@drop       flash=0.45  bg_dim=0.4   beat=1.1
+t=@@climax     flash=0.6   bg_dim=0.3   beat=1.5
+t=@@outro      flash=0.2   bg_dim=0.55  beat=0.7

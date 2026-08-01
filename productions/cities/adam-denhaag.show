@@ -1,0 +1,61 @@
+# martin — VAN DE LANGE VONDER NAAR DE HOFTOREN (rev. 2 — 800 m corridor + staged open/close):
+# het Schelvischhoofd (Amsterdam-Noord) → across the IJ past CS → Dam → the canal ring → SCHIPHOL →
+# the Kagerplassen → Leiden → Voorschoten → the HOFTOREN. ~59 km, 13 streamed segments, 181
+# subtiles. Direction: a high ESTABLISHING over the Lange Vonder while segment 0 assembles below,
+# dive to flight level, the long flight, then BRAKE at the Hoftoren, a half-orbit around the tower,
+# and a pull-up into the stars on the outro. Data: AHN CC0 · GeoTiles CC-BY (TU Delft).
+#   pipeline/nl_city_splat.py adam-denhaag --segments 13 --count 800000 --emit-camera --duration 85
+
+[settings]
+kind = demo
+ply = assets/cities/adam_denhaag_seg0_tight.ply
+budget = 480000               # streaming window holds FOUR clouds — 4×480k = 1.92M resident, under the 2M record cap
+normalize = 0
+pair = match
+score = productions/cities/score.txt
+morph_stagger = 0.4
+flash = 0.25
+bg_dim = 0.45
+
+[reel]
+splat:adam_denhaag_seg0_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg1_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg2_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg3_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg4_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg5_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg6_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg7_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg8_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg9_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg10_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg11_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+splat:adam_denhaag_seg12_tight.ply  @2.6,3.94,0  ~morph  backdrop:stars
+
+[camera]
+t=0.0  pos=0.7690,0.0014,-0.7482  dist=0.11  yaw=-1.61  pitch=0.58
+t=5.0  pos=0.7723,0.0014,-0.6631  dist=0.04  yaw=-1.55  pitch=0.42
+t=6.6  pos=0.7822,0.0014,-0.5723  dist=0.03  yaw=-1.36  pitch=0.38
+t=8.7  pos=0.7704,0.0014,-0.5170  dist=0.03  yaw=-1.27  pitch=0.38
+t=11.2  pos=0.7506,0.0014,-0.4538  dist=0.03  yaw=-0.83  pitch=0.38
+t=16.5  pos=0.6558,0.0014,-0.3511  dist=0.03  yaw=-0.50  pitch=0.38
+t=23.2  pos=0.4979,0.0014,-0.2643  dist=0.03  yaw=-0.40  pitch=0.38
+t=28.2  pos=0.3754,0.0014,-0.2129  dist=0.03  yaw=-0.72  pitch=0.38
+t=34.9  pos=0.2412,0.0014,-0.0944  dist=0.03  yaw=-0.86  pitch=0.38
+t=41.7  pos=0.1227,0.0014,0.0438  dist=0.03  yaw=-0.79  pitch=0.38
+t=51.2  pos=-0.0550,0.0014,0.2215  dist=0.03  yaw=-0.64  pitch=0.38
+t=58.6  pos=-0.2130,0.0014,0.3400  dist=0.03  yaw=-0.56  pitch=0.38
+t=63.7  pos=-0.3295,0.0014,0.4130  dist=0.03  yaw=-0.81  pitch=0.38
+t=68.1  pos=-0.4105,0.0014,0.4979  dist=0.03  yaw=-0.71  pitch=0.38
+t=72.2  pos=-0.4934,0.0014,0.5690  dist=0.03  yaw=-0.63  pitch=0.38
+t=78.5  pos=-0.6277,0.0014,0.6678  dist=0.03  yaw=-0.49  pitch=0.38
+t=82.5  pos=-0.7461,0.0014,0.7309  dist=0.025  yaw=-0.45  pitch=0.34
+t=85.0  pos=-0.7822,0.0014,0.7482  dist=0.042  yaw=-0.45  pitch=0.34
+t=87.2  pos=-0.7822,0.0014,0.7482  dist=0.036  yaw=0.95  pitch=0.36
+t=88.8  pos=-0.7822,0.0014,0.7482  dist=0.11  yaw=1.45  pitch=0.62
+
+[sync]
+t=@@intro      flash=0.3   bg_dim=0.5   beat=0.9
+t=@@drop       flash=0.5   bg_dim=0.35  beat=1.2
+t=@@climax     flash=0.6   bg_dim=0.25  beat=1.5
+t=@@outro      flash=0.2   bg_dim=0.5   beat=0.7

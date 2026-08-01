@@ -1,0 +1,36 @@
+# martin — MAAS FLYOVER (experiment): one elongated open-data strip — the Rotterdam Maas axis,
+# Euromast → Erasmusbrug → Kop van Zuid, 3.5×1.25 km over four merged AHN5 subtiles — and a camera
+# that FLIES the length of it. Proof-of-concept for "a splat bigger than one city block": same
+# pipeline (pipeline/nl_city_splat.py maas --count 1800000), just a long bbox. Data: AHN CC0 +
+# GeoTiles CC-BY (TU Delft). The strip normalizes long+thin: east-west spans roughly x −1.1..+1.1,
+# so the camera track slides its target down the x axis while staying low — a night flight up river.
+
+[settings]
+kind = demo
+# `ply =` doubles as the ASSET ROOT the [reel] `splat:` names resolve against — without it the part
+# silently resolves to nothing and the show renders backdrop-only (bitten 2026-08-01).
+ply = assets/cities/maas_tight.ply
+budget = 1800000              # the strip spreads points over 3.5× a city-block area — spend more
+score = productions/cities/score.txt
+flash = 0.25
+bg_dim = 0.45
+
+[reel]
+splat:maas_tight.ply  @70,10,0  ~morph  beat:0.9  backdrop:stars   # assemble once, then hold for the whole flight
+
+# camera: assemble high over the west end (Euromast), descend, then a long low flight east along the
+# river — past the Erasmusbrug — rising at the end over Kop van Zuid. Target slides along x.
+[camera]
+t=@@intro      pos=-0.85,0.10,0  dist=1.6   yaw=1.35  pitch=0.55   # high establishing over the west end
+t=@@drop       pos=-0.75,0.05,0  dist=0.55  yaw=1.50  pitch=0.20   # dive to rooftop height
+t=35.0         pos=-0.30,0.04,0  dist=0.40  yaw=1.55  pitch=0.14   # low flight east, hugging the river
+t=@@breakdown  pos=0.10,0.04,0   dist=0.38  yaw=1.42  pitch=0.13   # past the Erasmusbrug, slight look-north
+t=@@climax     pos=0.55,0.05,0   dist=0.45  yaw=1.30  pitch=0.18   # Kop van Zuid towers
+t=75.0         pos=0.85,0.12,0   dist=0.90  yaw=1.20  pitch=0.35   # rise out over the east end
+t=88.5         pos=0.85,0.30,0   dist=2.2   yaw=1.05  pitch=0.60   # pull away high — done
+
+[sync]
+t=@@intro      flash=0.3   bg_dim=0.5   beat=0.9
+t=@@drop       flash=0.5   bg_dim=0.35  beat=1.2
+t=@@climax     flash=0.65  bg_dim=0.25  beat=1.5
+t=@@outro      flash=0.2   bg_dim=0.5   beat=0.7

@@ -1,0 +1,35 @@
+# martin — AMSTERDAM: THE MAP. One huge flat area — 12×10 km of Amsterdam and surroundings
+# (Sloterdijk ↔ IJburg, Zuidas ↔ Waterland), 96 subtiles, one 1.8M-splat cloud. At this scale the
+# splats are ~15 m blobs: not a street scene but a LIVING PAINTED MAP — the IJ and the canals read
+# as black cuts through the fabric (water returns no lidar). Camera: start near-top-down with the
+# whole map turning slowly beneath you, sink through the drop, skim the centre at the climax, rise
+# back out to the full map for the outro. Data: AHN CC0 · GeoTiles CC-BY (TU Delft).
+#   pipeline/nl_city_splat.py amsterdam-map --count 1800000
+
+[settings]
+kind = demo
+ply = assets/cities/amsterdam_map_tight.ply
+budget = 900000               # single part: shape + assembly ball ≈ 2× resident → under the 2M cap
+normalize = 0
+score = productions/cities/score.txt
+flash = 0.25
+bg_dim = 0.5
+
+[reel]
+splat:amsterdam_map_tight.ply  @79,10,0  ~morph  beat:0.7  backdrop:stars
+
+[camera]
+t=0.0          pos=0,0.002,0      dist=2.6   yaw=-1.6  pitch=1.15
+t=@@drop       pos=0,0.002,0      dist=1.3   yaw=-0.9  pitch=0.95
+t=30.0         pos=0.05,0.002,-0.15  dist=0.55  yaw=-0.3  pitch=0.6
+t=@@breakdown  pos=0.08,0.002,-0.25  dist=0.28  yaw=0.3   pitch=0.45
+t=@@climax     pos=0,0.002,-0.1   dist=0.22  yaw=0.9   pitch=0.36
+t=62.0         pos=-0.12,0.002,0.18  dist=0.22  yaw=1.3   pitch=0.36
+t=@@outro      pos=0,0.002,0      dist=0.9   yaw=1.9   pitch=0.8
+t=88.5         pos=0,0.002,0      dist=2.6   yaw=2.6   pitch=1.15
+
+[sync]
+t=@@intro      flash=0.3   bg_dim=0.55  beat=0.8
+t=@@drop       flash=0.45  bg_dim=0.4   beat=1.1
+t=@@climax     flash=0.6   bg_dim=0.3   beat=1.5
+t=@@outro      flash=0.2   bg_dim=0.55  beat=0.7

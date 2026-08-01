@@ -258,6 +258,12 @@ fn flypath(
                 cam.dist = w.dist;
                 cam.yaw = w.yaw;
                 cam.pitch = w.pitch;
+                // The track IS the framing: with an authored timed `[camera]`, `build_sequence`
+                // deliberately skips `seed_orbit_framing` (its one-frame auto-frame would flash the
+                // establishing shot too-close), so this is the only place `framed` can be set — and
+                // `shot_driver`/record wait on it before capturing. Without it, MARTIN_SHOT[S] on any
+                // show with a camera track waits forever on a flag nobody sets (hang, 2026-08-01).
+                cam.framed = true;
             }
             // Blend from the auto-framed distance (close) to the authored track distance
             // over the first ~2s so the logo is visible from frame one.
@@ -339,6 +345,14 @@ fn spawn_camera(mut commands: Commands) {
         Hdr, // HDR target so bright splats bloom
         // film-grade tonemap: bright splats roll off instead of clipping to flat white
         Tonemapping::TonyMcMapface,
+        // Near plane 0.001 (Bevy default 0.1): a `normalize = 0` LONG-ROUTE flight normalizes tens
+        // of km into ±1 unit, so 0.1 units of near plane is *kilometres* — every nearby splat got
+        // clipped and only the far strip survived (looked like a tiny distant ribbon). Splats are
+        // depth-SORTED, not z-tested, so the tighter near costs no visible precision.
+        Projection::Perspective(PerspectiveProjection {
+            near: 0.001,
+            ..default()
+        }),
         Transform::default(),
         OrbitCam::default(),
     ));
