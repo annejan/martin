@@ -96,6 +96,10 @@ CITIES = {
     # (Sloterdijk ↔ IJburg, Zuidas ↔ Waterland). Fly HIGH: at map counts the splats are ~15 m
     # blobs — a living painted map, not a street-level scene.
     "amsterdam-map": {"area": (115500, 482000, 127500, 492000)},
+    # ULTRA — the canal-ring core at SOURCE-density: 3×2.5 km (Jordaan ↔ Artis, Leidseplein ↔ the
+    # IJ) at 16M splats ≈ 1 m splat pitch, the maximum this data gives. Fly LOW (the houses are
+    # only ~20 m tall): ~80 m camera height reads as a drone shot over the canals.
+    "amsterdam-ultra": {"area": (119800, 485800, 122800, 488300)},
 }
 
 
