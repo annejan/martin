@@ -81,6 +81,17 @@ CITIES = {
                            (81450, 455300), (80600, 456300), (79950, 457750),
                            (79350, 458350)],
                  "width": 500},
+    # Amsterdam → Den Haag (~59 km): LANGE VONDER (het Schelvischhoofd, Amsterdam-Noord, geocoded
+    # via the PDOK Locatieserver) → across the IJ past CS → Dam → the canal ring → SCHIPHOL (over
+    # the runways) → the Kagerplassen → Leiden (Pieterskerk) → Voorschoten → the HOFTOREN
+    # (Rijnstraat 8, Den Haag). Meant for --segments 13 --count 700000 (seam-resident 1.4M).
+    "adam-denhaag": {"route": [(121367, 493054), (121450, 490900), (121700, 488600),
+                               (121400, 487200), (120900, 485600), (118500, 483000),
+                               (114500, 480800), (111400, 479500), (108000, 476500),
+                               (105000, 473000), (100500, 468500), (96500, 465500),
+                               (93550, 463650), (91500, 461500), (89400, 459700),
+                               (86000, 457200), (83000, 455600), (82087, 455163)],
+                     "width": 500},
 }
 
 
@@ -177,11 +188,13 @@ def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
         if not keep.any():
             continue
         sel = np.flatnonzero(keep)
-        # RAM guard for LONG routes (a 20+ km flight touches 30+ tiles): cap the per-tile intake —
-        # 4M points/tile is still ~3× any realistic end budget's share.
-        if len(sel) > 4_000_000:
-            sel = np.random.default_rng(len(sel)).choice(sel, size=4_000_000, replace=False)
-        pts.append(np.column_stack([x[sel], y[sel], z[sel]]))
+        # RAM guard for LONG routes (a 55 km flight touches 60+ tiles on a 27 GB box): cap the
+        # per-tile intake — 2.5M points/tile is still ~3× any realistic end budget's share.
+        # (4M×60 tiles + laspy's own per-tile decompress peak OOM-killed the adam-denhaag run.)
+        if len(sel) > 2_500_000:
+            sel = np.random.default_rng(len(sel)).choice(sel, size=2_500_000, replace=False)
+        # float32 positions: RD coords are ~1e5 m → f32 keeps ~1 cm relative precision, half the RAM.
+        pts.append(np.column_stack([x[sel], y[sel], z[sel]]).astype(np.float32))
         rgb = np.column_stack(
             [np.asarray(las.red)[sel], np.asarray(las.green)[sel], np.asarray(las.blue)[sel]]
         ).astype(np.float32) / 255.0
@@ -256,7 +269,7 @@ def emit_camera(route, cx, cy, ground, s, duration, dist_m=260.0, pitch=0.30, al
         j = min(i, len(route) - 2)
         dx, dz = (route[j + 1][0] - route[j][0]) * s, -(route[j + 1][1] - route[j][1]) * s
         yaw = float((np.arctan2(dz, dx) + 2.0 * np.pi) % (2.0 * np.pi) - np.pi)
-        print(f"t={tt:.1f}  pos={x:.2f},{alt:.2f},{z:.2f}  dist={dist:.2f}  "
+        print(f"t={tt:.1f}  pos={x:.4f},{alt:.4f},{z:.4f}  dist={dist:.4f}  "
               f"yaw={yaw:.2f}  pitch={pitch:.2f}")
     print("# --- end generated track ---\n")
 

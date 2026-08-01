@@ -345,6 +345,14 @@ fn spawn_camera(mut commands: Commands) {
         Hdr, // HDR target so bright splats bloom
         // film-grade tonemap: bright splats roll off instead of clipping to flat white
         Tonemapping::TonyMcMapface,
+        // Near plane 0.001 (Bevy default 0.1): a `normalize = 0` LONG-ROUTE flight normalizes tens
+        // of km into ±1 unit, so 0.1 units of near plane is *kilometres* — every nearby splat got
+        // clipped and only the far strip survived (looked like a tiny distant ribbon). Splats are
+        // depth-SORTED, not z-tested, so the tighter near costs no visible precision.
+        Projection::Perspective(PerspectiveProjection {
+            near: 0.001,
+            ..default()
+        }),
         Transform::default(),
         OrbitCam::default(),
     ));
