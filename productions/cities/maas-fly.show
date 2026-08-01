@@ -7,6 +7,9 @@
 
 [settings]
 kind = demo
+# `ply =` doubles as the ASSET ROOT the [reel] `splat:` names resolve against — without it the part
+# silently resolves to nothing and the show renders backdrop-only (bitten 2026-08-01).
+ply = austin_run/exports/maas_tight.ply
 budget = 1800000              # the strip spreads points over 3.5× a city-block area — spend more
 score = productions/cities/score.txt
 flash = 0.25
