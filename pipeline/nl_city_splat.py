@@ -92,6 +92,10 @@ CITIES = {
                                (93550, 463650), (91500, 461500), (89400, 459700),
                                (86000, 457200), (83000, 455600), (82087, 455163)],
                      "width": 800},
+    # THE MAP — a huge flat AREA, not a corridor: 12×10 km of Amsterdam and surroundings
+    # (Sloterdijk ↔ IJburg, Zuidas ↔ Waterland). Fly HIGH: at map counts the splats are ~15 m
+    # blobs — a living painted map, not a street-level scene.
+    "amsterdam-map": {"area": (115500, 482000, 127500, 492000)},
 }
 
 
@@ -135,6 +139,22 @@ def _dist_to_polyline(px, py, route, want_arc=False):
         np.minimum(best, d, out=best)
         acc += L
     return (best, arc) if want_arc else best
+
+
+def bbox_tiles(x0, y0, x1, y1):
+    """All GeoTiles subtiles whose 1×1.25 km cell overlaps the bbox — the AREA mode (a huge flat
+    map instead of a route corridor)."""
+    tiles = []
+    for name, bx0, by0, bx1, by1 in _load_kaartbladen():
+        if bx1 < x0 or bx0 > x1 or by1 < y0 or by0 > y1:
+            continue
+        for sub in range(1, 26):
+            col, row = (sub - 1) % 5, (sub - 1) // 5
+            sx0, sy1 = bx0 + col * 1000, by1 - row * 1250
+            if sx0 + 1000 < x0 or sx0 > x1 or sy1 < y0 or sy1 - 1250 > y1:
+                continue
+            tiles.append(f"{name}_{sub:02d}")
+    return tiles
 
 
 def route_tiles(route, width):
@@ -293,14 +313,19 @@ def fetch(tile: str, src: str) -> Path:
     return dst
 
 
-def load_city(name: str) -> tuple[np.ndarray, np.ndarray]:
-    """Read + crop + merge the city's subtiles → (xyz float64 RD/NAP, rgb float32 0..1)."""
+def load_city(name: str, per_tile_cap: int = 0) -> tuple[np.ndarray, np.ndarray]:
+    """Read + crop + merge the city's subtiles → (xyz f32 RD/NAP, rgb f32 0..1). `per_tile_cap`
+    randomly thins each tile's intake — REQUIRED for big AREA maps (117 full tiles ≈ 3 BILLION
+    points uncapped: the amsterdam-map run OOM-died collecting them; capping at ~4× the end
+    budget's per-tile share loses nothing the final subsample would keep anyway)."""
     spec = CITIES[name]
     x0, y0, x1, y1 = spec["bbox"]
     src = spec.get("src", "AHN5_T")
     pts, cols = [], []
     for tile in spec["tiles"]:
-        las = laspy.read(fetch(tile, src))
+        # honour an explicit per-city src; otherwise AHN5 with AHN4 fallback (big AREA bboxes can
+        # brush against sheets the AHN5 flights haven't covered yet).
+        las = laspy.read(fetch(tile, src) if "src" in spec else fetch_any(tile))
         if "red" not in las.point_format.dimension_names:
             sys.exit(f"{tile}: no RGB dimensions — expected a GeoTiles colorized subtile")
         x, y, z = np.asarray(las.x), np.asarray(las.y), np.asarray(las.z)
@@ -309,10 +334,13 @@ def load_city(name: str) -> tuple[np.ndarray, np.ndarray]:
         # noise specks. Everything else stays — ground, buildings, and the unclassified bucket
         # (trees, cars, street furniture) that makes a city read as LIVED-IN, like the captures.
         keep &= np.asarray(las.classification) != 9
-        pts.append(np.column_stack([x[keep], y[keep], z[keep]]))
+        sel = np.flatnonzero(keep)
+        if per_tile_cap and len(sel) > per_tile_cap:
+            sel = np.random.default_rng(len(sel)).choice(sel, size=per_tile_cap, replace=False)
+        pts.append(np.column_stack([x[sel], y[sel], z[sel]]).astype(np.float32))
         # GeoTiles stores 0-255 in the uint16 RGB fields (verified) — /255, not /65535.
         rgb = np.column_stack(
-            [np.asarray(las.red)[keep], np.asarray(las.green)[keep], np.asarray(las.blue)[keep]]
+            [np.asarray(las.red)[sel], np.asarray(las.green)[sel], np.asarray(las.blue)[sel]]
         ).astype(np.float32) / 255.0
         cols.append(rgb)
     xyz = np.concatenate(pts)
@@ -404,7 +432,14 @@ def main():
     for name in names:
         print(f"{name}:")
         route = None
-        if "route" in CITIES[name]:
+        if "area" in CITIES[name]:
+            x0, y0, x1, y1 = CITIES[name]["area"]
+            CITIES[name]["tiles"] = bbox_tiles(x0, y0, x1, y1)
+            CITIES[name]["bbox"] = CITIES[name]["area"]
+            print(f"  area {x1 - x0}×{y1 - y0} m → {len(CITIES[name]['tiles'])} subtiles")
+            cap = max(200_000, 4 * a.count // max(1, len(CITIES[name]["tiles"])))
+            xyz, rgb = load_city(name, per_tile_cap=cap)
+        elif "route" in CITIES[name]:
             xyz, rgb, route = load_route(name)
         else:
             xyz, rgb = load_city(name)
