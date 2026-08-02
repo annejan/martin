@@ -20,11 +20,12 @@ pw_splat = 0.004
 
 # The RAINBOW arc: Dom segment in true color -> the middle segment (the Rhine crossing + Deutz)
 # in raster:position rainbow -> back to true color arriving at Kalk. The pair=match seam morphs ARE
-# the color transitions: the city recolors around you mid-flight. Slots: 85/3 = 28.3 s.
+# the color transitions: the city recolors around you mid-flight. Rainbow fades IN at 15 s (seg0
+# hold 11 + morph 4), holds the middle as the star, hands back to true color at ~55 s (Kalk).
 [reel]
-splat:koeln_seg0_tight.ply  @20.3,8,0  ~morph  beat:0.7  backdrop:stars
-splat:koeln_seg1_rainbow_tight.ply  @20.3,8,0  ~morph  beat:1.1  flash:0.4  backdrop:stars
-splat:koeln_seg2_tight.ply  @20.3,8,0  ~morph  beat:0.7  backdrop:stars
+splat:koeln_seg0_tight.ply  @11,4,0  ~morph  beat:0.7  backdrop:stars
+splat:koeln_seg1_rainbow_tight.ply  @35,5,0  ~morph  beat:1.1  flash:0.4  backdrop:stars
+splat:koeln_seg2_tight.ply  @26,4,0  ~morph  beat:0.7  backdrop:stars
 
 # LAYER 2 — the branding: the deFEEST wordmark handwrites in over the RAINBOW city (mid-flight,
 # hanging in the sky ahead of the camera), and EVOKE 2026 fades in above the Abenteuerhallen for
