@@ -115,3 +115,9 @@ t=@@breakdown  flash=0.2   bg_dim=0.55  beat=0.7  tint_music=0.6   # the hush (p
                                                      # with no event; warm tint marks the rainbow hold
 t=@@climax     flash=0.7   bg_dim=0.25  beat=1.7    # matched to the cities-nl/cities-defeest ceiling
 t=@@outro      flash=0.2   bg_dim=0.55  beat=0.7  tint_music=-0.2   # cool bookend — true-color Kalk
+
+# [caption] — screen-pinned data credit only (the landmark call-outs read lame, dropped). "Geodaten ©
+# Land NRW" matches the header's own courtesy-attribution wording verbatim (no attribution is legally
+# required for dl-zero, but crediting the source is the polite/honest move for open data).
+[caption]
+screentext:Geodaten © Land NRW — open data  in 84  out 89  at 0.5,0.94  size 16  center  fade 1.0
