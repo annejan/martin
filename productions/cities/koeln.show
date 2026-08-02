@@ -40,9 +40,14 @@ splat:koeln_seg2_tight.ply  @26,4,0  ~morph  beat:0.7  backdrop:stars
 #      look like they're "sinking into the ground" even though nothing actually occludes them
 #      geometrically. The safe band between "too low → eaten by terrain" and "too high → the *0.14
 #      word projects past the frame's top edge at this close orbit dist (~0.07)" is NARROW — deFEEST
-#      needed *0.08 (down from *0.14) at y=0.03 to fit cleanly; y=0.20 was already fully off-frame.
-#      Verified letter-clean, no ground-eating, across the WHOLE breakdown window (t=43-50, not just
-#      3 sample points).
+#      needed *0.045 (down from *0.14) at y=0.02 to fit cleanly across the WHOLE window, INCLUDING
+#      the brief transient right as the pen-write starts tracing (t≈44, only ~1.4s into the 3.6s
+#      reveal — the partially-drawn word sits differently than the finished one, so a size that
+#      clears the FINISHED word at t=46+ can still clip during that transient); y=0.20 was already
+#      fully off-frame. Verified letter-clean, no ground-eating or top-clip, at t=43/44/45/46/47/
+#      48/49/50 — dense, not 3 sparse points — and at the SAME splat density (400k) as the delivered
+#      preview, not just the denser 1.5M calibration renders (a first pass looked clean at 1.5M and
+#      still clipped at 400k).
 #
 #   2. Text rotation is Y-AXIS ONLY (`rot 0,Y,0`) — X must stay 0. An X component tips the glyph
 #      plane FLAT (edge-on to a level camera) instead of upright; that's what made the original
@@ -61,7 +66,7 @@ splat:koeln_seg2_tight.ply  @26,4,0  ~morph  beat:0.7  backdrop:stars
 #      camera yaw in an isolated test rig) rather than borrowing deFEEST's -90 (correct for a
 #      completely different yaw). Verified clean + unmirrored at t=81/83/85/87.
 [stage]
-text:deFEEST     @0.28,0.03,0.17  *0.08  rot 0,-90,0  ~pen-write  tint:brand  in breakdown  out climax
+text:deFEEST     @0.28,0.02,0.17  *0.045  rot 0,-90,0  ~pen-write  tint:brand  in breakdown  out climax
 text:EVOKE 2026  @0.90,0.012,0.42  *0.14  rot 0,-150,0  ~pen-write  tint:brand  in 79
 
 [camera]
