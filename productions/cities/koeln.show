@@ -17,6 +17,11 @@ flash = 0.25
 bg_dim = 0.5
 pw_step = 0.35
 pw_splat = 0.004
+cam_spline = 1                # Catmull-Rom flowing glide, not per-leg smoothstep — the 3 long
+                              # cruising legs (t=17.7→56.0) are near-constant speed/heading and
+                              # were reading as 3 stop-start pushes instead of one continuous flyover
+post = chroma                 # the family's kill-shot signature (cities-defeest/cities-nl/skyline
+                              # all carry it) — beat-gated RGB screen-tear, koeln had none
 
 # The RAINBOW arc: Dom segment in true color -> the middle segment (the Rhine crossing + Deutz)
 # in raster:position rainbow -> back to true color arriving at Kalk. The pair=match seam morphs ARE
@@ -37,7 +42,7 @@ pw_splat = 0.004
 # plays better than an instant cut would at this camera distance anyway.
 [reel]
 splat:koeln_seg0_tight.ply  @15.35,4,0  ~morph  beat:0.7  backdrop:stars
-splat:koeln_seg1_rainbow_tight.ply  @26.95,4,0  ~morph  beat:1.1  flash:0.4  backdrop:stars
+splat:koeln_seg1_rainbow_tight.ply  @26.95,4,0  ~morph  beat:1.1  flash:0.4  backdrop:rings
 splat:koeln_seg2_tight.ply  @34.7,4,0  ~morph  beat:0.7  backdrop:stars
 
 # LAYER 2 — the branding: the deFEEST wordmark handwrites in over the RAINBOW city (mid-flight,
@@ -88,13 +93,34 @@ t=6.0   pos=-0.9244,0.0131,-0.2027  dist=0.10    yaw=-2.10  pitch=0.48
 t=8.5   pos=-0.7933,0.0131,-0.0549  dist=0.0731  yaw=-2.40  pitch=0.42
 t=17.7  pos=-0.6366,0.0131,0.0899   dist=0.0731  yaw=-3.02  pitch=0.42
 t=31.2  pos=-0.3231,0.0131,0.1280   dist=0.0731  yaw=-3.06  pitch=0.42
-t=56.0  pos=0.2516,0.0131,0.1750    dist=0.0731  yaw=-3.10  pitch=0.42
-t=78.0  pos=0.9244,0.0131,0.2027    dist=0.085   yaw=-3.10  pitch=0.42
+t=40.0  pos=-0.1190,0.0131,0.1450   dist=0.14    yaw=-3.07  pitch=0.28  # becalm — the breakdown hush
+                                                                        # gets a wider, level, contemplative
+                                                                        # shot instead of coasting unchanged
+t=@@climax pos=0.1190,0.0131,0.1640 dist=0.065   yaw=-3.09  pitch=0.48  # lunge IN right on the peak —
+                                                                        # the colour-detonation gets a
+                                                                        # camera reaction, not a coast-through
+t=56.0  pos=0.2516,0.0131,0.1750    dist=0.0731  yaw=-3.10  pitch=0.42  # springs back out of the lunge
+t=@@outro pos=0.9244,0.0131,0.2027  dist=0.085   yaw=-3.10  pitch=0.42  # was a hardcoded t=78.0, 4.5s
+                                                                        # adrift from the section it's
+                                                                        # meant to open — now anchor-locked
 t=83.0  pos=0.9244,0.0131,0.2027    dist=0.075   yaw=-1.60  pitch=0.46
 t=88.5  pos=0.9244,0.0131,0.2027    dist=0.45    yaw=-0.60  pitch=0.85
 
 [sync]
-t=@@intro      flash=0.3   bg_dim=0.55  beat=0.8
+t=@@intro      flash=0.3   bg_dim=0.55  beat=0.8  tint_music=-0.3   # cool bookend — true-color Dom
 t=@@drop       flash=0.45  bg_dim=0.4   beat=1.1
-t=@@climax     flash=0.6   bg_dim=0.3   beat=1.5
-t=@@outro      flash=0.2   bg_dim=0.55  beat=0.7
+t=@@drop+11bar flash=0.5   bg_dim=0.35  beat=1.0    # the drop's fill-bar escalation gets a bloom lift
+t=@@breakdown  flash=0.2   bg_dim=0.55  beat=0.7  tint_music=0.6   # the hush (padsw=4 basssw=2) was
+                                                     # invisible before — 31s straight ramp drop→climax
+                                                     # with no event; warm tint marks the rainbow hold
+t=@@climax     flash=0.7   bg_dim=0.25  beat=1.7    # matched to the cities-nl/cities-defeest ceiling
+t=@@outro      flash=0.2   bg_dim=0.55  beat=0.7  tint_music=-0.2   # cool bookend — true-color Kalk
+
+# [caption] — screen-pinned (not world-space): sidesteps the ground-occlusion + rotation-vs-camera-yaw
+# traps the [stage] text: props fought this session. Names the real landmarks the flight passes —
+# koeln.show had zero place-naming before this, only the deFEEST/EVOKE brand. ASCII-only (no ö) —
+# unverified whether the pen/UI font renders German umlauts, not worth the risk on a first pass.
+[caption]
+screentext:KOELNER DOM                    in 6      out 17    at 0.5,0.86  size 30  center  fade 1.0
+screentext:ABENTEUERHALLEN — YOU ARE HERE in @@outro out 79    at 0.5,0.88  size 26  center  fade 0.8
+screentext:Geodaten (c) Land NRW — open data in 84   out 89    at 0.5,0.94  size 16  center  fade 1.0
