@@ -28,12 +28,25 @@ splat:koeln_seg1_rainbow_tight.ply  @35,5,0  ~morph  beat:1.1  flash:0.4  backdr
 splat:koeln_seg2_tight.ply  @26,4,0  ~morph  beat:0.7  backdrop:stars
 
 # LAYER 2 — the branding: the deFEEST wordmark handwrites in over the RAINBOW city (mid-flight,
-# hanging in the sky ahead of the camera), and EVOKE 2026 fades in above the Abenteuerhallen for
-# the finale orbit + pull-up. Positions sit where the camera LOOKS at those times (it traverses
-# the world here, unlike the orbiting cities shows).
+# hanging in the sky ahead of the camera), and EVOKE 2026 pen-writes in above the Abenteuerhallen
+# right as the finale orbit arrives. Positions sit where the camera LOOKS at those times (it
+# traverses the world here, unlike the orbiting cities shows). Two separate legibility fixes:
+#   deFEEST — at the close breakdown-window orbit dist (~0.073) the *0.14 word projected past the
+#   TOP of the downward-pitched frame (stills at t=46 showed only the bottom half of the letters).
+#   This is a single FLYBY (no orbit to catch it from another angle later), so moving it away was
+#   not an option — a bigger lateral offset just pushed it out of the yaw cone entirely (tried
+#   0.17→0.40 z: word vanished for the whole window). Fix was smaller glyphs instead: *0.14→*0.09
+#   (+ a hair down, y 0.02→0.01) — same sky position, same on-screen anchor, just short enough now
+#   to clear the top edge. Verified full-word, no clipping, at t=46/48/50.
+#   EVOKE 2026 — swapped ~fade → ~pen-write (was reading flat/static against the ~pen-write deFEEST
+#   right before it) and moved its `in` off the climax anchor (t≈50.3s — it sat fully lit ~24s
+#   before the camera ever got near x=0.90) to a raw-seconds time right before the finale ORBIT
+#   starts (t=78s): unlike deFEEST this one gets many yaw angles as the camera circles the
+#   Abenteuerhallen, so the larger z (0.20→0.42) that would've killed a flyby-only object here
+#   just works — it visibly writes itself in AS the camera arrives, verified at t=76/80/85.
 [stage]
-text:deFEEST     @0.28,0.02,0.17  *0.14  rot 0,-90,0  ~pen-write  tint:brand  in breakdown  out climax
-text:EVOKE 2026  @0.90,0.012,0.20  *0.12  rot 90,0,180  ~fade  tint:brand  in climax
+text:deFEEST     @0.28,0.01,0.17  *0.09  rot 0,-90,0  ~pen-write  tint:brand  in breakdown  out climax
+text:EVOKE 2026  @0.90,0.012,0.42  *0.14  rot 90,0,180  ~pen-write  tint:brand  in 75
 
 [camera]
 t=0.0   pos=-0.9244,0.0131,-0.2027  dist=0.38    yaw=-2.30  pitch=0.78
