@@ -29,24 +29,40 @@ splat:koeln_seg2_tight.ply  @26,4,0  ~morph  beat:0.7  backdrop:stars
 
 # LAYER 2 — the branding: the deFEEST wordmark handwrites in over the RAINBOW city (mid-flight,
 # hanging in the sky ahead of the camera), and EVOKE 2026 pen-writes in above the Abenteuerhallen
-# right as the finale orbit arrives. Positions sit where the camera LOOKS at those times (it
-# traverses the world here, unlike the orbiting cities shows). Two separate legibility fixes:
-#   deFEEST — at the close breakdown-window orbit dist (~0.073) the *0.14 word projected past the
-#   TOP of the downward-pitched frame (stills at t=46 showed only the bottom half of the letters).
-#   This is a single FLYBY (no orbit to catch it from another angle later), so moving it away was
-#   not an option — a bigger lateral offset just pushed it out of the yaw cone entirely (tried
-#   0.17→0.40 z: word vanished for the whole window). Fix was smaller glyphs instead: *0.14→*0.09
-#   (+ a hair down, y 0.02→0.01) — same sky position, same on-screen anchor, just short enough now
-#   to clear the top edge. Verified full-word, no clipping, at t=46/48/50.
-#   EVOKE 2026 — swapped ~fade → ~pen-write (was reading flat/static against the ~pen-write deFEEST
-#   right before it) and moved its `in` off the climax anchor (t≈50.3s — it sat fully lit ~24s
-#   before the camera ever got near x=0.90) to a raw-seconds time right before the finale ORBIT
-#   starts (t=78s): unlike deFEEST this one gets many yaw angles as the camera circles the
-#   Abenteuerhallen, so the larger z (0.20→0.42) that would've killed a flyby-only object here
-#   just works — it visibly writes itself in AS the camera arrives, verified at t=76/80/85.
+# during the finale orbit. Both needed a second round of tuning past the visible-in-3-stills first
+# pass — a full-motion watch (and a user catching a MIRRORED "EVOKE 2026") surfaced two things
+# stills at sparse timestamps missed:
+#
+#   1. GROUND OCCLUSION, not frame-top clipping. The engine sorts translucent gaussians PER CLOUD
+#      (its own centre-depth), not per-pixel across clouds — a text prop sitting near flight-line
+#      height (y≈0.01-0.02, right at typical rooftop height for this corridor) gets silently
+#      painted over by the terrain cloud wherever their silhouettes overlap on screen: the letters
+#      look like they're "sinking into the ground" even though nothing actually occludes them
+#      geometrically. The safe band between "too low → eaten by terrain" and "too high → the *0.14
+#      word projects past the frame's top edge at this close orbit dist (~0.07)" is NARROW — deFEEST
+#      needed *0.08 (down from *0.14) at y=0.03 to fit cleanly; y=0.20 was already fully off-frame.
+#      Verified letter-clean, no ground-eating, across the WHOLE breakdown window (t=43-50, not just
+#      3 sample points).
+#
+#   2. Text rotation is Y-AXIS ONLY (`rot 0,Y,0`) — X must stay 0. An X component tips the glyph
+#      plane FLAT (edge-on to a level camera) instead of upright; that's what made the original
+#      `90,0,180` attempt (and later `90,0,-90`) render as thin unreadable slivers. And the correct
+#      Y depends on the CAMERA'S YAW at viewing time: Y=0 faces yaw≈1.4 (the engine's FRONT_YAW);
+#      Y=±90 is edge-on to that same direction; Y=180 shows the MIRROR (letters backward — exactly
+#      the "spiegelbeeld" bug). Because deFEEST is a single flyby at a near-constant camera yaw
+#      (≈-3.08 through its whole window), one Y (-90) reads cleanly throughout. EVOKE sits inside a
+#      146°-yaw ORBIT (t=78 yaw=-3.10 → t=88.5 yaw=-0.60) — no single Y stays front-facing across
+#      that whole sweep. Also: its z=0.42 lateral offset (needed so the word isn't buried at
+#      y=0.012, same trap as #1) puts it OUTSIDE the camera's horizontal FOV during the straight
+#      approach — it doesn't actually enter frame until the orbit's yaw sweeps far enough round, ~
+#      t=81, no matter what its own fade/write-in timing says. Fix: `in` retimed to 79 (so the
+#      pen-write reveal lands inside the t=81+ visible window, not before it), and Y=-150 — tuned
+#      for yaw≈-1.6 to -2.5 (the meat of that visible arc, found by sweeping Y against the real
+#      camera yaw in an isolated test rig) rather than borrowing deFEEST's -90 (correct for a
+#      completely different yaw). Verified clean + unmirrored at t=81/83/85/87.
 [stage]
-text:deFEEST     @0.28,0.01,0.17  *0.09  rot 0,-90,0  ~pen-write  tint:brand  in breakdown  out climax
-text:EVOKE 2026  @0.90,0.012,0.42  *0.14  rot 90,0,180  ~pen-write  tint:brand  in 75
+text:deFEEST     @0.28,0.03,0.17  *0.08  rot 0,-90,0  ~pen-write  tint:brand  in breakdown  out climax
+text:EVOKE 2026  @0.90,0.012,0.42  *0.14  rot 0,-150,0  ~pen-write  tint:brand  in 79
 
 [camera]
 t=0.0   pos=-0.9244,0.0131,-0.2027  dist=0.38    yaw=-2.30  pitch=0.78
