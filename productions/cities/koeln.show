@@ -20,12 +20,25 @@ pw_splat = 0.004
 
 # The RAINBOW arc: Dom segment in true color -> the middle segment (the Rhine crossing + Deutz)
 # in raster:position rainbow -> back to true color arriving at Kalk. The pair=match seam morphs ARE
-# the color transitions: the city recolors around you mid-flight. Rainbow fades IN at 15 s (seg0
-# hold 11 + morph 4), holds the middle as the star, hands back to true color at ~55 s (Kalk).
+# the color transitions: the city recolors around you mid-flight — timed to the SCORE's anchors
+# (bpm 124: build 7.7s, drop 19.35s, breakdown 42.6s, climax 50.3s), not an even 3-way split. The
+# old even split (85/3≈28.3s slots) put both morphs off-beat and left the climax — the track's one
+# real peak — sitting mid-hold with no visual event at all.
+#
+# NOTE on the timing math: a part's declared `@hold,morph,0` describes ITS OWN window — `morph` is
+# how long IT takes to cross-fade IN from the PREVIOUS part (not how long the current part takes to
+# fade OUT), so the visual reveal for part N actually happens in the FIRST `morph` seconds of part
+# N's own window, i.e. starting the moment the PREVIOUS part's hold+morph elapses. Confirmed by
+# stills: seg1 (@26.95,4,0) becomes active at t=19.4 (seg0's 15.35+4) — right on the drop — and its
+# rainbow reveal visibly unfolds over the next ~4s (a colour-scatter mid-crossfade at t≈21-22,
+# settled by t≈23), same shape at the seg1→seg2 handoff (active at 50.3, right on the climax,
+# settled true-color by ~t=55). So the reveal STARTS on the beat and blooms outward from it, rather
+# than snapping instantly — reads as "the drop/climax visibly detonates the city's colour," which
+# plays better than an instant cut would at this camera distance anyway.
 [reel]
-splat:koeln_seg0_tight.ply  @11,4,0  ~morph  beat:0.7  backdrop:stars
-splat:koeln_seg1_rainbow_tight.ply  @35,5,0  ~morph  beat:1.1  flash:0.4  backdrop:stars
-splat:koeln_seg2_tight.ply  @26,4,0  ~morph  beat:0.7  backdrop:stars
+splat:koeln_seg0_tight.ply  @15.35,4,0  ~morph  beat:0.7  backdrop:stars
+splat:koeln_seg1_rainbow_tight.ply  @26.95,4,0  ~morph  beat:1.1  flash:0.4  backdrop:stars
+splat:koeln_seg2_tight.ply  @34.7,4,0  ~morph  beat:0.7  backdrop:stars
 
 # LAYER 2 — the branding: the deFEEST wordmark handwrites in over the RAINBOW city (mid-flight,
 # hanging in the sky ahead of the camera), and EVOKE 2026 pen-writes in above the Abenteuerhallen
