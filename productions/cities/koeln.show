@@ -22,6 +22,9 @@ cam_spline = 1                # Catmull-Rom flowing glide, not per-leg smoothste
                               # were reading as 3 stop-start pushes instead of one continuous flyover
 post = chroma                 # the family's kill-shot signature (cities-defeest/cities-nl/skyline
                               # all carry it) — beat-gated RGB screen-tear, koeln had none
+cam_pump = 0.03                # subtle kick-driven camera lunge — the whole flight gets a live pulse
+                              # on top of the authored track (small value: this is a single 89s play,
+                              # not a looping background where the shake would wear out its welcome)
 
 # The RAINBOW arc: Dom segment in true color -> the middle segment (the Rhine crossing + Deutz)
 # in raster:position rainbow -> back to true color arriving at Kalk. The pair=match seam morphs ARE
@@ -107,14 +110,29 @@ t=83.0  pos=0.9244,0.0131,0.2027    dist=0.075   yaw=-1.60  pitch=0.46
 t=88.5  pos=0.9244,0.0131,0.2027    dist=0.45    yaw=-0.60  pitch=0.85
 
 [sync]
-t=@@intro      flash=0.3   bg_dim=0.55  beat=0.8  tint_music=-0.3   # cool bookend — true-color Dom
-t=@@drop       flash=0.45  bg_dim=0.4   beat=1.1
+t=@@intro      flash=0.3   bg_dim=0.55  beat=0.8  tint_music=-0.3  fov=1.0   # cool bookend — true-color Dom
+t=@@drop       flash=0.45  bg_dim=0.4   beat=1.1  fov=0.85          # lens punches in a hair on the hit
+t=21           flash=0.85  bg_dim=0.35  beat=1.3                    # CELEBRATE the confetti-scatter mid-
+                                                                     # crossfade (~1.6s into the reveal —
+                                                                     # a chaotic colour-swirl otherwise
+                                                                     # flown straight through unremarked)
+t=23           flash=0.5   bg_dim=0.4   beat=1.1   fov=1.0          # settle as the rainbow resolves
 t=@@drop+11bar flash=0.5   bg_dim=0.35  beat=1.0    # the drop's fill-bar escalation gets a bloom lift
 t=@@breakdown  flash=0.2   bg_dim=0.55  beat=0.7  tint_music=0.6   # the hush (padsw=4 basssw=2) was
                                                      # invisible before — 31s straight ramp drop→climax
                                                      # with no event; warm tint marks the rainbow hold
-t=@@climax     flash=0.7   bg_dim=0.25  beat=1.7    # matched to the cities-nl/cities-defeest ceiling
-t=@@outro      flash=0.2   bg_dim=0.55  beat=0.7  tint_music=-0.2   # cool bookend — true-color Kalk
+t=@@climax     flash=0.7   bg_dim=0.25  beat=1.7  fov=0.88          # matched to the cities-nl/cities-
+                                                                     # defeest ceiling; fov stays modest
+                                                                     # here — the camera ALREADY lunges
+                                                                     # (dist 0.065) at this exact anchor,
+                                                                     # stacking a big fov punch on top of
+                                                                     # that lost the horizon entirely
+t=52           beat=2.2                                             # a BEAT spike (not flash — climax is
+                                                                     # already at its brightness ceiling)
+                                                                     # right on the climax's own confetti-
+                                                                     # scatter, ~1.6s into ITS reveal
+t=54           beat=1.5   fov=0.85                                  # settle as Kalk resolves, lens eases
+t=@@outro      flash=0.2   bg_dim=0.55  beat=0.7  tint_music=-0.2  fov=1.0   # cool bookend — true-color Kalk
 
 # [caption] — screen-pinned data credit only (the landmark call-outs read lame, dropped). "Geodaten ©
 # Land NRW" matches the header's own courtesy-attribution wording verbatim (no attribution is legally
