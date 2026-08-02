@@ -115,12 +115,3 @@ t=@@breakdown  flash=0.2   bg_dim=0.55  beat=0.7  tint_music=0.6   # the hush (p
                                                      # with no event; warm tint marks the rainbow hold
 t=@@climax     flash=0.7   bg_dim=0.25  beat=1.7    # matched to the cities-nl/cities-defeest ceiling
 t=@@outro      flash=0.2   bg_dim=0.55  beat=0.7  tint_music=-0.2   # cool bookend — true-color Kalk
-
-# [caption] — screen-pinned (not world-space): sidesteps the ground-occlusion + rotation-vs-camera-yaw
-# traps the [stage] text: props fought this session. Names the real landmarks the flight passes —
-# koeln.show had zero place-naming before this, only the deFEEST/EVOKE brand. ASCII-only (no ö) —
-# unverified whether the pen/UI font renders German umlauts, not worth the risk on a first pass.
-[caption]
-screentext:KOELNER DOM                    in 6      out 17    at 0.5,0.86  size 30  center  fade 1.0
-screentext:ABENTEUERHALLEN — YOU ARE HERE in @@outro out 79    at 0.5,0.88  size 26  center  fade 0.8
-screentext:Geodaten (c) Land NRW — open data in 84   out 89    at 0.5,0.94  size 16  center  fade 1.0
