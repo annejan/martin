@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Anne Jan Brouwer <brouwer@annejan.com>
 # SPDX-License-Identifier: MIT
-"""NL open-data city → martin sh0 splat .ply — the SHIPPABLE replacement for the Google aerial
-captures (which are local-only, see pipeline/AERIAL-CITIES.md). One command per city:
+"""European open-data city/route → martin sh0 splat .ply — the SHIPPABLE replacement for the
+Google aerial captures (which are local-only, see pipeline/AERIAL-CITIES.md). Started NL-only
+(hence the historical `martin-nl-data` cache dir name below), now also fetches German (NRW) open
+data and can stitch a route across the NL/DE border in one shared frame. Full reference,
+worked examples, and a from-scratch walkthrough for adding a new city/route: pipeline/CITY-SPLAT.md
+— read that first if you're new here. One command per city/route:
 
-    ~/.cache/martin-nl-data/venv/bin/python pipeline/nl_city_splat.py rotterdam
-    ... amsterdam / denhaag / utrecht      (--count 1200000, --out austin_run/exports/)
+    ~/.cache/martin-nl-data/venv/bin/python pipeline/city_splat.py rotterdam
+    ~/.cache/martin-nl-data/venv/bin/python pipeline/city_splat.py koeln --segments 3 --emit-camera
+    ... amsterdam / denhaag / utrecht / grens / ...   (--count 1200000, --out assets/cities/)
 
-Source: GeoTiles (TU Delft) AHN5 subtiles — 1×1.25 km cuts of the national lidar, ALREADY COLORED
-with the national aerial imagery (RGB in the LAZ). Data licensing (all open, all shippable):
-  * AHN lidar points: CC0 (data.overheid.nl dataset 47567)
-  * GeoTiles colorized redistribution: CC-BY 4.0 → credit "GeoTiles/TU Delft"
-  * point colors derive from Beeldmateriaal Nederland aerial imagery (open data)
-Show credit line: "hoogtedata AHN (CC0) · kleur GeoTiles · TU Delft / Beeldmateriaal NL".
+Data sources + licensing (all open, all shippable — see CITY-SPLAT.md for the full attribution
+table and per-provider details):
+  NL   GeoTiles (TU Delft) AHN5/AHN4 subtiles — lidar CC0 (data.overheid.nl dataset 47567),
+       colorized-redistribution CC-BY 4.0 ("GeoTiles/TU Delft"), colors from Beeldmateriaal NL.
+  DE   NRW open geodata (opengeodata.nrw.de) — bDOM50 (colored raster surface) or 3dm lidar
+       (colorless, true point structure) + a DOP orthophoto for color — both dl-zero (CC0-class,
+       no attribution required; "Geodaten © Land NRW" is the polite courtesy line anyway).
+Typical show credit lines: "hoogtedata AHN (CC0) · kleur GeoTiles · TU Delft / Beeldmateriaal NL"
+(NL) and "Geodaten © Land NRW — open data" (DE).
 
 Output matches martin's sh0 .ply layout exactly (src/splatgen.rs::write_ply — 14 floats/point:
 xyz, log-scale ×3, logit-opacity, identity quat, f_dc = (rgb-0.5)/0.2820948) and the capture
@@ -23,7 +31,8 @@ Geography check: denhaag-zee starts SOUTH of the route centre and lands at world
 
 LAZ facts (verified on the Rotterdam Markthal subtile): point format 8, RGB stored 0-255 in the
 uint16 fields (divide by 255, NOT 65535); classes 1=unclassified (trees/cars) 2=ground 6=building
-9=water 26=bridges; EPSG:28992 (RD New) metres + NAP heights; ~25-35M points per subtile.
+9=water 26=bridges; EPSG:28992 (RD New) metres + NAP heights; ~25-35M points per subtile. NRW LAZ
+is EPSG:25832 (UTM32) metres — see CITY-SPLAT.md for its own per-provider point-format notes.
 """
 import argparse
 import os
@@ -37,6 +46,9 @@ try:
     import laspy
 except ImportError:
     sys.exit("laspy missing — run: ~/.cache/martin-nl-data/venv/bin/python (see module docstring)")
+
+# Only needed for `legs` (cross-border) route entries — imported lazily inside load_mixed_route so
+# a bare NL-only run never needs it installed.
 
 CACHE = Path.home() / ".cache" / "martin-nl-data"
 GEOTILES = "https://geotiles.citg.tudelft.nl/{src}/{tile}.LAZ"
@@ -109,6 +121,22 @@ CITIES = {
     "koeln": {"provider": "nrw3d", "width": 700,
               "route": [(356549, 5645283), (356800, 5645000), (357100, 5644723),
                         (357700, 5644650), (358800, 5644560), (360088, 5644507)]},
+    # THE BORDER CROSSING — a real national border, real data both sides, one continuous flight:
+    # Enschede (Oude Markt, NL) → the actual Dutch/German border → Gronau → ~20 km into NRW
+    # (Ochtrup direction). ~24 km total. `legs` (not `route`): each leg keeps its OWN provider/CRS
+    # (NL = RD New/AHN via GeoTiles, DE = UTM32/NRW 3dm+DOP), reprojected to a shared UTM32 frame
+    # by `load_mixed_route` before the normal arc-length/segment machinery runs — this pipeline's
+    # first cross-border route. Dry-run tile count (route_tiles/grid_tiles, no downloads) BEFORE
+    # committing: 18 NL subtiles (~4.7 GB) + 68 DE grid cells (~4 GB) ≈ 9 GB total — sane; the
+    # original Amsterdam→Enschede→Köln full epic dry-ran at 427+672 tiles (~150+ GB) and was cut.
+    "grens": {
+        "legs": [
+            {"provider": None, "width": 500,
+             "route": [(258074, 471388), (263000, 471000)]},        # Enschede -> toward the border
+            {"provider": "nrw3d", "width": 500, "latlon": True,
+             "route": [(52.207, 7.023), (52.14, 7.28)]},             # Gronau -> ~20 km into NRW
+        ],
+    },
 }
 
 
@@ -364,6 +392,89 @@ def load_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
     return xyz, rgb, route
 
 
+def load_mixed_route(name: str) -> tuple[np.ndarray, np.ndarray, list]:
+    """A CROSS-BORDER route (`legs`, not `route`): each leg keeps its own provider/native CRS for
+    fetching (RD New/AHN via GeoTiles for NL legs, UTM32/NRW for DE legs — the tile-lookup and
+    per-point crop logic is identical to load_route, just looped per leg), then every leg's POINTS
+    and WAYPOINTS are reprojected into one shared UTM32 frame via pyproj before concatenating —
+    downstream (write_segments/emit_camera/to_martin) never needs to know this was multi-provider,
+    it just sees one big route+cloud. A `latlon: True` leg gives its route as (lat, lon) pairs
+    (handy for German via-points looked up as plain WGS84 town coordinates, not surveyed RD/UTM)."""
+    import pyproj
+
+    spec = CITIES[name]
+    to_utm_from_rd = pyproj.Transformer.from_crs("EPSG:28992", "EPSG:25832", always_xy=True)
+    to_utm_from_wgs = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:25832", always_xy=True)
+    pts, cols, full_route = [], [], []
+    for leg in spec["legs"]:
+        provider = leg.get("provider")
+        nrw = provider in ("nrw", "nrw3d")
+        width = leg["width"]
+        raw_route = leg["route"]
+        # the route polyline itself, reprojected to UTM32 for the shared arc-length track
+        if leg.get("latlon"):
+            utm_route = [to_utm_from_wgs.transform(lon, lat) for lat, lon in raw_route]
+        elif nrw:
+            utm_route = list(raw_route)
+        else:
+            utm_route = [to_utm_from_rd.transform(x, y) for x, y in raw_route]
+        full_route.extend(utm_route)
+        # las points are native-CRS per leg: RD New for NL, UTM32 for NRW — the crop/tile-lookup
+        # route must match THAT, not raw_route (which is lat/lon for a `latlon: True` leg).
+        crop_route = utm_route if nrw else raw_route
+        tiles = grid_tiles(route=crop_route, width=width) if nrw else route_tiles(raw_route, width)
+        print(f"  leg ({provider or 'nl'}): {len(raw_route)} waypoints, corridor {width} m "
+              f"-> {len(tiles)} tiles")
+        for tile in tiles:
+            if provider == "nrw3d":
+                # grid-edge NRW tiles (e.g. right at the political border) can 404 too — skip, don't abort.
+                try:
+                    las = laspy.read(fetch_nrw_3dm(*tile))
+                    dop = fetch_nrw_dop(*tile)
+                except urllib.error.HTTPError as e:
+                    print(f"  skip {tile}: {e}")
+                    continue
+            else:
+                # border-edge tiles can genuinely miss coverage (fetch_any hard-exits on a 404 in
+                # both AHN vintages) — skip and warn instead of killing the whole cross-border run.
+                try:
+                    las = laspy.read(fetch_nrw(*tile) if nrw else fetch_any(tile))
+                except SystemExit as e:
+                    print(f"  skip {tile}: {e}")
+                    continue
+                dop = None
+                if "red" not in las.point_format.dimension_names:
+                    print(f"  skip {tile}: no RGB dimensions — expected a colorized tile")
+                    continue
+            x, y, z = np.asarray(las.x), np.asarray(las.y), np.asarray(las.z)
+            keep = _dist_to_polyline(x, y, crop_route) <= width / 2
+            keep &= np.asarray(las.classification) != 9
+            if not keep.any():
+                continue
+            sel = np.flatnonzero(keep)
+            if len(sel) > args_tile_cap[0]:
+                sel = np.random.default_rng(len(sel)).choice(sel, size=args_tile_cap[0], replace=False)
+            xs, ys, zs = x[sel], y[sel], z[sel]
+            # reproject THIS LEG'S points into the shared UTM32 frame (no-op for NRW legs — already there)
+            if nrw:
+                ux, uy = xs, ys
+            else:
+                ux, uy = to_utm_from_rd.transform(xs, ys)
+            pts.append(np.column_stack([ux, uy, zs]).astype(np.float32))
+            if dop is not None:
+                cols.append(color_from_dop(xs, ys, tile[0], tile[1], dop))
+            else:
+                cscale = 65535.0 if int(np.max(las.red[:10000])) > 255 else 255.0
+                rgb = np.column_stack(
+                    [np.asarray(las.red)[sel], np.asarray(las.green)[sel], np.asarray(las.blue)[sel]]
+                ).astype(np.float32) / cscale
+                cols.append(rgb)
+    xyz = np.concatenate(pts)
+    rgb = np.clip(np.concatenate(cols), 0.0, 1.0)
+    print(f"  {name}: {len(xyz):,} points across {len(spec['legs'])} legs (shared UTM32 frame)")
+    return xyz, rgb, full_route
+
+
 def _hsv_to_rgb_np(hsv):
     """Vectorized HSV→RGB (float 0..1 arrays) — colorsys is per-tuple, useless at 2M points."""
     h, s, v = hsv[:, 0] * 6.0, hsv[:, 1], hsv[:, 2]
@@ -552,8 +663,8 @@ def to_martin(xyz: np.ndarray, count: int, seed: int):
 def write_ply(path: Path, name: str, pos: np.ndarray, rgb: np.ndarray, scale: float, opacity: float):
     """martin's sh0 binary .ply — byte-identical layout to src/splatgen.rs::write_ply."""
     header = (
-        f"ply\nformat binary_little_endian 1.0\ncomment martin NL-city splat: {name} "
-        f"(AHN CC0 · kleur GeoTiles CC-BY TU Delft)\n"
+        f"ply\nformat binary_little_endian 1.0\ncomment martin open-data city splat: {name} "
+        f"(pipeline/city_splat.py — see CITY-SPLAT.md for per-source licensing)\n"
         f"element vertex {len(pos)}\n"
         "property float x\nproperty float y\nproperty float z\n"
         "property float scale_0\nproperty float scale_1\nproperty float scale_2\n"
@@ -607,7 +718,8 @@ def main():
     args_tile_cap[0] = a.tile_cap
     outdir = Path(a.out)
     outdir.mkdir(parents=True, exist_ok=True)
-    names = sorted(n for n in CITIES if "route" not in CITIES[n]) if a.city == "all" else [a.city]
+    names = (sorted(n for n in CITIES if "route" not in CITIES[n] and "legs" not in CITIES[n])
+             if a.city == "all" else [a.city])
     for name in names:
         print(f"{name}:")
         route = None
@@ -618,6 +730,8 @@ def main():
             print(f"  area {x1 - x0}×{y1 - y0} m → {len(CITIES[name]['tiles'])} subtiles")
             cap = max(200_000, 4 * a.count // max(1, len(CITIES[name]["tiles"])))
             xyz, rgb = load_city(name, per_tile_cap=cap)
+        elif "legs" in CITIES[name]:
+            xyz, rgb, route = load_mixed_route(name)
         elif "route" in CITIES[name]:
             xyz, rgb, route = load_route(name)
         else:

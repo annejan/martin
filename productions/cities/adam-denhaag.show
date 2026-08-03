@@ -4,7 +4,7 @@
 # subtiles. Direction: a high ESTABLISHING over the Lange Vonder while segment 0 assembles below,
 # dive to flight level, the long flight, then BRAKE at the Hoftoren, a half-orbit around the tower,
 # and a pull-up into the stars on the outro. Data: AHN CC0 · GeoTiles CC-BY (TU Delft).
-#   pipeline/nl_city_splat.py adam-denhaag --segments 13 --count 800000 --emit-camera --duration 85
+#   pipeline/city_splat.py adam-denhaag --segments 13 --count 800000 --emit-camera --duration 85
 
 [settings]
 kind = demo

@@ -7,7 +7,7 @@
 # Data (all open, credit on screen in the outro):
 #   heights  AHN5 lidar — CC0 (Rijkswaterstaat)
 #   colours  GeoTiles colorized subtiles (TU Delft) — CC-BY 4.0, colours from Beeldmateriaal NL
-# Rebuild the four .ply any time:  pipeline/nl_city_splat.py all   (see that file's docstring)
+# Rebuild the four .ply any time:  pipeline/city_splat.py all   (see that file's docstring)
 #
 #   live loop:  MARTIN_LOOP=1 MARTIN_SHOW=productions/cities/cities-nl.show cargo +nightly run --release
 #   record:     MARTIN_SHOW=productions/cities/cities-nl.show ./record.sh cities-nl.mp4
@@ -29,7 +29,7 @@ pw_step = 0.35
 pw_splat = 0.004
 
 # LAYER 1 — logo → NL city tour (per-city sky/weather/pulse) → Amsterdam balls into a bitterbal → the logo.
-# (utrecht_tight.ply stays available for swaps — regenerate any city via pipeline/nl_city_splat.py.)
+# (utrecht_tight.ply stays available for swaps — regenerate any city via pipeline/city_splat.py.)
 [reel]
 glb:defeest.glb           @@intro      @5,5    beat:1.2   backdrop:stars                          # deFEEST mesh ⇄ blobs → city (beat-pulse = alive while held)
 splat:groningen_tight.ply @@drop       @6,7,0  ~morph  beat:0.8                 backdrop:stars      # GRONINGEN — home turf: the Martinitoren assembles out of the logo, night, calm

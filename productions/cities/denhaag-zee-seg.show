@@ -1,6 +1,6 @@
 # martin — DEN HAAG → ZEE, SEGMENT-STREAMED (the "tiles load in and out" flight): the same snake
 # route as denhaag-zee.show but split into 3 overlapping arc-length segments in ONE shared world
-# frame (pipeline/nl_city_splat.py denhaag-zee --segments 3 --count 900000 --emit-camera).
+# frame (pipeline/city_splat.py denhaag-zee --segments 3 --count 900000 --emit-camera).
 # `normalize = 0` keeps the engine from re-centering each part (that would yank segments to the
 # origin); `pair = match` + the overlap zone make each seam a soft in-place dissolve: the tail of
 # the city streams OUT behind the camera while the next stretch streams IN ahead — unlimited

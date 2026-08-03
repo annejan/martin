@@ -2,7 +2,7 @@
 # the dunes → Scheveningen — ~24 km of real Dutch open-data city in ONE continuous streamed flight.
 # 8 overlapping arc-length segments in one shared frame (normalize = 0), each seam a pair=match
 # in-place dissolve: the city streams in ahead and out behind, unlimited length under the GPU cap.
-#   pipeline/nl_city_splat.py randstad --segments 8 --count 700000 --emit-camera --duration 85
+#   pipeline/city_splat.py randstad --segments 8 --count 700000 --emit-camera --duration 85
 # 131.3M corridor points → 8 × ~1M splats. Data: AHN CC0 · GeoTiles CC-BY (TU Delft).
 # NOTE camera dist: a 24 km route normalizes ~3× smaller than a city block — dist 0.10 here is the
 # "close, more land than sky" height that dist 0.28 gives on a short route.

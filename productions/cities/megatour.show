@@ -1,0 +1,160 @@
+# martin — MEGATOUR: the whole open-data journey in one ~80s pass. deFEEST logo -> AMSTERDAM
+# (Lange Vonder -> across the IJ -> CS -> Dam, the opening leg of adam-denhaag.show) -> GRENS
+# (Enschede -> the Dutch/German border -> NRW, with its own rainbow border-crossing morph) -> KOELN
+# (the Dom -> across the Rhine in rainbow -> Kalk Abenteuerhallen) -> deFEEST logo, closing the loop.
+#
+# Each leg reuses ITS OWN production's already-generated .ply segments AND already-tuned camera
+# poses verbatim — adam-denhaag/grens/koeln each live in their OWN raw coordinate frame (normalize=0,
+# a shared authored frame per production, not a common one across productions). That's fine: only one
+# leg's cloud is ever resident+visible at a time (with a brief cross-fade at the seam), so the camera
+# track just uses each leg's own native pos/dist range during its own window — exactly like a single
+# production's camera would, just three different "own frames" back to back. The seam morphs recolor
+# the world as it jumps from one city's real place to the next (same trick as koeln's own Rhine-
+# crossing rainbow, applied at production boundaries too).
+#
+# KNOWN LIMITATION (v1): the borrowed camera arcs are RETIMED (offset + compressed) from each source
+# production's own full-length track, not re-authored from scratch for this run's specific pacing —
+# and [sync]/[camera] @@anchor references from the source shows don't carry over meaningfully once a
+# leg is squeezed into a fraction of its original duration, so this file uses plain seconds throughout
+# rather than music anchors. Fine-grained beat-sync per leg is a follow-up, not done here.
+[settings]
+kind = demo
+ply = assets/cities/defeest.glb
+budget = 8300000
+normalize = 0
+pair = match
+morph_stagger = 0.5
+score = productions/cities/score.txt
+flash = 0.25
+bg_dim = 0.45
+cam_spline = 1
+cam_pump = 0.03               # both source shows (koeln/grens) have this, megatour didn't — a subtle
+                              # kick-driven lunge that keeps the whole flight visibly alive, not just
+                              # the hand-authored curve (part of "less thin/streaky, more energy")
+post = chroma
+
+[reel]
+# each leg boundary now gets ITS OWN entrance/ease character instead of four identical ~morph swaps:
+# logo->Amsterdam eases in (anticipate — a small settle before committing), Amsterdam->grens gets a
+# stutter (picking up speed, matches the "faster/more" note), grens->koeln is a hard ~cut (a jolt of
+# contrast right after grens' own rainbow morph — Cut also auto-injects a flash per build.rs).
+glb:defeest.glb                        @3,1        beat:1.0  backdrop:stars
+splat:adam_denhaag_seg0_tight.ply      @6,2,0  ~morph  ease:anticipate  beat:0.8  backdrop:stars
+splat:adam_denhaag_seg1_tight.ply      @6,2,0  ~morph  beat:0.8  backdrop:stars
+splat:grens_seg0_tight.ply             @6,3,0  ~morph  ease:stutter  beat:0.7  backdrop:stars
+# raster:position was the ACTUAL root cause of grens reading as "loose fragments, incoherent" — koeln's
+# rainbow is a pre-baked-color .ply (its filename says "rainbow" for a reason), but grens_seg1 is a
+# REGULAR .ply and raster:position scatters splat positions by a position-hash at runtime (a confetti
+# explosion, not a simple recolor) — the terrain was barely ever visible through it. Dropped; the
+# crossing now reads through the camera lunge + sync flash/beat instead of a broken pseudo-rainbow.
+# backdrop:rings also dropped — the terrain sliver was actually fine positionally (a 500m corridor
+# genuinely reads as a thin diagonal strip from this angle, that part isn't a bug), but rings visually
+# drowned it out every time regardless of camera fixes. backdrop:stars matches seg0/seg2, less noise.
+splat:grens_seg1_tight.ply             @8,3,0  ~morph  beat:1.3  flash:0.5  backdrop:stars
+splat:grens_seg2_tight.ply             @5,3,0  ~morph  beat:0.7  backdrop:stars
+splat:koeln_seg0_tight.ply             @9,3,0  ~cut  beat:0.7  backdrop:stars
+splat:koeln_seg1_rainbow_tight.ply     @9,3,0  ~morph  beat:1.1  flash:0.6  backdrop:rings
+# NO outro logo — per direct feedback the causal-loop-back-to-logo ending (with its fast zoom-out)
+# was the weakest part; the köln leg was "the only good thing about this whole thing". So the show
+# now just ENDS on Kalk/Abenteuerhallen — no logo bookend, no loop. koeln_seg2 is the final part: a
+# long hold (12s, was 8s) and a short morph (2s, was 3 — nothing follows it to cross-fade into).
+splat:koeln_seg2_tight.ply             @12,2,0  ~morph  beat:0.7  backdrop:stars
+
+# city-name labels per leg — makes the Amsterdam->Enschede->Koeln->Evoke story legible instead of
+# implicit (user feedback: "kon Amsterdam en Enschede niet lezen"). Positions sit close to the
+# camera's own orbit TARGET at each moment (not just "somewhere on the route" — a tight-dist orbit
+# has a narrow view cone, learned the hard way on grens.show's Enschede label). Rotations: AMSTERDAM's
+# Y=0 confirmed via a direct rotation sweep at t=8 (yaw~-1.55 there reads correctly at Y=0, mirrored
+# at Y=90 — a genuinely different yaw family than grens/koeln's ~-3.0-ish range). DE GRENS/KOELN/EVOKE
+# reuse each SOURCE production's own already-validated Y for that same frame (grens.show's Enschede
+# Y=180, koeln.show's deFEEST Y=-90 and EVOKE 2026 Y=-150) rather than re-sweeping from scratch —
+# the compressed camera timing here stays within the same yaw family each source calibrated against.
+[stage]
+# AMSTERDAM was STILL flipped/mirrored at Y=0 despite the isolated single-yaw test — confirmed
+# directly from a rendered frame ("AMSTERDAM" reading backwards). Flipping to the opposite (Y=180).
+text:AMSTERDAM  @0.76,-0.02,-0.66  *0.035  rot 0,180,0  ~outline  tint:brand  in 5  out 9
+text:DE GRENS   @-0.83,0.05,-0.32  *0.03  rot 0,180,0  ~outline  tint:brand  in 20  out 25
+text:KÖLN       @-0.84,0.02,-0.10  *0.06  rot 0,-90,0  ~outline  tint:brand  in 48  out 57
+text:EVOKE 2026 ->  @0.92,0.08,0.20  *0.08  rot 0,-150,0  ~outline  tint:brand  in 77  out 86
+
+# the deFEEST wordmark went missing when megatour started reusing koeln.show's .ply SEGMENTS —
+# those don't carry koeln.show's own [stage] text along with them (that's defined separately in
+# koeln.show, not baked into the .ply). Reusing koeln's EXACT position/rotation here is safe (same
+# coordinate frame, identical source .ply) — only the timing is retimed for our compressed koeln
+# window (original "in breakdown out climax" landed over the rainbow segment; ours does too, t=55-64).
+text:deFEEST    @0.28,0.02,0.17  *0.045  rot 0,-90,0  ~pen-write  tint:brand  in 61  out 70
+
+[camera]
+# --- logo (t=0-4) ---
+t=0.0   pos=0,0.4,0             dist=2.6    yaw=1.4    pitch=0.60
+t=4.0   pos=0,0.18,0            dist=1.1    yaw=1.4    pitch=0.35
+# --- amsterdam (t=4-20) --- v3: v2's hand-interpolated waypoints looked into the empty IJ-crossing
+# gap (open water = no lidar/colour data) at several points — root-caused via an isolated test (same
+# blank/full oscillation reproduced standalone, independent of the logo morph or morph_stagger, only
+# went away using adam-denhaag's OWN exact keyframes). So: reuse those verbatim, offset in time only.
+t=4.0   pos=0.7690,0.0014,-0.7482  dist=0.11  yaw=-1.61  pitch=0.58   # Lange Vonder establishing
+t=9.0   pos=0.7723,0.0014,-0.6631  dist=0.04  yaw=-1.55  pitch=0.42
+t=10.6  pos=0.7822,0.0014,-0.5723  dist=0.03  yaw=-1.36  pitch=0.38
+t=12.7  pos=0.7704,0.0014,-0.5170  dist=0.03  yaw=-1.27  pitch=0.38
+t=15.2  pos=0.7506,0.0014,-0.4538  dist=0.03  yaw=-0.83  pitch=0.38
+t=19.3  pos=0.6558,0.0014,-0.3511  dist=0.03  yaw=-0.50  pitch=0.38   # "stick the landing" —
+t=20.0  pos=0.6558,0.0014,-0.3511  dist=0.03  yaw=-0.50  pitch=0.38   # CS / Dam: a brief hold instead
+                                                                        # of gliding straight through
+                                                                        # the arrival sync event (flash
+                                                                        # fired here but the camera never
+                                                                        # acknowledged it before)
+# --- grens (t=20-48) --- v2: was "losse flarden, totaal niet samenhangend" (loose fragments, not
+# coherent) — the lunge+spring-back+more-wobble design had yaw oscillating back and forth (-3.01 ->
+# -2.68 -> -2.60 -> -2.66 -> -2.75 -> -2.68 -> -2.70 -> -2.72, EIGHT keyframes with no clear direction)
+# and dist yo-yoing too. Simplified to FIVE keyframes, yaw moving in essentially one direction start
+# to end, dist doing exactly ONE clean push-in at the crossing rather than dip-recover-dip-recover —
+# one flowing glide (cam_spline does its job when the keyframes themselves are calm) with a single
+# confident moment at the border, not a string of disconnected jolts.
+# v3: my own hand-interpolated x,z were WRONG (off the real corridor) — reverted to proven pipeline
+# positions, but STILL mostly rings backdrop. v4: root cause was actually `raster:position` on
+# grens_seg1 (removed above) PLUS dist too tight (0.010-0.022, copied from grens.show's own "faster"
+# pacing pass, which the user separately also called "sliertig"/streaky) — at this compressed window's
+# scale, tight dist off a narrow 500m corridor mostly frames empty space beside it. Wider dist (~0.024
+# throughout, was <=0.022) + genuinely smooth yaw (not just "fewer keyframes", the SOURCE yaws at
+# these exact positions still zigzag -3.01/-2.60/-2.85/-2.72/-2.78/-2.68 — picked a near-monotonic
+# subset instead of chasing every source wobble) is the actual fix.
+t=20.0  pos=-0.9884,0.0027,-0.3680  dist=0.026  yaw=-3.00  pitch=0.30  # Enschede
+t=28.0  pos=-0.4388,0.0027,-0.1634  dist=0.024  yaw=-2.75  pitch=0.32  # easing toward the crossing
+t=35.0  pos=-0.1105,0.0027,-0.0412  dist=0.024  yaw=-2.72  pitch=0.30  # the border crossing — steady, no lunge
+t=42.0  pos=0.2194,0.0027,0.0817    dist=0.024  yaw=-2.70  pitch=0.30  # deep NRW, settled cruise
+t=48.0  pos=0.9884,0.0027,0.3680    dist=0.024  yaw=-2.72  pitch=0.30
+# --- koeln (t=48-83) --- koeln_seg0:48-60, seg1:60-72, seg2:72-83. Also given more room per "koeln
+# goes by too fast" — köln's own hold times grew (+3s seg0, +3s seg1, +1s seg2) vs the first cut.
+t=48.0  pos=-0.9244,0.0131,-0.2027  dist=0.20    yaw=-2.30  pitch=0.68  # the Dom
+t=52.0  pos=-0.7933,0.0131,-0.0549 dist=0.0731  yaw=-2.40  pitch=0.42
+t=55.0  pos=-0.6366,0.0131,0.0899  dist=0.0731  yaw=-3.02  pitch=0.42
+t=63.0  pos=-0.1190,0.0131,0.1450  dist=0.10    yaw=-3.07  pitch=0.30  # the Rhine crossing — lands right
+                                                                        # as seg1's own reveal completes
+t=66.0  pos=0.1190,0.0131,0.1640   dist=0.065   yaw=-3.09  pitch=0.48  # rainbow lunge
+t=77.0  pos=0.9244,0.0131,0.2027   dist=0.08    yaw=-2.60  pitch=0.44  # Kalk approaching
+# yaw barely moves through the Kalk arrival — DIST alone does the reveal (pull back to widen), so the
+# camera stays confidently POINTED AT Kalk/Evoke throughout instead of swinging away and back (was
+# read as "bouncing, no cohesion"). Widening now spans 5s (was 4s) — slower, matches "zooms out fast".
+t=79.0  pos=0.9244,0.0131,0.2027   dist=0.14    yaw=-2.55  pitch=0.48  # widening, still on target
+t=82.0  pos=0.9244,0.0131,0.2027   dist=0.24    yaw=-2.45  pitch=0.54  # settled wide — Kalk held in frame
+# NO outro/logo — the show now ends here, held on the Abenteuerhallen. koeln_seg2's own reel window
+# runs to t=86 (hold 12 + morph 2, started at 72), so hold this exact pose all the way to the end —
+# no further motion, no zoom, just landed and staying landed.
+t=86.0  pos=0.9244,0.0131,0.2027   dist=0.24    yaw=-2.45  pitch=0.54  # held — this is the last frame
+
+# the two rainbow border-crossings are deliberately UNEQUAL now — grens' is a short punchy signpost
+# (first one, sets up the trick), koeln's is bigger (flash/beat both higher, matches its own reel-line
+# flash:0.6 bump) so the second one reads as an escalation, not a rerun of the same beat.
+[sync]
+t=0    flash=0.3   bg_dim=0.5   beat=0.9
+t=20   flash=0.4   bg_dim=0.4   beat=1.0
+t=28   flash=0.6   bg_dim=0.3   beat=1.2   # grens rainbow — was "meh", punched up (still a signpost,
+                                            # just no longer weak); lands right on the LUNGE keyframe
+t=63   flash=0.5   bg_dim=0.35  beat=1.1
+t=66   flash=0.85  bg_dim=0.2   beat=1.8   # koeln rainbow — the escalation
+t=82   flash=0.4   bg_dim=0.4   beat=0.9   # Kalk arrival, settled
+t=86   flash=0.3   bg_dim=0.45  beat=0.7   # held on Evoke/Abenteuerhallen — the last frame
+
+[caption]
+screentext:Amsterdam - Enschede - Köln, in een adem  in 2  out 8  at 0.5,0.94  size 16  center  fade 1.0
+screentext:AHN5/GeoTiles NL - Land NRW DE, open data  in 30  out 42  at 0.5,0.94  size 14  center  fade 1.0

@@ -1,0 +1,78 @@
+# martin — GRENS: a real cross-border flyover. Enschede (NL) -> the Dutch/German border -> ~20 km
+# into North Rhine-Westphalia (Gronau and beyond). One continuous corridor, TWO national open-data
+# stacks stitched into a single UTM32 frame (pipeline/city_splat.py's load_mixed_route: NL legs
+# fetched in RD New/AHN, DE legs in UTM32/NRW, reprojected via pyproj before concatenating — the
+# renderer never sees it was multi-provider). Data (all open, credited on screen):
+#   NL height   AHN5 lidar — CC0 (Rijkswaterstaat)
+#   NL colour   GeoTiles colorized subtiles (TU Delft) — CC-BY 4.0, from Beeldmateriaal.nl
+#   DE height   NRW 3dm laserscan (~9.5 pts/m^2, true point structure) — dl-zero (opengeodata.nrw.de)
+#   DE colour   NRW DOP orthophoto (10 cm, sampled per-point via WMS) — dl-zero (opengeodata.nrw.de)
+# Rebuild:  pipeline/city_splat.py grens --segments 3 --emit-camera --count 4000000 --tile-cap 4000000
+#           (128.4M points across both legs -> 3 segments, ~5.2M splats each; a border-adjacent NL
+#           subtile and the NRW leg's tile-grid coords both needed a coordinate-system fix in the
+#           pipeline before this run landed real data on the DE side — see git log for the details.)
+[settings]
+kind = demo
+ply = assets/cities/grens_seg0_tight.ply
+budget = 8300000
+normalize = 0
+pair = match
+morph_stagger = 0.5
+score = productions/cities/score.txt
+flash = 0.25
+bg_dim = 0.5
+cam_spline = 1
+cam_pump = 0.03
+post = chroma
+
+# the whole corridor as ONE flight, sequenced spatially (not to music anchors — this is a real
+# route, not a themed multi-city tour; retiming to @@anchors desyncs the camera from where each
+# segment's cloud actually sits, see git history). `@20,10,0` stretches to a full 90s (0/30/60 starts)
+# so the camera visibly covers the WHOLE route within the track, not just most of it.
+# the koeln trick, ported: the middle segment — the actual border crossing — recolors through a
+# raster:position rainbow scatter mid-morph (rings backdrop to match), same as koeln's Rhine-crossing
+# segment. NL true-color -> rainbow AT the border -> DE true-color arriving in NRW.
+[reel]
+splat:grens_seg0_tight.ply  @20,10,0   ~morph  beat:0.7  backdrop:stars
+splat:grens_seg1_tight.ply  @20,10,0   ~morph  beat:1.0  raster:position  backdrop:rings
+splat:grens_seg2_tight.ply  @20,10,0   ~morph  beat:0.7  backdrop:stars
+
+# Enschede city-name label, ~outline (not ~pen-write) per request — placed close to the camera's
+# own t=0 orbit TARGET (not just "somewhere near the route start": at this tight dist=0.02 orbit
+# radius, an offset much larger than dist falls outside the view cone entirely — confirmed empirically
+# with an isolated calibration rig, same discipline as koeln's). Y=-90 (koeln's deFEEST value, similar
+# yaw) turned out edge-on/invisible here instead; Y=0 rendered but MIRRORED; Y=180 reads "Enschede"
+# correctly left-to-right — calibrated against THIS show's actual camera pose, not extrapolated.
+[stage]
+text:Enschede  @-0.93,-0.02,-0.34  *0.02  rot 0,180,0  ~outline  tint:brand  in 0.5  out 10
+
+# PACING FIX v2: not simplified — FASTER and MORE. Tighter dist throughout (closer = faster-reading
+# ground rush, not the wide pull-backs from v1) plus energy the whole way, not just at the two morph
+# events. Full route covered across the 90s (cam_spline glide keeps it one continuous flowing pass).
+[camera]
+t=0.0    pos=-0.9884,0.0027,-0.3680  dist=0.016  yaw=-3.01  pitch=0.32
+t=6.0    pos=-0.8500,0.0027,-0.3178  dist=0.011  yaw=-3.06  pitch=0.40
+t=12.0   pos=-0.7254,0.0027,-0.2701  dist=0.015  yaw=-2.92  pitch=0.28
+t=18.0   pos=-0.5924,0.0027,-0.2207  dist=0.010  yaw=-2.80  pitch=0.38
+t=25.0   pos=-0.4388,0.0027,-0.1634  dist=0.022  yaw=-2.60  pitch=0.30  # the border crossing — bank wide for it
+t=32.0   pos=-0.2789,0.0027,-0.1039  dist=0.012  yaw=-2.85  pitch=0.36
+t=40.0   pos=-0.1105,0.0027,-0.0412  dist=0.016  yaw=-2.72  pitch=0.26
+t=48.0   pos=0.0593,0.0027,0.0221  dist=0.010  yaw=-2.78  pitch=0.40
+t=55.0   pos=0.2194,0.0027,0.0817  dist=0.020  yaw=-2.68  pitch=0.30  # 2nd morph, deep into NRW
+t=63.0   pos=0.3993,0.0027,0.1488  dist=0.011  yaw=-2.76  pitch=0.38
+t=75.0   pos=0.6583,0.0027,0.2451  dist=0.015  yaw=-2.71  pitch=0.28
+t=83.0   pos=0.8184,0.0027,0.3049  dist=0.010  yaw=-2.74  pitch=0.36
+t=90.0   pos=0.9884,0.0027,0.3680  dist=0.016  yaw=-2.72  pitch=0.30
+
+[sync]
+t=@@intro      flash=0.3   bg_dim=0.55  beat=0.8   fov=1.0
+t=@@drop       flash=0.45  bg_dim=0.4   beat=1.1   fov=0.9
+t=@@breakdown  flash=0.2   bg_dim=0.55  beat=0.7            # the border hush before the climax morph
+t=@@climax     flash=0.7   bg_dim=0.25  beat=1.7   fov=0.9  # NL/DE data recolors into each other
+t=@@outro      flash=0.2   bg_dim=0.55  beat=0.7   fov=1.0
+
+# [caption] — the four-way data credit, split NL/DE and timed to when the camera is actually over
+# each country's data (NL early over Enschede, DE later once well into the NRW segment).
+[caption]
+screentext:AHN5 hoogte (CC0) - GeoTiles/TU Delft kleur (CC-BY 4.0)  in 3  out 16  at 0.5,0.94  size 14  center  fade 1.0
+screentext:Geodaten (c) Land NRW - 3dm/DOP, open data  in 65  out 80  at 0.5,0.94  size 14  center  fade 1.0

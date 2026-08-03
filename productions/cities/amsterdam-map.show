@@ -4,7 +4,7 @@
 # as black cuts through the fabric (water returns no lidar). Camera: start near-top-down with the
 # whole map turning slowly beneath you, sink through the drop, skim the centre at the climax, rise
 # back out to the full map for the outro. Data: AHN CC0 · GeoTiles CC-BY (TU Delft).
-#   pipeline/nl_city_splat.py amsterdam-map --count 1800000
+#   pipeline/city_splat.py amsterdam-map --count 1800000
 
 [settings]
 kind = demo

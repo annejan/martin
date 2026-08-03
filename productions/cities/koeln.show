@@ -3,7 +3,7 @@
 # German open data (NRW bDOM50: RGB from the 2024/25 aerial imagery, license dl-zero = CC0 class,
 # no attribution required — courtesy: "Geodaten © Land NRW, opengeodata.nrw.de"). Unlike the AHN
 # lidar, the bDOM is a colored SURFACE model, so the Rhine shows as colored water, not a black void.
-#   pipeline/nl_city_splat.py koeln --segments 3 --count 6000000 --seg-overlap 0.25 \
+#   pipeline/city_splat.py koeln --segments 3 --count 6000000 --seg-overlap 0.25 \
 #       --rainbow-seg 1 --tile-cap 6000000    (26M corridor points → 3 segments at ~8M, 43 cm splats)
 [settings]
 kind = demo

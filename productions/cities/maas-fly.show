@@ -1,7 +1,7 @@
 # martin — MAAS FLYOVER (experiment): one elongated open-data strip — the Rotterdam Maas axis,
 # Euromast → Erasmusbrug → Kop van Zuid, 3.5×1.25 km over four merged AHN5 subtiles — and a camera
 # that FLIES the length of it. Proof-of-concept for "a splat bigger than one city block": same
-# pipeline (pipeline/nl_city_splat.py maas --count 1800000), just a long bbox. Data: AHN CC0 +
+# pipeline (pipeline/city_splat.py maas --count 1800000), just a long bbox. Data: AHN CC0 +
 # GeoTiles CC-BY (TU Delft). The strip normalizes long+thin: east-west spans roughly x −1.1..+1.1,
 # so the camera track slides its target down the x axis while staying low — a night flight up river.
 

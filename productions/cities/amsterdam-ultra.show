@@ -4,7 +4,7 @@
 # follow the canal-ring ARC (Prinsengracht → Westerkerk → the IJ curve → CS → Nieuwmarkt) with the
 # yaw turning continuously along the bow → arrive over the DAM, half-orbit, pull up. Water = black
 # veins. Data: AHN CC0 · GeoTiles CC-BY (TU Delft).
-#   pipeline/nl_city_splat.py amsterdam-ultra --count 16000000
+#   pipeline/city_splat.py amsterdam-ultra --count 16000000
 # Records resample via MARTIN_MORPH_COUNT (6M proven); stills/live take the full 16M.
 
 [settings]

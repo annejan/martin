@@ -37,6 +37,7 @@ Two ways to stage content (both in `src/scene/`):
 | `SHADER-BLUEPRINT.md` | The per-particle / WGSL transition shader work. |
 | `productions/README.md` | The engine-vs-production split; one folder per demo. |
 | `pipeline/AERIAL-CITIES.md` | The aerial-city capture pipeline (gitignored, ©Google constraints). |
+| `pipeline/CITY-SPLAT.md` | The **shippable** open-data city/route pipeline (NL AHN/GeoTiles + German NRW, cross-border routes) — reference for `pipeline/city_splat.py`. |
 | `PERF.md` | The **measured** perf playbook: the two fps regimes (fill/overdraw vs vertex/count), the levers ranked, the `QUALITY` tiers, how to benchmark. |
 | `OPTIMIZATION-BACKLOG.md` | Verified-but-not-done optimizations + already-shipped list (working doc). |
 | `CHANGELOG.md` | Update this for anything user-facing. |
@@ -65,7 +66,7 @@ src/
 assets/      shipped art, fonts, shaders (bg.wgsl/post.wgsl), score.txt, .show examples
 productions/ one folder per demo (intro, camping, austin/nyc/cities, …) — theme-specific content
 parts/       reusable, tested building blocks (sequences/signatures)
-pipeline/    CUDA-free splat-creation + tooling scripts (python/bash), incl. show_layout.py, blender_bridge.py, blender_cities_bridge.py (Blender→[camera] waypoint authoring)
+pipeline/    CUDA-free splat-creation + tooling scripts (python/bash), incl. show_layout.py, blender_bridge.py, blender_cities_bridge.py (Blender→[camera] waypoint authoring), city_splat.py (open-data NL+DE city/route splats, see pipeline/CITY-SPLAT.md)
 build.rs     synthesizes the demo's gitignored .ply at build time; bundles assets for --features bundle
 ```
 
