@@ -1,0 +1,43 @@
+# martin — WAGENINGEN: a short ~30s loop, NURDspace (hackerspace, Vergersweg 22-24) <-> the old
+# town Markt. Open data: AHN CC0 heights, GeoTiles/TU Delft CC-BY colours (see pipeline/CITY-SPLAT.md).
+#   pipeline/city_splat.py wageningen --count 3000000 --emit-camera --duration 30 --dist-m 220 --alt-m 30
+
+[settings]
+kind = demo
+ply = assets/cities/wageningen_tight.ply
+budget = 3000000
+score = productions/cities/score.txt
+flash = 0.25
+bg_dim = 0.45
+cam_spline = 1
+post = chroma
+
+[reel]
+splat:wageningen_tight.ply  @30,0  backdrop:stars
+
+# NURDSPACE label moved to the CLOSE final approach (was during the wide t=0-10 establishing shot,
+# dist=0.34 — way too far out to actually read the building or the label against it).
+[stage]
+# y=0.10 floated well above the actual rooftop height (the camera target's own y at this point is
+# 0.0459) — lowered close to roof height. rot 0,0,0 read MIRRORED backwards at this yaw (-1.14),
+# same bug hit earlier with AMSTERDAM/EVOKE labels — flipped to rot 0,180,0.
+text:NURDSPACE  @0.30,0.065,-0.65  *0.05  rot 0,180,0  ~outline  tint:brand  in 25  out 30
+
+[camera]
+t=0.0   pos=0.3376,0.0459,-0.7345  dist=0.3367  yaw=-1.14  pitch=0.30
+t=15.0  pos=-0.3377,0.0459,0.7345  dist=0.3367  yaw=2.00   pitch=0.30
+# was a straight loop-close back to the wide t=0 pose — barely showed the actual NURDspace building.
+# v2: first attempt pushed to dist=0.035 for the final hold — TOO close, past this lidar density's
+# resolving power (a blurry unresolved splat mess, not a recognizable building). dist~0.12 is the
+# sweet spot that actually reads as distinct buildings; hold there instead of pushing in further.
+t=25.0  pos=0.3376,0.0459,-0.7345  dist=0.14    yaw=-1.14  pitch=0.34  # approaching NURDspace
+t=30.0  pos=0.3376,0.0459,-0.7345  dist=0.11    yaw=-1.14  pitch=0.36  # held on the building, still resolved
+
+[sync]
+t=0   flash=0.3  bg_dim=0.5   beat=0.9
+t=15  flash=0.5  bg_dim=0.35  beat=1.2   # turnaround at the Markt
+t=30  flash=0.3  bg_dim=0.5   beat=0.9
+
+[caption]
+screentext:Wageningen - NURDspace  in 1  out 8  at 0.5,0.94  size 16  center  fade 1.0
+screentext:AHN CC0 - GeoTiles/TU Delft CC-BY 4.0, open data  in 20  out 29  at 0.5,0.94  size 14  center  fade 1.0

@@ -137,6 +137,10 @@ CITIES = {
              "route": [(52.207, 7.023), (52.14, 7.28)]},             # Gronau -> ~20 km into NRW
         ],
     },
+    # WAGENINGEN — a short loop: NURDspace (hackerspace, Vergersweg 22-24) <-> the old town Markt.
+    # Waypoints geocoded via the PDOK Locatieserver (`api.pdok.nl/bzk/locatieserver/search/v3_1/free`).
+    "wageningen": {"route": [(174407.7, 442798.2), (173966.4, 441838.3), (174407.7, 442798.2)],
+                   "width": 400},
 }
 
 
