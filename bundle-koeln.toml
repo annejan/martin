@@ -1,0 +1,27 @@
+# bundle-koeln.toml — the KÖLN / Evoke greeting as ONE self-contained executable.
+#   MARTIN_BUNDLE=bundle-koeln.toml cargo build --release --features bundle
+# Built for handing out on a USB stick: no assets, no env, no install — double-click and it plays.
+#
+# WINDOWS .exe, cross-compiled from Linux (verified 2026-08-21, 258 MB, 6m40s):
+#   rustup target add x86_64-pc-windows-msvc
+#   # openSUSE ships the LLVM tools version-suffixed; cargo-xwin wants them bare on PATH:
+#   mkdir -p /tmp/llvmshim && for t in lib rc ar dlltool ranlib strip objcopy; do \
+#       ln -sf /usr/bin/llvm-$t-22 /tmp/llvmshim/llvm-$t; done
+#   PATH=/tmp/llvmshim:$PATH MARTIN_BUNDLE=bundle-koeln.toml \
+#     RUSTFLAGS="-C target-feature=+crt-static" \
+#     cargo xwin build --release --features bundle --target x86_64-pc-windows-msvc
+# crt-static drops the VCRUNTIME140.dll import — the .exe then needs only Windows system DLLs, so
+# no VC++ redistributable on the target machine. Verify under wine (its fake DX12 adapter panics in
+# wgpu-hal, so force the real backend):
+#   WGPU_BACKEND=vulkan MARTIN_BENCH=25 wine target/x86_64-pc-windows-msvc/release/martin.exe
+#
+# The three city segments are SUBSAMPLED copies (2M points each, ~112 MB) of the 43 cm max-density
+# captures in assets/cities/ (7.5-8.2M each, 1.3 GB total). Reasons: a ~1 GB executable is a bad
+# handout, and the machine that runs this is unknown hardware — 2M/segment keeps the flight readable
+# on a laptop iGPU. Regenerate with pipeline/ply_subsample.py (see assets/cities/bundle/).
+asset_dir   = assets/cities/bundle
+show        = productions/cities/koeln.show
+score       = productions/cities/score.txt
+music       = assets/cities/bundle/koeln-music.wav   # pre-rendered: the live synth takes ~19s
+logo        = defeest-logo.png
+morph_count = 900000        # overrides the show's budget = 8300000 (max-density authoring value)
