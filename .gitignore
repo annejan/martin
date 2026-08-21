@@ -111,3 +111,7 @@ productions/*/captures/*.glb
 *.mid
 /assets/beach/
 /assets/chopin/
+
+# Generated bundle inputs: subsampled/sh0-stripped copies of the capture .ply files plus the
+# pre-rendered track, built by pipeline/ply_subsample.py + --synth-wav for `--features bundle`.
+/assets/examples/bundle/

@@ -1,0 +1,26 @@
+# bundle-truck-train.toml — the ORIGINAL martin morph demo as a self-contained executable:
+# deFEEST title cards, then the dog assembles on the drop, morphs into a TRAIN, and the train morphs
+# into a TRUCK through the climax, before the logo coalesces for the outro.
+# (assets/examples/director.show — the show that the @@anchor timing was designed against.)
+#
+#   MARTIN_BUNDLE=bundle-truck-train.toml cargo build --release --features bundle
+# Windows .exe: same cross-compile recipe as bundle-koeln.toml — see that file's header.
+#
+# ASSET NOTE: train.ply + truck.ply are real photogrammetry captures (sh3, 1.07M/2.06M points, 750 MB
+# together). pipeline/ply_subsample.py thins them to 800k each AND strips the f_rest_* spherical-
+# harmonic columns (`--sh0`): 45 of every 62 floats per point, which the default sh0 build ignores
+# anyway. 750 MB -> 108 MB, so the .exe lands around 150 MB instead of ~800 MB. Regenerate with:
+#   pipeline/ply_subsample.py assets/train.ply assets/examples/bundle/train.ply 800000 --sh0
+#   pipeline/ply_subsample.py assets/truck.ply assets/examples/bundle/truck.ply 800000 --sh0
+#   cp assets/doggo.ply assets/defeest-logo.png assets/examples/bundle/
+#   MARTIN_SCORE=assets/score.txt cargo run --release -- --synth-wav assets/examples/bundle/music.wav
+# The wav MUST be rendered from assets/score.txt (162s), not the default score (productions/intro,
+# 89s) — the show's @@anchors follow the former, and a mismatched track desyncs every cut.
+asset_dir   = assets/examples/bundle
+show        = assets/examples/director.show
+score       = assets/score.txt
+music       = assets/examples/bundle/music.wav
+logo        = defeest-logo.png
+morph_count = 400000        # the show's budget = 500000 is an authoring value; 400k x 5 shots plus
+                            # the morph double-buffer is already 2M resident, and this ships to
+                            # unknown hardware. Overridable — src/bundle.rs only seeds unset vars.
