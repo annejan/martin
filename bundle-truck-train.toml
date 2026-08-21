@@ -1,7 +1,6 @@
-# bundle-truck-train.toml — the ORIGINAL martin morph demo as a self-contained executable:
-# deFEEST title cards, then the dog assembles on the drop, morphs into a TRAIN, and the train morphs
-# into a TRUCK through the climax, before the logo coalesces for the outro.
-# (assets/examples/director.show — the show that the @@anchor timing was designed against.)
+# bundle-truck-train.toml — the TRAIN <-> TRUCK morph as a self-contained executable. ~25 seconds:
+# the train scene fades up, morphs into the truck scene, morphs back. A test of the morph itself,
+# not a demo — no titles, no dog, no story. (productions/truck-train/truck-train.show)
 #
 #   MARTIN_BUNDLE=bundle-truck-train.toml cargo build --release --features bundle
 # Windows .exe: same cross-compile recipe as bundle-koeln.toml — see that file's header.
@@ -14,13 +13,15 @@
 #   pipeline/ply_subsample.py assets/truck.ply assets/examples/bundle/truck.ply 800000 --sh0
 #   cp assets/doggo.ply assets/defeest-logo.png assets/examples/bundle/
 #   MARTIN_SCORE=assets/score.txt cargo run --release -- --synth-wav assets/examples/bundle/music.wav
-# The wav MUST be rendered from assets/score.txt (162s), not the default score (productions/intro,
-# 89s) — the show's @@anchors follow the former, and a mismatched track desyncs every cut.
+#   ffmpeg -i assets/examples/bundle/music.wav -t 26 trimmed.wav   (the show is 25s; the full score
+#   is 162s and 28 MB of it would ship unheard)
+# The wav must be rendered from assets/score.txt, not the default score (productions/intro) — this
+# show has no @@anchors left to desync, but the two tracks are different music.
 asset_dir   = assets/examples/bundle
-show        = assets/examples/director.show
+show        = productions/truck-train/truck-train.show
 score       = assets/score.txt
 music       = assets/examples/bundle/music.wav
 logo        = defeest-logo.png
-morph_count = 400000        # the show's budget = 500000 is an authoring value; 400k x 5 shots plus
-                            # the morph double-buffer is already 2M resident, and this ships to
-                            # unknown hardware. Overridable — src/bundle.rs only seeds unset vars.
+morph_count = 500000        # 3 shots plus the morph double-buffer = 2M resident. Measured 49 fps
+                            # in a 720p window on the dev iGPU. Overridable — src/bundle.rs only
+                            # seeds env vars that are not already set.

@@ -1,0 +1,43 @@
+# martin — TRAIN <-> TRUCK: the morph, and nothing else. A ~24s test, not a demo.
+#
+#   cargo run --release -- productions/truck-train/truck-train.show
+#
+# The one thing worth keeping from building this: these two clouds are full 360-degree
+# photogrammetry SCENES, not objects. After normalization the vehicle is a small part of a much
+# larger captured environment, so orbiting at what feels like "object distance" (dist 1-8, which is
+# what assets/examples/director.show falls back to for want of a [camera] block) frames mostly empty
+# scene and reads as abstract debris — verified in contact stills at dist 1.5 / 2.5 / 3.5 / 5 / 7,
+# every one a smear. The distances below come from assets/truck-path.json, the path marked by flying
+# the scene and pressing M: dist 0.08-0.31, target pushed off the centroid. That is where the
+# vehicle actually is, and both scenes share a frame so one set of poses suits either.
+[settings]
+kind          = demo
+ply           = assets/train.ply
+score         = assets/score.txt
+budget        = 400000
+pair          = match    # nearest same-colour pairing. Rank (the default) flows nicely between
+                         # SIMILAR shapes, but these are two different captured scenes — different
+                         # trees, different ground, different sky — so rank pairs distant splats
+                         # that cross at the centroid and the morph pinches through a ball.
+                         # match sends every splat to a nearby splat of similar colour instead:
+                         # ground->ground, foliage->foliage, a straight ghostly cross-dissolve.
+bg            = aurora
+bg_dim        = 0.5
+cam_spline    = 1
+cam_pump      = 0.15
+morph_stagger = 0.80     # per-splat staggered timing — the cloud dissolves and reforms rather than
+                         # every splat sliding along the same streaky line. 0.65 is a strong
+                         # dissolve; with match pairing the moves are short, so it reads as the
+                         # scene fading through itself rather than as travel. 0.8 spreads each
+                         # splat's own window nearly across the whole morph — maximum cloudiness.
+
+[reel]
+splat:train.ply  @6,2,0  ~fade                backdrop:aurora
+splat:truck.ply  @4,4.5,0  ~morph  ease:smooth  backdrop:aurora
+splat:train.ply  @4,4.5,0  ~morph  ease:smooth  backdrop:aurora
+
+[camera]
+t=0.0   pos=-0.052,-0.117,-0.240  dist=0.30  yaw=5.10   pitch=0.02
+t=8.0   pos=0.021,-0.040,-0.037   dist=0.22  yaw=6.10   pitch=0.10
+t=16.0  pos=0.047,-0.094,-0.170   dist=0.14  yaw=7.16   pitch=0.20
+t=24.0  pos=-0.022,-0.021,-0.073  dist=0.26  yaw=8.40   pitch=0.06
