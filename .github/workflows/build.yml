@@ -41,7 +41,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@5b842231ba77f5c045dba54ac5560fed2db780e2 # nightly
         with:
           components: clippy
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
       # Default features (clippy the normal build, not the bundle path). build.rs synthesizes the
       # default show's gitignored .ply on the fly, so a clean checkout builds with no extra step.
       # -D warnings so a new lint can't slip in — the few intentional ones are #[allow]ed.
@@ -68,7 +68,7 @@ jobs:
             libudev-dev libasound2-dev libwayland-dev libxkbcommon-dev \
             mesa-vulkan-drivers vulkan-tools python3-pil
       - uses: dtolnay/rust-toolchain@5b842231ba77f5c045dba54ac5560fed2db780e2 # nightly
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
       - name: Build (release)
         run: cargo build --release
       - name: Smoke-render the intro on lavapipe (tiny res/count)
@@ -147,7 +147,7 @@ jobs:
         uses: dtolnay/rust-toolchain@5b842231ba77f5c045dba54ac5560fed2db780e2 # nightly
 
       - name: Cache cargo
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
 
       - name: Build (release)
         run: cargo build --release
@@ -195,7 +195,7 @@ jobs:
         uses: dtolnay/rust-toolchain@5b842231ba77f5c045dba54ac5560fed2db780e2 # nightly
 
       - name: Cache cargo
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
 
       # The show's procedural splats (galaxy/supershape/knot/helix/torus) aren't in the repo (.ply is
       # gitignored) and are NOT baked into the bundle — the engine regenerates them at startup
