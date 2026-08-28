@@ -33,6 +33,7 @@ r-fast = "run --profile fast"
 #
 #   RUSTFLAGS="-Znext-solver=globally" cargo build --release
 #
+# Re-tested 2026-08-29 (same nightly, refreshed dep tree): still ~16.8 GB peak — opt-out stays.
 # REMOVE THIS once bevy_render compiles in reasonable memory — the old solver is slated for deletion.
 [build]
 rustflags = ["-Znext-solver=coherence"]

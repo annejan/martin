@@ -39,7 +39,8 @@ rustflags = ["-Znext-solver=coherence"]
 
 **Why:** under the next solver, `bevy_render` 0.19.1 needs ~13.3 GB RSS in a single `rustc` and gets
 OOM-killed on a 16 GB machine; with the old solver the same crate peaks at ~1.9 GB. That ~7×
-regression breaks the dev box *and* the 16 GB GitHub runners, so it is not something we can just eat.
+regression eats every spare GB on the dev box *and* OOM-kills the 16 GB GitHub runners, so it is not
+something we can just swallow.
 
 **It is only that one dependency.** martin's own crate builds clean under the new solver (verified by
 a full `--release` codegen of the `martin` bin with deps on the old solver), and the bump needed no
@@ -52,6 +53,11 @@ RUSTFLAGS="-Znext-solver=globally" cargo build --release
 # just martin's own code on the next solver, deps on the old one (this is the one that should pass)
 cargo rustc --release --bin martin -- -Znext-solver=globally
 ```
+
+**Last re-tested 2026-08-29** (nightly-2026-08-28 `e457a7b0d`, dep tree refreshed): still regressed.
+`RUSTFLAGS="-Znext-solver=globally" cargo build --release -p bevy_render` *completes* on the 27 GB dev
+box, but peaks at **~16.8 GB** RSS in a single `rustc` (2m14s) — more than the first measurement, and
+still over what a 16 GB runner has. Opt-out stays.
 
 Re-test on each toolchain bump and **drop the opt-out as soon as `bevy_render` builds in sane
 memory** — the old solver is slated for removal, so this is borrowed time, not a resting place.
