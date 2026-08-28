@@ -13,7 +13,7 @@ production). Patches welcome. This file is the short version; see **README.md** 
 
 A **nightly** toolchain is required — `bevy_gaussian_splatting`'s default features use
 `nightly_generic_alias` (GATs). `rust-toolchain.toml` pins a **dated** nightly (currently
-`nightly-2026-04-26`) — deliberately **not** rolling `nightly`, so a nightly regression/ICE can't break
+`nightly-2026-08-28`) — deliberately **not** rolling `nightly`, so a nightly regression/ICE can't break
 the build before a compo; bump the date deliberately and re-verify. It also lists the `rustfmt` +
 `clippy` components the dated nightly needs (the CI fmt/clippy gates inherit this file).
 
@@ -25,6 +25,38 @@ cargo +nightly run --release          # the default demo
 cargo +nightly test --release         # the unit tests (parsers, timeline, score, effects — no GPU)
 ./record.sh out.mp4                    # render the whole timeline to an mp4 (headless)
 ```
+
+## The trait solver (temporarily pinned to the old one)
+
+`nightly-2026-08-28` flipped rustc's [next-generation trait solver][ns] on by default
+(`-Znext-solver=globally`, [rust-lang/rust#160619][pr], announced 2026-08-21). martin currently opts
+back out in `.cargo/config.toml`:
+
+```toml
+[build]
+rustflags = ["-Znext-solver=coherence"]
+```
+
+**Why:** under the next solver, `bevy_render` 0.19.1 needs ~13.3 GB RSS in a single `rustc` and gets
+OOM-killed on a 16 GB machine; with the old solver the same crate peaks at ~1.9 GB. That ~7×
+regression breaks the dev box *and* the 16 GB GitHub runners, so it is not something we can just eat.
+
+**The regression is in that dependency, not in our code** — the bump needed no source changes here.
+To re-check both halves of that (env `RUSTFLAGS` overrides the config file):
+
+```bash
+# whole tree on the next solver — expect the bevy_render OOM
+RUSTFLAGS="-Znext-solver=globally" cargo build --release
+
+# just martin's own code on the next solver, deps on the old one (this is the one that should pass)
+cargo rustc --release --bin martin -- -Znext-solver=globally
+```
+
+Re-test on each toolchain bump and **drop the opt-out as soon as `bevy_render` builds in sane
+memory** — the old solver is slated for removal, so this is borrowed time, not a resting place.
+
+[ns]: https://blog.rust-lang.org/2026/08/21/enabling-next-solver-on-nightly/
+[pr]: https://github.com/rust-lang/rust/pull/160619
 
 ## Before you push
 

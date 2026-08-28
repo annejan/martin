@@ -12,6 +12,24 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Changed
 
+- **Toolchain bumped to `nightly-2026-08-28`** (was `nightly-2026-07-30`), and the whole dependency
+  tree refreshed — Bevy **0.19.1** (was 0.19.0), and **146 locked crates updated / 12 added / 2 removed**
+  (`wgpu` 29.0.4, `quick-xml` 0.41, `uuid` 1.26, `thiserror` 2.0.20, `zerocopy` 0.8.56, …; the new
+  `arboard`/`wl-clipboard-rs` come in with Bevy 0.19.1). Every direct dependency was already at its
+  latest major, so `Cargo.toml`'s version requirements are untouched; the `bevy_gaussian_splatting`
+  fork rev is unchanged (`martin-tightcut` head still matches the pinned commit). No source changes.
+- **Pinned the OLD trait solver, deliberately.** `nightly-2026-08-28` is the first pin that carries
+  rustc's [next-generation trait solver](https://blog.rust-lang.org/2026/08/21/enabling-next-solver-on-nightly/)
+  on by default (`-Znext-solver=globally`). Under it `bevy_render` 0.19.1 needs **~13.3 GB RSS in one
+  `rustc` and gets OOM-killed**, against **~1.9 GB** with the old solver — a ~7× regression that breaks
+  both the dev box and the 16 GB CI runners. `.cargo/config.toml` now sets
+  `rustflags = ["-Znext-solver=coherence"]` (the documented opt-out) until that is fixed upstream.
+  The regression is confined to that one dependency — the bump itself needed no source changes here.
+  See `CONTRIBUTING.md` § The trait solver for how to re-test.
+- **Dropped two `cargo-audit` exceptions.** The dep refresh pulled `quick-xml` 0.41.0 (via
+  `wayland-scanner`), which patches **RUSTSEC-2026-0194** and **RUSTSEC-2026-0195**, so both ignores are
+  gone from `.cargo/audit.toml` — the audit gate now passes on its own merits rather than by exemption.
+  Only the `ttf-parser` unmaintained-crate warning (RUSTSEC-2026-0192) remains ignored, as before.
 - **Batch synth ~30% faster (~3.6s → ~2.5s on the builtin score).** The parallel render was pinned by
   the single fattest lane (`L_WALL`, 12 supersaw/choir voices per bar) while other cores idled; it's now
   chunked and rendered in parallel, then summed — an exact reconstruction (verified byte-identical WAV

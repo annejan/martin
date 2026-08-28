@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: MIT
 #
 # Accepted RustSec advisories — blocked by transitive deps or no fix available.
-# These are build-time (wayland-scanner proc-macro) or warnings (ttf-parser
-# unmaintained, latest version used), NOT runtime-exploitable in martin.
+# Warnings only (ttf-parser unmaintained, latest version used), NOT runtime-exploitable in martin.
+#
+# The two quick-xml advisories (RUSTSEC-2026-0194/0195) that used to sit here are GONE: both are
+# patched in quick-xml >= 0.41.0, and wayland-scanner now pulls that. Nothing to ignore.
 [advisories]
 ignore = [
-    "RUSTSEC-2026-0194",  # quick-xml: quadratic attrs (wayland-scanner, build-time only)
-    "RUSTSEC-2026-0195",  # quick-xml: unbounded ns alloc (wayland-scanner, build-time only)
     "RUSTSEC-2026-0192",  # ttf-parser: unmaintained (no newer version exists)
 ]
