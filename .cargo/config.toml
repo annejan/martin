@@ -23,8 +23,9 @@ r-fast = "run --profile fast"
 # nightly-2026-08-28 turns `-Znext-solver=globally` ON by default (rust-lang/rust#160619, announced
 # 2026-08-21). Under it, `bevy_render` 0.19.1 blows up: a single rustc peaks at ~13.3 GB RSS and is
 # OOM-killed on a 16 GB box, vs ~1.9 GB with the old solver — a ~7× regression that breaks both the
-# dev box and the 16 GB GitHub runners. The regression is in that dependency, not in martin's own
-# code — no source change here was needed (see CONTRIBUTING.md § The trait solver).
+# dev box and the 16 GB GitHub runners. The regression is confined to that one dependency: martin's
+# own crate builds clean under `-Znext-solver=globally` with deps on the old solver, and the bump
+# needed no source changes here (see CONTRIBUTING.md § The trait solver).
 #
 # `=coherence` is the documented opt-out — it keeps the new solver for coherence checking (where it
 # has been the default since 1.84) and uses the old one everywhere else, i.e. exactly the pre-bump

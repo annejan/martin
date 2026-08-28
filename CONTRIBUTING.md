@@ -41,8 +41,9 @@ rustflags = ["-Znext-solver=coherence"]
 OOM-killed on a 16 GB machine; with the old solver the same crate peaks at ~1.9 GB. That ~7×
 regression breaks the dev box *and* the 16 GB GitHub runners, so it is not something we can just eat.
 
-**The regression is in that dependency, not in our code** — the bump needed no source changes here.
-To re-check both halves of that (env `RUSTFLAGS` overrides the config file):
+**It is only that one dependency.** martin's own crate builds clean under the new solver (verified by
+a full `--release` codegen of the `martin` bin with deps on the old solver), and the bump needed no
+source changes here. To re-check both halves of that (env `RUSTFLAGS` overrides the config file):
 
 ```bash
 # whole tree on the next solver — expect the bevy_render OOM

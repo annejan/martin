@@ -24,8 +24,9 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
   `rustc` and gets OOM-killed**, against **~1.9 GB** with the old solver — a ~7× regression that breaks
   both the dev box and the 16 GB CI runners. `.cargo/config.toml` now sets
   `rustflags = ["-Znext-solver=coherence"]` (the documented opt-out) until that is fixed upstream.
-  The regression is confined to that one dependency — the bump itself needed no source changes here.
-  See `CONTRIBUTING.md` § The trait solver for how to re-test.
+  Scope checked and narrow: **martin's own crate builds clean under the new solver** (a full
+  `--release` codegen of the `martin` bin with `-Znext-solver=globally`, deps on the old solver), and
+  the bump needed no source changes here. See `CONTRIBUTING.md` § The trait solver for how to re-test.
 - **Dropped two `cargo-audit` exceptions.** The dep refresh pulled `quick-xml` 0.41.0 (via
   `wayland-scanner`), which patches **RUSTSEC-2026-0194** and **RUSTSEC-2026-0195**, so both ignores are
   gone from `.cargo/audit.toml` — the audit gate now passes on its own merits rather than by exemption.
