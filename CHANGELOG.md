@@ -12,6 +12,27 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Changed
 
+- **`bevy_gaussian_splatting` 8.0.0 → 8.0.1** — the fork branch rebased onto upstream's 8.0.1 release
+  (`[patch.crates-io]` rev bumped; the version requirement in `Cargo.toml` follows). Two upstream
+  commits come in: the 8.0.1 version bump (#236) and the `lazy_type_alias` → `checked_type_aliases`
+  nightly feature-gate rename (#237) — the latter is **the same fix we were carrying as fork edit §11**,
+  so §11 is now a docs-only entry rather than a code divergence, and the fork is one edit closer to
+  upstream. Also folded in: upstream's `chunks_exact` → `as_chunks` modernisation in `query/raycast.rs`
+  and its test/tool code. The fork's whole §1–11 edit set (explode/ball-pulse, `bulge`, per-particle
+  phase, deform, swarm, shockwave, `morph_stagger`, the 2.4σ quad, additive blend) replays onto 8.0.1
+  with **zero conflicts** — verified by reproducing the rebase locally and confirming the resulting tree
+  matches the pinned commit byte-for-byte. No martin source changes; no shader behaviour change.
+- **Everything else was already current.** `cargo update` moves nothing: Bevy **0.19.1**, `wgpu`
+  29.0.4, `resvg` 0.48.1, `image` 0.25.10, `clap` 4.6.6, `fundsp` 0.23.0, `rayon` 1.12.0,
+  `serde_json` 1.0.151 — every direct dependency is at its latest published version, and the only
+  crate in the tree behind a newer release is `generic-array` 0.14.7 (held there transitively; 1.x is
+  a breaking rewrite). The SHA-pinned GitHub Actions are Dependabot-managed (last grouped bump
+  2026-08-28, #35), and `.cargo/audit.toml` still needs only the one `ttf-parser` unmaintained-crate
+  ignore.
+- **Toolchain left at `nightly-2026-08-28`** deliberately. Newer nightlies exist, but this pin is two
+  days old, was verified against the whole tree, and carries the measured `-Znext-solver=coherence`
+  opt-out; re-rolling it for two days of churn buys nothing and risks the compo build. Bump it when
+  there is a reason to (see `CONTRIBUTING.md` § The trait solver).
 - **Toolchain bumped to `nightly-2026-08-28`** (was `nightly-2026-07-30`), and the whole dependency
   tree refreshed — Bevy **0.19.1** (was 0.19.0), and **146 locked crates updated / 12 added / 2 removed**
   (`wgpu` 29.0.4, `quick-xml` 0.41, `uuid` 1.26, `thiserror` 2.0.20, `zerocopy` 0.8.56, …; the new

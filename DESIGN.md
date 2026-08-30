@@ -97,7 +97,7 @@ this doc warns against.
 
 ### 1.1 The engine in 30 seconds
 
-martin is a standalone Bevy 0.19 + `bevy_gaussian_splatting` 8.0.0 (our fork, a git
+martin is a standalone Bevy 0.19 + `bevy_gaussian_splatting` 8.0.1 (our fork, a git
 dep). CUDA-free: wgpu → Vulkan / Mesa RADV on AMD. It flies an orbit camera around
 3D Gaussian splats while they morph into one another.
 
@@ -721,12 +721,13 @@ slot itself is a fresh open item, added to §9.2 #16).
 ## 5. The fork's shader edits — per-particle phase + friends (LANDED; this is the original blueprint)
 
 > **STATUS (2026-06): this landed and then some.** What began as a single co-designed edit is now the
-> fork's **§1–11** on the `martin-tightcut` branch (upstream **8.0.0**): explode/ball-pulse, the `bulge`
+> fork's **§1–11** on the `martin-tightcut` branch (upstream **8.0.1**): explode/ball-pulse, the `bulge`
 > uniform, the per-particle **transition phase** (this section), persistent **deform**, **swarm**,
 > **shockwave** (transition mode 8), **morph_stagger** (§8), a tighter synthetic-content quad extent
 > (§9), an **additive/emissive blend mode** (§10, `MARTIN_ADDITIVE`), and the
 > `lazy_type_alias` → `checked_type_aliases` nightly-gate rename (§11, keeps the crate building on
-> post-2026-07 nightlies). The sort speedup (§3) went
+> post-2026-07 nightlies) — which has since gone **upstream** too (merged as #237, shipped in 8.0.1),
+> so §11 is now a docs-only entry. The sort speedup (§3) likewise went
 > **upstream** (merged as #229; #231/#232/#233 are further upstream fixes). The authoritative, current list is the fork's
 > **`CHANGES.md`**; this section is kept as the original design sketch. The deeper WGSL/Rust plumbing +
 > upstream-PR shape live in **`SHADER-BLUEPRINT.md`**. Each edit stays gated default-off (default ==

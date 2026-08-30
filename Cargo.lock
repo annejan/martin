@@ -882,8 +882,8 @@ dependencies = [
 
 [[package]]
 name = "bevy_gaussian_splatting"
-version = "8.0.0"
-source = "git+https://github.com/annejan/bevy_gaussian_splatting?rev=f94855a4d4e81938b49aa121da7a4624938e3e8e#f94855a4d4e81938b49aa121da7a4624938e3e8e"
+version = "8.0.1"
+source = "git+https://github.com/annejan/bevy_gaussian_splatting?rev=ffaecd70f5102934beaca58845d3d2299b73394a#ffaecd70f5102934beaca58845d3d2299b73394a"
 dependencies = [
  "base64 0.22.1",
  "bevy",
