@@ -726,7 +726,8 @@ slot itself is a fresh open item, added to §9.2 #16).
 > **shockwave** (transition mode 8), **morph_stagger** (§8), a tighter synthetic-content quad extent
 > (§9), an **additive/emissive blend mode** (§10, `MARTIN_ADDITIVE`), and the
 > `lazy_type_alias` → `checked_type_aliases` nightly-gate rename (§11, keeps the crate building on
-> post-2026-07 nightlies) — which has since gone **upstream** too (merged as #237, shipped in 8.0.1),
+> post-2026-07 nightlies) — which has since gone **upstream** too (merged as #237, which landed *after*
+> the 8.0.1 version bump, so it is on upstream `main` but not in the published 8.0.1 on crates.io),
 > so §11 is now a docs-only entry. The sort speedup (§3) likewise went
 > **upstream** (merged as #229; #231/#232/#233 are further upstream fixes). The authoritative, current list is the fork's
 > **`CHANGES.md`**; this section is kept as the original design sketch. The deeper WGSL/Rust plumbing +
