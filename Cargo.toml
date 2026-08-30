@@ -118,10 +118,9 @@ strip = false
 # `cargo update` — can't silently repoint the engine's renderer to unreviewed commits before a deadline.
 # To pull new shader edits: push the fork branch, then bump this rev deliberately (+ `cargo update -p …`).
 #
-# NOTE (2026-08-30): this rev is the §1–11 edit set REPLAYED onto upstream 8.0.1, which currently lives
-# on the fork's `martin-tightcut-rebased` branch — `martin-tightcut` itself still points at the 8.0.0
-# base. Verified identical: replaying `martin-tightcut` onto upstream/main locally reproduces this
-# commit's tree byte-for-byte. Fast-forward the canonical branch when convenient —
-#   git push --force-with-lease origin ffaecd70…:martin-tightcut
-# — and do NOT delete `martin-tightcut-rebased` before that, or this pinned rev becomes unfetchable.
+# `martin-tightcut` is at this rev (fast-forwarded 2026-08-30); the pre-8.0.1 base is kept on the fork
+# as `martin-tightcut-8.0.0-base`. A local `../bgs-fork` checkout must be at this rev or newer: cargo
+# does NOT error when a `[patch.crates-io]` entry fails the version requirement — it warns "patch was
+# not used" and silently resolves the crate from crates.io instead (real upstream, none of our §1–11
+# edits), and the build then dies on missing CloudSettings fields with the cause scrolled off-screen.
 bevy_gaussian_splatting = { git = "https://github.com/annejan/bevy_gaussian_splatting", rev = "ffaecd70f5102934beaca58845d3d2299b73394a" }
