@@ -23,7 +23,7 @@ each assemble out of a ball cloud, then morph into the next (per-Gaussian, on th
 HDR bloom on black. A show is a **`.show` file** — the config — that you run with `martin <show>`
 (or `--production <name>`); it expands into `MARTIN_*` env vars (the internal IR), which a CLI
 layers run-mode flags on top of (`--record`/`--shot`/`--validate`/…). Precedence: **CLI flag > env
-> `.show` [settings] > default**. Built on Bevy 0.19 + `bevy_gaussian_splatting` 8.0.0 (our fork —
+> `.show` [settings] > default**. Built on Bevy 0.19 + `bevy_gaussian_splatting` 8.0.1 (our fork —
 the `martin-tightcut` branch of [`annejan/bevy_gaussian_splatting`](https://github.com/annejan/bevy_gaussian_splatting),
 a git dep), wgpu → Vulkan, nightly toolchain (a **dated** pin, `nightly-2026-08-28`, not rolling).
 

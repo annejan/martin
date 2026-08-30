@@ -14,7 +14,7 @@ bevy = { version = "0.19", features = ["wav"] }
 # Select features explicitly (mirrors the crate's defaults). The **SH degree** is NOT pinned here —
 # it's a one-hot crate feature selected via martin's own `sh0`/`sh3` features (see [features] below),
 # so you can build either profile. Needs nightly (nightly_generic_alias); io_ply + planar load our .ply.
-bevy_gaussian_splatting = { version = "8.0.0", default-features = false, features = [
+bevy_gaussian_splatting = { version = "8.0.1", default-features = false, features = [
     "io_flexbuffers", "io_ply", "planar", "buffer_storage",
     "query_select", "morph_interpolate", "nightly_generic_alias",
     "sort_bitonic", "sort_radix", "sort_rayon", "sort_std",
@@ -110,11 +110,18 @@ strip = false
 
 # Fork of the splat renderer so we can inject the explosion displacement into its WGSL
 # (shaders load via hardcoded-UUID internal assets — no app-side hook). Tracked as the
-# `martin-tightcut` branch of annejan/bevy_gaussian_splatting (= upstream 8.0.0 + our §1–11
+# `martin-tightcut` branch of annejan/bevy_gaussian_splatting (= upstream 8.0.1 + our §1–11
 # edits, documented in that branch's CHANGES.md); Cargo.lock pins the exact commit. To hack
 # the shaders locally, point this at a checkout instead: `path = "../bgs-fork"`.
 [patch.crates-io]
 # Pinned to an immutable REV (not just the branch) so a force-push/rebase of the fork — or a routine
 # `cargo update` — can't silently repoint the engine's renderer to unreviewed commits before a deadline.
 # To pull new shader edits: push the fork branch, then bump this rev deliberately (+ `cargo update -p …`).
-bevy_gaussian_splatting = { git = "https://github.com/annejan/bevy_gaussian_splatting", rev = "f94855a4d4e81938b49aa121da7a4624938e3e8e" }
+#
+# NOTE (2026-08-30): this rev is the §1–11 edit set REPLAYED onto upstream 8.0.1, which currently lives
+# on the fork's `martin-tightcut-rebased` branch — `martin-tightcut` itself still points at the 8.0.0
+# base. Verified identical: replaying `martin-tightcut` onto upstream/main locally reproduces this
+# commit's tree byte-for-byte. Fast-forward the canonical branch when convenient —
+#   git push --force-with-lease origin ffaecd70…:martin-tightcut
+# — and do NOT delete `martin-tightcut-rebased` before that, or this pinned rev becomes unfetchable.
+bevy_gaussian_splatting = { git = "https://github.com/annejan/bevy_gaussian_splatting", rev = "ffaecd70f5102934beaca58845d3d2299b73394a" }

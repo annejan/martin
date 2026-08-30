@@ -11,7 +11,7 @@ deeper doc disagree, the deeper doc wins — keep this one short and link out.
 ## What martin is
 
 A music-synced **Gaussian-splat demoscene engine** built on **Bevy 0.19 + `bevy_gaussian_splatting`
-8.0.0** (our `martin-tightcut` fork branch), rendering through **wgpu → Vulkan** with **no CUDA/ROCm**. It flies a camera around 3D
+8.0.1** (our `martin-tightcut` fork branch), rendering through **wgpu → Vulkan** with **no CUDA/ROCm**. It flies a camera around 3D
 splats while they **morph into one another** (per-Gaussian, on the GPU), with HDR bloom on black,
 all driven by a synth track. A show is a **`.show` file** (run it: `martin <show>` / `--production
 <name>`); it expands into `MARTIN_*` env vars — the internal IR — which a **CLI** layers run-mode flags
