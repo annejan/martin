@@ -48,7 +48,8 @@ props stay on the serial path (async asset load, no CPU sampling). Startup wall-
 predicted (record/shot builds were already inline; live windowed loads benefit). 171 tests green.
 
 ### Fork-shader batch (`../bgs-fork`, branch `martin-tightcut`)  ·  the full clone→edit→A/B→push→repoint dance
-Confirm the local checkout matches the pinned commit (`Cargo.lock` rev `f94855a4`); then path-patch
+Confirm the local checkout matches the pinned commit (whatever rev `Cargo.lock` currently names — it
+moves with every fork bump, so read it, don't trust this line); then path-patch
 martin to `../bgs-fork`, edit, rebuild **sh0 AND sh3**, A/B both, push the `martin-tightcut` branch,
 repoint the git dep + `cargo build` (re-resolves the lock to the new rev).
 - **#5 — dead-discard + alpha early-out** (`gaussian.wgsl:705-707` `dist²>9` never fires; ~21 % of every
