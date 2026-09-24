@@ -721,7 +721,7 @@ slot itself is a fresh open item, added to §9.2 #16).
 ## 5. The fork's shader edits — per-particle phase + friends (LANDED; this is the original blueprint)
 
 > **STATUS (2026-06): this landed and then some.** What began as a single co-designed edit is now the
-> fork's **§1–11** on the `martin-tightcut-8.0.2` branch (upstream **8.0.2**): explode/ball-pulse, the `bulge`
+> fork's **§1–11** on the `martin-tightcut` branch (upstream **8.0.2**): explode/ball-pulse, the `bulge`
 > uniform, the per-particle **transition phase** (this section), persistent **deform**, **swarm**,
 > **shockwave** (transition mode 8), **morph_stagger** (§8), a tighter synthetic-content quad extent
 > (§9), an **additive/emissive blend mode** (§10, `MARTIN_ADDITIVE`), and the

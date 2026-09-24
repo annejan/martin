@@ -12,8 +12,9 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Changed
 
-- **`bevy_gaussian_splatting` 8.0.1 → 8.0.2** — the fork rebased onto upstream's 8.0.2 release, now the
-  `martin-tightcut-8.0.2` branch (`[patch.crates-io]` rev → `902e1b4`; the version requirement
+- **`bevy_gaussian_splatting` 8.0.1 → 8.0.2** — the fork's `martin-tightcut` branch rebased onto
+  upstream's 8.0.2 release (`[patch.crates-io]` rev → `902e1b4`; the old 8.0.1 tip is kept as
+  `martin-tightcut-rebased`; the version requirement
   follows). Upstream 8.0.2 brings exactly one feature: the additive/emissive blend mode (#238) — **our
   own fork edit §10**, upstreamed with the identical wiring, so §10 is now docs-only and the fork is
   another edit closer to upstream. The only rebase conflict was append-only (`CloudSettings` fields);

@@ -118,9 +118,9 @@ strip = false
 # `cargo update` — can't silently repoint the engine's renderer to unreviewed commits before a deadline.
 # To pull new shader edits: push the fork branch, then bump this rev deliberately (+ `cargo update -p …`).
 #
-# This rev is `martin-tightcut-8.0.2` (our edits rebased onto upstream 8.0.2 on 2026-09-24; §10
-# additive blend is now upstream as #238). The 8.0.1 tip stays on the fork as `martin-tightcut` /
-# `martin-tightcut-rebased` (ffaecd7), the pre-8.0.1 base as `martin-tightcut-8.0.0-base`. A local
+# `martin-tightcut` is at this rev (our edits rebased onto upstream 8.0.2 on 2026-09-24; §10 additive
+# blend is now upstream as #238). The previous 8.0.1 tip is kept on the fork as `martin-tightcut-rebased`
+# (ffaecd7), the pre-8.0.1 base as `martin-tightcut-8.0.0-base`. A local
 # `../bgs-fork` checkout must be at this rev or newer: cargo
 # does NOT error when a `[patch.crates-io]` entry fails the version requirement — it warns "patch was
 # not used" and silently resolves the crate from crates.io instead (real upstream, none of our §1–11
