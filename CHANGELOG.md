@@ -12,6 +12,16 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Changed
 
+- **`bevy_gaussian_splatting` 8.0.1 → 8.0.2** — the fork rebased onto upstream's 8.0.2 release, now the
+  `martin-tightcut-8.0.2` branch (`[patch.crates-io]` rev → `902e1b4`; the version requirement
+  follows). Upstream 8.0.2 brings exactly one feature: the additive/emissive blend mode (#238) — **our
+  own fork edit §10**, upstreamed with the identical wiring, so §10 is now docs-only and the fork is
+  another edit closer to upstream. The only rebase conflict was append-only (`CloudSettings` fields);
+  the resulting source differs from the previous pin only in doc comments + the version. No martin
+  source changes; `MARTIN_ADDITIVE` behaves the same.
+- **Lockfile refresh** — `cargo update` moved 44 transitive crates by patch/minor (syn 3.0.6, smallvec
+  1.16.1, zerocopy 0.8.58, wasm-bindgen 0.2.128, crossbeam, cc, …). Every direct dependency is already
+  at its latest release; no manifest change.
 - **`bevy_gaussian_splatting` 8.0.0 → 8.0.1** — the fork branch rebased onto upstream's 8.0.1 release
   (`[patch.crates-io]` rev bumped; the version requirement in `Cargo.toml` follows). Two upstream
   commits come in: the 8.0.1 version bump (#236) and the `lazy_type_alias` → `checked_type_aliases`
