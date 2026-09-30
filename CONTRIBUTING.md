@@ -13,7 +13,7 @@ production). Patches welcome. This file is the short version; see **README.md** 
 
 A **nightly** toolchain is required — `bevy_gaussian_splatting`'s default features use
 `nightly_generic_alias` (GATs). `rust-toolchain.toml` pins a **dated** nightly (currently
-`nightly-2026-08-28`) — deliberately **not** rolling `nightly`, so a nightly regression/ICE can't break
+`nightly-2026-09-29`) — deliberately **not** rolling `nightly`, so a nightly regression/ICE can't break
 the build before a compo; bump the date deliberately and re-verify. It also lists the `rustfmt` +
 `clippy` components the dated nightly needs (the CI fmt/clippy gates inherit this file).
 
@@ -54,13 +54,24 @@ RUSTFLAGS="-Znext-solver=globally" cargo build --release
 cargo rustc --release --bin martin -- -Znext-solver=globally
 ```
 
-**Last re-tested 2026-08-29** (nightly-2026-08-28 `e457a7b0d`, dep tree refreshed): still regressed.
-`RUSTFLAGS="-Znext-solver=globally" cargo build --release -p bevy_render` *completes* on the 27 GB dev
-box, but peaks at **~16.8 GB** RSS in a single `rustc` (2m14s) — more than the first measurement, and
-still over what a 16 GB runner has. Opt-out stays.
+**Last re-tested 2026-09-30** (nightly-2026-09-29 `c1070d693`, dep tree refreshed): much better, not
+there yet. On a 15 GB / 4-core box, with every `rustc` sampled once a second:
 
-Re-test on each toolchain bump and **drop the opt-out as soon as `bevy_render` builds in sane
-memory** — the old solver is slated for removal, so this is borrowed time, not a resting place.
+- `RUSTFLAGS="-Znext-solver=globally" cargo build --release -p bevy_render` now peaks at **~5.3 GB**
+  (was ~16.8 GB on the 2026-08-28 pin; ~1.9 GB on the old solver).
+- The **whole tree** (`cargo build --release`) completes, but `bevy_pbr` becomes the fat one at
+  **~8.2 GB** in one `rustc`, and parallel rustcs sum to **~12.3 GB** — too close to a 16 GB runner's
+  ceiling. `cargo test --release` passes (171 + 5).
+- **`cargo clippy --all-targets` fails**: `overflow evaluating the requirement … : SystemParam` inside
+  Bevy's `AsBindGroup` derive on `src/background.rs` (the solver walks `RenderAssets<GpuShaderBuffer>:
+  Sync` down through `hashbrown` into `wgpu::Buffer`). That's upstream-generated code, not something to
+  paper over in martin.
+
+Opt-out stays. (Previous: 2026-08-29, nightly-2026-08-28 `e457a7b0d` — `bevy_render` alone peaked at
+~16.8 GB.)
+
+Re-test on each toolchain bump and **drop the opt-out as soon as the whole tree builds and lints in
+sane memory** — the old solver is slated for removal, so this is borrowed time, not a resting place.
 
 [ns]: https://blog.rust-lang.org/2026/08/21/enabling-next-solver-on-nightly/
 [pr]: https://github.com/rust-lang/rust/pull/160619
