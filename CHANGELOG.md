@@ -12,6 +12,20 @@ the project has no tagged releases yet, so everything lives under **Unreleased**
 
 ### Changed
 
+- **Toolchain bumped to `nightly-2026-09-29`** (rustc 1.101.0 `c1070d693`; was `nightly-2026-08-28`,
+  now a month old). Verified on the new pin: `fmt --check`, `clippy --all-targets -D warnings`,
+  `cargo test --release` (171 + 5 passed), `reuse lint`, and `cargo audit` (still only the
+  `ttf-parser` unmaintained ignore) — no source changes needed.
+- **Lockfile refresh** — `cargo update` moved 15 transitive crates by patch (cc 1.5.1, smallvec 1.16.2,
+  zerocopy 0.8.59, wasm-bindgen 0.2.129, js-sys/web-sys 0.3.106, wl-clipboard-rs 0.9.4, …) and adds a
+  featureless, wasm-only `tokio` under `wasm-bindgen-futures`. Every direct dependency is already at its
+  latest release and upstream `bevy_gaussian_splatting` has nothing past 8.0.2, so no manifest change;
+  the GitHub Actions were just bumped by Dependabot (#46).
+- **Next trait solver re-tested — opt-out stays.** On the new nightly `bevy_render` builds in ~5.3 GB
+  under `-Znext-solver=globally` (was ~16.8 GB), but the whole tree isn't ready: `bevy_pbr` peaks at
+  ~8.2 GB (~12.3 GB across parallel rustcs) and `cargo clippy` hits a solver overflow in Bevy's
+  `AsBindGroup` derive. `-Znext-solver=coherence` stays in `.cargo/config.toml`; details in
+  `CONTRIBUTING.md` § The trait solver.
 - **`bevy_gaussian_splatting` 8.0.1 → 8.0.2** — the fork's `martin-tightcut` branch rebased onto
   upstream's 8.0.2 release (`[patch.crates-io]` rev → `902e1b4`; the old 8.0.1 tip is kept as
   `martin-tightcut-rebased`; the version requirement
